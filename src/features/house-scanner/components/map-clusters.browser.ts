@@ -134,6 +134,15 @@ test('zooming merges and splits markers while preserving the selected home', asy
   await nearby.click();
   const stack = page.getByRole('button', { name: /^2 homes at this point/ });
   await expect(stack).toBeVisible();
+  await expect
+    .poll(() =>
+      page
+        .locator('button.maplibregl-marker')
+        .evaluateAll((buttons) =>
+          buttons.some((button) => button.getAnimations().length > 0),
+        ),
+    )
+    .toBe(true);
   await stack.click();
   await page.getByRole('button', { name: 'Home 2', exact: true }).click();
   const preview = page.getByRole('article', {
