@@ -285,7 +285,7 @@ export function HouseholdMap({
   useEffect(() => {
     if (!map.current || !loaded || error) return;
     const instance = map.current;
-    function renderMarkers() {
+    function renderMarkers(expanding = false) {
       const previous = markers.current;
       const focused = previous.find(
         ({ button }) => button === document.activeElement,
@@ -368,7 +368,42 @@ export function HouseholdMap({
             group.coordinates.longitude,
             group.coordinates.latitude,
           ]);
-          if (!existing.has(group.key)) entry.marker.addTo(instance);
+          if (!existing.has(group.key)) {
+            entry.marker.addTo(instance);
+            const source = expanding
+              ? previous.find(
+                  (candidate) =>
+                    candidate.group.nearby &&
+                    candidate.ids.length > group.points.length &&
+                    group.points.some((point) =>
+                      candidate.ids.includes(point.id),
+                    ),
+                )
+              : undefined;
+            if (
+              source &&
+              !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+            ) {
+              const origin = instance.project([
+                source.group.coordinates.longitude,
+                source.group.coordinates.latitude,
+              ]);
+              const destination = instance.project([
+                group.coordinates.longitude,
+                group.coordinates.latitude,
+              ]);
+              button.animate(
+                [
+                  {
+                    transform: `translate(${origin.x - destination.x}px, ${origin.y - destination.y}px) scale(.8)`,
+                    opacity: 0.6,
+                  },
+                  { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+                ],
+                { duration: 420, easing: 'cubic-bezier(.2, .8, .2, 1)' },
+              );
+            }
+          }
           return entry;
         },
       );
@@ -394,10 +429,17 @@ export function HouseholdMap({
         });
       }
     }
+    let previousZoom = instance.getZoom();
     renderMarkers();
-    instance.on('zoomend', renderMarkers);
+    function renderAfterZoom() {
+      const zoom = instance.getZoom();
+      const expanding = zoom > previousZoom;
+      previousZoom = zoom;
+      renderMarkers(expanding);
+    }
+    instance.on('zoomend', renderAfterZoom);
     return () => {
-      instance.off('zoomend', renderMarkers);
+      instance.off('zoomend', renderAfterZoom);
     };
   }, [points, loaded, error]);
   // Only the pressed state changes on selection, so a focused marker stays focused.

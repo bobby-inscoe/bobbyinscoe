@@ -123,8 +123,8 @@ export const SYNTHETIC_SNAPSHOT = snapshotSchema.parse({
         askingPriceSek: 3200000,
       },
       coordinates: {
-        longitude: 11.99,
-        latitude: 57.72,
+        longitude: 11.975,
+        latitude: 57.714,
         precision: 'approximate_area',
         source: 'Fictional demo area',
         observedAt: date,
