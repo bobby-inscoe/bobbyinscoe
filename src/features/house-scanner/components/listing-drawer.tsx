@@ -96,7 +96,7 @@ export function ListingDrawer({
           <PriceLine listing={listing} />
           <EstimateLine listing={listing} />
           <FactsLine listing={listing} />
-          <ReasonChips listing={listing} snapshot={snapshot} />
+          <ReasonChips listing={listing} />
           <AlsoOn sites={alsoOn} />
           {snapshot.favorites.some(
             (favorite) => favorite.listingId === listing.id,

@@ -203,7 +203,7 @@ describe('Bjurfors search page', () => {
     [
       'more than one hundred cards',
       fixture('search-page-more.html').replace(
-        '</ul>\n</div>\n<nav class="c-pagination"',
+        /<\/ul>\r?\n<\/div>\r?\n<nav class="c-pagination"/,
         `${'<div class="c-object-card o-intrinsic"></div>'.repeat(120)}</ul>\n</div>\n<nav class="c-pagination"`,
       ),
       'too-large',

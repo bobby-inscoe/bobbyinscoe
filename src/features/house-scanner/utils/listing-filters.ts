@@ -11,6 +11,7 @@ export type HiddenView = 'not-hidden' | 'hidden-only' | 'both';
 export type Freshness = 'all' | 'latest-scan' | '1-day' | '3-days' | '7-days';
 
 export interface ListingFilters {
+  titleQuery: string;
   minPriceSek: number | null;
   maxPriceSek: number | null;
   minAreaM2: number | null;
@@ -36,6 +37,7 @@ export interface ListingFilters {
 }
 
 export const emptyFilters: ListingFilters = {
+  titleQuery: '',
   minPriceSek: null,
   maxPriceSek: null,
   minAreaM2: null,
@@ -71,6 +73,7 @@ export function listingHost(listing: Listing): string {
 
 export function activeFilterCount(filters: ListingFilters): number {
   return [
+    filters.titleQuery.trim().length > 0,
     clean(filters.minPriceSek) !== null || clean(filters.maxPriceSek) !== null,
     clean(filters.minAreaM2) !== null || clean(filters.maxAreaM2) !== null,
     clean(filters.minRooms) !== null,
@@ -101,6 +104,7 @@ export function applyListingFilters(
   const minArea = clean(filters.minAreaM2);
   const maxArea = clean(filters.maxAreaM2);
   const minRooms = clean(filters.minRooms);
+  const titleQuery = filters.titleQuery.trim().toLocaleLowerCase('sv-SE');
   const freshnessDays = {
     all: null,
     'latest-scan': null,
@@ -124,6 +128,8 @@ export function applyListingFilters(
     const neighborhoods = listingNeighborhoods(listing);
     const firstSeen = Date.parse(listing.firstSeenAt ?? '');
     return (
+      (titleQuery === '' ||
+        listing.title.toLocaleLowerCase('sv-SE').includes(titleQuery)) &&
       (filters.freshness === 'latest-scan'
         ? listing.isNew === true
         : freshnessDays === null ||

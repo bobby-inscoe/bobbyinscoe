@@ -9,6 +9,7 @@ import {
   Stack,
   Switch,
   Text,
+  TextInput,
   Title,
   Tooltip,
 } from '@mantine/core';
@@ -46,6 +47,10 @@ import {
 } from '@/features/house-scanner/utils/listing-filters';
 import { listingNeighborhoods } from '@/features/house-scanner/utils/listing-neighborhoods';
 import { hasPin } from '@/features/house-scanner/utils/listing-position';
+import {
+  type ListingSort,
+  sortListings,
+} from '@/features/house-scanner/utils/listing-sort';
 import { isListingStale } from '@/features/house-scanner/utils/listing-staleness';
 import { mapPoints } from '@/features/house-scanner/utils/listing-view';
 import { reviewMapSelection } from '@/features/house-scanner/utils/map-selection';
@@ -111,8 +116,8 @@ interface ListingsPanelProps {
   onSelectingChange: (value: boolean) => void;
   filtersOpen: boolean;
   onFiltersOpenChange: (value: boolean) => void;
-  sort: 'default' | 'price-asc' | 'price-desc';
-  onSortChange: (value: 'default' | 'price-asc' | 'price-desc') => void;
+  sort: ListingSort;
+  onSortChange: (value: ListingSort) => void;
   onFiltersChange: (filters: ListingFilters) => void;
   filterHosts: string[];
   // How many homes the tab holds before the filters apply.
@@ -311,20 +316,7 @@ export function ListingsPanel({
     () => applyListingFilters(scoped, draft, hiddenIds, duplicateIds).length,
     [scoped, draft, hiddenIds, duplicateIds],
   );
-  const ordered = useMemo(() => {
-    if (sort === 'default') return visible;
-    const price = (listing: Listing) =>
-      listing.conflicts.includes('askingPriceSek')
-        ? null
-        : listing.facts.askingPriceSek;
-    return [...visible].sort((a, b) => {
-      const first = price(a);
-      const second = price(b);
-      if (first === null) return second === null ? 0 : 1;
-      if (second === null) return -1;
-      return sort === 'price-asc' ? first - second : second - first;
-    });
-  }, [visible, sort]);
+  const ordered = useMemo(() => sortListings(visible, sort), [visible, sort]);
   const renderedCount =
     listRender.visible === visible && listRender.sort === sort
       ? listRender.count
@@ -521,11 +513,38 @@ export function ListingsPanel({
                 comboboxProps={{ withinPortal: false }}
               />
             ) : (
-              <Group gap="xs" align="flex-end" wrap="nowrap" maw="100%">
+              <Stack gap={4} w={{ base: 140, sm: 180 }}>
+                <Group gap={4} wrap="nowrap">
+                  <Text size="sm" fw={500}>
+                    Match
+                  </Text>
+                  <Tooltip
+                    multiline
+                    w={300}
+                    events={{ hover: true, focus: true, touch: true }}
+                    label={
+                      <Stack gap={4}>
+                        {MATCH_CHOICES.map(({ value, label, description }) => (
+                          <Text key={value} size="xs">
+                            {label}: {description}
+                          </Text>
+                        ))}
+                      </Stack>
+                    }
+                  >
+                    <ActionIcon
+                      variant="transparent"
+                      color="gray"
+                      size="sm"
+                      className={styles.matchHelp}
+                      aria-label="What the match options mean"
+                    >
+                      ⓘ
+                    </ActionIcon>
+                  </Tooltip>
+                </Group>
                 <Select
-                  label="Match"
-                  w={{ base: 140, sm: 200 }}
-                  style={{ flex: '1 1 auto', minWidth: 0 }}
+                  aria-label="Match"
                   value={section}
                   onChange={(value) => onSectionChange(value ?? 'all')}
                   data={[
@@ -537,31 +556,41 @@ export function ListingsPanel({
                   ]}
                   comboboxProps={{ withinPortal: false }}
                 />
-                <Tooltip
-                  multiline
-                  w={300}
-                  events={{ hover: true, focus: true, touch: true }}
-                  label={
-                    <Stack gap={4}>
-                      {MATCH_CHOICES.map(({ value, label, description }) => (
-                        <Text key={value} size="xs">
-                          {label}: {description}
-                        </Text>
-                      ))}
-                    </Stack>
-                  }
-                >
-                  <ActionIcon
-                    variant="subtle"
-                    color="gray"
-                    size="lg"
-                    aria-label="What the match options mean"
-                  >
-                    ⓘ
-                  </ActionIcon>
-                </Tooltip>
-              </Group>
+              </Stack>
             )}
+            <Select
+              label="Sort"
+              aria-label="Sort homes"
+              value={sort}
+              onChange={(value) =>
+                onSortChange((value as ListingSort) ?? 'newest')
+              }
+              data={[
+                { value: 'newest', label: 'Newest' },
+                { value: 'oldest', label: 'Oldest' },
+                { value: 'next-viewing', label: 'Next viewing' },
+                { value: 'alphabetical', label: 'Alphabetical' },
+                { value: 'price-asc', label: 'Price: low to high' },
+                { value: 'price-desc', label: 'Price: high to low' },
+              ]}
+              w={{ base: 140, sm: 180 }}
+              comboboxProps={{ withinPortal: false }}
+            />
+            <TextInput
+              type="search"
+              label="Search by title"
+              placeholder="Street or listing title"
+              value={filters.titleQuery}
+              maxLength={128}
+              onChange={(event) =>
+                onFiltersChange({
+                  ...filters,
+                  titleQuery: event.currentTarget.value,
+                })
+              }
+              w={{ base: 180, sm: 220 }}
+              maw="100%"
+            />
             <Group gap="xs">
               <Button
                 variant="default"
@@ -597,22 +626,33 @@ export function ListingsPanel({
               {hiddenCount > 0 && ` · ${hiddenCount} hidden`}
               {duplicateCount > 0 && ` · ${duplicateCount} duplicates folded`}
             </Text>
-            <Group gap="xs" role="group" aria-label="View">
-              <Button
-                variant={view === 'list' ? 'filled' : 'default'}
-                aria-pressed={view === 'list'}
-                onClick={() => onViewChange('list')}
-              >
-                List
-              </Button>
-              <Button
-                ref={mapViewButton}
-                variant={view === 'map' ? 'filled' : 'default'}
-                aria-pressed={view === 'map'}
-                onClick={() => onViewChange('map')}
-              >
-                Map
-              </Button>
+            <Group gap="xs" wrap="wrap">
+              <Group gap="xs" role="group" aria-label="View">
+                <Button
+                  variant={view === 'list' ? 'filled' : 'default'}
+                  aria-pressed={view === 'list'}
+                  onClick={() => onViewChange('list')}
+                >
+                  List
+                </Button>
+                <Button
+                  ref={mapViewButton}
+                  variant={view === 'map' ? 'filled' : 'default'}
+                  aria-pressed={view === 'map'}
+                  onClick={() => onViewChange('map')}
+                >
+                  Map
+                </Button>
+              </Group>
+              {canSelect && (
+                <Button
+                  variant="default"
+                  disabled={batchBusy}
+                  onClick={() => onSelectingChange(!selecting)}
+                >
+                  {selecting ? 'Cancel selection' : 'Select'}
+                </Button>
+              )}
             </Group>
           </Group>
         </div>
@@ -661,37 +701,6 @@ export function ListingsPanel({
           </Group>
         </Stack>
       </Drawer>
-      {!mobileMap && (
-        <Group justify="space-between" gap="xs">
-          <Select
-            aria-label="Sort homes"
-            value={sort}
-            onChange={(value) =>
-              onSortChange(
-                value === 'price-asc' || value === 'price-desc'
-                  ? value
-                  : 'default',
-              )
-            }
-            data={[
-              { value: 'default', label: 'Current order' },
-              { value: 'price-asc', label: 'Price: low to high' },
-              { value: 'price-desc', label: 'Price: high to low' },
-            ]}
-            w={{ base: 170, sm: 200 }}
-            maw="100%"
-          />
-          {canSelect && (
-            <Button
-              variant="default"
-              disabled={batchBusy}
-              onClick={() => onSelectingChange(!selecting)}
-            >
-              {selecting ? 'Cancel selection' : 'Select'}
-            </Button>
-          )}
-        </Group>
-      )}
       {selecting && (
         <Stack
           gap="xs"

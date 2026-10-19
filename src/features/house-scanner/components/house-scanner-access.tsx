@@ -15,8 +15,10 @@ import type { Household } from '@/features/house-scanner/types/household';
 
 export function HouseScannerAccess({
   children,
+  onDemo,
 }: {
-  children: (household: Household) => ReactNode;
+  children: (household: Household, signOut: () => void) => ReactNode;
+  onDemo: () => void;
 }) {
   const session = useHouseholdSession();
   const [email, setEmail] = useState('');
@@ -43,23 +45,21 @@ export function HouseScannerAccess({
       <Stack>
         <Title order={2}>Private access is not configured</Title>
         <Text>No household data is loaded.</Text>
+        <Button
+          variant="subtle"
+          aria-label="Explore the synthetic demo"
+          onClick={onDemo}
+        >
+          Explore demo
+        </Button>
       </Stack>
     );
   return (
     <Stack gap="md">
       {message && <Alert role="alert">{message}</Alert>}
       {state.status === 'authenticated' ? (
-        <>
-          <Group justify="flex-end">
-            <Button
-              variant="default"
-              loading={busy}
-              onClick={() => void perform(session.signOut)}
-            >
-              Sign out
-            </Button>
-          </Group>
-          {children({
+        children(
+          {
             snapshot: state.snapshot,
             userId: state.userId,
             onSaveFavorite: session.onSaveFavorite,
@@ -70,8 +70,9 @@ export function HouseScannerAccess({
             onSetHidden: session.onSetHidden,
             onLoadNotes: session.onLoadNotes,
             onSaveNote: session.onSaveNote,
-          })}
-        </>
+          },
+          () => void perform(session.signOut),
+        )
       ) : state.status === 'loading' ? (
         <Text role="status">Loading your household…</Text>
       ) : state.status === 'signed-out' ? (
@@ -117,6 +118,14 @@ export function HouseScannerAccess({
             />
             <Button type="submit" loading={busy}>
               Sign in
+            </Button>
+            <Button
+              type="button"
+              variant="subtle"
+              aria-label="Explore the synthetic demo"
+              onClick={onDemo}
+            >
+              Explore demo
             </Button>
           </Stack>
         </form>

@@ -2,12 +2,17 @@ import { HouseholdWorkspace } from '@/features/house-scanner/components/househol
 import { useDemoHousehold } from '@/features/house-scanner/hooks/use-demo-household';
 import { DEMO_USER_ID } from '@/features/house-scanner/mock/synthetic-household';
 
-export function SyntheticWorkspace() {
+export function SyntheticWorkspace({
+  onLeaveDemo,
+}: {
+  onLeaveDemo: () => void;
+}) {
   const demo = useDemoHousehold();
   return (
     <HouseholdWorkspace
       snapshot={demo.snapshot}
       userId={DEMO_USER_ID}
+      onDemoToggle={onLeaveDemo}
       onSaveFavorite={demo.saveFavorite}
       onSaveFavorites={demo.saveFavorites}
       onRemoveFavorite={demo.removeFavorite}
