@@ -1,0 +1,472 @@
+// @vitest-environment jsdom
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  addManual,
+  clearOwnedSessionStorage,
+  createHouseholdClient,
+  householdSnapshot,
+  memberships,
+  privateBackendSettings,
+  saveNote,
+  saveProfile,
+  setFavorite,
+  setHidden,
+  setRememberDevice,
+} from '@/features/house-scanner/api/household-client';
+import {
+  AUTH_KEY,
+  fixtureSnapshot,
+  HOUSEHOLD_ID,
+  OTHER_HOUSEHOLD_ID,
+  OTHER_USER_ID,
+  reply,
+  resetSdk,
+  sdk,
+  sdkStorage,
+  sdkStorageKey,
+  USER_ID,
+} from '@/features/house-scanner/api/session-test-helpers';
+import type { Snapshot } from '@/features/house-scanner/types/contracts';
+import { NoteConflictError } from '@/features/house-scanner/types/notes';
+
+vi.mock('@supabase/supabase-js', async () => {
+  const fake = await import(
+    '@/features/house-scanner/api/session-test-helpers'
+  );
+  return { createClient: fake.createClient };
+});
+beforeEach(resetSdk);
+function client() {
+  const active = createHouseholdClient();
+  if (!active) throw new Error('Synthetic backend should be configured.');
+  return active;
+}
+
+describe('House Scanner storage boundaries', () => {
+  it.each([
+    ['VITE_HOUSE_SCANNER_ENABLED', 'false'],
+    [
+      'VITE_HOUSE_SCANNER_SUPABASE_URL',
+      'https://user:password@example.invalid',
+    ],
+    ['VITE_HOUSE_SCANNER_SUPABASE_URL', 'http://example.invalid'],
+    [
+      'VITE_HOUSE_SCANNER_SUPABASE_URL',
+      'https://example.invalid/?private=value',
+    ],
+    [
+      'VITE_HOUSE_SCANNER_SUPABASE_PUBLISHABLE_KEY',
+      'service_role_synthetic_invalid',
+    ],
+  ])('rejects unsafe configuration %s = %s', (name, value) => {
+    vi.stubEnv(name, value);
+    expect(privateBackendSettings()).toBeNull();
+  });
+  it('uses a namespaced SDK storage key', () => {
+    client();
+    expect(sdkStorageKey).toBe(AUTH_KEY);
+  });
+  it.each([false, true])(
+    'keeps SDK tokens in the chosen store when remember is %s',
+    (remember) => {
+      client();
+      setRememberDevice(remember);
+      sdkStorage.setItem(sdkStorageKey, 'synthetic token only');
+      const selected = remember ? window.localStorage : window.sessionStorage;
+      const other = remember ? window.sessionStorage : window.localStorage;
+      expect(selected.getItem(AUTH_KEY)).toBe('synthetic token only');
+      expect(other.getItem(AUTH_KEY)).toBeNull();
+      expect(sdkStorage.getItem(AUTH_KEY)).toBe('synthetic token only');
+      sdkStorage.removeItem(AUTH_KEY);
+      expect(selected.getItem(AUTH_KEY)).toBeNull();
+      expect(other.getItem(AUTH_KEY)).toBeNull();
+    },
+  );
+  it('session preference overrides a remembered local preference', () => {
+    client();
+    window.localStorage.setItem('house-scanner.remember', 'true');
+    window.sessionStorage.setItem('house-scanner.remember', 'false');
+    sdkStorage.setItem(AUTH_KEY, 'synthetic session only');
+    expect(window.sessionStorage.getItem(AUTH_KEY)).toBe(
+      'synthetic session only',
+    );
+    expect(window.localStorage.getItem(AUTH_KEY)).toBeNull();
+  });
+  it('clears only owned keys in both stores and removes the old remember choice', () => {
+    for (const store of [window.localStorage, window.sessionStorage]) {
+      store.setItem('duck-feed:high-scores', '[123]');
+      store.setItem('portfolio.preference', 'green');
+      store.setItem(AUTH_KEY, 'synthetic token');
+      store.setItem(`${AUTH_KEY}-code-verifier`, 'synthetic verifier');
+      store.setItem('house-scanner.remember', 'true');
+    }
+    clearOwnedSessionStorage();
+    for (const store of [window.localStorage, window.sessionStorage]) {
+      expect(Object.keys(store).sort()).toEqual([
+        'duck-feed:high-scores',
+        'portfolio.preference',
+      ]);
+    }
+  });
+  it('switching remember off removes persisted tokens before the next login', () => {
+    client();
+    setRememberDevice(true);
+    sdkStorage.setItem(AUTH_KEY, 'synthetic old token');
+    setRememberDevice(false);
+    expect(window.localStorage.getItem(AUTH_KEY)).toBeNull();
+    expect(window.localStorage.getItem('house-scanner.remember')).toBeNull();
+    expect(window.sessionStorage.getItem('house-scanner.remember')).toBe(
+      'false',
+    );
+  });
+  it('reports cleanup failure but still clears the other storage area', () => {
+    window.sessionStorage.setItem(AUTH_KEY, 'synthetic token');
+    vi.spyOn(window, 'localStorage', 'get').mockImplementation(() => {
+      throw new DOMException('Denied', 'SecurityError');
+    });
+    expect(clearOwnedSessionStorage).toThrow(
+      'Browser storage could not be cleared',
+    );
+    expect(window.sessionStorage.getItem(AUTH_KEY)).toBeNull();
+  });
+});
+
+describe('House Scanner RPC boundaries', () => {
+  it('accepts a valid private response', async () => {
+    await expect(
+      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
+    ).resolves.toEqual(fixtureSnapshot());
+    expect(sdk.rpc).toHaveBeenCalledWith('hs_snapshot_neighborhoods', {
+      p_household_id: HOUSEHOLD_ID,
+    });
+  });
+  it('falls back only when the neighborhood endpoint is not installed', async () => {
+    sdk.rpc.mockResolvedValueOnce(reply(fixtureSnapshot().members));
+    sdk.rpc.mockResolvedValueOnce({
+      data: null,
+      error: { code: 'PGRST202', message: 'Function missing' },
+    });
+    sdk.rpc.mockResolvedValueOnce(reply(fixtureSnapshot()));
+    await expect(
+      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
+    ).resolves.toEqual(fixtureSnapshot());
+    expect(sdk.rpc).toHaveBeenLastCalledWith('hs_snapshot', {
+      p_household_id: HOUSEHOLD_ID,
+    });
+  });
+  it('does not mask authorization failures with a fallback request', async () => {
+    sdk.rpc.mockResolvedValueOnce(reply(fixtureSnapshot().members));
+    sdk.rpc.mockResolvedValueOnce({
+      data: null,
+      error: { code: '42501', message: 'Access denied' },
+    });
+    await expect(
+      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
+    ).rejects.toThrow('household request failed');
+    expect(sdk.rpc).toHaveBeenCalledTimes(2);
+  });
+  it('does not request a snapshot without current matching membership', async () => {
+    sdk.rpc.mockResolvedValueOnce(
+      reply([{ ...fixtureSnapshot().members[0], userId: OTHER_USER_ID }]),
+    );
+    await expect(
+      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
+    ).rejects.toThrow('no longer active');
+    expect(sdk.rpc).toHaveBeenCalledTimes(1);
+  });
+  const noteRow = (listingId: string, userId: string) => ({
+    listingId,
+    userId,
+    body: 'sample',
+    revision: 1,
+    editedAt: '2026-10-17T10:00:00.000Z',
+  });
+  const invalidSnapshots: [string, (snapshot: Snapshot) => void][] = [
+    [
+      'snapshot household',
+      (s) => {
+        s.householdId = OTHER_HOUSEHOLD_ID;
+      },
+    ],
+    [
+      'member household',
+      (s) => {
+        s.members[1].householdId = OTHER_HOUSEHOLD_ID;
+      },
+    ],
+    [
+      'profile household',
+      (s) => {
+        s.profiles[0].householdId = OTHER_HOUSEHOLD_ID;
+      },
+    ],
+    [
+      'listing household',
+      (s) => {
+        s.listings[0].householdId = OTHER_HOUSEHOLD_ID;
+      },
+    ],
+    [
+      'favorite household',
+      (s) => {
+        s.favorites[0].householdId = OTHER_HOUSEHOLD_ID;
+      },
+    ],
+    [
+      'missing viewer',
+      (s) => {
+        s.members = s.members.filter((m) => m.userId !== USER_ID);
+      },
+    ],
+    [
+      'unknown favorite listing',
+      (s) => {
+        s.favorites[0].listingId = OTHER_HOUSEHOLD_ID;
+      },
+    ],
+    [
+      'unknown favorite actor',
+      (s) => {
+        s.favorites[0].userId = OTHER_HOUSEHOLD_ID;
+      },
+    ],
+    [
+      'duplicate listing',
+      (s) => {
+        s.listings.push(s.listings[0]);
+      },
+    ],
+    [
+      'duplicate member',
+      (s) => {
+        s.members.push(s.members[0]);
+      },
+    ],
+    [
+      'note on a listing that is not in the snapshot',
+      (s) => {
+        s.notes = [noteRow('00000000-0000-4000-8000-0000000000ff', USER_ID)];
+      },
+    ],
+    [
+      'note by someone who is not a member',
+      (s) => {
+        s.notes = [noteRow(s.listings[0].id, OTHER_HOUSEHOLD_ID)];
+      },
+    ],
+    [
+      'hidden listing that is not in the snapshot',
+      (s) => {
+        s.hiddenListingIds = ['00000000-0000-4000-8000-0000000000ff'];
+      },
+    ],
+    [
+      'demo listing',
+      (s) => {
+        s.listings[0].origin = 'synthetic';
+      },
+    ],
+  ];
+  it.each(invalidSnapshots)(
+    'rejects inconsistent %s data',
+    async (_label, change) => {
+      const snapshot = fixtureSnapshot();
+      change(snapshot);
+      sdk.rpc
+        .mockResolvedValueOnce(reply([fixtureSnapshot().members[0]]))
+        .mockResolvedValueOnce(reply(snapshot));
+      await expect(
+        householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
+      ).rejects.toThrow('inconsistent household data');
+    },
+  );
+  it.each([
+    null,
+    {},
+    { contractVersion: 2 },
+    { ...fixtureSnapshot(), unexpected: 'field' },
+  ])('rejects unsupported snapshot responses %#', async (data) => {
+    sdk.rpc
+      .mockResolvedValueOnce(reply([fixtureSnapshot().members[0]]))
+      .mockResolvedValueOnce(reply(data));
+    await expect(
+      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
+    ).rejects.toThrow('unsupported household response');
+  });
+  it('does not reveal database details in RPC errors', async () => {
+    sdk.rpc.mockResolvedValue({
+      data: null,
+      error: { message: 'synthetic confidential database detail' },
+    });
+    await expect(memberships(client())).rejects.toThrow(
+      'The household request failed. Reload and try again.',
+    );
+  });
+  it('reports a note revision conflict as a typed error', async () => {
+    sdk.rpc.mockResolvedValue({
+      data: null,
+      error: { message: 'Note changed; reload before saving', code: '40001' },
+    });
+    await expect(
+      saveNote(
+        client(),
+        HOUSEHOLD_ID,
+        fixtureSnapshot().listings[0].id,
+        'draft',
+        1,
+      ),
+    ).rejects.toBeInstanceOf(NoteConflictError);
+  });
+  it.each([
+    ['another SQLSTATE on a note save', 'hs_save_note', '42501'],
+    ['no SQLSTATE on a note save', 'hs_save_note', undefined],
+    ['a conflict code on a profile save', 'hs_save_profile', '40001'],
+  ])('keeps the generic message for %s', async (_label, name, code) => {
+    sdk.rpc.mockResolvedValue({
+      data: null,
+      error: { message: 'synthetic confidential database detail', code },
+    });
+    const listingId = fixtureSnapshot().listings[0].id;
+    const call =
+      name === 'hs_save_note'
+        ? saveNote(client(), HOUSEHOLD_ID, listingId, 'draft', 1)
+        : saveProfile(client(), HOUSEHOLD_ID, fixtureSnapshot().profiles[0]);
+    await expect(call).rejects.toThrow(
+      'The household request failed. Reload and try again.',
+    );
+    await expect(call).rejects.not.toBeInstanceOf(NoteConflictError);
+  });
+  it('rejects oversized membership responses', async () => {
+    sdk.rpc.mockResolvedValue(
+      reply(Array.from({ length: 11 }, () => fixtureSnapshot().members[0])),
+    );
+    await expect(memberships(client())).rejects.toThrow(
+      'unsupported household response',
+    );
+  });
+  it('leaves favorite actor identity to the server', async () => {
+    await setFavorite(
+      client(),
+      HOUSEHOLD_ID,
+      fixtureSnapshot().listings[0].id,
+      false,
+    );
+    expect(sdk.rpc).toHaveBeenCalledWith('hs_set_favorite', {
+      p_household_id: HOUSEHOLD_ID,
+      p_listing_id: fixtureSnapshot().listings[0].id,
+      p_saved: false,
+    });
+  });
+  it('keeps a snapshot whose notes belong to its listings and members', async () => {
+    const snapshot = fixtureSnapshot();
+    snapshot.notes = [
+      noteRow(snapshot.listings[0].id, snapshot.members[0].userId),
+    ];
+    sdk.rpc
+      .mockResolvedValueOnce(reply([snapshot.members[0]]))
+      .mockResolvedValueOnce(reply(snapshot));
+    await expect(
+      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
+    ).resolves.toMatchObject({ notes: [{ body: 'sample' }] });
+  });
+  it('keeps a snapshot whose hidden ids are all listed', async () => {
+    const snapshot = fixtureSnapshot();
+    snapshot.hiddenListingIds = [snapshot.listings[0].id];
+    sdk.rpc
+      .mockResolvedValueOnce(reply([snapshot.members[0]]))
+      .mockResolvedValueOnce(reply(snapshot));
+    await expect(
+      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
+    ).resolves.toMatchObject({ hiddenListingIds: [snapshot.listings[0].id] });
+  });
+  it('sends hides as a list and leaves the member to the server', async () => {
+    const ids = fixtureSnapshot().listings.map((listing) => listing.id);
+    await setHidden(client(), HOUSEHOLD_ID, ids, true);
+    expect(sdk.rpc).toHaveBeenCalledWith('hs_set_hidden', {
+      p_household_id: HOUSEHOLD_ID,
+      p_listing_ids: ids,
+      p_hidden: true,
+    });
+  });
+  it('refuses an empty, oversized or malformed id list before calling the server', () => {
+    expect(() => setHidden(client(), HOUSEHOLD_ID, [], true)).toThrow();
+    expect(() => setHidden(client(), HOUSEHOLD_ID, ['nope'], true)).toThrow();
+    expect(() =>
+      setHidden(
+        client(),
+        HOUSEHOLD_ID,
+        Array.from(
+          { length: 501 },
+          (_, index) =>
+            `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+        ),
+        true,
+      ),
+    ).toThrow();
+    expect(sdk.rpc).not.toHaveBeenCalled();
+  });
+  it('removes tracking query parameters from manual links without fetching them', async () => {
+    const fetch = vi.fn();
+    vi.stubGlobal('fetch', fetch);
+    sdk.rpc.mockResolvedValue(
+      reply({ listingId: fixtureSnapshot().listings[0].id, existing: false }),
+    );
+    await addManual(client(), HOUSEHOLD_ID, {
+      url: 'https://example.invalid/home?utm_source=test&keep=yes&fbclid=tracking#photos',
+      title: ' Fictional home ',
+      note: ' Note ',
+      tags: [' sample '],
+    });
+    expect(sdk.rpc).toHaveBeenCalledWith('hs_add_manual', {
+      p_household_id: HOUSEHOLD_ID,
+      p_url: 'https://example.invalid/home?keep=yes#photos',
+      p_title: 'Fictional home',
+      p_note: 'Note',
+      p_tags: ['sample'],
+    });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+  it('rejects a profile owned by another household before calling the server', () => {
+    const profile = fixtureSnapshot().profiles[0];
+    expect(() => saveProfile(client(), OTHER_HOUSEHOLD_ID, profile)).toThrow(
+      'another household',
+    );
+    expect(sdk.rpc).not.toHaveBeenCalled();
+  });
+  it('sends the expected profile revision without accepting actor input', async () => {
+    const profile = fixtureSnapshot().profiles[0];
+    sdk.rpc.mockResolvedValue(reply({ revision: 2 }));
+    await expect(saveProfile(client(), HOUSEHOLD_ID, profile)).resolves.toEqual(
+      { revision: 2 },
+    );
+    expect(sdk.rpc).toHaveBeenCalledWith('hs_save_profile', {
+      p_household_id: HOUSEHOLD_ID,
+      p_profile_id: profile.id,
+      p_revision: 1,
+      p_name: profile.name,
+      p_enabled: profile.enabled,
+      p_criteria: profile.criteria,
+    });
+  });
+  it('validates note and mutation responses', async () => {
+    sdk.rpc.mockResolvedValue(reply({ ok: false }));
+    await expect(
+      setFavorite(
+        client(),
+        HOUSEHOLD_ID,
+        fixtureSnapshot().listings[0].id,
+        true,
+      ),
+    ).rejects.toThrow('unsupported household response');
+    expect(() =>
+      saveNote(
+        client(),
+        HOUSEHOLD_ID,
+        fixtureSnapshot().listings[0].id,
+        'x'.repeat(2001),
+        0,
+      ),
+    ).toThrow();
+  });
+});

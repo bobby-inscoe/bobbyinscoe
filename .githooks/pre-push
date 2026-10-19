@@ -1,0 +1,32 @@
+#!/bin/sh
+# Auto-formats the branch with Biome before it reaches the remote.
+# Installed via `core.hooksPath` (see package.json "prepare" script).
+set -e
+
+cd "$(git rev-parse --show-toplevel)"
+
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  echo "pre-push: you have uncommitted changes — commit or stash them before pushing."
+  exit 1
+fi
+
+if npm run check --silent; then
+  exit 0
+fi
+
+echo ""
+echo "pre-push: Biome found formatting/lint issues — attempting to auto-fix..."
+npm run fix --silent || true
+
+if npm run check --silent; then
+  git add -u
+  git commit --amend --no-edit --no-verify
+  echo ""
+  echo "pre-push: auto-formatted and folded the fix into your last commit ($(git rev-parse --short HEAD))."
+  echo "pre-push: please push again."
+  exit 1
+fi
+
+echo ""
+echo "pre-push: some issues remain that Biome couldn't auto-fix. Run 'npm run check' for details, fix them, and commit."
+exit 1

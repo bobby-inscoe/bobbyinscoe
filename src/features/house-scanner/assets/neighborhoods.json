@@ -1,0 +1,386 @@
+[
+  {
+    "id": "goteborg-101",
+    "name": "Kungsladugård"
+  },
+  {
+    "id": "goteborg-102",
+    "name": "Sanna"
+  },
+  {
+    "id": "goteborg-103",
+    "name": "Majorna"
+  },
+  {
+    "id": "goteborg-104",
+    "name": "Stigberget"
+  },
+  {
+    "id": "goteborg-105",
+    "name": "Masthugget"
+  },
+  {
+    "id": "goteborg-106",
+    "name": "Änggården"
+  },
+  {
+    "id": "goteborg-107",
+    "name": "Haga"
+  },
+  {
+    "id": "goteborg-108",
+    "name": "Annedal"
+  },
+  {
+    "id": "goteborg-109",
+    "name": "Olivedal"
+  },
+  {
+    "id": "goteborg-110",
+    "name": "Krokslätt"
+  },
+  {
+    "id": "goteborg-111",
+    "name": "Johanneberg"
+  },
+  {
+    "id": "goteborg-112",
+    "name": "Landala"
+  },
+  {
+    "id": "goteborg-113",
+    "name": "Guldheden"
+  },
+  {
+    "id": "goteborg-114",
+    "name": "Lorensberg"
+  },
+  {
+    "id": "goteborg-115",
+    "name": "Vasastaden"
+  },
+  {
+    "id": "goteborg-116",
+    "name": "Inom Vallgraven"
+  },
+  {
+    "id": "goteborg-117",
+    "name": "Stampen"
+  },
+  {
+    "id": "goteborg-118",
+    "name": "Heden"
+  },
+  {
+    "id": "goteborg-201",
+    "name": "Olskroken"
+  },
+  {
+    "id": "goteborg-202",
+    "name": "Redbergslid"
+  },
+  {
+    "id": "goteborg-203",
+    "name": "Bagaregården"
+  },
+  {
+    "id": "goteborg-204",
+    "name": "Kallebäck"
+  },
+  {
+    "id": "goteborg-205",
+    "name": "Skår"
+  },
+  {
+    "id": "goteborg-206",
+    "name": "Överås"
+  },
+  {
+    "id": "goteborg-207",
+    "name": "Kärralund"
+  },
+  {
+    "id": "goteborg-208",
+    "name": "Lunden"
+  },
+  {
+    "id": "goteborg-209",
+    "name": "Härlanda"
+  },
+  {
+    "id": "goteborg-210",
+    "name": "Kålltorp"
+  },
+  {
+    "id": "goteborg-211",
+    "name": "Torpa"
+  },
+  {
+    "id": "goteborg-212",
+    "name": "Björkekärr"
+  },
+  {
+    "id": "goteborg-301",
+    "name": "Gamlestaden"
+  },
+  {
+    "id": "goteborg-302",
+    "name": "Utby"
+  },
+  {
+    "id": "goteborg-303",
+    "name": "Södra Kortedala"
+  },
+  {
+    "id": "goteborg-304",
+    "name": "Norra Kortedala"
+  },
+  {
+    "id": "goteborg-305",
+    "name": "Västra Bergsjön"
+  },
+  {
+    "id": "goteborg-306",
+    "name": "Östra Bergsjön"
+  },
+  {
+    "id": "goteborg-402",
+    "name": "Kvillebäcken"
+  },
+  {
+    "id": "goteborg-403",
+    "name": "Slättadamm"
+  },
+  {
+    "id": "goteborg-404",
+    "name": "Kärrdalen"
+  },
+  {
+    "id": "goteborg-405",
+    "name": "Tuve"
+  },
+  {
+    "id": "goteborg-406",
+    "name": "Säve"
+  },
+  {
+    "id": "goteborg-407",
+    "name": "Kärra"
+  },
+  {
+    "id": "goteborg-408",
+    "name": "Rödbo"
+  },
+  {
+    "id": "goteborg-409",
+    "name": "Skogome"
+  },
+  {
+    "id": "goteborg-410",
+    "name": "Brunnsbo"
+  },
+  {
+    "id": "goteborg-412",
+    "name": "Backa"
+  },
+  {
+    "id": "goteborg-413",
+    "name": "Skälltorp"
+  },
+  {
+    "id": "goteborg-414",
+    "name": "Kyrkbyn"
+  },
+  {
+    "id": "goteborg-415",
+    "name": "Rambergsstaden"
+  },
+  {
+    "id": "goteborg-416",
+    "name": "Eriksberg"
+  },
+  {
+    "id": "goteborg-417",
+    "name": "Lindholmen"
+  },
+  {
+    "id": "goteborg-501",
+    "name": "Fiskebäck"
+  },
+  {
+    "id": "goteborg-502",
+    "name": "Långedrag"
+  },
+  {
+    "id": "goteborg-503",
+    "name": "Hagen"
+  },
+  {
+    "id": "goteborg-504",
+    "name": "Grimmered"
+  },
+  {
+    "id": "goteborg-505",
+    "name": "Södra Skärgården"
+  },
+  {
+    "id": "goteborg-506",
+    "name": "Bratthammar"
+  },
+  {
+    "id": "goteborg-507",
+    "name": "Guldringen"
+  },
+  {
+    "id": "goteborg-508",
+    "name": "Skattegården"
+  },
+  {
+    "id": "goteborg-509",
+    "name": "Kaverös"
+  },
+  {
+    "id": "goteborg-510",
+    "name": "Flatås"
+  },
+  {
+    "id": "goteborg-511",
+    "name": "Högsbohöjd"
+  },
+  {
+    "id": "goteborg-512",
+    "name": "Högsbotorp"
+  },
+  {
+    "id": "goteborg-513",
+    "name": "Tofta"
+  },
+  {
+    "id": "goteborg-514",
+    "name": "Ruddalen"
+  },
+  {
+    "id": "goteborg-515",
+    "name": "Järnbrott"
+  },
+  {
+    "id": "goteborg-516",
+    "name": "Högsbo"
+  },
+  {
+    "id": "goteborg-517",
+    "name": "Frölunda Torg"
+  },
+  {
+    "id": "goteborg-518",
+    "name": "Ängås"
+  },
+  {
+    "id": "goteborg-519",
+    "name": "Önnered"
+  },
+  {
+    "id": "goteborg-520",
+    "name": "Grevegården"
+  },
+  {
+    "id": "goteborg-521",
+    "name": "Näset"
+  },
+  {
+    "id": "goteborg-522",
+    "name": "Kannebäck"
+  },
+  {
+    "id": "goteborg-523",
+    "name": "Askim"
+  },
+  {
+    "id": "goteborg-524",
+    "name": "Hovås"
+  },
+  {
+    "id": "goteborg-525",
+    "name": "Billdal"
+  },
+  {
+    "id": "goteborg-601",
+    "name": "Lövgärdet"
+  },
+  {
+    "id": "goteborg-602",
+    "name": "Rannebergen"
+  },
+  {
+    "id": "goteborg-603",
+    "name": "Gårdstensberget"
+  },
+  {
+    "id": "goteborg-604",
+    "name": "Angereds centrum"
+  },
+  {
+    "id": "goteborg-605",
+    "name": "Agnesberg"
+  },
+  {
+    "id": "goteborg-606",
+    "name": "Hammarkullen"
+  },
+  {
+    "id": "goteborg-609",
+    "name": "Linnarhult"
+  },
+  {
+    "id": "goteborg-610",
+    "name": "Gunnilse"
+  },
+  {
+    "id": "goteborg-611",
+    "name": "Bergum"
+  },
+  {
+    "id": "goteborg-612",
+    "name": "Hjällbo"
+  },
+  {
+    "id": "goteborg-613",
+    "name": "Eriksbo"
+  },
+  {
+    "id": "goteborg-701",
+    "name": "Norra Biskopsgården"
+  },
+  {
+    "id": "goteborg-702",
+    "name": "Länsmansgården"
+  },
+  {
+    "id": "goteborg-703",
+    "name": "Svartedalen"
+  },
+  {
+    "id": "goteborg-704",
+    "name": "Hjuvik"
+  },
+  {
+    "id": "goteborg-705",
+    "name": "Nolered"
+  },
+  {
+    "id": "goteborg-706",
+    "name": "Björlanda"
+  },
+  {
+    "id": "goteborg-707",
+    "name": "Arendal"
+  },
+  {
+    "id": "goteborg-708",
+    "name": "Södra Biskopsgården"
+  },
+  {
+    "id": "goteborg-709",
+    "name": "Jättesten"
+  }
+]

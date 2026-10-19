@@ -1,0 +1,16 @@
+project_id = "house-scanner-local"
+
+[auth]
+enable_signup = false
+site_url = "http://localhost:5173"
+additional_redirect_urls = []
+
+[auth.email]
+enable_signup = false
+max_frequency = "60s"
+otp_length = 6
+otp_expiry = 600
+
+[functions.house-scanner-ingest]
+verify_jwt = false
+import_map = "./functions/deno.json"

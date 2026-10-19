@@ -1,0 +1,271 @@
+/* --------------------------------- */
+/* HUD                                */
+/* --------------------------------- */
+
+.GameHud-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--secondary);
+}
+
+.GameHud-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.GameHud-combo .GameHud-value {
+  color: #f4c96b;
+}
+
+.GameHud-timer--warning .GameHud-value {
+  color: #f4c96b;
+}
+
+.GameHud-timer--critical .GameHud-value {
+  color: #e8635f;
+  animation: pulse 0.6s ease-in-out infinite;
+}
+
+.GameHud-timer--paused {
+  opacity: 0.5;
+}
+
+.GameHud-bonus .GameHud-value {
+  color: #e879f9;
+}
+
+/* --------------------------------- */
+/* Board                              */
+/* --------------------------------- */
+
+.DuckFeed-boardFrame {
+  position: relative;
+  width: 100%;
+  max-width: 720px;
+  height: 480px;
+}
+
+.GameBoard {
+  position: absolute;
+  inset: 0;
+  background-color: var(--primary-dark);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: background-image 0.3s ease;
+}
+
+.GameBoard--custom-cursor {
+  cursor: none;
+}
+
+.CursorAvatar {
+  position: absolute;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  display: flex;
+}
+
+.GameBoard--bonus-phase {
+  background-image: radial-gradient(
+    circle at center,
+    rgba(244, 201, 107, 0.12),
+    transparent 70%
+  );
+}
+
+.FeedItem {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  position: absolute;
+  transition:
+    left 0.2s cubic-bezier(0, 0.65, 0.03, 1.2),
+    top 0.2s cubic-bezier(0, 0.65, 0.03, 1.2),
+    opacity 0.2s ease;
+}
+
+.FeedItem--bonus-pickup {
+  filter: hue-rotate(200deg) saturate(1.6) brightness(1.2);
+}
+
+.FeedItem--fan-pickup {
+  filter: hue-rotate(100deg) saturate(1.6) brightness(1.1);
+}
+
+.FeedItem--crumb {
+  filter: hue-rotate(280deg) saturate(1.8);
+  animation: crumb-spawn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.FeedItem--muted {
+  opacity: 0.3;
+  filter: grayscale(1);
+  pointer-events: none;
+}
+
+.FeedItem--icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The linear transition spans one SMALL_DUCK_TICK_MS step (50ms) so the
+   duck glides between ticks rather than hopping. */
+.SmallDuck {
+  position: absolute;
+  display: flex;
+  pointer-events: none;
+  transition:
+    left 50ms linear,
+    top 50ms linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .SmallDuck {
+    transition: none;
+  }
+}
+
+.CatchPopup {
+  position: absolute;
+  pointer-events: none;
+  font-size: 1.1rem;
+  font-weight: 600;
+  white-space: nowrap;
+  animation: popup-float 0.7s ease-out forwards;
+}
+
+.CatchPopup--catch {
+  color: #e8635f;
+}
+
+.CatchPopup--time-bonus {
+  color: #e879f9;
+}
+
+/* --------------------------------- */
+/* Start / game-over overlays         */
+/* --------------------------------- */
+
+.StartScreen,
+.GameOverScreen {
+  position: absolute;
+  inset: 0;
+  text-align: center;
+  background-color: var(--primary-dark);
+  border-radius: var(--mantine-radius-md);
+  overflow: auto;
+}
+.InitialsInput {
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  font-family: monospace;
+  font-size: 1.25rem;
+}
+
+.game-field-label {
+  color: inherit;
+  display: block;
+  text-align: center;
+}
+
+/* --------------------------------- */
+/* Animations                         */
+/* --------------------------------- */
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes shake {
+  0% {
+    translate: 0 0;
+    rotate: 0deg;
+  }
+  1% {
+    translate: -1px -2px;
+    rotate: -10deg;
+  }
+  2% {
+    translate: -3px 0;
+    rotate: 30deg;
+  }
+  3% {
+    translate: 0 2px;
+    rotate: 0deg;
+  }
+  4% {
+    translate: 1px -1px;
+    rotate: 30deg;
+  }
+  5% {
+    translate: -1px 2px;
+    rotate: -10deg;
+  }
+  6% {
+    translate: -3px 1px;
+    rotate: 0deg;
+  }
+  7% {
+    translate: 2px 1px;
+    rotate: -10deg;
+  }
+  8% {
+    translate: -1px -1px;
+    rotate: 10deg;
+  }
+  9% {
+    translate: 2px 2px;
+    rotate: 0deg;
+  }
+  10%,
+  100% {
+    translate: 0 0;
+    rotate: 0deg;
+  }
+}
+
+.shake {
+  animation-name: shake;
+  animation-duration: 5s;
+  transform-origin: 50% 50%;
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+}
+
+/* Uses the standalone `scale` property (not `transform`) so it composes
+   cleanly alongside `.shake`'s translate/rotate keyframes on other kinds;
+   crumbs skip `.shake` entirely so this is their only motion. */
+@keyframes crumb-spawn {
+  from {
+    scale: 0;
+  }
+  60% {
+    scale: 0.85;
+  }
+  to {
+    scale: 0.7;
+  }
+}
+
+@keyframes popup-float {
+  0% {
+    opacity: 0;
+    translate: -50% -100%;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    translate: -50% calc(-100% - 28px);
+  }
+}

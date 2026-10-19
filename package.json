@@ -1,0 +1,53 @@
+{
+  "name": "bobbyinscoe-site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "dependencies": {
+    "@mantine/core": "^9.7.2",
+    "@mantine/hooks": "^9.7.2",
+    "@supabase/supabase-js": "^2.117.3",
+    "@tanstack/react-router": "^1.170.32",
+    "lucide-react": "^1.41.0",
+    "maplibre-gl": "^6.14.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "zod": "^4.6.6"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.12",
+    "@electric-sql/pglite": "^0.5.9",
+    "@playwright/test": "^1.64.0",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^26.4.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "jsdom": "^30.0.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2",
+    "vitest": "^5.0.0"
+  },
+  "scripts": {
+    "dev": "vite --host localhost --port 5173",
+    "start": "npm run dev",
+    "check": "biome check .",
+    "format": "biome format --write .",
+    "lint": "biome lint .",
+    "fix": "biome check --write .",
+    "typecheck": "tsc --noEmit",
+    "build": "vite build",
+    "preview": "vite preview --host localhost --port 4173",
+    "prepare": "git config core.hooksPath .githooks",
+    "house-scanner:build": "vite build --config tools/house-scanner/vite.config.ts",
+    "house-scanner:typecheck": "tsc --noEmit -p tools/house-scanner/tsconfig.json",
+    "house-scanner:fixture": "npm run house-scanner:build && node .house-scanner-build/collector.mjs",
+    "house-scanner:accept": "vite build --config tools/house-scanner/acceptance/vite.config.ts && node .house-scanner-build/acceptance.mjs",
+    "house-scanner:accept:typecheck": "tsc --noEmit -p tools/house-scanner/acceptance/tsconfig.json",
+    "test": "vitest run",
+    "test:browser": "playwright test",
+    "test:typecheck": "tsc --noEmit -p tsconfig.verification.json"
+  }
+}

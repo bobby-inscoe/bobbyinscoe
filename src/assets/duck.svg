@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" fill="none"><title>Yellow duck with a pale wing and pink cheek</title>
+  <path d="M40 86c-12-5-25-3-29 5-3 7 4 15 24 17" fill="#e79b75" stroke="#433d27" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M36 112C30 92 33 66 46 48 59 29 80 21 102 24c29 2 47 23 50 49 3 17-4 30-6 44-2 10-1 15 10 16 26 4 46-1 64-15 3 15 3 33-1 48-7 30-29 49-68 51H76c-30 0-43-16-43-40 0-23 6-43 3-65Z" fill="#ffda40" stroke="#433d27" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M42 146c-3 17-5 30-3 40 4 17 19 25 39 25h72c30-1 48-12 59-29-20 16-46 20-75 19H80c-24 0-36-15-38-55Z" fill="#efbe27"/>
+  <path d="M148 146c-23-5-40 4-42 22-3 18 9 30 28 30 21 1 37-6 48-18" fill="#fff0a0"/>
+  <path d="M182 157c-7-7-18-10-34-11-23-5-40 4-42 22-3 18 9 30 28 30 21 1 37-6 48-18" stroke="#433d27" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <ellipse cx="61" cy="82" rx="4" ry="6" fill="#433d27"/>
+  <ellipse cx="62" cy="96" rx="8" ry="5" fill="#eda6a1"/>
+</svg>

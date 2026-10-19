@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /globalassets/fixture-privat/
+Disallow: /contentassets/*.pdf
+Disallow: /sv/om-oss/fixture/
+Allow: /
+Sitemap: https://www.bjurfors.se/sitemap.xml

@@ -1,0 +1,215 @@
+import { useNavigate, useRouter, useRouterState } from '@tanstack/react-router';
+import { useCallback, useEffect } from 'react';
+import type { WorkspaceTab } from '@/features/house-scanner/types/household';
+import {
+  type BrowseSearch,
+  validateBrowseSearch,
+} from '@/features/house-scanner/utils/browse-search';
+
+type Layer = 'filterOpen' | 'select';
+interface BrowseOrigin {
+  index: number;
+  pathname: string;
+  search: BrowseSearch;
+}
+declare module '@tanstack/react-router' {
+  interface HistoryState {
+    houseScannerLayers?: Partial<Record<Layer, BrowseOrigin>>;
+    houseScannerDetailOrigin?: BrowseOrigin;
+  }
+}
+
+const PREFIX = '/projects/house-scanner';
+const destinations = {
+  suggestions: '/projects/house-scanner/listings',
+  favorites: '/projects/house-scanner/favorites',
+  viewings: '/projects/house-scanner/viewings',
+  manual: '/projects/house-scanner/add-link',
+  sources: '/projects/house-scanner/sources',
+  settings: '/projects/house-scanner/settings',
+} as const;
+
+export function useBrowseNavigation() {
+  const navigate = useNavigate();
+  const router = useRouter();
+  const location = useRouterState({ select: (state) => state.location });
+  const search = useRouterState({
+    select: (state) => validateBrowseSearch(state.location.search),
+    structuralSharing: true,
+  });
+  const detailMatch = /^\/projects\/house-scanner\/listings\/([^/]+)\/?$/.exec(
+    location.pathname,
+  );
+  const listingId = detailMatch?.[1] ?? null;
+  const tab = listingId
+    ? search.from === 'favorites'
+      ? 'favorites'
+      : 'suggestions'
+    : ((Object.entries(destinations).find(
+        ([, path]) => path === location.pathname,
+      )?.[0] as WorkspaceTab | undefined) ?? 'suggestions');
+  const layers = location.state.houseScannerLayers ?? {};
+  const origin = (): BrowseOrigin => ({
+    index: location.state.__TSR_index,
+    pathname: location.pathname,
+    search,
+  });
+
+  useEffect(() => {
+    if (location.pathname === PREFIX || location.pathname === `${PREFIX}/`) {
+      void navigate({ to: destinations.suggestions, search, replace: true });
+    }
+  }, [location.pathname, navigate, search]);
+
+  async function returnTo(
+    previous: BrowseOrigin,
+    nextSearch: BrowseSearch,
+    nextLayers: Partial<Record<Layer, BrowseOrigin>> = {},
+  ) {
+    const distance = previous.index - location.state.__TSR_index;
+    if (distance < 0) {
+      await new Promise<void>((resolve) => {
+        const unsubscribe = router.history.subscribe(() => {
+          unsubscribe();
+          resolve();
+        });
+        router.history.go(distance, { ignoreBlocker: true });
+      });
+      if (JSON.stringify(previous.search) === JSON.stringify(nextSearch))
+        return;
+    }
+    await navigate({
+      to: previous.pathname,
+      search: nextSearch,
+      replace: distance >= 0,
+      state: { houseScannerLayers: nextLayers },
+      resetScroll: false,
+    });
+  }
+
+  const updateSearch = useCallback(
+    (patch: Partial<BrowseSearch>) => {
+      void navigate({
+        to: location.pathname,
+        search: {
+          ...search,
+          ...patch,
+          ...(patch.filters ? { filterOpen: false } : {}),
+        },
+        state: {
+          houseScannerLayers: patch.filters
+            ? { ...layers, filterOpen: undefined }
+            : layers,
+          houseScannerDetailOrigin: location.state.houseScannerDetailOrigin,
+        },
+        replace: Boolean(patch.filters && search.filterOpen),
+        resetScroll: false,
+      });
+    },
+    [
+      location.pathname,
+      location.state.houseScannerDetailOrigin,
+      navigate,
+      search,
+      layers,
+    ],
+  );
+
+  const closeLayer = (layer: Layer) => {
+    const nextSearch = { ...search, [layer]: false };
+    const nextLayers = { ...layers, [layer]: undefined };
+    const previous = layers[layer];
+    if (previous) void returnTo(previous, nextSearch, nextLayers);
+    else
+      void navigate({
+        to: location.pathname,
+        search: nextSearch,
+        state: { houseScannerLayers: nextLayers },
+        replace: true,
+        resetScroll: false,
+      });
+  };
+  const setLayer = (layer: Layer, open: boolean) => {
+    if (!open) closeLayer(layer);
+    else
+      void navigate({
+        to: location.pathname,
+        search: { ...search, [layer]: true },
+        state: { houseScannerLayers: { ...layers, [layer]: origin() } },
+        resetScroll: false,
+      });
+  };
+
+  useEffect(
+    () =>
+      router.history.subscribe(({ action, location: next }) => {
+        if (
+          (action.type === 'BACK' || action.type === 'GO') &&
+          search.select &&
+          !listingId &&
+          !search.filterOpen &&
+          validateBrowseSearch(router.parseLocation(next).search).select
+        ) {
+          // Back closes selection before restoring an earlier committed search.
+          void navigate({
+            to: next.pathname,
+            search: { ...search, select: false },
+            state: { houseScannerLayers: { ...layers, select: undefined } },
+            replace: true,
+            resetScroll: false,
+          });
+        }
+      }),
+    [router, navigate, search, listingId, layers],
+  );
+
+  const changeTab = (value: WorkspaceTab) => {
+    void navigate({
+      to: destinations[value],
+      search: { ...search, select: false, filterOpen: false },
+      resetScroll: false,
+    });
+  };
+  const openListing = (id: string) => {
+    void navigate({
+      to: '/projects/house-scanner/listings/$listingId',
+      params: { listingId: id },
+      search: {
+        ...search,
+        from: tab === 'favorites' ? 'favorites' : 'listings',
+      },
+      state: { houseScannerDetailOrigin: origin(), houseScannerLayers: layers },
+      resetScroll: false,
+    });
+  };
+  const closeListing = () => {
+    const previous = location.state.houseScannerDetailOrigin;
+    if (previous) void returnTo(previous, previous.search);
+    else
+      void navigate({
+        to: destinations[tab === 'favorites' ? 'favorites' : 'suggestions'],
+        search: { ...search, from: 'listings' },
+        replace: true,
+        resetScroll: false,
+      });
+  };
+  const seeSelectedOnMap = () => {
+    void navigate({
+      to: destinations[tab === 'favorites' ? 'favorites' : 'suggestions'],
+      search: { ...search, view: 'map' },
+      state: { houseScannerLayers: layers },
+      resetScroll: false,
+    });
+  };
+  return {
+    search,
+    tab,
+    listingId,
+    updateSearch,
+    setLayer,
+    changeTab,
+    openListing,
+    closeListing,
+    seeSelectedOnMap,
+  };
+}

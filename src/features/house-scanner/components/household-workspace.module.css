@@ -1,0 +1,590 @@
+.scope {
+  --scanner-surface: var(--mantine-color-flax-0);
+  --scanner-ink: var(--mantine-color-text);
+  --scanner-line: var(--mantine-color-flax-3);
+  --scanner-accent: var(--mantine-color-moss-7);
+  --scanner-accent-strong: var(--mantine-color-moss-8);
+  --scanner-accent-wash: var(--mantine-color-moss-0);
+  --mantine-color-anchor: var(--scanner-accent);
+  --mantine-color-default: var(--scanner-surface);
+  --mantine-color-default-color: var(--scanner-ink);
+  --mantine-color-default-border: var(--scanner-line);
+  --mantine-color-white: var(--scanner-surface);
+  --mantine-color-dark-6: var(--scanner-surface);
+  --mantine-primary-color-filled: var(--scanner-accent);
+  --mantine-primary-color-filled-hover: var(--scanner-accent-strong);
+  --mantine-primary-color-light: var(--scanner-accent-wash);
+  --mantine-primary-color-light-hover: var(--scanner-accent-wash);
+  --mantine-primary-color-light-color: var(--scanner-accent);
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-lg);
+  color: var(--scanner-ink);
+  min-width: 0;
+}
+.selectionBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+  background: var(--scanner-surface);
+  border-top: 1px solid var(--scanner-line);
+}
+.batchSelect {
+  max-width: 100%;
+  height: auto;
+  min-height: 44px;
+}
+.batchSelect :global(.mantine-Button-label) {
+  white-space: normal;
+}
+.list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--mantine-spacing-md);
+  min-width: 0;
+}
+.card {
+  position: relative;
+  background: var(--scanner-surface);
+  border: 1px solid var(--scanner-line);
+  padding: var(--mantine-spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-sm);
+}
+/* Sizing applies only inside the list; the card is reused in column layouts elsewhere. */
+.list > .card {
+  flex: 1 1 320px;
+  max-width: 480px;
+  min-width: 0;
+}
+/* Pushes the actions row to the bottom so cards in a row share a height. */
+.grow {
+  flex-grow: 1;
+}
+.selected {
+  border-color: var(--scanner-accent);
+  outline: 1px solid var(--scanner-accent);
+}
+/* 3:2 matches the source thumbnails, so nothing is cropped and the card does not jump while loading. */
+.photoLink {
+  display: block;
+  width: 100%;
+}
+/* The star sits over the photo's top-right corner. */
+.photoWrap {
+  position: relative;
+}
+.star {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  /* The glyph fills most of the circle. */
+  font-size: 1.6rem;
+  line-height: 1;
+}
+/* Left of the star: room for a 44 px star on a touch screen plus a gap. */
+.hide {
+  position: absolute;
+  top: 8px;
+  right: 56px;
+  z-index: 1;
+}
+.photo {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+}
+.placeholder {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  background: var(--mantine-color-flax-1);
+  color: var(--mantine-color-dimmed);
+  padding: var(--mantine-spacing-md);
+}
+.viewingPhoto .placeholder {
+  min-height: 0;
+  aspect-ratio: 3 / 2;
+  padding: 0;
+}
+/* A label and its value, two columns; the labels are dimmed and the rows divide on a thin line. */
+.factList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+}
+.factRow {
+  display: grid;
+  grid-template-columns: minmax(7rem, 10rem) minmax(0, 1fr);
+  gap: var(--mantine-spacing-sm);
+  padding-block: 6px;
+  border-bottom: 1px solid var(--scanner-line);
+  font-size: var(--mantine-font-size-sm);
+}
+.factRow:last-child {
+  border-bottom: 0;
+}
+.factRow dt {
+  color: var(--mantine-color-dimmed);
+}
+.factRow dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--mantine-spacing-sm);
+}
+.mapPanel {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-md);
+}
+.listingsPanel {
+  display: contents;
+}
+.pinCard {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 2;
+  width: min(320px, calc(100% - 24px));
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-xs);
+  padding: var(--mantine-spacing-sm);
+  background: var(--scanner-surface);
+  border: 1px solid var(--scanner-line);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 18%);
+}
+/* A wider, shorter photo keeps the card from covering most of the map. */
+.pinCard .photo {
+  aspect-ratio: 16 / 9;
+}
+/* On a phone the selected home is a sheet on the map's lower edge instead of a floating card. */
+@media (max-width: 36em) {
+  :global(body):has(.mobileMapShell) {
+    overflow: hidden;
+  }
+  .scope:has(> .mobileMapShell) > :not(.mobileMapShell) {
+    display: none;
+  }
+  .mobileMapShell {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    height: 100dvh;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+      env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background: var(--scanner-surface);
+  }
+  .mobileMapHeader {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+    border-bottom: 1px solid var(--scanner-line);
+  }
+  .mobileMapHeader :global(.mantine-Button-root) {
+    min-height: 44px;
+    height: auto;
+    padding-inline: 12px;
+  }
+  .mobileMapHeader :global(.mantine-Button-label) {
+    white-space: normal;
+  }
+  .mobileMapStatus {
+    flex-shrink: 0;
+    padding: 4px 8px;
+    gap: 4px;
+    font-size: var(--mantine-font-size-sm);
+  }
+  .mobileMapShell .mapPanel {
+    flex: 1 0 260px;
+    min-height: 260px;
+    gap: 0;
+  }
+  .mobileMapShell .selectionBar {
+    flex-shrink: 0;
+    position: static;
+    padding: 8px;
+  }
+  .pinCard {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    max-height: min(70%, 22rem);
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 4px 8px;
+    padding: 8px;
+    border-bottom: 0;
+    border-radius: var(--mantine-radius-md) var(--mantine-radius-md) 0 0;
+  }
+  .pinPhoto {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    min-width: 0;
+  }
+  .pinPhoto .photo,
+  .pinPhoto .placeholder {
+    width: 72px;
+    height: 72px;
+    min-height: 72px;
+    aspect-ratio: 1;
+    padding: 0;
+  }
+  .pinPhoto .photoAttribution {
+    font-size: 0.625rem;
+    overflow-wrap: anywhere;
+  }
+  .pinHeader,
+  .pinPrice {
+    grid-column: 2;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .pinHeader {
+    gap: 0;
+  }
+  .pinHeader :global(.mantine-Title-root) {
+    font-size: var(--mantine-font-size-md);
+    line-height: 1.3;
+  }
+  .pinHeader :global(.mantine-CloseButton-root) {
+    min-width: 44px;
+    min-height: 44px;
+    flex-shrink: 0;
+  }
+  .pinFacts,
+  .pinActions {
+    grid-column: 1 / -1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .pinActions .hide,
+  .pinActions .star {
+    position: static;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .pinActions :global(.mantine-Button-root) {
+    min-height: 44px;
+  }
+  .pinActions :global(.mantine-Button-label) {
+    white-space: normal;
+  }
+}
+/* Fingers need 44 px; the page root carries this class so the demo and sign-in controls count too. */
+@media (pointer: coarse) {
+  .touch :global(.mantine-Button-root),
+  .touch :global(.mantine-ActionIcon-root),
+  .touch :global(.mantine-CloseButton-root),
+  .touch :global(.mantine-Input-input) {
+    min-height: 44px;
+  }
+  .touch :global(.mantine-ActionIcon-root),
+  .touch :global(.mantine-CloseButton-root) {
+    min-width: 44px;
+  }
+  /* The stepper arrows cannot reach 44 px inside a 44 px field; touch users type the number. */
+  .touch :global(.mantine-NumberInput-controls) {
+    display: none;
+  }
+}
+/* One row that never wraps; on a narrow screen it scrolls sideways. */
+.tabs {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+.tabs > * {
+  flex-shrink: 0;
+}
+/* Stays in the accessibility tree while the active tab already names the view. */
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+/* The workshop stylesheet sets an unlayered, page-wide h1 size that beats Mantine's layered size prop. */
+.pageTitle {
+  font-size: var(--title-fz);
+  line-height: var(--title-lh);
+  letter-spacing: normal;
+}
+/* A full-width photo in a wide sheet would fill most of its height. */
+.drawerBody .photo {
+  max-height: 320px;
+}
+/* Out of a portal the fixed sheet would start at its static position, so pin it to the viewport edge. */
+/* Takes the empty root out of the flex flow, where it would add a gap; the z-index keeps the sheet above the map. */
+.drawerRoot {
+  position: fixed;
+  z-index: var(--mb-z-index);
+}
+.drawerInner {
+  left: 0;
+}
+.drawerTitle {
+  font-family: var(--mantine-font-family-headings);
+  font-size: var(--mantine-h4-font-size);
+}
+/* Controls, then the filters, then the count and the List/Map toggle, so the toggle sits under an open filter panel. */
+.toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "controls" "filters" "view";
+  min-width: 0;
+}
+.toolbarControls {
+  grid-area: controls;
+}
+.toolbarFilters {
+  grid-area: filters;
+  min-width: 0;
+}
+.toolbarFilters[data-open="true"] {
+  padding-top: var(--mantine-spacing-sm);
+}
+.toolbarView {
+  grid-area: view;
+  padding-top: var(--mantine-spacing-sm);
+}
+/* On a wide screen the count and toggle share the first row and the filters open full width below it. */
+@media (min-width: 48em) {
+  .toolbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "controls view" "filters filters";
+    align-items: end;
+  }
+  .toolbarView {
+    padding-top: 0;
+    justify-content: flex-end;
+  }
+}
+.photoButton,
+.titleButton {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.photoButton {
+  display: block;
+  width: 100%;
+}
+.photoButton:focus-visible,
+.titleButton:focus-visible {
+  outline: 2px solid var(--scanner-accent);
+  outline-offset: 3px;
+}
+.titleButton {
+  min-height: 44px;
+  overflow-wrap: anywhere;
+}
+.mobileSummary {
+  display: none;
+}
+.selectionRow :global(.mantine-Checkbox-body) {
+  min-height: 44px;
+  align-items: center;
+}
+.selectionRow :global(.mantine-Checkbox-labelWrapper),
+.selectionRow :global(.mantine-Checkbox-label) {
+  width: 100%;
+  cursor: pointer;
+}
+.selectionRow :global(.mantine-Checkbox-label) {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+@media (max-width: 36em) {
+  .compactCard {
+    position: relative;
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr);
+    align-content: start;
+    column-gap: 12px;
+    row-gap: var(--mantine-spacing-sm);
+    padding: 12px;
+    width: 100%;
+  }
+  .list > .compactCard {
+    max-width: none;
+  }
+  .compactCard .desktopSummary,
+  .compactCard .grow {
+    display: none;
+  }
+  .compactCard .mobileSummary {
+    display: block;
+  }
+  .compactCard .cardPhoto {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    position: static;
+    min-width: 0;
+  }
+  .compactCard .photo,
+  .compactCard .placeholder {
+    width: 88px;
+    height: 88px;
+    min-height: 88px;
+    padding: 0;
+    aspect-ratio: 1;
+  }
+  .compactCard .photoAttribution {
+    font-size: 0.625rem;
+    overflow-wrap: anywhere;
+  }
+  .compactCard .star {
+    top: 8px;
+    right: 8px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .compactCard .cardTitle {
+    grid-column: 2;
+    grid-row: 1;
+    padding-right: 36px;
+    font-size: var(--mantine-font-size-md);
+    line-height: 1.3;
+  }
+  .compactCard .titleButton {
+    min-height: 44px;
+  }
+  .compactCard .cardPrice {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .compactCard .cardPrice > * {
+    font-size: var(--mantine-font-size-md);
+  }
+  .compactCard .cardFacts {
+    overflow-wrap: anywhere;
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+  .compactCard .cardAmenities,
+  .compactCard .cardViewing,
+  .compactCard .cardStatus,
+  .compactCard .cardActions,
+  .compactCard .cardNotice {
+    grid-column: 1 / -1;
+  }
+  .compactCard .cardActions :global(.mantine-Button-root),
+  .compactCard :global(.mantine-Menu-item) {
+    min-height: 44px;
+  }
+  .compactCard :global(.mantine-Badge-root) {
+    height: auto;
+    min-height: 20px;
+    white-space: normal;
+  }
+  .compactCard :global(.mantine-Badge-label) {
+    white-space: normal;
+    overflow: visible;
+  }
+}
+.cardViewing:empty,
+.cardEstimate:empty,
+.cardAmenities:empty {
+  display: none;
+}
+@media (max-width: 36em) {
+  .compactCard .cardEstimate {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 36em) {
+  .compactCard .cardPrice s {
+    font-size: var(--mantine-font-size-xs);
+  }
+}
+@media (max-width: 36em) {
+  .scope {
+    gap: var(--mantine-spacing-xs);
+  }
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--scanner-accent);
+  outline-offset: 2px;
+}
+
+/* Selection sits over the photo so entering the mode never shifts every card's grid. */
+.card > .selectionRow {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--mantine-radius-sm);
+  background: var(--scanner-surface);
+}
+.card > .selectionRow :global(.mantine-Checkbox-labelWrapper) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.card > .selectionRow :global(.mantine-Checkbox-input) {
+  cursor: pointer;
+}
+
+.card > .selectionRow[hidden] {
+  display: none;
+}
+
+@media (max-width: 36em) {
+  .compactCard > .selectionRow {
+    top: 8px;
+    left: 8px;
+    align-items: flex-start;
+    justify-content: flex-start;
+    background: transparent;
+  }
+  .compactCard > .selectionRow :global(.mantine-Checkbox-root) {
+    --checkbox-size: 16px;
+  }
+  .compactCard > .selectionRow :global(.mantine-Checkbox-body) {
+    align-items: flex-start;
+  }
+}
