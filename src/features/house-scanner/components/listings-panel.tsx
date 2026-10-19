@@ -59,6 +59,8 @@ const LazyMap = lazy(() =>
   ),
 );
 
+const LIST_BATCH_SIZE = 32;
+
 class MapLoadBoundary extends Component<
   { children: ReactNode },
   { failed: boolean }
@@ -227,6 +229,12 @@ export function ListingsPanel({
   }, [mobileMap]);
   const [draft, setDraft] = useState(filters);
   const [selection, setSelection] = useState<string[]>([]);
+  const [listRender, setListRender] = useState({
+    visible,
+    sort,
+    count: LIST_BATCH_SIZE,
+  });
+  const listEnd = useRef<HTMLDivElement>(null);
   const stackReturnFocus = useRef<HTMLElement | null>(null);
   const [stackReview, setStackReview] = useState<{
     tab: typeof tab;
@@ -317,6 +325,27 @@ export function ListingsPanel({
       return sort === 'price-asc' ? first - second : second - first;
     });
   }, [visible, sort]);
+  const renderedCount =
+    listRender.visible === visible && listRender.sort === sort
+      ? listRender.count
+      : LIST_BATCH_SIZE;
+  useEffect(() => {
+    if (view !== 'list' || renderedCount >= ordered.length || !listEnd.current)
+      return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting)
+          setListRender({
+            visible,
+            sort,
+            count: Math.min(renderedCount + LIST_BATCH_SIZE, ordered.length),
+          });
+      },
+      { rootMargin: '600px' },
+    );
+    observer.observe(listEnd.current);
+    return () => observer.disconnect();
+  }, [view, renderedCount, ordered.length, visible, sort]);
   const toggleSelection = useCallback(
     (id: string) => {
       if (batchBusy || !eligible.has(id)) return;
@@ -733,7 +762,7 @@ export function ListingsPanel({
       )}
       {view === 'list' ? (
         <div className={styles.list}>
-          {ordered.map((listing) => (
+          {ordered.slice(0, renderedCount).map((listing) => (
             <ListingCard
               key={listing.id}
               listing={listing}
@@ -759,6 +788,9 @@ export function ListingsPanel({
               onFavorite={favoriteListing}
             />
           ))}
+          {renderedCount < ordered.length && (
+            <div ref={listEnd} className={styles.listEnd} aria-hidden="true" />
+          )}
         </div>
       ) : (
         <div className={styles.mapPanel}>

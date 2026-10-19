@@ -67,10 +67,16 @@ async function openMap(page: Page, count = 4) {
   ).toBeVisible();
 }
 
+async function openOptionsOnPhone(page: Page) {
+  if (test.info().project.name === 'narrow')
+    await page.getByRole('button', { name: 'Map options' }).click();
+}
+
 test('keyboard expansion keeps exact stacks, saved state and marker focus', async ({
   page,
 }) => {
   await openMap(page);
+  await openOptionsOnPhone(page);
   const nearby = page.getByRole('button', {
     name: /^3 homes nearby, 1 saved by household/,
   });
@@ -131,18 +137,24 @@ test('zooming merges and splits markers while preserving the selected home', asy
 }) => {
   await openMap(page);
   const nearby = page.getByRole('button', { name: /^3 homes nearby/ });
+  await page.evaluate(() => {
+    const animate = Element.prototype.animate;
+    document.documentElement.dataset.markerAnimations = '0';
+    Element.prototype.animate = function (...args) {
+      if (this.matches('button.maplibregl-marker')) {
+        document.documentElement.dataset.markerAnimations = String(
+          Number(document.documentElement.dataset.markerAnimations) + 1,
+        );
+      }
+      return animate.apply(this, args);
+    };
+  });
   await nearby.click();
   const stack = page.getByRole('button', { name: /^2 homes at this point/ });
   await expect(stack).toBeVisible();
-  await expect
-    .poll(() =>
-      page
-        .locator('button.maplibregl-marker')
-        .evaluateAll((buttons) =>
-          buttons.some((button) => button.getAnimations().length > 0),
-        ),
-    )
-    .toBe(true);
+  expect(
+    Number(await page.locator('html').getAttribute('data-marker-animations')),
+  ).toBeGreaterThan(0);
   await stack.click();
   await page.getByRole('button', { name: 'Home 2', exact: true }).click();
   const preview = page.getByRole('article', {
@@ -169,6 +181,7 @@ test('capture reviews each original home behind a cluster and excludes unlocated
     page.getByRole('button', { name: /^3 homes nearby/ }),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Select', exact: true }).click();
+  await openOptionsOnPhone(page);
   await page
     .getByRole('button', { name: 'Review this area', exact: true })
     .click();
@@ -239,6 +252,7 @@ test('a thousand dense homes retain their counts as clusters expand', async ({
   await expect(
     page.getByRole('article', { name: /^Selected home:/ }),
   ).toHaveCount(0);
+  await openOptionsOnPhone(page);
   await expect(
     page.getByRole('button', { name: 'Not located (1)', exact: true }),
   ).toBeVisible();

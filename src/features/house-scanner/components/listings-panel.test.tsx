@@ -252,3 +252,40 @@ it('does not close a new selection context when an earlier bulk save completes',
   expect(props.onSelectingChange).not.toHaveBeenCalled();
   expect(close).not.toHaveBeenCalled();
 });
+
+it('mounts list cards in batches and resets the rendered batch when order changes', () => {
+  let revealNext = () => {};
+  vi.stubGlobal(
+    'IntersectionObserver',
+    class {
+      constructor(callback: IntersectionObserverCallback) {
+        revealNext = () =>
+          callback(
+            [{ isIntersecting: true } as IntersectionObserverEntry],
+            this as unknown as IntersectionObserver,
+          );
+      }
+      observe() {}
+      disconnect() {}
+    },
+  );
+  const props = panelProps(async () => true);
+  const listings = Array.from({ length: 70 }, (_, index) => ({
+    ...props.snapshot.listings[0],
+    id: `10000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+    title: `Home ${index}`,
+  }));
+  const large = {
+    ...props,
+    snapshot: { ...props.snapshot, listings },
+    visible: listings,
+    scoped: listings,
+  };
+  const { rerender } = render(<PanelHarness {...large} />);
+  expect(screen.getAllByRole('article')).toHaveLength(32);
+  act(revealNext);
+  expect(screen.getAllByRole('article')).toHaveLength(64);
+  rerender(<PanelHarness {...large} sort="price-asc" />);
+  expect(screen.getAllByRole('article')).toHaveLength(32);
+  vi.unstubAllGlobals();
+});
