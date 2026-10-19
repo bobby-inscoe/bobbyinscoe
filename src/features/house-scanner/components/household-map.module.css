@@ -24,6 +24,9 @@
   width: 100%;
   border: 1px solid var(--scanner-line);
 }
+.markerRoot {
+  display: inline-flex;
+}
 .marker {
   box-sizing: border-box;
   padding-inline: 6px;

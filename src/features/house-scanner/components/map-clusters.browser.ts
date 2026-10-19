@@ -132,6 +132,16 @@ test('keyboard expansion keeps exact stacks, saved state and marker focus', asyn
   await expect(stack).toBeFocused();
 });
 
+test('the synthetic demo exposes a nearby cluster', async ({ page }) => {
+  await page.goto('/projects/house-scanner/listings?view=map');
+  await page
+    .getByRole('button', { name: 'Explore the synthetic demo' })
+    .click();
+  await expect(
+    page.getByRole('button', { name: /^2 homes nearby/ }),
+  ).toBeVisible();
+});
+
 test('zooming merges and splits markers while preserving the selected home', async ({
   page,
 }) => {
@@ -141,7 +151,13 @@ test('zooming merges and splits markers while preserving the selected home', asy
     const animate = Element.prototype.animate;
     document.documentElement.dataset.markerAnimations = '0';
     Element.prototype.animate = function (...args) {
-      if (this.matches('button.maplibregl-marker')) {
+      const keyframes = args[0];
+      if (
+        this instanceof HTMLButtonElement &&
+        this.parentElement?.classList.contains('maplibregl-marker') &&
+        Array.isArray(keyframes) &&
+        keyframes[0]?.transform !== keyframes.at(-1)?.transform
+      ) {
         document.documentElement.dataset.markerAnimations = String(
           Number(document.documentElement.dataset.markerAnimations) + 1,
         );
@@ -219,7 +235,7 @@ test('a thousand dense homes retain their counts as clusters expand', async ({
   await openMap(page, 999);
   const markers = page
     .getByLabel('Listing map')
-    .locator('button.maplibregl-marker');
+    .locator('.maplibregl-marker button');
   await expect.poll(() => markers.count()).toBeGreaterThan(0);
   const counts = await markers.evaluateAll((buttons) =>
     buttons.map((button) =>
