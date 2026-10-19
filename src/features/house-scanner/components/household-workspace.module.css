@@ -45,6 +45,10 @@
   gap: var(--mantine-spacing-md);
   min-width: 0;
 }
+.listEnd {
+  flex-basis: 100%;
+  height: 1px;
+}
 .card {
   position: relative;
   background: var(--scanner-surface);
@@ -299,6 +303,7 @@
   .touch :global(.mantine-CloseButton-root),
   .touch :global(.mantine-Input-input) {
     min-height: 44px;
+    font-size: 16px;
   }
   .touch :global(.mantine-ActionIcon-root),
   .touch :global(.mantine-CloseButton-root) {
@@ -555,7 +560,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--mantine-radius-sm);
+  border-radius: 0 0 var(--mantine-radius-sm) 0;
   background: var(--scanner-surface);
 }
 .card > .selectionRow :global(.mantine-Checkbox-labelWrapper) {

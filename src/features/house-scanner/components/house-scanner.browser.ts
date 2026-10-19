@@ -615,6 +615,8 @@ test('the satellite toggle swaps the basemap, names the provider and keeps the m
   const imagery = await routeImagery(page);
   await openDemo(page);
   await page.getByRole('button', { name: 'Map', exact: true }).click();
+  if (test.info().project.name === 'narrow')
+    await page.getByRole('button', { name: 'Map options' }).click();
   const marker = page.getByRole('button', {
     name: /^2 homes at this point/,
   });
@@ -633,9 +635,6 @@ test('the satellite toggle swaps the basemap, names the provider and keeps the m
   await expect(satellite).toHaveAttribute('aria-pressed', 'true');
   await expect(
     page.getByText('Imagery © Esri, Maxar, Earthstar Geographics'),
-  ).toBeVisible();
-  await expect(
-    page.getByText('Map tiles come from Esri', { exact: false }),
   ).toBeVisible();
   await expect.poll(() => imagery.length).toBeGreaterThan(0);
   // Satellite keeps street and place names through Esri's reference tiles.
@@ -657,9 +656,6 @@ test('the satellite toggle swaps the basemap, names the provider and keeps the m
   await expect(
     page.getByRole('button', { name: 'Street map' }),
   ).toHaveAttribute('aria-pressed', 'true');
-  await expect(
-    page.getByText('Map tiles come from OpenFreeMap', { exact: false }),
-  ).toBeVisible();
   await expect(marker).toBeVisible();
   expect(await offset()).toEqual(before);
 });
@@ -893,9 +889,11 @@ test('the pin card Details opens the dialog over the map without switching to th
       return !element.contains(top);
     });
   expect(await covered(pinCard)).toBe(true);
-  expect(await covered(page.getByRole('group', { name: 'Basemap' }))).toBe(
-    true,
-  );
+  const mapControl =
+    test.info().project.name === 'narrow'
+      ? page.getByRole('button', { name: 'Map options' })
+      : page.getByRole('group', { name: 'Basemap' });
+  expect(await covered(mapControl)).toBe(true);
   await expect(
     page.getByRole('article', { name: 'Example balcony home' }),
   ).toHaveCount(0);
@@ -990,6 +988,8 @@ test('See on map opens a located home and unlocated homes remain available from 
   ).toHaveCount(0);
   const before = await locatedMarker.boundingBox();
   if (!before) throw new Error('Missing located marker box.');
+  if (test.info().project.name === 'narrow')
+    await page.getByRole('button', { name: 'Map options' }).click();
   await page
     .getByRole('button', { name: 'Not located (3)', exact: true })
     .click();
@@ -1258,6 +1258,22 @@ test('the basemap toggle sits in the map corner, clear of the map navigation con
   await routeImagery(page);
   await openDemo(page);
   await page.getByRole('button', { name: 'Map', exact: true }).click();
+  if (test.info().project.name === 'narrow') {
+    const options = page.getByRole('button', { name: 'Map options' });
+    await expect(options).toBeVisible();
+    const [mapBox, optionsBox, navBox] = await Promise.all([
+      page.getByLabel('Listing map').boundingBox(),
+      options.boundingBox(),
+      page.locator('.maplibregl-ctrl-top-right').boundingBox(),
+    ]);
+    if (!mapBox || !optionsBox || !navBox) throw new Error('Missing box.');
+    expect(optionsBox.x).toBeGreaterThanOrEqual(mapBox.x);
+    expect(optionsBox.x + optionsBox.width).toBeLessThanOrEqual(
+      mapBox.x + mapBox.width,
+    );
+    expect(optionsBox.y + optionsBox.height).toBeLessThanOrEqual(navBox.y);
+    return;
+  }
   const toggle = page.getByRole('group', { name: 'Basemap' });
   await expect(toggle).toBeVisible();
   const [mapBox, toggleBox, navBox] = await Promise.all([
@@ -1307,6 +1323,7 @@ test('the selected home is a bottom sheet on a phone and a floating card on desk
     .toBe(true);
   if (!narrow) return;
   // The local street fixture has no attribution; the intercepted imagery style does.
+  await page.getByRole('button', { name: 'Map options' }).click();
   await page.getByRole('button', { name: 'Satellite', exact: true }).click();
   // The tile attribution must stay readable above the sheet.
   await expect

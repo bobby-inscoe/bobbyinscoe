@@ -32,9 +32,15 @@ test.beforeEach(async ({ context, page }) => {
   await page.getByRole('button', { name: 'Select', exact: true }).click();
 });
 
+async function openOptionsOnPhone(page: import('@playwright/test').Page) {
+  if (test.info().project.name === 'narrow')
+    await page.getByRole('button', { name: 'Map options' }).click();
+}
+
 test('map capture reviews exact homes, protects favorites, hides and undoes the batch', async ({
   page,
 }) => {
+  await openOptionsOnPhone(page);
   await page
     .getByRole('button', { name: 'Review this area', exact: true })
     .click();
@@ -71,6 +77,7 @@ test('map capture reviews exact homes, protects favorites, hides and undoes the 
 test('review can be cancelled and Back closes map selection without hiding', async ({
   page,
 }) => {
+  await openOptionsOnPhone(page);
   const capture = page.getByRole('button', {
     name: 'Review this area',
     exact: true,

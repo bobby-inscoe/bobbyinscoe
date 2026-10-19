@@ -1,4 +1,6 @@
-import { Button, Group, Popover, Stack, Text } from '@mantine/core';
+import { ActionIcon, Button, Group, Popover, Stack, Text } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
+import { Settings2 } from 'lucide-react';
 import {
   Map as MapLibreMap,
   Marker,
@@ -29,6 +31,7 @@ const MARKER_MARGIN = 24;
 const CARD_GAP = 24;
 // Minimum marker size on coarse pointers.
 const MARKER_SIZE = 44;
+const MOBILE_CONTROLS_INSET = 200;
 
 function esriReference(service: string) {
   return {
@@ -175,6 +178,8 @@ export function HouseholdMap({
   const [loaded, setLoaded] = useState(false);
   const [stack, setStack] = useState<string[]>([]);
   const [unlocatedOpen, setUnlocatedOpen] = useState(false);
+  const [mobileOptionsOpen, setMobileOptionsOpen] = useState(false);
+  const mobile = useMediaQuery('(max-width: 36em)');
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
   const previewRef = useRef(onPreview);
@@ -217,6 +222,7 @@ export function HouseholdMap({
   const centerLatitude = first?.latitude ?? 57.7089;
   useEffect(() => {
     if (!container.current || error) return;
+    const phoneLayout = window.matchMedia('(max-width: 36em)').matches;
     let instance: MapLibreMap | null = null;
     try {
       const savedCamera = camera?.current;
@@ -230,7 +236,9 @@ export function HouseholdMap({
         ...(savedCamera ? {} : { bounds }),
         fitBoundsOptions: {
           padding: {
-            top: Math.max(56, controlsInset(controlsRef.current)),
+            top: phoneLayout
+              ? MOBILE_CONTROLS_INSET
+              : Math.max(56, controlsInset(controlsRef.current)),
             right: 96,
             bottom: 56,
             left: 96,
@@ -468,7 +476,9 @@ export function HouseholdMap({
     const cardInset = cardHeight ? cardHeight + CARD_GAP : 0;
     // Clear the corner controls only while a whole marker still fits between them and the card.
     const top = Math.min(
-      controlsInset(controlsRef.current),
+      window.matchMedia('(max-width: 36em)').matches
+        ? MOBILE_CONTROLS_INSET
+        : controlsInset(controlsRef.current),
       Math.max(0, clientHeight - cardInset - 2 * MARKER_MARGIN - MARKER_SIZE),
     );
     const freeTop = Math.max(top, MARKER_MARGIN);
@@ -557,7 +567,100 @@ export function HouseholdMap({
     observer.observe(element);
     return () => observer.disconnect();
   }, [error]);
-  const provider = satellite ? 'Esri' : 'OpenFreeMap';
+  const mapOptions = (
+    <Stack gap="xs">
+      {controls}
+      <MapPinGuide />
+      {onCaptureView && (
+        <Button
+          size="xs"
+          variant="default"
+          disabled={!loaded || captureDisabled || Boolean(error)}
+          onClick={(event) => {
+            event.stopPropagation();
+            setMobileOptionsOpen(false);
+            if (mobile) requestAnimationFrame(captureView);
+            else captureView();
+          }}
+        >
+          Review this area
+        </Button>
+      )}
+      {unlocated.length > 0 && (
+        <Popover
+          opened={unlocatedOpen}
+          onChange={setUnlocatedOpen}
+          position="bottom-start"
+          width="min(340px, calc(100vw - 48px))"
+          trapFocus
+          withinPortal={false}
+        >
+          <Popover.Target>
+            <Button
+              size="xs"
+              variant="default"
+              aria-expanded={unlocatedOpen}
+              aria-haspopup="dialog"
+              onClick={() => setUnlocatedOpen((open) => !open)}
+            >
+              Not located ({unlocated.length})
+            </Button>
+          </Popover.Target>
+          <Popover.Dropdown
+            ref={pickerRef}
+            role="dialog"
+            aria-label="Not located homes"
+            className={styles.unlocatedPicker}
+          >
+            <Stack gap="xs">
+              <Text size="sm">These homes have no known position.</Text>
+              {unlocated.map((point) => (
+                <Button
+                  key={point.id}
+                  variant={
+                    (
+                      selectionMode
+                        ? checkedIds.has(point.id)
+                        : point.id === selectedId
+                    )
+                      ? 'filled'
+                      : 'default'
+                  }
+                  aria-pressed={
+                    selectionMode
+                      ? checkedIds.has(point.id)
+                      : point.id === selectedId
+                  }
+                  disabled={
+                    selectionMode &&
+                    (selectionDisabled ||
+                      point.dimmed === true ||
+                      (checkedIds.size >= 500 && !checkedIds.has(point.id)))
+                  }
+                  className={styles.unlocatedChoice}
+                  onClick={() => {
+                    setStack([]);
+                    onSelect(point.id);
+                    setUnlocatedOpen(false);
+                    setMobileOptionsOpen(false);
+                  }}
+                >
+                  {point.savedByMe ? '★ ' : point.savedByHousehold ? '☆ ' : ''}
+                  {point.label}
+                </Button>
+              ))}
+            </Stack>
+          </Popover.Dropdown>
+        </Popover>
+      )}
+      {located.length === 0 && unlocated.length > 0 && (
+        <Text size="xs" className={styles.noPositions}>
+          These homes have no known position. Choose Not located to view their
+          details.
+        </Text>
+      )}
+    </Stack>
+  );
   const availableStack =
     selectedId !== null && stack.includes(selectedId)
       ? stack.filter((id) => points.some((point) => point.id === id))
@@ -576,99 +679,31 @@ export function HouseholdMap({
         />
         {(controls || onCaptureView || unlocated.length > 0) && (
           <div ref={controlsRef} className={styles.controls}>
-            <Stack gap="xs">
-              {controls}
-              <MapPinGuide />
-              {onCaptureView && (
-                <Button
-                  size="xs"
-                  variant="default"
-                  disabled={!loaded || captureDisabled || Boolean(error)}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    captureView();
-                  }}
-                >
-                  Review this area
-                </Button>
-              )}
-              {unlocated.length > 0 && (
-                <Popover
-                  opened={unlocatedOpen}
-                  onChange={setUnlocatedOpen}
-                  position="bottom-start"
-                  width="min(340px, calc(100vw - 48px))"
-                  trapFocus
-                >
-                  <Popover.Target>
-                    <Button
-                      size="xs"
-                      variant="default"
-                      aria-expanded={unlocatedOpen}
-                      aria-haspopup="dialog"
-                      onClick={() => setUnlocatedOpen((open) => !open)}
-                    >
-                      Not located ({unlocated.length})
-                    </Button>
-                  </Popover.Target>
-                  <Popover.Dropdown
-                    ref={pickerRef}
-                    role="dialog"
-                    aria-label="Not located homes"
-                    className={styles.unlocatedPicker}
+            {mobile ? (
+              <Popover
+                opened={mobileOptionsOpen}
+                onChange={setMobileOptionsOpen}
+                position="bottom-end"
+                withinPortal={false}
+              >
+                <Popover.Target>
+                  <ActionIcon
+                    variant="default"
+                    aria-label="Map options"
+                    aria-expanded={mobileOptionsOpen}
+                    aria-haspopup="dialog"
+                    onClick={() => setMobileOptionsOpen((open) => !open)}
                   >
-                    <Stack gap="xs">
-                      <Text size="sm">These homes have no known position.</Text>
-                      {unlocated.map((point) => (
-                        <Button
-                          key={point.id}
-                          variant={
-                            (
-                              selectionMode
-                                ? checkedIds.has(point.id)
-                                : point.id === selectedId
-                            )
-                              ? 'filled'
-                              : 'default'
-                          }
-                          aria-pressed={
-                            selectionMode
-                              ? checkedIds.has(point.id)
-                              : point.id === selectedId
-                          }
-                          disabled={
-                            selectionMode &&
-                            (selectionDisabled ||
-                              point.dimmed === true ||
-                              (checkedIds.size >= 500 &&
-                                !checkedIds.has(point.id)))
-                          }
-                          className={styles.unlocatedChoice}
-                          onClick={() => {
-                            setStack([]);
-                            onSelect(point.id);
-                            setUnlocatedOpen(false);
-                          }}
-                        >
-                          {point.savedByMe
-                            ? '★ '
-                            : point.savedByHousehold
-                              ? '☆ '
-                              : ''}
-                          {point.label}
-                        </Button>
-                      ))}
-                    </Stack>
-                  </Popover.Dropdown>
-                </Popover>
-              )}
-              {located.length === 0 && unlocated.length > 0 && (
-                <Text size="xs" className={styles.noPositions}>
-                  These homes have no known position. Choose Not located to view
-                  their details.
-                </Text>
-              )}
-            </Stack>
+                    <Settings2 size={20} aria-hidden="true" />
+                  </ActionIcon>
+                </Popover.Target>
+                <Popover.Dropdown role="dialog" aria-label="Map options">
+                  {mapOptions}
+                </Popover.Dropdown>
+              </Popover>
+            ) : (
+              mapOptions
+            )}
           </div>
         )}
         {/* Measured for the card height; the card keeps its own absolute position. */}
@@ -715,10 +750,6 @@ export function HouseholdMap({
           )}
         </Group>
       )}
-      <Text size="xs" c="dimmed">
-        Map tiles come from {provider}, which sees your address and the area you
-        view.
-      </Text>
     </Stack>
   );
 }

@@ -53,12 +53,26 @@
 }
 /* The bottom sheet takes about 330 px, so a phone map needs more height to leave the pin in sight. */
 @media (max-width: 36em) {
+  .controls {
+    left: auto;
+    right: 12px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    backdrop-filter: none;
+  }
   .map {
     height: clamp(430px, 80svh, 680px);
   }
   /* The selected-home sheet spans the bottom edge; keep the attribution visible above it. */
   .map :global(.maplibregl-ctrl-bottom-right) {
     bottom: var(--card-height, 0px);
+  }
+  .map :global(.maplibregl-ctrl-top-right) {
+    top: 56px;
+  }
+  .map :global(.maplibregl-ctrl-icon) {
+    background-size: 20px 20px;
   }
 }
 @media (pointer: coarse) {
