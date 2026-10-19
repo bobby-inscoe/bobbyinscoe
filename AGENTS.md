@@ -47,6 +47,13 @@ never adapted to this project. Say so and ask the developer for the ones your ta
 needs, usually the stack and the test command. Do not guess commands or invent
 conventions from what you see in the tree.
 
+## Local worktrees
+
+Keep additional worktrees beside the primary checkout, under
+`<primary-checkout>-worktrees/<task>`. Find the primary checkout with
+`git worktree list` before creating one. Use a separate branch and directory per
+task, named for the work rather than the agent running it.
+
 ## For the developer
 
 You invoke skills by name in plain language: "plan this", "diagnose this",
