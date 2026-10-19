@@ -41,7 +41,10 @@ test('routed favorites survive details, Back, Forward and section changes', asyn
   await expect(page).toHaveURL(/house-scanner\/add-link/);
   await page.goBack();
   await expect(page.getByRole('article')).toHaveCount(2);
-  await expect(page.getByRole('button', { name: 'Leave demo' })).toBeVisible();
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await expect(
+    page.getByRole('menuitem', { name: 'Leave demo' }),
+  ).toBeVisible();
 });
 
 test('direct detail links require access and resolve independently of filters', async ({

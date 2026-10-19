@@ -143,40 +143,27 @@ describe('reason chips', () => {
   const chips = (
     facts: Partial<Listing['facts']>,
     changes?: Partial<Listing>,
-  ) => reasonChips(home(facts, changes), SYNTHETIC_SNAPSHOT);
-  it('lists known facts in a fixed order and stops at three', () => {
-    expect(chips({}).facts).toEqual(['Balcony', 'Lift', 'Above ground floor']);
-    expect(
-      chips({ outdoor: 'both', lift: false, groundFloor: true }).facts,
-    ).toEqual(['Balcony and terrace', 'Glazed']);
-    expect(chips({ outdoor: 'terrace' }).facts[0]).toBe('Terrace');
+  ) => reasonChips(home(facts, changes));
+  it('lists confirmed features in a fixed order', () => {
+    expect(chips({})).toEqual(['Balcony', 'Lift', 'Glazed']);
+    expect(chips({ outdoor: 'both', lift: false, groundFloor: true })).toEqual([
+      'Balcony and terrace',
+      'Glazed',
+    ]);
+    expect(chips({ outdoor: 'terrace' })[0]).toBe('Terrace');
   });
-  it('leaves out unknown, false and disputed facts', () => {
+  it('leaves out unknown, false and disputed facts, including floor position', () => {
     expect(
-      chips({ outdoor: null, lift: null, groundFloor: null, glazed: null })
-        .facts,
+      chips({ outdoor: null, lift: null, groundFloor: null, glazed: null }),
     ).toEqual([]);
     expect(
-      chips({ outdoor: 'none', lift: false, groundFloor: true, glazed: false })
-        .facts,
+      chips({ outdoor: 'none', lift: false, groundFloor: true, glazed: false }),
     ).toEqual([]);
-    expect(
-      chips({}, { conflicts: ['outdoor', 'lift', 'glazed'] }).facts,
-    ).toEqual(['Above ground floor']);
-  });
-  it('names the first listing-specific caveat and skips the ones nearly every home has', () => {
-    expect(chips({}).caveat).toBeNull();
-    expect(chips({ baseFeeSek: 5001 }).caveat).toBe('Fee above reference');
-    expect(chips({ baseFeeSek: 4500, mandatoryMonthlySek: 600 }).caveat).toBe(
-      'Monthly total above reference',
-    );
-    expect(chips({ liftServesHome: false, stepFree: false }).caveat).toBe(
-      'Lift not to the home',
-    );
-    expect(chips({ stepFree: false }).caveat).toBe('Not step-free');
-    expect(chips({ glazed: false }).caveat).toBe('Unglazed outdoor space');
-    expect(chips({ glazed: false, largePrivateTerrace: true }).caveat).toBe(
-      'Large unglazed terrace',
-    );
+    expect(chips({}, { conflicts: ['outdoor', 'lift', 'glazed'] })).toEqual([]);
+    expect(chips({ baseFeeSek: 5001, stepFree: false })).toEqual([
+      'Balcony',
+      'Lift',
+      'Glazed',
+    ]);
   });
 });

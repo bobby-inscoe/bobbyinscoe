@@ -71,44 +71,25 @@ export const MATCH_CHOICES: {
   },
 ];
 
-// Short card labels for the caveats that differ between homes. The ones nearly every home
-// carries (transit, nature, mandatory additions) are left out because they say nothing.
-const CAVEAT_CHIPS: Record<string, string> = {
-  'Base monthly fee exceeds profile reference': 'Fee above reference',
-  'Known monthly total exceeds profile reference':
-    'Monthly total above reference',
-  'Lift does not serve the home': 'Lift not to the home',
-  'Access is not fully step-free': 'Not step-free',
-  'Outdoor space is unglazed': 'Unglazed outdoor space',
-  'Large private unglazed terrace': 'Large unglazed terrace',
-};
-
 const OUTDOOR_CHIPS = {
   balcony: 'Balcony',
   terrace: 'Terrace',
   both: 'Balcony and terrace',
 } as const;
 
-// Facts first, in a fixed order and only when known and undisputed; then at most one caveat.
-export function reasonChips(listing: Listing, snapshot: Snapshot) {
+// Compact cards show only confirmed features; match caveats remain in details.
+export function reasonChips(listing: Listing) {
   const { facts, conflicts } = listing;
-  const known = (key: 'outdoor' | 'lift' | 'groundFloor' | 'glazed') =>
+  const known = (key: 'outdoor' | 'lift' | 'glazed') =>
     !conflicts.includes(key);
   const chips = [
     facts.outdoor && facts.outdoor !== 'none' && known('outdoor')
       ? OUTDOOR_CHIPS[facts.outdoor]
       : null,
     facts.lift === true && known('lift') ? 'Lift' : null,
-    facts.groundFloor === false && known('groundFloor')
-      ? 'Above ground floor'
-      : null,
     facts.glazed === true && known('glazed') ? 'Glazed' : null,
   ].filter((chip) => chip !== null);
-  const caveat = listingMatches(listing, snapshot)
-    .flatMap(({ result }) => result.caveats)
-    .map((text) => CAVEAT_CHIPS[text])
-    .find((label) => label !== undefined);
-  return { facts: chips.slice(0, 3), caveat: caveat ?? null };
+  return chips;
 }
 
 export function listingMatches(listing: Listing, snapshot: Snapshot) {

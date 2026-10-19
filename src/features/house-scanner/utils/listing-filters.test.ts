@@ -101,6 +101,14 @@ describe('freshness filters', () => {
   });
 });
 
+it('searches listing titles without case or surrounding spaces', () => {
+  const listing = home({}, { title: 'Linnégatan 12' });
+  expect(passes(listing, { titleQuery: '  LINNÉGATAN  ' })).toBe(true);
+  expect(passes(listing, { titleQuery: '14' })).toBe(false);
+  expect(activeFilterCount({ ...emptyFilters, titleQuery: ' 12 ' })).toBe(1);
+  expect(activeFilterCount({ ...emptyFilters, titleQuery: '  ' })).toBe(0);
+});
+
 describe('neighborhood filters', () => {
   const [first, second, third] = neighborhoods;
   const candidate = (neighborhood: (typeof neighborhoods)[number]) => ({

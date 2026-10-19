@@ -32,12 +32,16 @@ export interface HouseholdWorkspaceProps extends Partial<HouseholdActions> {
   snapshot: Snapshot;
   userId: string;
   mapStyleUrl?: string;
+  onDemoToggle?: () => void;
+  onSignOut?: () => void;
 }
 
 export function HouseholdWorkspace({
   snapshot,
   userId,
   mapStyleUrl,
+  onDemoToggle,
+  onSignOut,
   onSaveFavorite,
   onSaveFavorites,
   onRemoveFavorite,
@@ -209,6 +213,15 @@ export function HouseholdWorkspace({
             <Menu.Item onClick={() => navigation.changeTab('settings')}>
               Settings
             </Menu.Item>
+            {onDemoToggle && (
+              <>
+                <Menu.Divider />
+                <Menu.Item onClick={onDemoToggle}>
+                  {synthetic ? 'Leave demo' : 'Demo'}
+                </Menu.Item>
+              </>
+            )}
+            {onSignOut && <Menu.Item onClick={onSignOut}>Sign out</Menu.Item>}
           </Menu.Dropdown>
         </Menu>
       </Group>

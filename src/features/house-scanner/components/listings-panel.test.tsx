@@ -57,7 +57,7 @@ function panelProps(onHideMany: PanelProps['onHideMany']): PanelProps {
     onSelectingChange: vi.fn(),
     filtersOpen: false,
     onFiltersOpenChange: vi.fn(),
-    sort: 'default',
+    sort: 'newest',
     onSortChange: vi.fn(),
     onFiltersChange: vi.fn(),
     filterHosts: [],

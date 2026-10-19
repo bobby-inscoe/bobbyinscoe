@@ -30,6 +30,19 @@ test.beforeEach(async ({ context, page }) => {
   await page.route('https://server.arcgisonline.com/**', (route) =>
     route.fulfill({ body: PIXEL_PNG, contentType: 'image/png' }),
   );
+  await page.route(
+    '**/src/features/house-scanner/mock/synthetic-household.ts*',
+    async (route) => {
+      const response = await route.fetch();
+      await route.fulfill({
+        response,
+        body: `${await response.text()}
+          SYNTHETIC_SNAPSHOT.listings.find((home) => home.title === 'Example detached home').coordinates =
+            SYNTHETIC_SNAPSHOT.listings.find((home) => home.title === 'Example balcony home').coordinates;
+        `,
+      });
+    },
+  );
   await page.goto('/projects/house-scanner/listings');
   await page
     .getByRole('button', { name: 'Explore the synthetic demo' })
@@ -40,10 +53,6 @@ test('mobile map fills the viewport and List restores the full listing view', as
   page,
 }) => {
   const mapToggle = page.getByRole('button', { name: 'Map', exact: true });
-  const leaveDemo = page.getByRole('button', {
-    name: 'Leave demo',
-    exact: true,
-  });
   await mapToggle.click();
   const shell = page.locator('[aria-label="Map browsing"]');
   await expect(shell).toBeVisible();
@@ -145,10 +154,14 @@ test('mobile map fills the viewport and List restores the full listing view', as
   await expect(page.locator('[aria-label="Map browsing"]')).toHaveCount(0);
   await expect(page.getByRole('article')).toHaveCount(5);
   await expect(mapToggle).toBeFocused();
-  await expect(leaveDemo).toBeEnabled();
-  expect(
-    await leaveDemo.evaluate((button) => button.closest('[inert]')),
-  ).toBeNull();
+  const more = page.getByRole('button', { name: 'More', exact: true });
+  await expect(more).toBeEnabled();
+  expect(await more.evaluate((button) => button.closest('[inert]'))).toBeNull();
+  await more.click();
+  await expect(
+    page.getByRole('menuitem', { name: 'Leave demo' }),
+  ).toBeVisible();
+  await page.keyboard.press('Escape');
   expect(
     await page.locator('body').evaluate((body) => body.style.overflow),
   ).toBe('');

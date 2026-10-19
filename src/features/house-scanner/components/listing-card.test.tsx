@@ -209,6 +209,14 @@ it('shows the status badge when a home is not available or its status is dispute
   expect(screen.getByText('Status disputed')).toBeTruthy();
 });
 
+it('does not show an unknown status badge', async () => {
+  const base = SYNTHETIC_SNAPSHOT.listings[0];
+  await renderOverridden({
+    listing: { facts: { ...base.facts, status: 'unknown' } },
+  });
+  expect(screen.queryByText('unknown', { exact: true })).toBeNull();
+});
+
 it('prefixes the match label with the profile name only when several profiles are enabled', async () => {
   const [profile] = SYNTHETIC_SNAPSHOT.profiles;
   await renderOverridden({});
@@ -241,18 +249,18 @@ it('styles the original-listing link as a default button with the same label and
   expect(link.getAttribute('referrerpolicy')).toBe('no-referrer');
 });
 
-it('shows up to three fact chips and one caveat chip, with no chip for the caveats every home has', async () => {
+it('shows confirmed feature chips without caveats', async () => {
   const base = SYNTHETIC_SNAPSHOT.listings[0];
   await renderOverridden({});
-  for (const label of ['Balcony', 'Lift', 'Above ground floor'])
+  for (const label of ['Balcony', 'Lift', 'Glazed'])
     expect(screen.getByText(label)).toBeTruthy();
-  expect(screen.queryByText('Glazed')).toBeNull();
+  expect(screen.queryByText('Above ground floor')).toBeNull();
   expect(screen.queryByText('Transit not checked')).toBeNull();
   cleanup();
   await renderOverridden({
     listing: { facts: { ...base.facts, stepFree: false } },
   });
-  expect(screen.getAllByText('Not step-free').length).toBeGreaterThan(0);
+  expect(screen.queryByText('Not step-free')).toBeNull();
 });
 
 it('opens internal details from both the photo fallback and title', async () => {
@@ -345,13 +353,13 @@ it('keeps photo attribution and a working detail target when an image fails', as
   expect(onSelect).toHaveBeenCalledOnce();
 });
 
-it('keeps required lift uncertainty in the compact summary', async () => {
+it('keeps required lift uncertainty out of compact feature chips', async () => {
   const base = SYNTHETIC_SNAPSHOT.listings[0];
   await renderOverridden({ listing: { facts: { ...base.facts, lift: null } } });
-  expect(screen.getByText('Lift unknown')).toBeTruthy();
+  expect(screen.queryByText('Lift unknown')).toBeNull();
   cleanup();
   await renderOverridden({ listing: { conflicts: ['lift'] } });
-  expect(screen.getByText('Lift disputed')).toBeTruthy();
+  expect(screen.queryByText('Lift disputed')).toBeNull();
 });
 
 it('labels selection targets by their action, checked state, and disabled state', async () => {

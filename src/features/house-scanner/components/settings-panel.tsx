@@ -20,8 +20,8 @@ export function SettingsPanel({
 }: SettingsPanelProps) {
   const member = snapshot.members.find((entry) => entry.userId === userId);
   return (
-    <Stack maw="48rem">
-      <Flex gap="sm" justify="space-between" align="center" wrap="wrap">
+    <Stack w="100%" maw="48rem" mx="auto">
+      <Flex gap="sm" align="center" wrap="wrap">
         <Title order={2}>Search criteria</Title>
         <CriteriaHelp />
       </Flex>

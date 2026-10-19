@@ -1,4 +1,4 @@
-import { Anchor, Button, Flex, Group, Stack, Text, Title } from '@mantine/core';
+import { Anchor, Flex, Stack, Text, Title } from '@mantine/core';
 import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
 import { HouseScannerAccess } from '@/features/house-scanner/components/house-scanner-access';
@@ -15,7 +15,7 @@ export function HouseScannerPage() {
       p={{ base: 'xs', md: 'xl' }}
       mih="100svh"
     >
-      <Stack className={styles.touch} w="100%" maw={1440} gap="xs">
+      <Stack className={styles.touch} w="100%" maw="72rem" gap="xs">
         <Anchor
           component={Link}
           to="/"
@@ -25,36 +25,29 @@ export function HouseScannerPage() {
         >
           ← Back to the workshop
         </Anchor>
-        <Group justify="space-between">
-          <div>
-            <Title
-              order={1}
-              size="h2"
-              fz={{ base: 'lg', sm: 'h2' }}
-              className={styles.pageTitle}
-            >
-              House Scanner
-            </Title>
-            <Text size="sm" c="dimmed" visibleFrom="sm">
-              A private shared home shortlist.
-            </Text>
-          </div>
-          <Button
-            variant="subtle"
-            aria-label={demo ? 'Leave demo' : 'Explore the synthetic demo'}
-            onClick={() => setDemo(!demo)}
+        <div>
+          <Title
+            order={1}
+            size="h2"
+            fz={{ base: 'lg', sm: 'h2' }}
+            className={styles.pageTitle}
           >
-            {demo ? 'Leave demo' : 'Demo'}
-          </Button>
-        </Group>
+            House Scanner
+          </Title>
+          <Text size="sm" c="dimmed" visibleFrom="sm">
+            A private shared home shortlist.
+          </Text>
+        </div>
         {demo ? (
-          <SyntheticWorkspace />
+          <SyntheticWorkspace onLeaveDemo={() => setDemo(false)} />
         ) : (
-          <HouseScannerAccess>
-            {(household) => (
+          <HouseScannerAccess onDemo={() => setDemo(true)}>
+            {(household, signOut) => (
               <HouseholdWorkspace
                 key={`${household.snapshot.householdId}:${household.userId}`}
                 {...household}
+                onDemoToggle={() => setDemo(true)}
+                onSignOut={signOut}
               />
             )}
           </HouseScannerAccess>

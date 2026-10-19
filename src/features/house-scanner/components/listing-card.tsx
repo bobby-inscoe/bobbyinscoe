@@ -84,20 +84,14 @@ export const ListingCard = memo(function ListingCard({
     );
     const mine = saved.some((favorite) => favorite.userId === userId);
     const statusDisputed = listing.conflicts.includes('status');
-    const showStatus = statusDisputed || listing.facts.status !== 'available';
+    const showStatus =
+      statusDisputed ||
+      (listing.facts.status !== 'available' &&
+        listing.facts.status !== 'unknown');
     const memberName = (id: string | null) =>
       snapshot.members.find((member) => member.userId === id)?.displayName ||
       'Household member';
-    const chips = reasonChips(listing, snapshot);
-    const requiresLift = snapshot.profiles.some(
-      (profile) => profile.enabled && profile.criteria.requireLift,
-    );
-    const caveat =
-      requiresLift && listing.conflicts.includes('lift')
-        ? 'Lift disputed'
-        : requiresLift && listing.facts.lift === null
-          ? 'Lift unknown'
-          : chips.caveat;
+    const chips = reasonChips(listing);
     const position =
       estimatedPositionLabel(listing.coordinates) ??
       (listing.coordinates?.precision === 'approximate_area'
@@ -111,15 +105,13 @@ export const ListingCard = memo(function ListingCard({
       summary: (
         <>
           <div className={styles.desktopSummary}>
-            <ReasonChips listing={listing} snapshot={snapshot} />
+            <ReasonChips listing={listing} />
           </div>
           <div className={`${styles.mobileSummary} ${styles.cardAmenities}`}>
-            {chips.facts.length > 0 && (
-              <Text size="sm">{chips.facts.join(' · ')}</Text>
-            )}
-            {(caveat || position) && (
+            {chips.length > 0 && <Text size="sm">{chips.join(' · ')}</Text>}
+            {position && (
               <Text size="sm" c="dimmed">
-                {[caveat, position].filter(Boolean).join(' · ')}
+                {position}
               </Text>
             )}
           </div>

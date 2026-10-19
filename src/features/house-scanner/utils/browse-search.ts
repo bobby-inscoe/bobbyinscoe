@@ -6,6 +6,7 @@ const neighborhoodIds = new Set(neighborhoods.map(({ id }) => id));
 const number = z.number().finite().nonnegative().nullable().catch(null);
 const flag = z.boolean().catch(false);
 const filtersSchema = z.object({
+  titleQuery: z.string().max(128).catch(''),
   minPriceSek: number,
   maxPriceSek: number,
   minAreaM2: number,
@@ -33,7 +34,16 @@ const filtersSchema = z.object({
 });
 const browseSearchSchema = z.object({
   view: z.enum(['list', 'map']).catch('list'),
-  sort: z.enum(['default', 'price-asc', 'price-desc']).catch('default'),
+  sort: z
+    .enum([
+      'newest',
+      'oldest',
+      'next-viewing',
+      'alphabetical',
+      'price-asc',
+      'price-desc',
+    ])
+    .catch('newest'),
   select: z.boolean().catch(false),
   filterOpen: z.boolean().catch(false),
   person: z.string().min(1).max(128).catch('everyone'),

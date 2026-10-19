@@ -359,7 +359,7 @@
   font-family: var(--mantine-font-family-headings);
   font-size: var(--mantine-h4-font-size);
 }
-/* Controls, then the filters, then the count and the List/Map toggle, so the toggle sits under an open filter panel. */
+/* Keep browse controls together, with the count and view buttons below. */
 .toolbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -368,6 +368,9 @@
 }
 .toolbarControls {
   grid-area: controls;
+}
+.matchHelp:hover {
+  background: transparent;
 }
 .toolbarFilters {
   grid-area: filters;
@@ -379,18 +382,6 @@
 .toolbarView {
   grid-area: view;
   padding-top: var(--mantine-spacing-sm);
-}
-/* On a wide screen the count and toggle share the first row and the filters open full width below it. */
-@media (min-width: 48em) {
-  .toolbar {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas: "controls view" "filters filters";
-    align-items: end;
-  }
-  .toolbarView {
-    padding-top: 0;
-    justify-content: flex-end;
-  }
 }
 .photoButton,
 .titleButton {

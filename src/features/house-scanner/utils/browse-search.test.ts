@@ -15,7 +15,7 @@ describe('browse URL search', () => {
     });
     expect(search).toEqual({
       view: 'list',
-      sort: 'default',
+      sort: 'newest',
       person: 'everyone',
       section: 'all',
       select: false,
@@ -48,6 +48,13 @@ describe('browse URL search', () => {
     expect(validateBrowseSearch(JSON.parse(JSON.stringify(search)))).toEqual(
       search,
     );
+  });
+
+  it('restores next viewing sort and drops the removed latest check sort', () => {
+    expect(validateBrowseSearch({ sort: 'next-viewing' }).sort).toBe(
+      'next-viewing',
+    );
+    expect(validateBrowseSearch({ sort: 'latest' }).sort).toBe('newest');
   });
 
   it('accepts all official neighborhoods and removes duplicate selections', () => {
@@ -103,6 +110,17 @@ describe('browse URL search', () => {
         private: 'discard',
       }).filters,
     ).toEqual(emptyFilters);
+  });
+
+  it('keeps a short title search and drops an oversized one', () => {
+    expect(
+      validateBrowseSearch({ filters: { titleQuery: '  Linnégatan 12 ' } })
+        .filters.titleQuery,
+    ).toBe('  Linnégatan 12 ');
+    expect(
+      validateBrowseSearch({ filters: { titleQuery: 'a'.repeat(129) } }).filters
+        .titleQuery,
+    ).toBe('');
   });
 
   it.each(['all', 'latest-scan', '1-day', '3-days', '7-days'])(

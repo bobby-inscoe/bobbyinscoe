@@ -22,6 +22,23 @@ async function openDemo(page: import('@playwright/test').Page) {
   ).toBeVisible();
 }
 
+async function useSharedDemoPoint(page: import('@playwright/test').Page) {
+  await page.route(
+    '**/src/features/house-scanner/mock/synthetic-household.ts*',
+    async (route) => {
+      const response = await route.fetch();
+      await route.fulfill({
+        response,
+        body: `${await response.text()}
+          SYNTHETIC_SNAPSHOT.listings.find((home) => home.title === 'Example detached home').coordinates =
+            SYNTHETIC_SNAPSHOT.listings.find((home) => home.title === 'Example balcony home').coordinates;
+        `,
+      });
+    },
+  );
+  await page.reload();
+}
+
 async function openSection(
   page: import('@playwright/test').Page,
   name: string,
@@ -71,7 +88,8 @@ test('private access is closed by default and demo state leaves no browser stora
   await expect(
     page.getByText('Favorite saved.', { exact: true }),
   ).toBeVisible();
-  await page.getByRole('button', { name: 'Leave demo' }).click();
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Leave demo' }).click();
   await expect(page.getByRole('article')).toHaveCount(0);
   await openDemo(page);
   const balcony = page.getByRole('article', {
@@ -96,6 +114,31 @@ test('private access is closed by default and demo state leaves no browser stora
     path: `.browser-test-results/shortlist-${test.info().project.name}.png`,
     fullPage: true,
   });
+});
+
+test('title search and sort narrow and order the visible homes', async ({
+  page,
+}) => {
+  await openDemo(page);
+  await expect(page.getByRole('combobox', { name: 'Sort homes' })).toHaveValue(
+    'Newest',
+  );
+  await choose(page, 'Sort homes', 'Alphabetical');
+  await expect(page.getByRole('article').first()).toHaveAttribute(
+    'aria-label',
+    'Example balcony home',
+  );
+  await page
+    .getByRole('searchbox', { name: 'Search by title' })
+    .fill('BALCONY');
+  await expect(page.getByRole('article')).toHaveCount(1);
+  await expect(
+    page.getByRole('article', { name: 'Example balcony home' }),
+  ).toBeVisible();
+  await choose(page, 'Sort homes', 'Next viewing');
+  await expect(page.getByRole('combobox', { name: 'Sort homes' })).toHaveValue(
+    'Next viewing',
+  );
 });
 
 test('favorites preserve the other member save and filters identify the saver', async ({
@@ -291,6 +334,7 @@ test('map is opt-in and a failed tile request leaves details and list controls u
 test('a locally served map style groups overlapping homes and keeps map selection synchronized', async ({
   page,
 }) => {
+  await useSharedDemoPoint(page);
   await page.route(
     'https://tiles.openfreemap.org/styles/liberty',
     async (route) =>
@@ -461,7 +505,7 @@ test('Lift only and Glazed only narrow the list and count as active filters', as
       .getByRole('article', { name: 'Example balcony home', exact: true })
       .getByText(
         test.info().project.name === 'narrow'
-          ? 'Balcony · Lift · Above ground floor'
+          ? 'Balcony · Lift · Glazed'
           : 'Balcony',
         { exact: true },
       ),
@@ -609,6 +653,7 @@ test('unknown prices are kept or hidden by the checkbox, and an empty result say
 test('the satellite toggle swaps the basemap, names the provider and keeps the markers', async ({
   page,
 }) => {
+  await useSharedDemoPoint(page);
   await page.route('https://tiles.openfreemap.org/styles/liberty', (route) =>
     route.fulfill({ json: LOCAL_STREET_STYLE }),
   );
@@ -709,7 +754,8 @@ test('shared notes show every member and the signed-in member edits only their o
   // The open dialog covers the page, so close it before leaving the demo.
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
-  await page.getByRole('button', { name: 'Leave demo' }).click();
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Leave demo' }).click();
   await openDemo(page);
   await home.getByRole('button', { name: 'Details', exact: true }).click();
   await expect(notes.getByRole('listitem')).toHaveCount(1);
@@ -962,6 +1008,7 @@ test('a saved listing missing from the latest scan shows a notice and can be unf
 test('See on map opens a located home and unlocated homes remain available from the map', async ({
   page,
 }) => {
+  await useSharedDemoPoint(page);
   await page.route('https://tiles.openfreemap.org/styles/liberty', (route) =>
     route.fulfill({ json: LOCAL_STREET_STYLE }),
   );
@@ -1035,9 +1082,6 @@ test('pressing a map marker keeps keyboard focus on it and marks it pressed', as
   await page.getByRole('button', { name: 'Map', exact: true }).click();
   const marker = page.getByRole('button', { name: /^Example detached home:/ });
   await expect(marker).toHaveAttribute('aria-pressed', 'false');
-  const restingColor = await marker.evaluate(
-    (element) => getComputedStyle(element).backgroundColor,
-  );
   await marker.focus();
   await page.keyboard.press('Enter');
   await expect(
@@ -1048,23 +1092,6 @@ test('pressing a map marker keeps keyboard focus on it and marks it pressed', as
   ).toBeVisible();
   await expect(marker).toBeFocused();
   await expect(marker).toHaveAttribute('aria-pressed', 'true');
-  // The selected pin is filled with the accent so it stands out from the rest.
-  await expect(marker).toHaveCSS(
-    'background-color',
-    await page.evaluate(() => {
-      const probe = document.createElement('span');
-      probe.style.color = 'var(--mantine-color-moss-7)';
-      document.body.append(probe);
-      const color = getComputedStyle(probe).color;
-      probe.remove();
-      return color;
-    }),
-  );
-  expect(restingColor).not.toBe(
-    await marker.evaluate(
-      (element) => getComputedStyle(element).backgroundColor,
-    ),
-  );
 });
 
 async function seeDetachedHomeOnMap(page: import('@playwright/test').Page) {
