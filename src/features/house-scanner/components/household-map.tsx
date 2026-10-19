@@ -310,13 +310,16 @@ export function HouseholdMap({
         (group) => {
           let entry = existing.get(group.key);
           if (!entry) {
+            const markerElement = document.createElement('div');
+            markerElement.className = styles.markerRoot;
             const button = document.createElement('button');
             button.type = 'button';
+            markerElement.append(button);
             entry = {
               group,
               button,
               ids: [],
-              marker: new Marker({ element: button }),
+              marker: new Marker({ element: markerElement }),
             };
             const current = entry;
             button.addEventListener('click', () => {

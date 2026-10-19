@@ -158,10 +158,10 @@ export const SYNTHETIC_SNAPSHOT = snapshotSchema.parse({
         livingAreaM2: 95,
       },
       coordinates: {
-        longitude: 11.97,
-        latitude: 57.71,
+        longitude: 11.97005,
+        latitude: 57.71005,
         precision: 'building',
-        source: 'Fictional shared building point',
+        source: 'Fictional demo pin',
         observedAt: date,
       },
       previousAskingPriceSek: null,
