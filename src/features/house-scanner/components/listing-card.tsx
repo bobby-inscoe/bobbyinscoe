@@ -41,7 +41,6 @@ interface ListingCardProps {
   userId: string;
   selected?: boolean;
   details?: boolean;
-  stale?: boolean;
   busy: boolean;
   canSave: boolean;
   hidden?: boolean;
@@ -63,7 +62,6 @@ export const ListingCard = memo(function ListingCard({
   userId,
   selected,
   details,
-  stale,
   busy,
   canSave,
   hidden,
@@ -91,6 +89,12 @@ export const ListingCard = memo(function ListingCard({
     const memberName = (id: string | null) =>
       snapshot.members.find((member) => member.userId === id)?.displayName ||
       'Household member';
+    // A sold or withdrawn status already says why it is gone.
+    const delisted =
+      listing.delistedAt !== undefined &&
+      (statusDisputed ||
+        (listing.facts.status !== 'sold' &&
+          listing.facts.status !== 'withdrawn'));
     const hiddenBy = snapshot.hides?.find(
       (hide) => hide.listingId === listing.id,
     )?.userId;
@@ -121,7 +125,7 @@ export const ListingCard = memo(function ListingCard({
           {(listing.isNew ||
             showStatus ||
             listing.origin === 'manual' ||
-            stale ||
+            delisted ||
             hidden) && (
             <Group gap="xs" className={styles.cardStatus}>
               {listing.isNew && <Badge variant="light">New</Badge>}
@@ -135,7 +139,7 @@ export const ListingCard = memo(function ListingCard({
                   Added by {memberName(listing.addedBy)}
                 </Badge>
               )}
-              {stale && <Badge variant="outline">Not in latest scan</Badge>}
+              {delisted && <Badge variant="outline">No longer listed</Badge>}
               {hidden && (
                 <Badge variant="outline">
                   {hiddenBy ? `Hidden by ${memberName(hiddenBy)}` : 'Hidden'}
@@ -159,7 +163,7 @@ export const ListingCard = memo(function ListingCard({
         </>
       ),
     };
-  }, [listing, snapshot, userId, details, stale, hidden]);
+  }, [listing, snapshot, userId, details, hidden]);
   // Keep checkbox widgets mounted and reusable; opening Select only reveals their lightweight wrappers.
   const selectionControl = useMemo(
     () => (
@@ -337,7 +341,6 @@ export const ListingCard = memo(function ListingCard({
           listing={listing}
           snapshot={snapshot}
           userId={userId}
-          stale={stale}
           notes={notes}
         />
       )}

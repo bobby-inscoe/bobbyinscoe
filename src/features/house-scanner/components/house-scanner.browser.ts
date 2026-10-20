@@ -962,7 +962,7 @@ test('the pin card Details opens the dialog over the map without switching to th
   await expect(page.getByLabel('Listing map')).toBeVisible();
 });
 
-test('a saved listing missing from the latest scan shows a notice and can be unfavorited by keyboard', async ({
+test('an older saved listing has no scan notice and can be unfavorited by keyboard', async ({
   page,
 }) => {
   await openDemo(page);
@@ -970,20 +970,15 @@ test('a saved listing missing from the latest scan shows a notice and can be unf
     name: 'Example older listing',
     exact: true,
   });
-  await expect(home.getByText('Not in latest scan')).toBeVisible();
-  await expect(home.getByRole('note')).toHaveCount(0);
+  // Only a server mark says a home left its source; an old observation alone does not.
+  await expect(home.getByText('No longer listed')).toHaveCount(0);
   await home.getByRole('button', { name: 'Details', exact: true }).focus();
   await page.keyboard.press('Enter');
   const dialog = page.getByRole('dialog', {
     name: 'Example older listing',
     exact: true,
   });
-  const notice = dialog.getByRole('note', {
-    name: 'Not seen in the latest scan',
-  });
-  await expect(notice).toBeVisible();
-  await expect(notice).toContainText('Not seen in the latest scan. Last seen');
-  await expect(notice).toContainText('open it to check');
+  await expect(dialog.getByRole('note')).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
   if (test.info().project.name === 'narrow')

@@ -298,6 +298,8 @@ export const listingSchema = z.strictObject({
   lastChangedAt: timestamp.nullable().optional(),
   /** Server time a newer observation was accepted, including unchanged content. */
   lastCheckedAt: timestamp.optional(),
+  /** When the listing went missing from two full reads of its source in a row. Absent while listed. */
+  delistedAt: timestamp.optional(),
   /** First found in this source's latest successful/partial published run. Not an unread flag. */
   isNew: z.boolean().optional(),
   // Future viewings the policy allows, sorted. Left out when there are none.
@@ -375,6 +377,18 @@ export const ingestRequestSchema = z.discriminatedUnion('action', [
           status: z.enum(['success', 'partial', 'failed']),
           coverageNote: z.string().max(1000),
           cursor: z.string().max(2000).nullable(),
+          // True when every search page was read to its end and reached the source's own total.
+          fullRead: z.boolean().optional(),
+          // Every home on the search pages, including those the collector bounds drop.
+          seen: z
+            .array(
+              z.strictObject({
+                sourceListingId: z.string().min(1).max(200),
+                episodeId: z.string().min(1).max(200),
+              }),
+            )
+            .max(2000)
+            .optional(),
         }),
       )
       .min(1)

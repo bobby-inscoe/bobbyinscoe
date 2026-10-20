@@ -57,6 +57,14 @@ describe('buyer matching under incomplete evidence', () => {
       expect(matchListing(home(facts), criteria).section).toBe('outside');
     },
   );
+  it('excludes a listing that is no longer listed, even with unknown facts', () => {
+    expect(
+      matchListing(
+        home({ askingPriceSek: null }, { delistedAt: '2026-10-21T09:00:00Z' }),
+        criteria,
+      ),
+    ).toMatchObject({ section: 'outside', reasons: ['No longer listed'] });
+  });
   it.each(['groundFloor', 'lift', 'outdoor', 'askingPriceSek'] as const)(
     'keeps unknown %s for confirmation',
     (field) => {
