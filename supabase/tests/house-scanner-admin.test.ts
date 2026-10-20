@@ -1633,11 +1633,6 @@ describe('hs.valid_policy and hs.admin_set_source_policy', () => {
       ['capabilities', 'coverageGaps'],
       ['\u{1F600}'.repeat(151)],
     ],
-    [
-      'a valid punycode host, which hs.valid_bookmark_url also refuses',
-      ['listingOrigins'],
-      ['https://xn--bcher-kva.example'],
-    ],
     ['an ftp origin', ['listingOrigins'], ['ftp://example.invalid']],
     ['a websocket origin', ['imageOrigins'], ['wss://example.invalid']],
     ['an IPv6 origin', ['listingOrigins'], ['https://[::1]']],
@@ -1675,6 +1670,8 @@ describe('hs.valid_policy and hs.admin_set_source_policy', () => {
     'https://a.0x7f',
     'https://xn--a',
     'https://xn--ab.com',
+    // A valid punycode host: both sides refuse every xn-- label, as hs.valid_bookmark_url does.
+    'https://xn--bcher-kva.example',
     'https://0x7f000001',
     'https://0x7f.0.0.1',
     'https://a.b.0xff',
