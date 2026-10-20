@@ -20,7 +20,8 @@ skipping it broke the app once.
 - Some configuration lives outside the repository. Supabase Auth (dashboard): Site URL `https://bobbyinscoe.com`,
   redirect URLs for `/projects/house-scanner/invite**` and `/projects/house-scanner/listings`, public signup off, email
   confirmation on, custom SMTP through Resend from `no-reply@auth.bobbyinscoe.com`. Function secrets:
-  `HS_INGEST_KEYS_JSON`. The collector's keys, run scripts and Windows scheduled task are private to the owner's PC.
+  `HS_INGEST_KEYS_JSON`, and `RESEND_API_KEY` for `house-scanner-invite`, which mails invitation links itself and
+  creates accounts for people who open a link. The collector's keys, run scripts and Windows scheduled task are private to the owner's PC.
   A new page or domain that sends people back from Auth emails needs its address in the redirect list and in
   `ORIGINS` of `supabase/functions/house-scanner-invite`.
 - Compare a new source's times and prices with another source's page for the same home before trusting a time zone or

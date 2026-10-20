@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const admin = vi.hoisted(() => ({
   rpc: vi.fn(),
-  auth: { admin: { inviteUserByEmail: vi.fn() } },
+  auth: { admin: { createUser: vi.fn() } },
 }));
 vi.mock('@supabase/supabase-js', () => ({ createClient: () => admin }));
 const token = 'a'.repeat(64);
@@ -35,46 +35,66 @@ beforeEach(async () => {
   });
   admin.rpc.mockReset();
   admin.rpc.mockResolvedValue({ data: { ok: true }, error: null });
-  admin.auth.admin.inviteUserByEmail.mockReset();
-  admin.auth.admin.inviteUserByEmail.mockResolvedValue({ error: null });
+  admin.auth.admin.createUser.mockReset();
+  admin.auth.admin.createUser.mockResolvedValue({ error: null });
   await import('./index');
 });
 
 describe('invitation account setup', () => {
-  it('reserves the link for the email, then sends an Auth invitation back to it', async () => {
-    const reply = await post({ token, email: 'New@Example.invalid' });
+  it('reserves the link for the email, then creates a confirmed account with the password', async () => {
+    const reply = await post({
+      token,
+      email: 'New@Example.invalid',
+      password: 'a long password',
+    });
     expect(reply.status).toBe(200);
+    expect(await reply.json()).toEqual({ status: 'created' });
     expect(reply.headers.get('access-control-allow-origin')).toBe(origin);
     expect(admin.rpc).toHaveBeenCalledWith('hs_invitation_reserve', {
       p_token: token,
       p_email: 'new@example.invalid',
     });
-    expect(admin.auth.admin.inviteUserByEmail).toHaveBeenCalledWith(
-      'new@example.invalid',
-      { redirectTo: `${origin}/projects/house-scanner/invite?token=${token}` },
-    );
+    expect(admin.auth.admin.createUser).toHaveBeenCalledWith({
+      email: 'new@example.invalid',
+      password: 'a long password',
+      email_confirm: true,
+    });
   });
 
   it('creates no account for a link the database refuses', async () => {
+    const body = {
+      token,
+      email: 'new@example.invalid',
+      password: 'long enough',
+    };
     admin.rpc.mockResolvedValueOnce({ data: { ok: false }, error: null });
-    expect((await post({ token, email: 'new@example.invalid' })).status).toBe(
-      400,
-    );
+    expect((await post(body)).status).toBe(400);
     admin.rpc.mockResolvedValueOnce({ data: null, error: { message: 'x' } });
-    expect((await post({ token, email: 'new@example.invalid' })).status).toBe(
-      400,
-    );
-    expect(admin.auth.admin.inviteUserByEmail).not.toHaveBeenCalled();
+    expect((await post(body)).status).toBe(400);
+    expect(admin.auth.admin.createUser).not.toHaveBeenCalled();
   });
 
-  const known = () =>
-    admin.auth.admin.inviteUserByEmail.mockResolvedValueOnce({
-      error: {
-        message: 'A user with this email address has already been registered',
-      },
+  it('answers the same when the address already has an account', async () => {
+    admin.auth.admin.createUser.mockResolvedValueOnce({
+      error: { code: 'email_exists', message: 'exists' },
     });
+    const reply = await post({
+      token,
+      email: 'known@example.invalid',
+      password: 'a long password',
+    });
+    expect(reply.status).toBe(200);
+    expect(await reply.json()).toEqual({ status: 'created' });
+  });
 
-  it('emails the link through Resend when the address already has an account, with the same answer', async () => {
+  it('refuses a short password before touching the database', async () => {
+    expect(
+      (await post({ token, email: 'a@b.invalid', password: 'short' })).status,
+    ).toBe(400);
+    expect(admin.rpc).not.toHaveBeenCalled();
+  });
+
+  it('mails the link through Resend when there is no password', async () => {
     env.set('RESEND_API_KEY', 'synthetic-resend-key');
     env.set('SUPABASE_ANON_KEY', 'synthetic-anon-key');
     admin.rpc.mockImplementation(async (name: string) => ({
@@ -86,7 +106,6 @@ describe('invitation account setup', () => {
     }));
     const send = vi.fn(async () => new Response('{}'));
     vi.stubGlobal('fetch', send);
-    known();
     const reply = await post({ token, email: 'known@example.invalid' });
     expect(reply.status).toBe(200);
     expect(await reply.json()).toEqual({ status: 'sent' });
@@ -100,14 +119,15 @@ describe('invitation account setup', () => {
     expect(mail.to).toEqual(['known@example.invalid']);
     expect(mail.text).toContain('Casey invited you to join Home');
     expect(mail.text).toContain(`invite?token=${token}`);
+    expect(admin.auth.admin.createUser).not.toHaveBeenCalled();
   });
 
-  it('answers the same, and sends nothing, when the address has an account but no mail key is set', async () => {
+  it('reports a failed send when no mail key is set', async () => {
     const send = vi.fn();
     vi.stubGlobal('fetch', send);
-    known();
-    const reply = await post({ token, email: 'known@example.invalid' });
-    expect(reply.status).toBe(200);
+    expect((await post({ token, email: 'known@example.invalid' })).status).toBe(
+      502,
+    );
     expect(send).not.toHaveBeenCalled();
   });
 

@@ -94,7 +94,7 @@ export function HouseScannerAccess({
             token={inviteToken}
             signedIn={signedIn}
             onPreview={session.previewInvitation}
-            onStartAccountSetup={session.startAccountSetup}
+            onCreateAccount={session.createAccount}
             onAccept={async (token, householdName, displayName) => {
               await session.acceptInvitation(token, householdName, displayName);
               onInviteDone?.();

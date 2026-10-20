@@ -391,7 +391,7 @@ export async function sendInvitation(
 ) {
   const url = await createInvitation(client, householdId, purpose, email);
   try {
-    await startAccountSetup(
+    await invokeInvite(
       client,
       token.parse(new URL(url).searchParams.get('token')),
       email,
@@ -409,15 +409,18 @@ export function previewInvitation(client: SupabaseClient, value: string) {
     invitationPreviewSchema,
   );
 }
-// Asks the trusted server to reserve the link for this email and send an account email.
-export async function startAccountSetup(
+// Asks the trusted server to reserve the link for this email, then to create the account when there is a password or
+// to mail the link when there is not.
+export async function invokeInvite(
   client: SupabaseClient,
   value: string,
   email: string,
+  password?: string,
 ) {
   const body = {
     token: token.parse(value),
     email: z.email().max(254).parse(email.trim()),
+    ...(password === undefined ? {} : { password }),
   };
   const { error } = await client.functions.invoke('house-scanner-invite', {
     body,

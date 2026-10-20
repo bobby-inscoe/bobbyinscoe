@@ -11,6 +11,7 @@ import {
   deactivateMember,
   householdAccess,
   householdSnapshot,
+  invokeInvite,
   leaveHousehold,
   makeOwner,
   memberships,
@@ -24,7 +25,6 @@ import {
   setFavorite,
   setHidden,
   setRememberDevice,
-  startAccountSetup,
 } from '@/features/house-scanner/api/household-client';
 import type {
   ManualSubmission,
@@ -366,6 +366,23 @@ export function useHouseholdSession() {
       );
     setPasswordSetup(null);
   }
+  // The link is the invitation: the server creates the account for its email, then this signs in with the same
+  // password. An address that already has an account only gets in when the password is its own.
+  async function createAccount(value: string, email: string, password: string) {
+    if (!client) throw new Error('Private access is not configured.');
+    if (password.length < 8 || password.length > 72)
+      throw new Error('Choose a password of 8 to 72 characters.');
+    await invokeInvite(client, value, email, password);
+    const { error } = await client.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+    if (error)
+      throw new Error(
+        'That email already has an account. Sign in below with its password.',
+      );
+    await (inflight.current ?? refresh());
+  }
   // Accepting a link adds a household to this account; the session then opens it.
   async function acceptInvitation(
     value: string,
@@ -580,10 +597,7 @@ export function useHouseholdSession() {
       client
         ? previewInvitation(client, value)
         : Promise.reject(new Error('Private access is not configured.')),
-    startAccountSetup: (value: string, email: string) =>
-      client
-        ? startAccountSetup(client, value, email)
-        : Promise.reject(new Error('Private access is not configured.')),
+    createAccount,
     access: accessActions(),
     selectHousehold: async (id: string) => {
       householdId.current = z.uuid().parse(id);
