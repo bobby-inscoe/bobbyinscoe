@@ -117,6 +117,17 @@
   aspect-ratio: 3 / 2;
   padding: 0;
 }
+/* One viewing: photo above the details on a phone, beside them from 36em. */
+.viewingCard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--mantine-spacing-md);
+}
+@media (min-width: 36em) {
+  .viewingCard {
+    grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+  }
+}
 /* A label and its value, two columns; the labels are dimmed and the rows divide on a thin line. */
 .factList {
   display: flex;
