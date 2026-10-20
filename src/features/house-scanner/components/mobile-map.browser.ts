@@ -158,9 +158,6 @@ test('mobile map fills the viewport and List restores the full listing view', as
   await expect(more).toBeEnabled();
   expect(await more.evaluate((button) => button.closest('[inert]'))).toBeNull();
   await more.click();
-  await expect(
-    page.getByRole('menuitem', { name: 'Leave demo' }),
-  ).toBeVisible();
   await page.keyboard.press('Escape');
   expect(
     await page.locator('body').evaluate((body) => body.style.overflow),

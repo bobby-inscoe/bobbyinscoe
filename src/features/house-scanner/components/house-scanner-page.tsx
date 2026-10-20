@@ -1,4 +1,4 @@
-import { Anchor, Flex, Stack, Text, Title } from '@mantine/core';
+import { Anchor, Button, Flex, Group, Stack, Title } from '@mantine/core';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { HouseScannerAccess } from '@/features/house-scanner/components/house-scanner-access';
@@ -27,33 +27,36 @@ export function HouseScannerPage() {
       mih="100svh"
     >
       <Stack className={styles.touch} w="100%" maw="72rem" gap="xs">
-        <Anchor
-          component={Link}
-          to="/"
-          size="xs"
-          visibleFrom="sm"
-          style={{ alignSelf: 'flex-start' }}
-        >
-          ← Back to the workshop
-        </Anchor>
-        <div>
-          <Title
-            order={1}
-            size="h2"
-            fz={{ base: 'lg', sm: 'h2' }}
-            className={styles.pageTitle}
-          >
-            House Scanner
-          </Title>
-          <Text size="sm" c="dimmed" visibleFrom="sm">
-            A private shared home shortlist.
-          </Text>
-        </div>
+        <Group justify="space-between" align="center" wrap="nowrap">
+          <Anchor component={Link} to="/" size="xs" visibleFrom="sm">
+            ← Back to the workshop
+          </Anchor>
+          <Group gap="xs" ml="auto" wrap="nowrap">
+            {/* The demo is a local testing aid, so the deployed site never offers it. */}
+            {import.meta.env.DEV && (
+              <Button
+                size="compact-xs"
+                variant="subtle"
+                onClick={() => setDemo(!demo)}
+              >
+                {demo ? 'Leave demo' : 'Demo'}
+              </Button>
+            )}
+            <Title
+              order={1}
+              size="h2"
+              fz={{ base: 'lg', sm: 'h2' }}
+              className={styles.pageTitle}
+            >
+              House Scanner
+            </Title>
+          </Group>
+        </Group>
         {demo ? (
-          <SyntheticWorkspace onLeaveDemo={() => setDemo(false)} />
+          <SyntheticWorkspace />
         ) : (
           <HouseScannerAccess
-            onDemo={() => setDemo(true)}
+            onDemo={import.meta.env.DEV ? () => setDemo(true) : undefined}
             inviteToken={inviteToken}
             onInviteDone={() => {
               setInviteToken(null);
@@ -68,7 +71,6 @@ export function HouseScannerPage() {
               <HouseholdWorkspace
                 key={`${household.snapshot.householdId}:${household.userId}`}
                 {...household}
-                onDemoToggle={() => setDemo(true)}
                 onSignOut={signOut}
               />
             )}

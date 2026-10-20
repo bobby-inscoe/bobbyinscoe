@@ -35,7 +35,6 @@ export interface HouseholdWorkspaceProps extends Partial<HouseholdActions> {
   snapshot: Snapshot;
   userId: string;
   mapStyleUrl?: string;
-  onDemoToggle?: () => void;
   onSignOut?: () => void;
   access?: HouseholdAccessActions;
 }
@@ -44,7 +43,6 @@ export function HouseholdWorkspace({
   snapshot,
   userId,
   mapStyleUrl,
-  onDemoToggle,
   onSignOut,
   onSaveFavorite,
   onSaveFavorites,
@@ -163,18 +161,6 @@ export function HouseholdWorkspace({
   const stale = editionAge !== null && editionAge > 36 * 60 * 60 * 1000;
   return (
     <section className={styles.scope} aria-label="Household shortlist">
-      {/* The demo's fixed edition date is always old, so only real editions warn. */}
-      <Text
-        size="sm"
-        c={stale && !synthetic ? 'red.8' : 'dimmed'}
-        role="status"
-      >
-        {synthetic
-          ? 'Fictional demo · Changes stay in memory.'
-          : snapshot.edition
-            ? `Updated ${formatDate(snapshot.edition.publishedAt)}${stale ? '. Over 36 hours old, so facts may be stale.' : ''}`
-            : 'No data has been published yet.'}
-      </Text>{' '}
       {/* A new household starts with one profile at revision 1, set to the collector bounds. */}
       {!synthetic &&
         tab !== 'settings' &&
@@ -245,14 +231,6 @@ export function HouseholdWorkspace({
             <Menu.Item onClick={() => navigation.changeTab('settings')}>
               Settings
             </Menu.Item>
-            {onDemoToggle && (
-              <>
-                <Menu.Divider />
-                <Menu.Item onClick={onDemoToggle}>
-                  {synthetic ? 'Leave demo' : 'Demo'}
-                </Menu.Item>
-              </>
-            )}
             {onSignOut && <Menu.Item onClick={onSignOut}>Sign out</Menu.Item>}
           </Menu.Dropdown>
         </Menu>
@@ -374,6 +352,19 @@ export function HouseholdWorkspace({
           />
         </PriceEstimateProvider>
       )}
+      {/* The demo's fixed edition date is always old, so only real editions warn. */}
+      <Text
+        size="sm"
+        mt="md"
+        c={stale && !synthetic ? 'red.8' : 'dimmed'}
+        role="status"
+      >
+        {synthetic
+          ? 'Fictional demo · Changes stay in memory.'
+          : snapshot.edition
+            ? `Updated ${formatDate(snapshot.edition.publishedAt)}${stale ? '. Over 36 hours old, so facts may be stale.' : ''}`
+            : 'No data has been published yet.'}
+      </Text>
     </section>
   );
 }

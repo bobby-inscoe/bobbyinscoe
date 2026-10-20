@@ -14,7 +14,7 @@ export function HouseScannerAccess({
   onInviteDone,
 }: {
   children: (household: Household, signOut: () => void) => ReactNode;
-  onDemo: () => void;
+  onDemo?: () => void;
   // Set on the invitation page: the link's token, or '' for a malformed link.
   inviteToken?: string | null;
   onInviteDone?: () => void;
@@ -41,13 +41,15 @@ export function HouseScannerAccess({
       <Stack>
         <Title order={2}>Private access is not configured</Title>
         <Text>No household data is loaded.</Text>
-        <Button
-          variant="subtle"
-          aria-label="Explore the synthetic demo"
-          onClick={onDemo}
-        >
-          Explore demo
-        </Button>
+        {onDemo && (
+          <Button
+            variant="subtle"
+            aria-label="Explore the synthetic demo"
+            onClick={onDemo}
+          >
+            Explore demo
+          </Button>
+        )}
       </Stack>
     );
   const signedIn =
@@ -60,7 +62,7 @@ export function HouseScannerAccess({
       onSignIn={session.signInWithCode}
       onResetPassword={session.requestPasswordReset}
     >
-      {demo && (
+      {demo && onDemo && (
         <Button
           type="button"
           variant="subtle"

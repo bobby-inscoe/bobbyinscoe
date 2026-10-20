@@ -88,8 +88,7 @@ test('private access is closed by default and demo state leaves no browser stora
   await expect(
     page.getByText('Favorite saved.', { exact: true }),
   ).toBeVisible();
-  await page.getByRole('button', { name: 'More', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'Leave demo' }).click();
+  await page.getByRole('button', { name: 'Leave demo' }).click();
   await expect(page.getByRole('article')).toHaveCount(0);
   await openDemo(page);
   const balcony = page.getByRole('article', {
@@ -279,7 +278,7 @@ test('criteria revisions re-evaluate suggestions and keep favorites', async ({
     .getByRole('textbox', { name: 'Stretch budget (SEK)' })
     .fill('1500000');
   await page.getByRole('button', { name: 'Save criteria' }).click();
-  await expect(page.getByText('Revision 2', { exact: false })).toBeVisible();
+  await expect(page.getByText(/Profile saved/)).toBeVisible();
   await page.getByRole('button', { name: 'Listings', exact: true }).click();
   await expect(page.getByRole('article')).toHaveCount(1);
   await expect(
@@ -755,8 +754,7 @@ test('shared notes show every member and the signed-in member edits only their o
   // The open dialog covers the page, so close it before leaving the demo.
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
-  await page.getByRole('button', { name: 'More', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'Leave demo' }).click();
+  await page.getByRole('button', { name: 'Leave demo' }).click();
   await openDemo(page);
   await home.getByRole('button', { name: 'Details', exact: true }).click();
   await expect(notes.getByRole('listitem')).toHaveCount(1);
@@ -1440,7 +1438,7 @@ test('Settings uses dropdowns, names the places and the search circle, and expla
     'Maximum living area (m²)',
     'Minimum rooms',
     'Radius',
-    'Centre of the search circle',
+    'Search from',
     'Places to search',
   ])
     await expect(page.getByRole('combobox', { name })).toBeVisible();
@@ -1468,10 +1466,10 @@ test('Settings uses dropdowns, names the places and the search circle, and expla
   }
   const help = page.getByRole('button', { name: 'How does this work?' });
   await help.click();
-  const dialog = page.getByRole('dialog', { name: 'How the search works' });
+  const dialog = page.getByRole('dialog', { name: 'About House Scanner' });
   await expect(dialog).toBeVisible();
   await expect(
-    dialog.getByRole('heading', { name: 'How a home is sorted' }),
+    dialog.getByText(/apartments for sale in Göteborg/),
   ).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();

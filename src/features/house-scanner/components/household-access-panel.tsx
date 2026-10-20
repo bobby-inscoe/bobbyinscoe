@@ -142,7 +142,7 @@ export function HouseholdAccessPanel({
     </form>
   );
   return (
-    <Paper withBorder p="md">
+    <Paper>
       <Stack>
         <Title order={2}>Household</Title>
         {error && <Alert role="alert">{error}</Alert>}
@@ -181,8 +181,8 @@ export function HouseholdAccessPanel({
 
         <Title order={3}>Members</Title>
         <Text size="sm" c="dimmed">
-          {data.members.length} of 10 member places used, including former
-          members.
+          {data.members.filter((member) => member.active).length} of 10 member
+          places used.
         </Text>
         <Stack
           gap="xs"
@@ -191,54 +191,57 @@ export function HouseholdAccessPanel({
           m={0}
           style={{ listStyle: 'none' }}
         >
-          {data.members.map((member) => (
-            <Group component="li" key={member.userId} gap="xs" wrap="wrap">
-              <Text>
-                {member.displayName}
-                {member.userId === userId ? ' (you)' : ''}
-              </Text>
-              {member.role === 'owner' && <Badge variant="light">Owner</Badge>}
-              {!member.active && <Badge variant="outline">Former member</Badge>}
-              {owner && member.active && member.userId !== userId && (
-                <>
-                  {member.role === 'member' && (
+          {data.members
+            .filter((member) => member.active)
+            .map((member) => (
+              <Group component="li" key={member.userId} gap="xs" wrap="wrap">
+                <Text>
+                  {member.displayName}
+                  {member.userId === userId ? ' (you)' : ''}
+                </Text>
+                {member.role === 'owner' && (
+                  <Badge variant="light">Owner</Badge>
+                )}
+                {owner && member.userId !== userId && (
+                  <>
+                    {member.role === 'member' && (
+                      <Button
+                        size="xs"
+                        variant="default"
+                        loading={pending === `owner:${member.userId}`}
+                        onClick={() =>
+                          void perform(`owner:${member.userId}`, async () => {
+                            await actions.current.makeOwner(member.userId);
+                            await load();
+                          })
+                        }
+                      >
+                        Make owner
+                      </Button>
+                    )}
                     <Button
                       size="xs"
-                      variant="default"
-                      loading={pending === `owner:${member.userId}`}
-                      onClick={() =>
-                        void perform(`owner:${member.userId}`, async () => {
-                          await actions.current.makeOwner(member.userId);
-                          await load();
-                        })
-                      }
-                    >
-                      Make owner
-                    </Button>
-                  )}
-                  <Button
-                    size="xs"
-                    variant="subtle"
-                    color="red"
-                    loading={pending === `remove:${member.userId}`}
-                    onClick={() => {
-                      if (
-                        window.confirm(
-                          `Remove ${member.displayName} from this household? Their saves and notes stay, and an owner can invite them back.`,
+                      variant="subtle"
+                      color="red"
+                      loading={pending === `remove:${member.userId}`}
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            `Remove ${member.displayName} from this household? Their saves and notes stay, and an owner can invite them back.`,
+                          )
                         )
-                      )
-                        void perform(`remove:${member.userId}`, async () => {
-                          await actions.current.deactivate(member.userId);
-                          await load();
-                        });
-                    }}
-                  >
-                    Remove
-                  </Button>
-                </>
-              )}
-            </Group>
-          ))}
+                          void perform(`remove:${member.userId}`, async () => {
+                            await actions.current.deactivate(member.userId);
+                            await load();
+                          });
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </>
+                )}
+              </Group>
+            ))}
         </Stack>
 
         <Title order={3}>Invite people</Title>
