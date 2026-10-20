@@ -47,7 +47,7 @@ The table and the report show labels such as "user A" and "household B", statuse
 | 4 round trip | Favorite on and off, and note save at revision 0 then 1, persist and show in the snapshot. |
 | 4b stale shape | A stale `hs_save_note` returns code `40001`, which `household-client.ts` turns into the note conflict path. The status, code and message are recorded as the real shape. |
 | 5 concurrent | Two sessions of user A saving the same revision at once give one winner and one `40001`, and the final revision matches the winner. One attempt is evidence, not proof. |
-| 6 privileged | A signed-in member cannot run `hs_purge_expired`, the ingest functions or any `admin_*` function, and cannot read `hs.admin_log`. |
+| 6 privileged | A signed-in member cannot run the ingest functions or any `admin_*` function, and cannot read `hs.admin_log`. |
 | 7 deactivated | Only with A2 and `--a2-deactivated`: A2 is refused for snapshot, notes, favorite and note save. |
 | 8 cleanup | The favorite is removed and the note body cleared. |
 

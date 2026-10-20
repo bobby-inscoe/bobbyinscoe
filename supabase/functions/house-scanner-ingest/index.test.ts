@@ -117,6 +117,26 @@ describe('signed ingestion trust boundary', () => {
     });
     expect(await response.json()).toEqual({ runId, state: 'staging' });
   });
+  it('accepts a catalog credential without a household and a begin without profile versions', async () => {
+    const original = database.rpc.getMockImplementation();
+    database.rpc.mockImplementation(async (name, args) =>
+      name === 'hs_ingest_credential'
+        ? {
+            data: { sourceIds: ['synthetic-demo'], scopes: ['ingest'] },
+            error: null,
+          }
+        : original?.(name, args),
+    );
+    const { profileVersions: _, ...catalogBegin } = JSON.parse(body);
+    const payload = JSON.stringify(catalogBegin);
+    const response = await handler(signedRequest({ payload }));
+    expect(response.status).toBe(200);
+    expect(database.rpc).toHaveBeenLastCalledWith('hs_ingest', {
+      p_key_id: 'test-key',
+      p_body_hash: createHash('sha256').update(payload).digest('hex'),
+      p_request: catalogBegin,
+    });
+  });
   it('accepts the gateway stripped path while retaining the canonical signing path', async () => {
     expect(
       (await handler(signedRequest({ requestPath: '/house-scanner-ingest' })))

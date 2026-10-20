@@ -70,7 +70,6 @@ export const PUBLIC_RPC_PROBES: Record<string, Record<string, unknown>> = {
 };
 // Granted to service_role only: neither anon nor authenticated may run them.
 export const SERVICE_RPC_PROBES: Record<string, Record<string, unknown>> = {
-  hs_purge_expired: { p_household_id: NIL_UUID, p_limit: 1, p_dry_run: true },
   hs_ingest_credential: { p_key_id: 'accept-probe' },
   hs_consume_nonce: {
     p_key_id: 'accept-probe',
@@ -100,9 +99,8 @@ export const ADMIN_PROBES: Record<string, Record<string, unknown>> = {
     p_role: 'member',
     p_active: true,
   },
-  admin_set_source_policy: { p_household_id: NIL_UUID, p_policy: {} },
+  admin_set_source_policy: { p_policy: {} },
   admin_issue_credential: {
-    p_household_id: NIL_UUID,
     p_key_id: 'accept-probe',
     p_source_ids: ['accept-probe'],
     p_expires_at: '2000-01-01T00:00:00Z',
@@ -582,14 +580,8 @@ async function privilegedDenied(ctx: Context): Promise<Outcome> {
       `${blocked ? 'blocked' : 'NOT BLOCKED'} ${label}: ${describeResult(result)}`,
     );
   };
-  for (const [name, args] of Object.entries(SERVICE_RPC_PROBES)) {
-    // Dry run with the caller's own household, so a leaked grant changes nothing.
-    const probe =
-      name === 'hs_purge_expired'
-        ? { ...args, p_household_id: householdA }
-        : args;
-    record(name, await a.caller.rpc(name, probe));
-  }
+  for (const [name, args] of Object.entries(SERVICE_RPC_PROBES))
+    record(name, await a.caller.rpc(name, args));
   for (const [name, args] of Object.entries(ADMIN_PROBES)) {
     record(`hs.${name} (hs schema)`, await a.caller.rpcInHsSchema(name, args));
     record(`${name} (public schema)`, await a.caller.rpc(name, args));
@@ -748,7 +740,7 @@ export function buildChecks(
       id: '6-privileged-denied',
       title: 'Signed-in users cannot reach operator or service functions',
       meaning:
-        'hs_purge_expired, the ingest functions and every hs.admin_* function are unreachable from the API as a member.',
+        'The ingest functions and every hs.admin_* function are unreachable from the API as a member.',
       run: () => privilegedDenied(ctx),
     },
     {

@@ -5,7 +5,10 @@ import {
   geocodeMissing,
 } from '@house-scanner-tools/geocoder';
 import { type LiveDeps, runCollection } from '@house-scanner-tools/live-reader';
-import { prefilterObservations } from '@house-scanner-tools/prefilter';
+import {
+  type CollectorBounds,
+  prefilterObservations,
+} from '@house-scanner-tools/prefilter';
 import {
   planQueries,
   type queryPlanInputSchema,
@@ -25,7 +28,9 @@ export interface LiveRunOptions {
   runId?: string;
   batchId?: string;
   capability: SourceCapability;
+  // Only partitions come from the plan; what is kept comes from the collector bounds.
   planning: Omit<z.input<typeof queryPlanInputSchema>, 'capability'>;
+  bounds?: CollectorBounds;
   // Updated in place with the listing pages this run reads.
   memory?: LoadedMemory;
   // Estimated positions for kept homes the source gave none for; updated in place.
@@ -70,12 +75,7 @@ export async function prepareLiveRun(options: LiveRunOptions, deps: LiveDeps) {
     capability: options.capability,
   });
   const prefilter = (observations: Observation[]) =>
-    prefilterObservations(
-      observations,
-      options.planning.profiles
-        .filter((profile) => profile.enabled)
-        .map((profile) => profile.criteria),
-    );
+    prefilterObservations(observations, options.bounds);
   const result = await runCollection(
     adapter,
     queryPlan.partitions.map(({ id, municipality, propertyTypes }) => ({
@@ -107,7 +107,7 @@ export async function prepareLiveRun(options: LiveRunOptions, deps: LiveDeps) {
   // Plain sentences for people. The database prefixes the source and status and appends the
   // policy's gap list, which the app strips when it shows this.
   const coverageNote = [
-    `Read ${result.observations.length} homes across ${pages} pages; kept ${kept.length} that fit your profile and dropped ${droppedCount}.`,
+    `Read ${result.observations.length} homes across ${pages} pages; kept ${kept.length} within collector bounds and dropped ${droppedCount}.`,
     `${adapter.detailLabel}: ${result.detailRead} read, ${result.detailCached} reused, ${result.detailFailed} failed, ${result.detailSkipped} skipped.`,
     geocoded
       ? `Positions estimated from addresses: ${geocoded.found} found (${geocoded.cached} reused).`
@@ -133,7 +133,6 @@ export async function prepareLiveRun(options: LiveRunOptions, deps: LiveDeps) {
     ingestRequestSchema.parse({
       ...common,
       action: 'begin',
-      profileVersions: queryPlan.profileVersions,
       sourceIds: [adapter.sourceId],
     }),
     ...stages,

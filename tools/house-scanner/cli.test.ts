@@ -3,7 +3,6 @@ import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { beforeAll, expect, it } from 'vitest';
-import { SYNTHETIC_SNAPSHOT } from '@/features/house-scanner/mock/synthetic-household';
 
 beforeAll(() => {
   execFileSync(
@@ -65,7 +64,6 @@ it.each([
       '--at=2026-10-13T00:00:00Z',
     ],
   ],
-  [['--live', '--source=bjurfors', '--confirm-personal-read']],
   [['--source=boneo', '--confirm-personal-read']],
   [['--source=boneo']],
 ])('refuses live reading without every flag: %j', (args) => {
@@ -84,43 +82,22 @@ it.each([
 
 // Every case below must be refused before the collector makes any request.
 const SECRET = 'synthetic-cli-secret-not-real-0123456789abcdef';
-const profilesPath = join(
-  mkdtempSync(join(tmpdir(), 'hs-profiles-')),
-  'profiles.json',
-);
-writeFileSync(
-  profilesPath,
-  JSON.stringify(
-    SYNTHETIC_SNAPSHOT.profiles.map(({ id, revision, enabled, criteria }) => ({
-      id,
-      revision,
-      enabled,
-      criteria,
-    })),
-  ),
-);
 const LIVE = ['--live', '--source=boneo', '--confirm-personal-read'];
 
 it.each([
-  [[...LIVE]],
-  [[...LIVE, '--send', '--profiles', profilesPath]],
-  [[...LIVE, '--confirm-send', '--profiles', profilesPath]],
+  [[...LIVE, '--send']],
+  [[...LIVE, '--confirm-send']],
   [['--send', '--confirm-send']],
-  [['--send', '--confirm-send', '--profiles', profilesPath]],
-  [[...LIVE, '--profiles', join(tmpdir(), 'hs-missing-profiles.json')]],
-])(
-  'refuses live runs without a profiles file or with incomplete send flags: %j',
-  (args) => {
-    const result = spawnSync(
-      process.execPath,
-      ['.house-scanner-build/collector.mjs', ...args],
-      { encoding: 'utf8', timeout: 10_000 },
-    );
-    expect(result.status).toBe(1);
-    expect(JSON.parse(result.stderr)).toMatchObject({ status: 'rejected' });
-    expect(result.stdout).toBe('');
-  },
-);
+])('refuses live runs with incomplete send flags: %j', (args) => {
+  const result = spawnSync(
+    process.execPath,
+    ['.house-scanner-build/collector.mjs', ...args],
+    { encoding: 'utf8', timeout: 10_000 },
+  );
+  expect(result.status).toBe(1);
+  expect(JSON.parse(result.stderr)).toMatchObject({ status: 'rejected' });
+  expect(result.stdout).toBe('');
+});
 
 it.each([
   [
@@ -147,8 +124,6 @@ it.each([
         ...LIVE,
         '--send',
         '--confirm-send',
-        '--profiles',
-        profilesPath,
       ],
       {
         encoding: 'utf8',
@@ -172,7 +147,6 @@ it.each([
   },
 );
 
-const HOUSEHOLD = '00000000-0000-4000-8000-0000000000aa';
 const runPrinter = (...args: string[]) =>
   spawnSync(
     process.execPath,
@@ -181,14 +155,13 @@ const runPrinter = (...args: string[]) =>
   );
 
 it('prints the SQL that approves the Boneo policy without any network or file access', () => {
-  const result = runPrinter('--source=boneo', `--household=${HOUSEHOLD}`);
+  const result = runPrinter('--source=boneo');
   expect(result.status).toBe(0);
   const match =
-    /^select hs\.admin_set_source_policy\('([^']+)', '(.*)'::jsonb\);\n$/s.exec(
+    /^select hs\.admin_set_source_policy\('(.*)'::jsonb\);\n$/s.exec(
       result.stdout,
     );
-  expect(match?.[1]).toBe(HOUSEHOLD);
-  const policy = JSON.parse((match?.[2] ?? '').replaceAll("''", "'"));
+  const policy = JSON.parse((match?.[1] ?? '').replaceAll("''", "'"));
   expect(policy).toMatchObject({
     sourceId: 'boneo',
     status: 'approved',
@@ -203,14 +176,13 @@ it('prints the SQL that approves the Boneo policy without any network or file ac
 });
 
 it('prints the SQL that approves the Bjurfors policy at revision 2', () => {
-  const result = runPrinter('--source=bjurfors', `--household=${HOUSEHOLD}`);
+  const result = runPrinter('--source=bjurfors');
   expect(result.status).toBe(0);
   const match =
-    /^select hs\.admin_set_source_policy\('([^']+)', '(.*)'::jsonb\);\n$/s.exec(
+    /^select hs\.admin_set_source_policy\('(.*)'::jsonb\);\n$/s.exec(
       result.stdout,
     );
-  expect(match?.[1]).toBe(HOUSEHOLD);
-  const policy = JSON.parse((match?.[2] ?? '').replaceAll("''", "'"));
+  const policy = JSON.parse((match?.[1] ?? '').replaceAll("''", "'"));
   expect(policy).toMatchObject({
     sourceId: 'bjurfors',
     revision: 2,
@@ -227,11 +199,9 @@ it('prints the SQL that approves the Bjurfors policy at revision 2', () => {
 });
 
 it.each([
-  [['--source=boneo']],
-  [['--source=boneo', '--household=not-a-uuid']],
-  [['--source=bjurfors']],
-  [['--source=bjurfors', '--household=not-a-uuid']],
-  [['--source=alvhem', `--household=${HOUSEHOLD}`]],
+  [[]],
+  [['--source=alvhem']],
+  [['--source=boneo', '--household=00000000-0000-4000-8000-0000000000aa']],
 ])('refuses to print policy SQL for %j', (args) => {
   const result = runPrinter(...args);
   expect(result.status).toBe(1);
@@ -256,8 +226,6 @@ const runLive = (cwd: string, ...args: string[]) =>
       noFetch,
       resolve('.house-scanner-build/collector.mjs'),
       ...LIVE,
-      '--profiles',
-      profilesPath,
       ...args,
     ],
     { encoding: 'utf8', timeout: 20_000, cwd },
@@ -274,8 +242,6 @@ it('reads bjurfors live under the same flags, and makes its first request to rob
       '--live',
       '--source=bjurfors',
       '--confirm-personal-read',
-      '--profiles',
-      profilesPath,
     ],
     { encoding: 'utf8', timeout: 20_000, cwd },
   );
@@ -284,6 +250,17 @@ it('reads bjurfors live under the same flags, and makes its first request to rob
     stopped: 'robots-unavailable',
     requestCount: 1,
   });
+});
+
+it('ignores a profiles argument from an older run script', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'hs-cwd-'));
+  const result = runLive(
+    cwd,
+    '--profiles',
+    join(tmpdir(), 'hs-missing-profiles.json'),
+  );
+  expect(result.status).toBe(0);
+  expect(JSON.parse(result.stdout)).toMatchObject({ requestCount: 1 });
 });
 
 it('refuses a live read of a source that has no executor', () => {
@@ -296,8 +273,6 @@ it('refuses a live read of a source that has no executor', () => {
       '--live',
       '--source=alvhem',
       '--confirm-personal-read',
-      '--profiles',
-      profilesPath,
     ],
     {
       encoding: 'utf8',

@@ -158,8 +158,8 @@ describe('against a backend that breaks one guarantee', () => {
     expect(result.code).toBe(1);
   });
 
-  it('fails when an authenticated user can run the purge', async () => {
-    const result = await statuses({ purgeAllowed: true });
+  it('fails when an authenticated user can run a service-only function', async () => {
+    const result = await statuses({ serviceAllowed: true });
     expect(result.byId['6-privileged-denied']).toBe('FAIL');
   });
 
@@ -348,10 +348,13 @@ describe('probe arguments match the migrations', () => {
     .map((name) => readFileSync(resolve('supabase/migrations', name), 'utf8'))
     .join('\n');
 
+  // The latest definition wins, as when the migrations run in order.
   function parameters(schema: string, name: string) {
-    const match = new RegExp(
-      `create function ${schema}\\.${name}\\(([^)]*)\\)`,
-    ).exec(sql);
+    const match = [
+      ...sql.matchAll(
+        new RegExp(`create function ${schema}\\.${name}\\(([^)]*)\\)`, 'g'),
+      ),
+    ].at(-1);
     if (!match) throw new Error(`${schema}.${name} not found`);
     return match[1]
       .split(',')

@@ -79,8 +79,8 @@ beforeAll(async () => {
     allowedEvidenceSubjects: [],
   };
   await db.query(
-    "insert into hs.source_policies(household_id,source_id,policy) values ($1,'synthetic',$2::jsonb)",
-    [HOUSE, JSON.stringify(policy)],
+    "insert into hs.source_policies(source_id,policy) values ('synthetic',$1::jsonb)",
+    [JSON.stringify(policy)],
   );
   const value = {
     ...SYNTHETIC_SNAPSHOT.listings[0],
@@ -90,8 +90,8 @@ beforeAll(async () => {
     evidence: [],
   };
   await db.query(
-    "insert into hs.listings(id,household_id,origin,source_id,source_listing_id,episode_id,value) values ($1,$2,'source','synthetic','home','first',$3::jsonb)",
-    [HOME, HOUSE, JSON.stringify(value)],
+    "insert into hs.listings(id,source_id,source_listing_id,episode_id,value) values ($1,'synthetic','home','first',$2::jsonb)",
+    [HOME, JSON.stringify(value)],
   );
   // The migration can precede reference-data loading, with the old response still valid.
   expect(

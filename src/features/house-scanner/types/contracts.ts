@@ -323,6 +323,7 @@ export const ingestRequestSchema = z.discriminatedUnion('action', [
     action: z.literal('begin'),
     contractVersion: z.literal(CONTRACT_VERSION),
     runId: id,
+    // Ignored since the shared catalog; accepted until every collector stops sending it.
     profileVersions: z
       .array(
         z.strictObject({
@@ -331,7 +332,8 @@ export const ingestRequestSchema = z.discriminatedUnion('action', [
         }),
       )
       .min(1)
-      .max(20),
+      .max(20)
+      .optional(),
     sourceIds: z
       .array(z.string().regex(/^[a-z0-9-]{1,60}$/))
       .min(1)
