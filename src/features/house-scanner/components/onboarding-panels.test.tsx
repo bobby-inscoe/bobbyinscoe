@@ -134,6 +134,7 @@ describe('household settings section', () => {
     const access: HouseholdAccessActions = {
       load: vi.fn(async () => structuredClone(data)),
       createLink: vi.fn(async () => `http://localhost/invite?token=${TOKEN}`),
+      sendLink: vi.fn(async () => `http://localhost/invite?token=${TOKEN}`),
       revoke: vi.fn(async () => {}),
       rename: vi.fn(async () => {}),
       makeOwner: vi.fn(async () => {}),
@@ -178,22 +179,64 @@ describe('household settings section', () => {
         '00000000-0000-4000-8000-0000000000bb',
       ),
     );
-    type(/Invite someone to join/, 'friend@example.com');
-    fireEvent.click(screen.getByRole('button', { name: 'Copy a join link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy new link' }));
     await waitFor(() =>
       expect(access.createLink).toHaveBeenCalledWith(
+        'join',
+        'pending@example.com',
+      ),
+    );
+    expect(
+      await screen.findByText(/Copied a new link for pending@example.com/),
+    ).toBeTruthy();
+    expect(access.sendLink).not.toHaveBeenCalled();
+  });
+
+  it('checks the address, then sends and copies only after confirmation', async () => {
+    const writeText = vi.fn(async () => {});
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const access = showAccess({
+      name: 'Home',
+      members: [member(ME, 'owner', 'Me')],
+      invitations: [],
+    });
+    await screen.findByText('Me (you)');
+    type(/Invite someone to join/, 'friend@example');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Send join invitation' }),
+    );
+    expect(
+      await screen.findByText('Enter a valid email address.'),
+    ).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    type(/Invite someone to join/, 'friend@example.com');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Send join invitation' }),
+    );
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/friend@example.com/)).toBeTruthy();
+    expect(access.sendLink).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(access.sendLink).not.toHaveBeenCalled();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Send join invitation' }),
+    );
+    fireEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', {
+        name: 'Send invitation',
+      }),
+    );
+    await waitFor(() =>
+      expect(access.sendLink).toHaveBeenCalledWith(
         'join',
         'friend@example.com',
       ),
     );
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining(TOKEN));
     expect(
-      await screen.findByText(
-        /Only someone who signs in with friend@example.com/,
-      ),
+      await screen.findByText(/Invitation sent to friend@example.com/),
     ).toBeTruthy();
-    expect(
-      (screen.getByLabelText('Link to share') as HTMLInputElement).value,
-    ).toContain(TOKEN);
   });
 
   it('gives a member a create link and leaving, but no owner controls', async () => {
@@ -206,14 +249,19 @@ describe('household settings section', () => {
     expect(screen.queryByLabelText(/Household name/)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Make owner' })).toBeNull();
     expect(screen.queryByLabelText(/Invite someone to join/)).toBeNull();
+    type(/start their own household/, 'new@example.com');
     fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Copy a link to create a household',
+      screen.getByRole('button', { name: 'Send new household invitation' }),
+    );
+    fireEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', {
+        name: 'Send invitation',
       }),
     );
     await waitFor(() =>
-      expect(access.createLink).toHaveBeenCalledWith('create'),
+      expect(access.sendLink).toHaveBeenCalledWith('create', 'new@example.com'),
     );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     fireEvent.click(
       screen.getByRole('button', { name: 'Leave this household' }),
     );

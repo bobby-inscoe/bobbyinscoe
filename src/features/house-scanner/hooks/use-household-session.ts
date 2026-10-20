@@ -20,6 +20,7 @@ import {
   revokeInvitation,
   saveNote as saveNoteRequest,
   saveProfile,
+  sendInvitation,
   setFavorite,
   setHidden,
   setRememberDevice,
@@ -546,6 +547,8 @@ export function useHouseholdSession() {
       load: () => householdAccess(client, household),
       createLink: (purpose, email) =>
         createInvitation(client, household, purpose, email ?? null),
+      sendLink: (purpose, email) =>
+        sendInvitation(client, household, purpose, email),
       revoke: async (id) => {
         await revokeInvitation(client, household, id);
       },

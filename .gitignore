@@ -43,3 +43,6 @@ yarn.lock
 house-scanner.profiles*.json
 *.private.json
 house-scanner.cache*.json
+
+# Claude Code worktrees nest a full checkout, with its own Biome config
+/.claude/worktrees/

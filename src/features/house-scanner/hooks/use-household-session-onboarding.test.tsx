@@ -186,6 +186,37 @@ describe('household settings actions', () => {
     });
   });
 
+  it('sends an invitation by making the link, then asking the invite function to email it', async () => {
+    const hook = await authenticated();
+    const access = hook.result.current.access;
+    if (!access) throw new Error('Signed-in session lacks settings actions.');
+    sdk.rpc.mockResolvedValueOnce(
+      reply({
+        id: '00000000-0000-4000-8000-0000000000aa',
+        token: TOKEN,
+        expiresAt: '2026-10-28T12:00:00Z',
+      }),
+    );
+    const url = await access.sendLink('join', 'friend@example.com');
+    expect(url).toContain(`token=${TOKEN}`);
+    expect(sdk.functions.invoke).toHaveBeenCalledWith('house-scanner-invite', {
+      body: { token: TOKEN, email: 'friend@example.com' },
+    });
+    sdk.rpc.mockResolvedValueOnce(
+      reply({
+        id: '00000000-0000-4000-8000-0000000000ab',
+        token: TOKEN,
+        expiresAt: '2026-10-28T12:00:00Z',
+      }),
+    );
+    sdk.functions.invoke.mockResolvedValueOnce({
+      error: { message: 'Edge Function returned a non-2xx status code' },
+    });
+    await expect(
+      access.sendLink('create', 'friend@example.com'),
+    ).rejects.toThrow('email could not be sent');
+  });
+
   it('asks the last owner to hand over, and re-reads memberships after leaving', async () => {
     const hook = await authenticated();
     const access = hook.result.current.access;
