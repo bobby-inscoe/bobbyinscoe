@@ -107,15 +107,12 @@
 .placeholder {
   display: grid;
   place-items: center;
-  min-height: 120px;
+  min-height: 0;
+  /* Same 3:2 box as a photo, so cards with and without one are the same height. */
+  aspect-ratio: 3 / 2;
   background: var(--mantine-color-flax-1);
   color: var(--mantine-color-dimmed);
   padding: var(--mantine-spacing-md);
-}
-.viewingPhoto .placeholder {
-  min-height: 0;
-  aspect-ratio: 3 / 2;
-  padding: 0;
 }
 /* Viewing cards share the row and grow to fill it: one fills the width up to the cap, several wrap into columns. */
 .viewingList {
