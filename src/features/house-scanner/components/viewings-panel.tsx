@@ -83,16 +83,16 @@ export function ViewingsPanel({
             <Title order={3} size="h4">
               {day.label}
             </Title>
-            {day.entries.map(({ listing, viewing }) => (
-              <Box
-                key={`${listing.id}-${viewing.startsAt}`}
-                className={`${styles.card} ${styles.viewingCard}`}
-              >
-                <Box className={styles.viewingPhoto}>
-                  <ListingPhoto listing={listing} />
-                </Box>
-                <Stack gap="xs" justify="space-between" style={{ minWidth: 0 }}>
-                  <Stack gap={4}>
+            <Box className={styles.viewingList}>
+              {day.entries.map(({ listing, viewing }) => (
+                <Box
+                  key={`${listing.id}-${viewing.startsAt}`}
+                  className={styles.card}
+                >
+                  <Box className={styles.viewingPhoto}>
+                    <ListingPhoto listing={listing} />
+                  </Box>
+                  <Stack gap={4} className={styles.grow}>
                     <Text size="lg" fw={700}>
                       {formatViewing(viewing)}
                     </Text>
@@ -113,9 +113,9 @@ export function ViewingsPanel({
                       Original listing
                     </Anchor>
                   </Group>
-                </Stack>
-              </Box>
-            ))}
+                </Box>
+              ))}
+            </Box>
           </Stack>
         ))
       )}
