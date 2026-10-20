@@ -7,6 +7,7 @@ import { sourceRegistry } from '@house-scanner-tools/source-registry';
 import { describe, expect, it } from 'vitest';
 import { SYNTHETIC_SNAPSHOT } from '@/features/house-scanner/mock/synthetic-household';
 import type { Observation } from '@/features/house-scanner/types/contracts';
+import { SOURCES } from '@/features/house-scanner/utils/criteria-options';
 
 const at = '2026-10-12T12:00:00Z';
 const options = {
@@ -64,6 +65,13 @@ describe('local fixture collector', () => {
         ?.previousAskingPriceSek,
     ).toBe(2900000);
     expect(run.queryPlan.gaps.join(' ')).toContain('no live discovery');
+  });
+  it('offers exactly the live sources in the Settings source picker', () => {
+    const live = sourceRegistry()
+      .filter(({ executor }) => executor.endsWith('-personal-read'))
+      .map(({ policy }) => policy.sourceId)
+      .sort();
+    expect(SOURCES.map(({ value }) => value)).toEqual(live);
   });
   it('refuses every real-source executor and expired fixture policy', () => {
     for (const capability of sourceRegistry().slice(1))

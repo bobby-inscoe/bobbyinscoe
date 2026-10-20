@@ -180,6 +180,9 @@ export async function householdSnapshot(
     snapshot.hiddenListingIds?.some(
       (listingId) => !listingIds.has(listingId),
     ) ||
+    snapshot.hides?.some(
+      (hide) => !listingIds.has(hide.listingId) || !memberIds.has(hide.userId),
+    ) ||
     snapshot.notes?.some(
       (note) => !listingIds.has(note.listingId) || !memberIds.has(note.userId),
     ) ||

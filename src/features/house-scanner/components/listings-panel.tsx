@@ -95,7 +95,7 @@ interface ListingsPanelProps {
   section: string;
   onSectionChange: (section: string) => void;
   filters: ListingFilters;
-  // This member's hidden homes, which stay out of view unless the filter says otherwise.
+  // The household's hidden homes, which stay out of view unless the filter says otherwise.
   hiddenIds: ReadonlySet<string>;
   // How many hidden homes the current filters keep out of view.
   hiddenCount: number;
@@ -313,8 +313,14 @@ export function ListingsPanel({
     if (!filtersOpen) setDraft(filters);
   }, [filters, filtersOpen]);
   const draftCount = useMemo(
-    () => applyListingFilters(scoped, draft, hiddenIds, duplicateIds).length,
-    [scoped, draft, hiddenIds, duplicateIds],
+    () =>
+      applyListingFilters(
+        scoped,
+        tab === 'favorites' ? { ...draft, hidden: 'both' } : draft,
+        hiddenIds,
+        duplicateIds,
+      ).length,
+    [scoped, draft, hiddenIds, duplicateIds, tab],
   );
   const ordered = useMemo(() => sortListings(visible, sort), [visible, sort]);
   const renderedCount =
@@ -707,8 +713,8 @@ export function ListingsPanel({
           className={mobileMap ? styles.mobileMapStatus : undefined}
         >
           <Text role="status" aria-live="polite">
-            {checkedIds.length} selected · Saves are yours; hiding is only for
-            you
+            {checkedIds.length} selected · Saves are yours; hiding is for the
+            household
             {savedCount > 0
               ? ` · Includes ${savedCount} saved ${savedCount === 1 ? 'home' : 'homes'}`
               : ''}
@@ -804,7 +810,7 @@ export function ListingsPanel({
       ) : (
         <div className={styles.mapPanel}>
           {/* The same view the Hidden homes filter sets, so the list and the map stay in step. */}
-          {!mobileMap && (
+          {!mobileMap && tab !== 'favorites' && (
             <Switch
               label="Show hidden homes"
               checked={filters.hidden !== 'not-hidden'}
@@ -891,7 +897,8 @@ export function ListingsPanel({
                           // A home hidden out of the view takes its card with it, and stays closed when it returns.
                           if (
                             !hiddenIds.has(listingId) &&
-                            filters.hidden === 'not-hidden'
+                            filters.hidden === 'not-hidden' &&
+                            tab !== 'favorites'
                           )
                             onSelectedIdChange(null);
                         }}

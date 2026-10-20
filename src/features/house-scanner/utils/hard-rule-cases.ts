@@ -4,7 +4,7 @@ import type {
 } from '@/features/house-scanner/types/contracts';
 
 // One set of cases for the hard rules that both the client matcher and the database candidate filter apply
-// (supabase/migrations/*_house_scanner_criteria_filter.sql). A case marked `excluded` must be outside for both;
+// (hs.fails_hard_rule, latest in supabase/migrations/*_house_scanner_shared_hides.sql). A case marked `excluded` must be outside for both;
 // every other case must be returned by the database. Geography and the apartment rules stay client-only.
 export const HARD_RULE_CRITERIA: Pick<
   Criteria,
@@ -21,9 +21,33 @@ export const HARD_RULE_CASES: {
   name: string;
   facts: Partial<Listing['facts']>;
   conflicts?: Listing['conflicts'];
+  // The listing's source, and the sources the criteria select; absent means no source filter.
+  sourceId?: string;
+  sourceIds?: string[];
   excluded: boolean;
 }[] = [
   { name: 'fits every rule', facts: {}, excluded: false },
+  {
+    name: 'source not selected',
+    facts: {},
+    sourceId: 'beta',
+    sourceIds: ['alpha'],
+    excluded: true,
+  },
+  {
+    name: 'source selected',
+    facts: {},
+    sourceId: 'alpha',
+    sourceIds: ['alpha'],
+    excluded: false,
+  },
+  { name: 'no source filter', facts: {}, sourceId: 'beta', excluded: false },
+  {
+    name: 'no source, as a manual listing',
+    facts: {},
+    sourceIds: ['alpha'],
+    excluded: false,
+  },
   {
     name: 'area below the minimum',
     facts: { livingAreaM2: 59 },

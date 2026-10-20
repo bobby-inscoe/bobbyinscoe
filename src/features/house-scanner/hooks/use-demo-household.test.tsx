@@ -17,16 +17,21 @@ const TERRACE = '00000000-0000-4000-8000-000000000011';
 describe('demo hidden homes', () => {
   it('hides and unhides in memory, and leaves the field out when none are hidden', async () => {
     const { result } = renderHook(useDemoHousehold);
-    expect(result.current.snapshot.hiddenListingIds).toBeUndefined();
+    const hidden = () =>
+      result.current.snapshot.hides?.map(({ listingId, userId }) => ({
+        listingId,
+        userId,
+      }));
+    expect(hidden()).toBeUndefined();
     await act(() => result.current.setHidden([BALCONY, TERRACE], true));
-    expect(result.current.snapshot.hiddenListingIds).toEqual([
-      BALCONY,
-      TERRACE,
+    expect(hidden()).toEqual([
+      { listingId: BALCONY, userId: DEMO_USER_ID },
+      { listingId: TERRACE, userId: DEMO_USER_ID },
     ]);
     await act(() => result.current.setHidden([BALCONY], false));
-    expect(result.current.snapshot.hiddenListingIds).toEqual([TERRACE]);
+    expect(hidden()).toEqual([{ listingId: TERRACE, userId: DEMO_USER_ID }]);
     await act(() => result.current.setHidden([TERRACE], false));
-    expect(result.current.snapshot.hiddenListingIds).toBeUndefined();
+    expect(hidden()).toBeUndefined();
   });
 });
 

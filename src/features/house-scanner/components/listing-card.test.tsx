@@ -10,6 +10,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { ListingCard } from '@/features/house-scanner/components/listing-card';
 import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
 import {
+  DEMO_OTHER_USER_ID,
   DEMO_USER_ID,
   STALE_LISTING_ID,
   SYNTHETIC_SNAPSHOT,
@@ -126,6 +127,38 @@ it('shows neither the badge nor the notice on a listing that is not stale', asyn
   await renderCard(false, true);
   expect(screen.queryByText('Not in latest scan')).toBeNull();
   expect(screen.queryByRole('note')).toBeNull();
+});
+
+it('names the member who hid the home', async () => {
+  stubMatchMedia();
+  const { MantineProvider } = await import('@mantine/core');
+  const listing = SYNTHETIC_SNAPSHOT.listings[0];
+  render(
+    <MantineProvider>
+      <ListingCard
+        listing={listing}
+        snapshot={{
+          ...SYNTHETIC_SNAPSHOT,
+          hides: [
+            {
+              listingId: listing.id,
+              userId: DEMO_OTHER_USER_ID,
+              hiddenAt: '2026-10-20T12:00:00Z',
+            },
+          ],
+        }}
+        userId={DEMO_USER_ID}
+        details={false}
+        stale={false}
+        busy={false}
+        canSave
+        hidden
+        onSelect={() => {}}
+        onFavorite={() => {}}
+      />
+    </MantineProvider>,
+  );
+  expect(screen.getByText('Hidden by Demo Morgan')).toBeTruthy();
 });
 
 function stubMatchMedia() {

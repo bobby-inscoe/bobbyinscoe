@@ -41,9 +41,15 @@ export function useHiddenListings({
   persist,
   onSetHidden,
 }: UseHiddenListingsOptions) {
+  // The household's hides; an older database sends only this member's ids.
   const hidden = useMemo(
-    () => new Set(snapshot.hiddenListingIds ?? []),
-    [snapshot.hiddenListingIds],
+    () =>
+      new Set(
+        snapshot.hides?.map((hide) => hide.listingId) ??
+          snapshot.hiddenListingIds ??
+          [],
+      ),
+    [snapshot.hides, snapshot.hiddenListingIds],
   );
   // The session hands out a new action on every render; callers keep stable functions.
   const action = useRef(onSetHidden);

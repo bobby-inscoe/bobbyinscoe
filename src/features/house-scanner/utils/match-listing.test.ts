@@ -22,13 +22,18 @@ function home(
 
 describe('hard rules shared with the database candidate filter', () => {
   const shared = { ...criteria, ...HARD_RULE_CRITERIA };
-  it.each(HARD_RULE_CASES)('$name', ({ facts, conflicts = [], excluded }) => {
-    const listing = home(
-      { ...HARD_RULE_BASE_FACTS, ...facts },
-      { conflicts, coordinates: null },
-    );
-    expect(matchListing(listing, shared).section === 'outside').toBe(excluded);
-  });
+  it.each(HARD_RULE_CASES)(
+    '$name',
+    ({ facts, conflicts = [], sourceId, sourceIds, excluded }) => {
+      const listing = home(
+        { ...HARD_RULE_BASE_FACTS, ...facts },
+        { conflicts, coordinates: null, sourceId },
+      );
+      expect(
+        matchListing(listing, { ...shared, sourceIds }).section === 'outside',
+      ).toBe(excluded);
+    },
+  );
 });
 
 describe('buyer matching under incomplete evidence', () => {
