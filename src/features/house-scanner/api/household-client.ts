@@ -382,6 +382,25 @@ export async function createInvitation(
   );
   return invitationUrl(created.token);
 }
+// Makes a link for this email and has the trusted server email it. Returns the link so the sender can copy it too.
+export async function sendInvitation(
+  client: SupabaseClient,
+  householdId: string,
+  purpose: 'create' | 'join',
+  email: string,
+) {
+  const url = await createInvitation(client, householdId, purpose, email);
+  try {
+    await startAccountSetup(
+      client,
+      token.parse(new URL(url).searchParams.get('token')),
+      email,
+    );
+  } catch {
+    throw new Error('The invitation email could not be sent. Try again.');
+  }
+  return url;
+}
 export function previewInvitation(client: SupabaseClient, value: string) {
   return accessRpc(
     client,

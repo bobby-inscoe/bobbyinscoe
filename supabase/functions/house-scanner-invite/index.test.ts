@@ -67,15 +67,48 @@ describe('invitation account setup', () => {
     expect(admin.auth.admin.inviteUserByEmail).not.toHaveBeenCalled();
   });
 
-  it('answers the same when the address already has an account', async () => {
+  const known = () =>
     admin.auth.admin.inviteUserByEmail.mockResolvedValueOnce({
       error: {
         message: 'A user with this email address has already been registered',
       },
     });
+
+  it('emails the link through Resend when the address already has an account, with the same answer', async () => {
+    env.set('RESEND_API_KEY', 'synthetic-resend-key');
+    env.set('SUPABASE_ANON_KEY', 'synthetic-anon-key');
+    admin.rpc.mockImplementation(async (name: string) => ({
+      data:
+        name === 'hs_invitation_preview'
+          ? { purpose: 'join', householdName: 'Home', issuerName: 'Casey' }
+          : { ok: true },
+      error: null,
+    }));
+    const send = vi.fn(async () => new Response('{}'));
+    vi.stubGlobal('fetch', send);
+    known();
     const reply = await post({ token, email: 'known@example.invalid' });
     expect(reply.status).toBe(200);
     expect(await reply.json()).toEqual({ status: 'sent' });
+    expect(send).toHaveBeenCalledTimes(1);
+    const [endpoint, init] = send.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(endpoint).toBe('https://api.resend.com/emails');
+    const mail = JSON.parse(String(init.body));
+    expect(mail.to).toEqual(['known@example.invalid']);
+    expect(mail.text).toContain('Casey invited you to join Home');
+    expect(mail.text).toContain(`invite?token=${token}`);
+  });
+
+  it('answers the same, and sends nothing, when the address has an account but no mail key is set', async () => {
+    const send = vi.fn();
+    vi.stubGlobal('fetch', send);
+    known();
+    const reply = await post({ token, email: 'known@example.invalid' });
+    expect(reply.status).toBe(200);
+    expect(send).not.toHaveBeenCalled();
   });
 
   it('refuses other origins, methods and malformed input before touching the database', async () => {

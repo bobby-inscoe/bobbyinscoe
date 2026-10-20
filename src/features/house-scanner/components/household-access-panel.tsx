@@ -12,27 +12,13 @@ import {
   Title,
 } from '@mantine/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { z } from 'zod';
 
 import type { HouseholdAccess } from '@/features/house-scanner/api/household-client';
 import type { HouseholdAccessActions } from '@/features/house-scanner/types/household';
 import { formatDate } from '@/features/house-scanner/utils/format';
 
-// A link that was just made, shown so it can be copied by hand when the clipboard is unavailable.
-function SharedLink({ url, note }: { url: string; note: string }) {
-  return (
-    <Stack gap={4} w="100%" maw="36rem">
-      <TextInput
-        label="Link to share"
-        readOnly
-        value={url}
-        onFocus={(event) => event.currentTarget.select()}
-      />
-      <Text size="sm" c="dimmed">
-        {note}
-      </Text>
-    </Stack>
-  );
-}
+type Purpose = 'create' | 'join';
 
 async function copy(url: string) {
   try {
@@ -55,13 +41,20 @@ export function HouseholdAccessPanel({
   actions.current = access;
   const [data, setData] = useState<HouseholdAccess | null>(null);
   const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
+  // The action in flight, so only its own button shows a spinner.
+  const [pending, setPending] = useState('');
   const [name, setName] = useState('');
-  const [joinEmail, setJoinEmail] = useState('');
-  const [createdLink, setCreatedLink] = useState<{
-    url: string;
-    note: string;
+  const [emails, setEmails] = useState<Record<Purpose, string>>({
+    create: '',
+    join: '',
+  });
+  const [emailError, setEmailError] = useState<Purpose | null>(null);
+  // The invitation waiting for the sender's confirmation.
+  const [confirming, setConfirming] = useState<{
+    purpose: Purpose;
+    email: string;
   } | null>(null);
+  const [notice, setNotice] = useState('');
   const [leaving, setLeaving] = useState(false);
   const [nextOwner, setNextOwner] = useState<string | null>(null);
   const load = useCallback(async () => {
@@ -74,9 +67,10 @@ export function HouseholdAccessPanel({
       setError('Could not load the household members. Reload to try again.'),
     );
   }, [load]);
-  async function perform(action: () => Promise<void>) {
-    setBusy(true);
+  async function perform(key: string, action: () => Promise<void>) {
+    setPending(key);
     setError('');
+    setNotice('');
     try {
       await action();
     } catch (failure) {
@@ -86,7 +80,7 @@ export function HouseholdAccessPanel({
           : 'Request failed. Try again.',
       );
     } finally {
-      setBusy(false);
+      setPending((current) => (current === key ? '' : current));
     }
   }
   if (!data)
@@ -101,6 +95,52 @@ export function HouseholdAccessPanel({
   const others = active.filter((member) => member.userId !== userId);
   const lastOwner = owner && !others.some((member) => member.role === 'owner');
   const mustHandOver = lastOwner && others.length > 0;
+  // Sending waits for the sender's confirmation, which also copies the link.
+  const inviteForm = (purpose: Purpose, label: string, description: string) => (
+    <form
+      noValidate
+      onSubmit={(event) => {
+        event.preventDefault();
+        const email = emails[purpose].trim();
+        if (!z.email().max(254).safeParse(email).success) {
+          setEmailError(purpose);
+          return;
+        }
+        setEmailError(null);
+        setConfirming({ purpose, email });
+      }}
+    >
+      <Group align="flex-end" wrap="nowrap" maw="30rem">
+        <TextInput
+          style={{ flex: 1 }}
+          label={label}
+          description={description}
+          type="email"
+          autoComplete="off"
+          required
+          value={emails[purpose]}
+          error={emailError === purpose && 'Enter a valid email address.'}
+          onChange={(event) => {
+            const value = event.currentTarget.value;
+            setEmails((current) => ({ ...current, [purpose]: value }));
+            setEmailError(null);
+          }}
+        />
+        <Button
+          type="submit"
+          variant="default"
+          w="5rem"
+          aria-label={
+            purpose === 'create'
+              ? 'Send new household invitation'
+              : 'Send join invitation'
+          }
+        >
+          Send
+        </Button>
+      </Group>
+    </form>
+  );
   return (
     <Paper withBorder p="md">
       <Stack>
@@ -110,7 +150,7 @@ export function HouseholdAccessPanel({
           <form
             onSubmit={(event) => {
               event.preventDefault();
-              void perform(async () => {
+              void perform('rename', async () => {
                 await actions.current.rename(name);
                 await load();
               });
@@ -122,13 +162,13 @@ export function HouseholdAccessPanel({
                 required
                 maxLength={80}
                 value={name}
-                disabled={busy}
+                disabled={pending === 'rename'}
                 onChange={(event) => setName(event.currentTarget.value)}
               />
               <Button
                 type="submit"
                 variant="default"
-                loading={busy}
+                loading={pending === 'rename'}
                 disabled={name.trim() === data.name}
               >
                 Rename
@@ -165,9 +205,9 @@ export function HouseholdAccessPanel({
                     <Button
                       size="xs"
                       variant="default"
-                      loading={busy}
+                      loading={pending === `owner:${member.userId}`}
                       onClick={() =>
-                        void perform(async () => {
+                        void perform(`owner:${member.userId}`, async () => {
                           await actions.current.makeOwner(member.userId);
                           await load();
                         })
@@ -180,14 +220,14 @@ export function HouseholdAccessPanel({
                     size="xs"
                     variant="subtle"
                     color="red"
-                    loading={busy}
+                    loading={pending === `remove:${member.userId}`}
                     onClick={() => {
                       if (
                         window.confirm(
                           `Remove ${member.displayName} from this household? Their saves and notes stay, and an owner can invite them back.`,
                         )
                       )
-                        void perform(async () => {
+                        void perform(`remove:${member.userId}`, async () => {
                           await actions.current.deactivate(member.userId);
                           await load();
                         });
@@ -202,60 +242,25 @@ export function HouseholdAccessPanel({
         </Stack>
 
         <Title order={3}>Invite people</Title>
-        <Group>
-          <Button
-            variant="default"
-            loading={busy}
-            onClick={() =>
-              void perform(async () => {
-                const url = await actions.current.createLink('create');
-                const copied = await copy(url);
-                setCreatedLink({
-                  url,
-                  note: `${copied ? 'Copied. ' : ''}Anyone you send this to can start their own, separate household. It works once, for 7 days.`,
-                });
-              })
-            }
-          >
-            Copy a link to create a household
-          </Button>
-        </Group>
-        {owner && (
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              void perform(async () => {
-                const url = await actions.current.createLink('join', joinEmail);
-                const copied = await copy(url);
-                setCreatedLink({
-                  url,
-                  note: `${copied ? 'Copied. ' : ''}Only someone who signs in with ${joinEmail.trim()} can use it to join. It works once, for 7 days.`,
-                });
-                setJoinEmail('');
-                await load();
-              });
-            }}
-          >
-            <Group align="flex-end">
-              <TextInput
-                label="Invite someone to join this household"
-                description="Enter their email. You send them the link yourself."
-                type="email"
-                required
-                value={joinEmail}
-                disabled={busy}
-                onChange={(event) => setJoinEmail(event.currentTarget.value)}
-              />
-              <Button type="submit" variant="default" loading={busy}>
-                Copy a join link
-              </Button>
-            </Group>
-          </form>
+        {inviteForm(
+          'create',
+          'Invite someone to start their own household',
+          'Their household shares nothing with yours.',
         )}
-        {createdLink && <SharedLink {...createdLink} />}
+        {owner &&
+          inviteForm(
+            'join',
+            'Invite someone to join this household',
+            'Only someone who signs in with this email can use the link.',
+          )}
+        {notice && <Alert role="status">{notice}</Alert>}
         {owner && data.invitations.length > 0 && (
           <Stack gap="xs">
             <Text size="sm">Pending join links</Text>
+            <Text size="sm" c="dimmed">
+              Lost an invitation? Copy new link makes a fresh link and cancels
+              the old one. It sends no email.
+            </Text>
             {data.invitations.map((invitation) => (
               <Group key={invitation.id} gap="xs">
                 <Text size="sm">
@@ -263,10 +268,31 @@ export function HouseholdAccessPanel({
                 </Text>
                 <Button
                   size="xs"
-                  variant="subtle"
-                  loading={busy}
+                  variant="default"
+                  loading={pending === `renew:${invitation.id}`}
                   onClick={() =>
-                    void perform(async () => {
+                    void perform(`renew:${invitation.id}`, async () => {
+                      const url = await actions.current.createLink(
+                        'join',
+                        invitation.email,
+                      );
+                      setNotice(
+                        (await copy(url))
+                          ? `Copied a new link for ${invitation.email}. The earlier one no longer works.`
+                          : 'The new link could not be copied. Press Copy new link again.',
+                      );
+                      await load();
+                    })
+                  }
+                >
+                  Copy new link
+                </Button>
+                <Button
+                  size="xs"
+                  variant="subtle"
+                  loading={pending === `revoke:${invitation.id}`}
+                  onClick={() =>
+                    void perform(`revoke:${invitation.id}`, async () => {
                       await actions.current.revoke(invitation.id);
                       await load();
                     })
@@ -292,6 +318,42 @@ export function HouseholdAccessPanel({
           </Button>
         </Group>
       </Stack>
+      <Modal
+        opened={confirming !== null}
+        onClose={() => setConfirming(null)}
+        title="Send this invitation?"
+      >
+        <Stack>
+          <Text>
+            We will email an invitation to {confirming?.email} and copy its link
+            to your clipboard, so you can send it yourself too. It works once,
+            for 7 days.
+          </Text>
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setConfirming(null)}>
+              Cancel
+            </Button>
+            <Button
+              loading={pending === 'send'}
+              onClick={() => {
+                if (!confirming) return;
+                const { purpose, email } = confirming;
+                void perform('send', async () => {
+                  const url = await actions.current.sendLink(purpose, email);
+                  const copied = await copy(url);
+                  setEmails((current) => ({ ...current, [purpose]: '' }));
+                  setNotice(
+                    `Invitation sent to ${email}. ${copied ? 'The link is copied to your clipboard.' : 'The link could not be copied.'}`,
+                  );
+                  await load();
+                }).then(() => setConfirming(null));
+              }}
+            >
+              Send invitation
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
       <Modal
         opened={leaving}
         onClose={() => setLeaving(false)}
@@ -331,10 +393,10 @@ export function HouseholdAccessPanel({
             </Button>
             <Button
               color="red"
-              loading={busy}
+              loading={pending === 'leave'}
               disabled={mustHandOver && !nextOwner}
               onClick={() =>
-                void perform(async () => {
+                void perform('leave', async () => {
                   if (mustHandOver && nextOwner)
                     await actions.current.makeOwner(nextOwner);
                   await actions.current.leave();
