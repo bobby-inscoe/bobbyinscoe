@@ -117,16 +117,16 @@
   aspect-ratio: 3 / 2;
   padding: 0;
 }
-/* One viewing: photo above the details on a phone, beside them from 36em. */
-.viewingCard {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
+/* Viewing cards share the row and grow to fill it: one fills the width up to the cap, several wrap into columns. */
+.viewingList {
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--mantine-spacing-md);
 }
-@media (min-width: 36em) {
-  .viewingCard {
-    grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
-  }
+.viewingList > .card {
+  flex: 1 1 360px;
+  max-width: 640px;
+  min-width: 0;
 }
 /* A label and its value, two columns; the labels are dimmed and the rows divide on a thin line. */
 .factList {
