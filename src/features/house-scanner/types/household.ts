@@ -1,3 +1,4 @@
+import type { HouseholdAccess } from '@/features/house-scanner/api/household-client';
 import type {
   LoadNotes,
   SaveNote,
@@ -15,15 +16,28 @@ export interface HouseholdActions {
   onRemoveFavorite: (listingId: string) => Promise<void>;
   onAddManual: (submission: ManualSubmission) => Promise<void>;
   onSaveProfile: (profile: SearchProfile) => Promise<void>;
-  // Hides or unhides homes for the signed-in member only.
+  // Hides or unhides homes for the whole household.
   onSetHidden: (listingIds: string[], hidden: boolean) => Promise<void>;
   onLoadNotes: LoadNotes;
   onSaveNote: SaveNote;
 }
 
+/** Household settings actions; only a signed-in session has them, never the demo. */
+export interface HouseholdAccessActions {
+  load: () => Promise<HouseholdAccess>;
+  /** Returns the link to share. */
+  createLink: (purpose: 'create' | 'join', email?: string) => Promise<string>;
+  revoke: (invitationId: string) => Promise<void>;
+  rename: (name: string) => Promise<void>;
+  makeOwner: (userId: string) => Promise<void>;
+  deactivate: (userId: string) => Promise<void>;
+  leave: () => Promise<void>;
+}
+
 export interface Household extends HouseholdActions {
   snapshot: Snapshot;
   userId: string;
+  access?: HouseholdAccessActions;
 }
 
 export type WorkspaceTab =

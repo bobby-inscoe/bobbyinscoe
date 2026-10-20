@@ -1,29 +1,25 @@
-import {
-  Alert,
-  Button,
-  Checkbox,
-  Group,
-  Stack,
-  Text,
-  TextInput,
-  Title,
-} from '@mantine/core';
+import { Alert, Button, Group, Stack, Text, Title } from '@mantine/core';
 import { type ReactNode, useState } from 'react';
 
+import { InvitePanel } from '@/features/house-scanner/components/invite-panel';
+import { SetPasswordForm } from '@/features/house-scanner/components/set-password-form';
+import { SignInForm } from '@/features/house-scanner/components/sign-in-form';
 import { useHouseholdSession } from '@/features/house-scanner/hooks/use-household-session';
 import type { Household } from '@/features/house-scanner/types/household';
 
 export function HouseScannerAccess({
   children,
   onDemo,
+  inviteToken = null,
+  onInviteDone,
 }: {
   children: (household: Household, signOut: () => void) => ReactNode;
   onDemo: () => void;
+  // Set on the invitation page: the link's token, or '' for a malformed link.
+  inviteToken?: string | null;
+  onInviteDone?: () => void;
 }) {
   const session = useHouseholdSession();
-  const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
-  const [remember, setRemember] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   async function perform(action: () => Promise<void>) {
@@ -54,10 +50,65 @@ export function HouseScannerAccess({
         </Button>
       </Stack>
     );
+  const signedIn =
+    state.status === 'authenticated' ||
+    state.status === 'nonmember' ||
+    state.status === 'choose-household';
+  const signIn = (title: ReactNode, demo: boolean) => (
+    <SignInForm
+      title={title}
+      onSignIn={session.signInWithCode}
+      onResetPassword={session.requestPasswordReset}
+    >
+      {demo && (
+        <Button
+          type="button"
+          variant="subtle"
+          aria-label="Explore the synthetic demo"
+          onClick={onDemo}
+        >
+          Explore demo
+        </Button>
+      )}
+    </SignInForm>
+  );
   return (
     <Stack gap="md">
       {message && <Alert role="alert">{message}</Alert>}
-      {state.status === 'authenticated' ? (
+      {session.linkError && (
+        <Alert role="alert">
+          That email link has expired or was already used. Ask for a new
+          invitation, or use Forgot password to get a fresh link.
+        </Alert>
+      )}
+      {session.passwordSetup && signedIn ? (
+        <SetPasswordForm
+          kind={session.passwordSetup}
+          onSave={session.setPassword}
+        />
+      ) : inviteToken !== null && state.status !== 'loading' ? (
+        inviteToken ? (
+          <InvitePanel
+            token={inviteToken}
+            signedIn={signedIn}
+            onPreview={session.previewInvitation}
+            onStartAccountSetup={session.startAccountSetup}
+            onAccept={async (token, householdName, displayName) => {
+              await session.acceptInvitation(token, householdName, displayName);
+              onInviteDone?.();
+            }}
+            signIn={signIn(
+              <Title order={3}>Already have an account?</Title>,
+              false,
+            )}
+          />
+        ) : (
+          <Text role="alert">
+            This invitation link is incomplete. Copy the whole link and try
+            again.
+          </Text>
+        )
+      ) : state.status === 'authenticated' ? (
         children(
           {
             snapshot: state.snapshot,
@@ -70,65 +121,14 @@ export function HouseScannerAccess({
             onSetHidden: session.onSetHidden,
             onLoadNotes: session.onLoadNotes,
             onSaveNote: session.onSaveNote,
+            access: session.access,
           },
           () => void perform(session.signOut),
         )
       ) : state.status === 'loading' ? (
         <Text role="status">Loading your household…</Text>
       ) : state.status === 'signed-out' ? (
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            void perform(async () => {
-              await session.signInWithCode(email, code, remember);
-              setCode('');
-            });
-          }}
-        >
-          <Stack align="flex-start" gap="md">
-            <Title order={2}>Sign in with your access code</Title>
-            <TextInput
-              label="Email or username"
-              w="100%"
-              maw="22rem"
-              autoComplete="username"
-              autoCapitalize="none"
-              required
-              value={email}
-              disabled={busy}
-              onChange={(event) => setEmail(event.currentTarget.value)}
-            />
-            <TextInput
-              label="Access code"
-              w="100%"
-              maw="22rem"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={code}
-              disabled={busy}
-              onChange={(event) => setCode(event.currentTarget.value)}
-            />
-            <Checkbox
-              label="Remember this device"
-              description="Leave off on shared devices."
-              checked={remember}
-              disabled={busy}
-              onChange={(event) => setRemember(event.currentTarget.checked)}
-            />
-            <Button type="submit" loading={busy}>
-              Sign in
-            </Button>
-            <Button
-              type="button"
-              variant="subtle"
-              aria-label="Explore the synthetic demo"
-              onClick={onDemo}
-            >
-              Explore demo
-            </Button>
-          </Stack>
-        </form>
+        signIn(<Title order={2}>Sign in</Title>, true)
       ) : state.status === 'choose-household' ? (
         <Stack>
           <Text>Choose a household.</Text>
@@ -140,7 +140,7 @@ export function HouseScannerAccess({
                 void perform(() => session.selectHousehold(member.householdId))
               }
             >
-              {member.displayName} · {member.householdId.slice(0, 8)}
+              {member.householdName ?? 'Household'} · as {member.displayName}
             </Button>
           ))}
         </Stack>
@@ -148,7 +148,7 @@ export function HouseScannerAccess({
         <Stack align="flex-start">
           <Text role="alert">
             {state.status === 'nonmember'
-              ? 'This account has no active household membership. Ask the household owner to restore access.'
+              ? 'This account has no active household. Ask a household owner for a link to join, or a member for a link to create your own.'
               : state.message}
           </Text>
           <Group>

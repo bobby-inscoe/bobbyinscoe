@@ -2,6 +2,7 @@ import type { AnyRoute } from '@tanstack/react-router';
 import { createAddLinkRoute } from '@/features/house-scanner/routes/add-link-route';
 import { createFavoritesRoute } from '@/features/house-scanner/routes/favorites-route';
 import { createHouseScannerRoute } from '@/features/house-scanner/routes/house-scanner-route';
+import { createInviteRoute } from '@/features/house-scanner/routes/invite-route';
 import { createListingDetailRoute } from '@/features/house-scanner/routes/listing-detail-route';
 import { createListingsRoute } from '@/features/house-scanner/routes/listings-route';
 import { createSettingsRoute } from '@/features/house-scanner/routes/settings-route';
@@ -20,5 +21,6 @@ export function createHouseScannerRouteTree<TParent extends AnyRoute>(
     createAddLinkRoute(route),
     createSourcesRoute(route),
     createSettingsRoute(route),
+    createInviteRoute(route),
   ]);
 }
