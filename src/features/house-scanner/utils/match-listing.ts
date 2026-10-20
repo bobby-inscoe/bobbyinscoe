@@ -219,6 +219,7 @@ export function matchListing(
     (f.status === 'sold' || f.status === 'withdrawn')
   )
     excluded.push('No longer available');
+  else if (listing.delistedAt) excluded.push('No longer listed');
   if (excluded.length)
     return { section: 'outside', reasons: excluded, caveats, missing: [] };
   if (missing.length) {

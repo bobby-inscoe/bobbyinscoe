@@ -51,7 +51,6 @@ import {
   type ListingSort,
   sortListings,
 } from '@/features/house-scanner/utils/listing-sort';
-import { isListingStale } from '@/features/house-scanner/utils/listing-staleness';
 import { mapPoints } from '@/features/house-scanner/utils/listing-view';
 import { reviewMapSelection } from '@/features/house-scanner/utils/map-selection';
 import { MATCH_CHOICES } from '@/features/house-scanner/utils/match-listing';
@@ -792,7 +791,6 @@ export function ListingsPanel({
                 (checkedIds.length >= 500 && !checkedSet.has(listing.id))
               }
               onToggleSelection={toggleSelection}
-              stale={isListingStale(listing, snapshot.edition)}
               busy={saveBusy || pending.includes(listing.id)}
               canSave={canSave(listing.id)}
               hidden={hiddenIds.has(listing.id)}
@@ -989,7 +987,6 @@ export function ListingsPanel({
         userId={userId}
         alsoOn={selected ? alsoOn.get(selected.id) : undefined}
         opened={detailsOpen && selected !== null}
-        stale={selected ? isListingStale(selected, snapshot.edition) : false}
         hidden={selected ? hiddenIds.has(selected.id) : false}
         favorite={selectedFavorite}
         notes={notes}

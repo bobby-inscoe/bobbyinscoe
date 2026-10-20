@@ -22,7 +22,6 @@ interface ListingDetailsProps {
   listing: Listing;
   snapshot: Snapshot;
   userId: string;
-  stale?: boolean;
   notes?: ListingNotesController;
   // The level of the section headings, one below the title above them.
   headingOrder?: 3 | 4;
@@ -94,7 +93,6 @@ export function ListingDetails({
   listing,
   snapshot,
   userId,
-  stale,
   notes,
   headingOrder = 4,
 }: ListingDetailsProps) {
@@ -114,17 +112,12 @@ export function ListingDetails({
         : 'Above ground floor';
   return (
     <>
-      {stale && (
-        <Paper
-          withBorder
-          p="sm"
-          role="note"
-          aria-label="Not seen in the latest scan"
-        >
+      {listing.delistedAt && (
+        <Paper withBorder p="sm" role="note" aria-label="No longer listed">
           <Text size="sm">
-            Not seen in the latest scan. Last seen{' '}
-            {formatDate(listing.observedAt)}. The source page may have changed
-            or been removed, so open it to check.
+            No longer listed since {formatDate(listing.delistedAt)}: the source
+            stopped showing it in two full reads in a row. Last seen{' '}
+            {formatDate(listing.observedAt)}.
           </Text>
         </Paper>
       )}

@@ -27,7 +27,6 @@ interface ListingDrawerProps {
   snapshot: Snapshot;
   userId: string;
   opened: boolean;
-  stale?: boolean;
   hidden: boolean;
   // The member's own favorite of this home.
   favorite: { mine: boolean; canSave: boolean; busy: boolean };
@@ -46,7 +45,6 @@ export function ListingDrawer({
   snapshot,
   userId,
   opened,
-  stale,
   hidden,
   favorite,
   notes,
@@ -127,7 +125,6 @@ export function ListingDrawer({
             listing={listing}
             snapshot={snapshot}
             userId={userId}
-            stale={stale}
             notes={notes}
             headingOrder={3}
           />

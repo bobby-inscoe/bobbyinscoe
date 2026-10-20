@@ -255,6 +255,13 @@ describe('prepared run', () => {
     expect(
       publish.action === 'publish' && publish.results[0].coverageNote,
     ).toContain('kept 0 within collector bounds and dropped 8');
+    // Dropped homes are still on the source, so they are reported as seen.
+    expect(publish.action === 'publish' && publish.results[0].seen).toEqual(
+      prepared.result.observations.map(({ sourceListingId, episodeId }) => ({
+        sourceListingId,
+        episodeId,
+      })),
+    );
   });
 
   it('splits kept observations into stage requests of at most one hundred', async () => {
@@ -290,6 +297,11 @@ describe('prepared run', () => {
     );
     expect(stages.map((s) => s.observations.length)).toEqual([100, 100, 50]);
     expect(stages[0].batchId).toBe('00000000-0000-4000-8000-000000000202');
+    // Every page was read and the homes reached the reported total.
+    const publish = prepared.requests.at(-1);
+    expect(publish?.action === 'publish' && publish.results[0].fullRead).toBe(
+      true,
+    );
     expect(new Set(stages.map((s) => s.batchId)).size).toBe(3);
     expect(
       new Set(
@@ -311,6 +323,32 @@ describe('prepared run', () => {
       'begin',
       'publish',
     ]);
+    const publish = prepared.requests[1];
+    expect(publish.action === 'publish' && publish.results[0].fullRead).toBe(
+      false,
+    );
+  });
+
+  it('is not a full read when the pages stop short of the reported total', async () => {
+    const { impl } = fakeFetch(
+      boneoRobotsOr((url) => ({
+        body: nextPage(
+          new URL(url).searchParams.has('page')
+            ? []
+            : Array.from({ length: 25 }, (_v, i) => i),
+          250,
+        ),
+      })),
+    );
+    const prepared = await prepareLiveRun(
+      { capability, planning, bounds },
+      deps(impl),
+    );
+    const publish = prepared.requests.at(-1);
+    expect(prepared.result.partitions[0].status).not.toBe('read');
+    expect(publish?.action === 'publish' && publish.results[0].fullRead).toBe(
+      false,
+    );
   });
 
   it('refuses a capability whose executor is not this adapter', async () => {

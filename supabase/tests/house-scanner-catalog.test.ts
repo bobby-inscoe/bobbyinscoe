@@ -260,6 +260,9 @@ async function publish(
     profiles?: boolean;
     status?: 'success' | 'partial' | 'failed';
     database?: PGlite;
+    // Source listing ids on the search pages, and whether the read was full.
+    seen?: string[];
+    fullRead?: boolean;
   } = {},
 ) {
   const {
@@ -267,6 +270,8 @@ async function publish(
     profiles = false,
     status = 'success',
     database = db,
+    seen,
+    fullRead,
   } = options;
   const runId = randomUUID();
   await ingest(
@@ -303,6 +308,15 @@ async function publish(
           status,
           coverageNote: 'Synthetic local coverage',
           cursor: `cursor-${source}`,
+          ...(fullRead === undefined ? {} : { fullRead }),
+          ...(seen
+            ? {
+                seen: seen.map((sourceListingId) => ({
+                  sourceListingId,
+                  episodeId: 'synthetic-episode',
+                })),
+              }
+            : {}),
         },
       ],
     },
@@ -1034,7 +1048,8 @@ describe('candidates filtered by household criteria', () => {
     ).toContain('fits-both');
   });
 
-  it('rolls back shared hides, then the criteria filter, and applies both again', async () => {
+  it('rolls back delisting, shared hides and the criteria filter, and applies them again', async () => {
+    const delisted = '20261021090000_house_scanner_delisted';
     const shared = '20261020210000_house_scanner_shared_hides';
     const filter = '20261020180000_house_scanner_criteria_filter';
     const down = async (name: string) =>
@@ -1050,6 +1065,16 @@ describe('candidates filtered by household criteria', () => {
       `update hs.profiles set criteria=criteria||'{"sourceIds":["alpha","beta"]}' where id=$1`,
       [PROFILE_B],
     );
+    await db.query(
+      "update hs.listings set delisted_at=now(),missed_full_reads=2 where value->>'title'='fits-both'",
+    );
+    await down(delisted);
+    expect(
+      (await snapshot(HOUSE_A, OWNER_A)).listings.some(
+        (item) => item.delistedAt !== undefined,
+      ),
+    ).toBe(false);
+    expect(await titles()).toContain('fits-both');
     await down(shared);
     // Merged hides go back to the member who hid them last; source selections are dropped.
     const member = await snapshot(HOUSE_A, MEMBER_A);
@@ -1069,8 +1094,95 @@ describe('candidates filtered by household criteria', () => {
     expect(await titles()).toContain('too-small-for-b');
     await db.exec(await migration(`${filter}.sql`));
     await db.exec(await migration(`${shared}.sql`));
+    await db.exec(await migration(`${delisted}.sql`));
     expect(await titles()).not.toContain('too-small-for-b');
     expect((await snapshot(HOUSE_A, OWNER_A)).hides).toHaveLength(2);
+  });
+});
+
+describe('listings that leave their source', () => {
+  const now = () => new Date().toISOString();
+  const state = async (title: string) =>
+    (
+      await db.query<{ missed: number; delisted: boolean }>(
+        "select missed_full_reads missed, delisted_at is not null delisted from hs.listings where value->>'title'=$1",
+        [title],
+      )
+    ).rows[0];
+  const betaIds = async (except: string[]) =>
+    (
+      await db.query<{ id: string }>(
+        "select source_listing_id id from hs.listings where source_id='beta' and not (value->>'title' = any($1))",
+        [except],
+      )
+    ).rows.map((row) => row.id);
+  // A run that stages one home and reports the rest of the source as seen, or not.
+  const read = async (missing: string[], fullRead?: boolean) =>
+    publish([home('fits-both', { observedAt: now() })], {
+      source: 'beta',
+      seen: await betaIds(missing),
+      fullRead,
+    });
+
+  it('marks a home missing from two full reads, and nothing for partial reads', async () => {
+    await read(['gone-a', 'gone-b'], true);
+    await publish(
+      [
+        home('gone-a', { observedAt: now() }),
+        home('gone-b', { observedAt: now() }),
+      ],
+      { source: 'beta' },
+    );
+    expect(await state('gone-a')).toEqual({ missed: 0, delisted: false });
+    await read(['gone-a', 'saved-by-b'], true);
+    expect(await state('gone-a')).toEqual({ missed: 1, delisted: false });
+    // A read that is not full marks nothing, and a home seen outside the bounds is not missing.
+    await read(['gone-a', 'saved-by-b']);
+    await read(['gone-a', 'saved-by-b'], false);
+    expect(await state('gone-a')).toEqual({ missed: 1, delisted: false });
+    expect(await state('too-small-for-b')).toEqual({
+      missed: 0,
+      delisted: false,
+    });
+    await read(['gone-a', 'saved-by-b'], true);
+    expect(await state('gone-a')).toEqual({ missed: 2, delisted: true });
+    expect(await state('saved-by-b')).toEqual({ missed: 2, delisted: true });
+    expect(await state('gone-b')).toEqual({ missed: 0, delisted: false });
+  });
+
+  it('leaves browsing, keeps saved homes with the date, and unmarks a home seen again', async () => {
+    const b = await snapshot(HOUSE_B, OWNER_B);
+    expect(b.listings.some((item) => item.title === 'gone-a')).toBe(false);
+    const saved = b.listings.find((item) => item.title === 'saved-by-b');
+    expect(saved?.delistedAt).toEqual(expect.any(String));
+    expect(
+      b.listings.find((item) => item.title === 'gone-b')?.delistedAt,
+    ).toBeUndefined();
+    await read(['saved-by-b']);
+    expect(await state('gone-a')).toEqual({ missed: 0, delisted: false });
+    expect(
+      (await snapshot(HOUSE_B, OWNER_B)).listings.some(
+        (item) => item.title === 'gone-a',
+      ),
+    ).toBe(true);
+    // A home the run staged counts as seen even without a seen list.
+    await publish([home('saved-by-b', { observedAt: now() })], {
+      source: 'beta',
+    });
+    expect(await state('saved-by-b')).toEqual({ missed: 0, delisted: false });
+  });
+
+  it('ignores the marks of a failed source result', async () => {
+    await read(['gone-b'], true);
+    await expect(
+      publish([home('gone-b', { observedAt: now() })], {
+        source: 'beta',
+        status: 'failed',
+        seen: [],
+        fullRead: true,
+      }),
+    ).resolves.toMatchObject({ state: 'failed' });
+    expect(await state('gone-b')).toEqual({ missed: 1, delisted: false });
   });
 });
 

@@ -163,18 +163,18 @@ describe('the details sheet', () => {
     ).toBeTruthy();
   });
 
-  it('keeps the conflict note and the stale notice', () => {
+  it('keeps the conflict note and the no longer listed notice', () => {
     view(
       <ListingDetails
-        listing={home({}, ['askingPriceSek'])}
+        listing={{
+          ...home({}, ['askingPriceSek']),
+          delistedAt: '2026-10-21T09:00:00Z',
+        }}
         snapshot={SYNTHETIC_SNAPSHOT}
         userId={DEMO_USER_ID}
-        stale
       />,
     );
     expect(screen.getByText('Conflicting fields: askingPriceSek')).toBeTruthy();
-    expect(
-      screen.getByRole('note', { name: 'Not seen in the latest scan' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('note', { name: 'No longer listed' })).toBeTruthy();
   });
 });

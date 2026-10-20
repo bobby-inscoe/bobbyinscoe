@@ -8,7 +8,6 @@ import type {
   Snapshot,
 } from '@/features/house-scanner/types/contracts';
 import type { HouseholdActions } from '@/features/house-scanner/types/household';
-import { isListingStale } from '@/features/house-scanner/utils/listing-staleness';
 
 interface AddLinkPanelProps
   extends Partial<Pick<HouseholdActions, 'onAddManual'>> {
@@ -49,7 +48,6 @@ export function AddLinkPanel({
           snapshot={snapshot}
           userId={userId}
           details
-          stale={isListingStale(duplicate, snapshot.edition)}
           selected
           busy={pending.includes(duplicate.id)}
           canSave={canSave(duplicate.id)}

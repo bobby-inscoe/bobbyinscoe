@@ -102,6 +102,17 @@ export async function prepareLiveRun(options: LiveRunOptions, deps: LiveDeps) {
   const runId = options.runId ?? randomUUID();
   const common = { contractVersion: CONTRACT_VERSION, runId };
   const failed = result.stopped !== null && result.observations.length === 0;
+  // A full read lets the database mark homes missing from it: every search page was read to its end,
+  // and the homes read plus skipped reach the total the source reports.
+  const fullRead =
+    result.stopped === null &&
+    result.partitions.length > 0 &&
+    result.partitions.every(
+      (partition) =>
+        partition.status === 'read' &&
+        (partition.total === null ||
+          partition.observations + partition.skipped >= partition.total),
+    );
   // Never "success": upcoming and unknown-price views are not queried and
   // pagination is unproven.
   // Plain sentences for people. The database prefixes the source and status and appends the
@@ -145,6 +156,12 @@ export async function prepareLiveRun(options: LiveRunOptions, deps: LiveDeps) {
           status: failed ? 'failed' : 'partial',
           cursor: null,
           coverageNote,
+          fullRead,
+          // Before the collector bounds, so a home that moved outside them is not taken for gone.
+          seen: result.observations.map(({ sourceListingId, episodeId }) => ({
+            sourceListingId,
+            episodeId,
+          })),
         },
       ],
     }),
