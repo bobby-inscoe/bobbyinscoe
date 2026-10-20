@@ -5,14 +5,25 @@ import { z } from 'zod';
 import {
   addManual,
   clearOwnedSessionStorage,
+  consumeAuthRedirect,
   createHouseholdClient,
+  createInvitation,
+  deactivateMember,
+  householdAccess,
   householdSnapshot,
+  leaveHousehold,
+  makeOwner,
   memberships,
+  previewInvitation,
+  redeemInvitation,
+  renameHousehold,
+  revokeInvitation,
   saveNote as saveNoteRequest,
   saveProfile,
   setFavorite,
   setHidden,
   setRememberDevice,
+  startAccountSetup,
 } from '@/features/house-scanner/api/household-client';
 import type {
   ManualSubmission,
@@ -20,9 +31,8 @@ import type {
   SearchProfile,
   Snapshot,
 } from '@/features/house-scanner/types/contracts';
+import type { HouseholdAccessActions } from '@/features/house-scanner/types/household';
 import { NoteConflictError } from '@/features/house-scanner/types/notes';
-
-const USERNAME_EMAIL_DOMAIN = 'house-scanner.bobbyinscoe.com';
 
 export type HouseholdSessionState =
   | { status: 'unconfigured' }
@@ -296,33 +306,81 @@ export function useHouseholdSession() {
       subscription.unsubscribe();
     };
   }, [client, refresh, fail, forget]);
-  // The access code is the password the owner set for this member's user, so no email is sent.
-  // A bare username signs in as <username>@USERNAME_EMAIL_DOMAIN, the address the owner gave that user.
+  // An invitation or recovery email returns with a session in the address. Reading it once signs the person in and
+  // asks them to choose a password before anything else.
+  const [passwordSetup, setPasswordSetup] = useState<
+    'invite' | 'recovery' | null
+  >(null);
+  const [linkError, setLinkError] = useState(false);
+  useEffect(() => {
+    if (!client) return;
+    let current = true;
+    void consumeAuthRedirect(client)
+      .then((kind) => {
+        if (!current) return;
+        if (kind === 'error') setLinkError(true);
+        else if (kind) setPasswordSetup(kind);
+      })
+      .catch(() => {
+        if (current) setLinkError(true);
+      });
+    return () => {
+      current = false;
+    };
+  }, [client]);
   async function signInWithCode(
     login: string,
     code: string,
     remember: boolean,
   ) {
     if (!client) throw new Error('Private access is not configured.');
-    const name = login.trim();
-    const address = z
-      .email()
-      .max(254)
-      .safeParse(
-        name.includes('@')
-          ? name
-          : `${name.toLowerCase()}@${USERNAME_EMAIL_DOMAIN}`,
-      );
+    const address = z.email().max(254).safeParse(login.trim());
     if (!address.success || code.length < 6 || code.length > 72)
-      throw new Error('Enter your email or username and access code.');
+      throw new Error('Enter your email and password.');
     setRememberDevice(remember);
     const { error } = await client.auth.signInWithPassword({
       email: address.data,
       password: code,
     });
-    if (error)
-      throw new Error('The email, username or access code was not accepted.');
+    if (error) throw new Error('The email or password was not accepted.');
     await (inflight.current ?? refresh());
+  }
+  // The answer is the same whether or not the address has an account.
+  async function requestPasswordReset(email: string) {
+    if (!client) throw new Error('Private access is not configured.');
+    const address = z.email().max(254).safeParse(email.trim());
+    if (!address.success) throw new Error('Enter your email.');
+    await client.auth.resetPasswordForEmail(address.data, {
+      redirectTo: `${window.location.origin}/projects/house-scanner/listings`,
+    });
+  }
+  async function setPassword(password: string) {
+    if (!client) throw new Error('Private access is not configured.');
+    if (password.length < 8 || password.length > 72)
+      throw new Error('Choose a password of 8 to 72 characters.');
+    const { error } = await client.auth.updateUser({ password });
+    if (error)
+      throw new Error(
+        'The password could not be saved. Choose a different one or ask for a fresh link.',
+      );
+    setPasswordSetup(null);
+  }
+  // Accepting a link adds a household to this account; the session then opens it.
+  async function acceptInvitation(
+    value: string,
+    householdName: string | null,
+    displayName: string,
+  ) {
+    if (!client) throw new Error('Private access is not configured.');
+    const household = await redeemInvitation(
+      client,
+      value,
+      householdName,
+      displayName,
+    );
+    signedOut.current = false;
+    householdId.current = household;
+    await refresh();
   }
   async function signOut() {
     generation.current += 1;
@@ -475,11 +533,55 @@ export function useHouseholdSession() {
     }
     if (!scope.active()) throw new Error('Your session changed.');
   }
+  // Household settings for the open household. A change to members re-reads the snapshot, since cards name members;
+  // leaving re-reads the memberships, since the household may no longer be one of them.
+  function accessActions(): HouseholdAccessActions | undefined {
+    if (!client || state.status !== 'authenticated') return undefined;
+    const household = state.snapshot.householdId;
+    const thenReload = async (work: Promise<unknown>) => {
+      await work;
+      await reload(true).catch(() => {});
+    };
+    return {
+      load: () => householdAccess(client, household),
+      createLink: (purpose, email) =>
+        createInvitation(client, household, purpose, email ?? null),
+      revoke: async (id) => {
+        await revokeInvitation(client, household, id);
+      },
+      rename: async (name) => {
+        await renameHousehold(client, household, name);
+      },
+      makeOwner: (userId) => thenReload(makeOwner(client, household, userId)),
+      deactivate: (userId) =>
+        thenReload(deactivateMember(client, household, userId)),
+      leave: async () => {
+        await leaveHousehold(client, household);
+        householdId.current = null;
+        forget();
+        await refresh();
+      },
+    };
+  }
   return {
     state,
     signInWithCode,
     signOut,
     refresh,
+    passwordSetup,
+    linkError,
+    requestPasswordReset,
+    setPassword,
+    acceptInvitation,
+    previewInvitation: (value: string) =>
+      client
+        ? previewInvitation(client, value)
+        : Promise.reject(new Error('Private access is not configured.')),
+    startAccountSetup: (value: string, email: string) =>
+      client
+        ? startAccountSetup(client, value, email)
+        : Promise.reject(new Error('Private access is not configured.')),
+    access: accessActions(),
     selectHousehold: async (id: string) => {
       householdId.current = z.uuid().parse(id);
       await refresh();

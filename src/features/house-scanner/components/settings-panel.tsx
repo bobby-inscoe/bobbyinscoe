@@ -1,15 +1,21 @@
 import { Flex, Stack, Text, Title } from '@mantine/core';
 
 import { CriteriaHelp } from '@/features/house-scanner/components/criteria-help';
+import { HouseholdAccessPanel } from '@/features/house-scanner/components/household-access-panel';
 import { ProfileEditor } from '@/features/house-scanner/components/profile-editor';
 import type { Snapshot } from '@/features/house-scanner/types/contracts';
-import type { HouseholdActions } from '@/features/house-scanner/types/household';
+import type {
+  HouseholdAccessActions,
+  HouseholdActions,
+} from '@/features/house-scanner/types/household';
 
 interface SettingsPanelProps
   extends Partial<Pick<HouseholdActions, 'onSaveProfile'>> {
   snapshot: Snapshot;
   userId: string;
   synthetic: boolean;
+  // Members and links; absent in the demo.
+  access?: HouseholdAccessActions;
 }
 
 export function SettingsPanel({
@@ -17,6 +23,7 @@ export function SettingsPanel({
   userId,
   synthetic,
   onSaveProfile,
+  access,
 }: SettingsPanelProps) {
   const member = snapshot.members.find((entry) => entry.userId === userId);
   return (
@@ -41,6 +48,9 @@ export function SettingsPanel({
         ))
       ) : (
         <Text>No search profiles yet.</Text>
+      )}
+      {access && !synthetic && (
+        <HouseholdAccessPanel access={access} userId={userId} />
       )}
     </Stack>
   );

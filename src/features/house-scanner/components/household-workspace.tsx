@@ -16,7 +16,10 @@ import { useFavoriteToggle } from '@/features/house-scanner/hooks/use-favorite-t
 import { useHiddenListings } from '@/features/house-scanner/hooks/use-hidden-listings';
 import { useListingNotes } from '@/features/house-scanner/hooks/use-listing-notes';
 import type { Snapshot } from '@/features/house-scanner/types/contracts';
-import type { HouseholdActions } from '@/features/house-scanner/types/household';
+import type {
+  HouseholdAccessActions,
+  HouseholdActions,
+} from '@/features/house-scanner/types/household';
 import { validateBrowseSearch } from '@/features/house-scanner/utils/browse-search';
 import { findDuplicates } from '@/features/house-scanner/utils/duplicates';
 import { formatDate } from '@/features/house-scanner/utils/format';
@@ -34,6 +37,7 @@ export interface HouseholdWorkspaceProps extends Partial<HouseholdActions> {
   mapStyleUrl?: string;
   onDemoToggle?: () => void;
   onSignOut?: () => void;
+  access?: HouseholdAccessActions;
 }
 
 export function HouseholdWorkspace({
@@ -50,6 +54,7 @@ export function HouseholdWorkspace({
   onSetHidden,
   onLoadNotes,
   onSaveNote,
+  access,
 }: HouseholdWorkspaceProps) {
   const navigation = useBrowseNavigation();
   const { tab, search, listingId } = navigation;
@@ -170,6 +175,25 @@ export function HouseholdWorkspace({
             ? `Updated ${formatDate(snapshot.edition.publishedAt)}${stale ? '. Over 36 hours old, so facts may be stale.' : ''}`
             : 'No data has been published yet.'}
       </Text>{' '}
+      {/* A new household starts with one profile at revision 1, set to the collector bounds. */}
+      {!synthetic &&
+        tab !== 'settings' &&
+        snapshot.profiles.length === 1 &&
+        snapshot.profiles[0].revision === 1 && (
+          <Group gap={4} role="note">
+            <Text size="sm">
+              This household uses starter criteria: apartments in Göteborg from
+              60 m², up to 6M SEK.
+            </Text>
+            <Button
+              size="compact-sm"
+              variant="subtle"
+              onClick={() => navigation.changeTab('settings')}
+            >
+              Adjust them in Settings
+            </Button>
+          </Group>
+        )}
       <Group
         component="nav"
         aria-label="Shortlist sections"
@@ -269,6 +293,7 @@ export function HouseholdWorkspace({
           userId={userId}
           synthetic={synthetic}
           onSaveProfile={onSaveProfile}
+          access={access}
         />
       ) : (
         <PriceEstimateProvider listings={snapshot.listings}>

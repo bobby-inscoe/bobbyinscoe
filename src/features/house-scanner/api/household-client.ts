@@ -97,7 +97,9 @@ export function createHouseholdClient() {
       storageKey: `${STORAGE_PREFIX}${new URL(settings.url).host}`,
       persistSession: true,
       autoRefreshToken: true,
+      // Email links are read once by consumeAuthRedirect, which also clears them from the address.
       detectSessionInUrl: false,
+      flowType: 'implicit',
     },
     global: { headers: { 'X-Client-Info': 'house-scanner-browser' } },
   });
@@ -289,4 +291,236 @@ export function saveNote(
     },
     revisionSchema,
   );
+}
+
+const token = z.string().regex(/^[a-f0-9]{64}$/);
+export const invitationPreviewSchema = z.discriminatedUnion('valid', [
+  z.strictObject({ valid: z.literal(false) }),
+  z.strictObject({
+    valid: z.literal(true),
+    purpose: z.enum(['create', 'join']),
+    expiresAt: z.string(),
+    householdName: z.string().nullable(),
+    issuerName: z.string().nullable(),
+  }),
+]);
+export type InvitationPreview = z.infer<typeof invitationPreviewSchema>;
+export const householdAccessSchema = z.strictObject({
+  name: z.string(),
+  members: z
+    .array(
+      z.strictObject({
+        userId: z.uuid(),
+        displayName: z.string(),
+        role: z.enum(['owner', 'member']),
+        active: z.boolean(),
+      }),
+    )
+    .max(10),
+  invitations: z
+    .array(
+      z.strictObject({
+        id: z.uuid(),
+        email: z.string(),
+        createdAt: z.string(),
+        expiresAt: z.string(),
+      }),
+    )
+    .max(100),
+});
+export type HouseholdAccess = z.infer<typeof householdAccessSchema>;
+
+// The database's reasons a person can act on; anything else stays a generic failure.
+const ACCESS_ERRORS: Record<string, string> = {
+  'Make another member an owner before leaving':
+    'Make another member an owner before leaving.',
+  'Household member limit reached': 'This household already has ten members.',
+  'Membership limit reached': 'You already belong to ten households.',
+  'Already a member': 'You are already a member of this household.',
+  'Invitation unavailable':
+    'This invitation has expired, been used or revoked, or was sent to a different email. Ask for a fresh link.',
+  'Confirm your email before accepting': 'Confirm your email before accepting.',
+  'Invalid email': 'Enter a valid email address.',
+  'Invalid name': 'Enter a name of 1 to 80 characters.',
+};
+async function accessRpc<T>(
+  client: SupabaseClient,
+  name: string,
+  args: Record<string, string | null>,
+  schema: z.ZodType<T>,
+) {
+  const { data, error } = await client.rpc(name, args);
+  if (error)
+    throw new Error(
+      ACCESS_ERRORS[error.message] ??
+        'The household request failed. Reload and try again.',
+    );
+  const parsed = schema.safeParse(data);
+  if (!parsed.success)
+    throw new Error('The server returned an unsupported household response.');
+  return parsed.data;
+}
+
+export function invitationUrl(value: string) {
+  return `${window.location.origin}/projects/house-scanner/invite?token=${token.parse(value)}`;
+}
+export async function createInvitation(
+  client: SupabaseClient,
+  householdId: string,
+  purpose: 'create' | 'join',
+  email: string | null = null,
+) {
+  const created = await accessRpc(
+    client,
+    'hs_invitation_create',
+    {
+      p_purpose: purpose,
+      p_household_id: z.uuid().parse(householdId),
+      p_email: email,
+    },
+    z.strictObject({ id: z.uuid(), token, expiresAt: z.string() }),
+  );
+  return invitationUrl(created.token);
+}
+export function previewInvitation(client: SupabaseClient, value: string) {
+  return accessRpc(
+    client,
+    'hs_invitation_preview',
+    { p_token: token.parse(value) },
+    invitationPreviewSchema,
+  );
+}
+// Asks the trusted server to reserve the link for this email and send an account email.
+export async function startAccountSetup(
+  client: SupabaseClient,
+  value: string,
+  email: string,
+) {
+  const body = {
+    token: token.parse(value),
+    email: z.email().max(254).parse(email.trim()),
+  };
+  const { error } = await client.functions.invoke('house-scanner-invite', {
+    body,
+  });
+  if (error)
+    throw new Error(
+      'This invitation cannot be used with that email. Check the address or ask for a fresh link.',
+    );
+}
+export async function redeemInvitation(
+  client: SupabaseClient,
+  value: string,
+  householdName: string | null,
+  displayName: string,
+) {
+  const result = await accessRpc(
+    client,
+    'hs_invitation_redeem',
+    {
+      p_token: token.parse(value),
+      p_household_name: householdName,
+      p_display_name: displayName,
+    },
+    z.strictObject({ householdId: z.uuid() }),
+  );
+  return result.householdId;
+}
+export function householdAccess(client: SupabaseClient, householdId: string) {
+  return accessRpc(
+    client,
+    'hs_household_access',
+    { p_household_id: z.uuid().parse(householdId) },
+    householdAccessSchema,
+  );
+}
+const ok = z.strictObject({ ok: z.literal(true) });
+export function revokeInvitation(
+  client: SupabaseClient,
+  householdId: string,
+  invitationId: string,
+) {
+  return accessRpc(
+    client,
+    'hs_invitation_revoke',
+    {
+      p_household_id: z.uuid().parse(householdId),
+      p_invitation_id: z.uuid().parse(invitationId),
+    },
+    ok,
+  );
+}
+export function renameHousehold(
+  client: SupabaseClient,
+  householdId: string,
+  name: string,
+) {
+  return accessRpc(
+    client,
+    'hs_household_rename',
+    { p_household_id: z.uuid().parse(householdId), p_name: name },
+    ok,
+  );
+}
+export function makeOwner(
+  client: SupabaseClient,
+  householdId: string,
+  userId: string,
+) {
+  return accessRpc(
+    client,
+    'hs_member_make_owner',
+    {
+      p_household_id: z.uuid().parse(householdId),
+      p_user_id: z.uuid().parse(userId),
+    },
+    ok,
+  );
+}
+export function deactivateMember(
+  client: SupabaseClient,
+  householdId: string,
+  userId: string,
+) {
+  return accessRpc(
+    client,
+    'hs_member_deactivate',
+    {
+      p_household_id: z.uuid().parse(householdId),
+      p_user_id: z.uuid().parse(userId),
+    },
+    ok,
+  );
+}
+export function leaveHousehold(client: SupabaseClient, householdId: string) {
+  return accessRpc(
+    client,
+    'hs_household_leave',
+    { p_household_id: z.uuid().parse(householdId) },
+    z.strictObject({ archived: z.boolean() }),
+  );
+}
+
+// Invitation and recovery emails return with the session in the address hash. It is read once, moved into the
+// client, and removed from the address and history. Returns which kind of link it was.
+export async function consumeAuthRedirect(
+  client: SupabaseClient,
+): Promise<'invite' | 'recovery' | 'error' | null> {
+  const params = new URLSearchParams(window.location.hash.slice(1));
+  const access = params.get('access_token');
+  const refresh = params.get('refresh_token');
+  if (!access && !params.get('error')) return null;
+  window.history.replaceState(
+    window.history.state,
+    '',
+    `${window.location.pathname}${window.location.search}`,
+  );
+  if (!access || !refresh) return 'error';
+  const { error } = await client.auth.setSession({
+    access_token: access,
+    refresh_token: refresh,
+  });
+  if (error) return 'error';
+  const type = params.get('type');
+  return type === 'recovery' ? 'recovery' : type === 'invite' ? 'invite' : null;
 }

@@ -521,42 +521,38 @@ describe('House Scanner session privacy', () => {
     );
     expect(window.localStorage.getItem('house-scanner.remember')).toBeNull();
   });
-  it('signs in a bare username as its address on the house-scanner domain', async () => {
-    const hook = renderHook(useHouseholdSession);
-    await act(() =>
-      hook.result.current.signInWithCode(' Bobby ', '48291736', true),
-    );
-    expect(sdk.auth.signInWithPassword).toHaveBeenCalledWith({
-      email: 'bobby@house-scanner.bobbyinscoe.com',
-      password: '48291736',
-    });
-  });
   it.each([
     ['', '48291736'],
     ['   ', '48291736'],
     ['two words', '48291736'],
     ['not an@email', '48291736'],
-    ['bobby', '12345'],
-    ['bobby', ''],
-    ['bobby', 'x'.repeat(73)],
+    // Usernames are gone: sign-in is by email only.
+    ['bobby', '48291736'],
+    ['casey@example.com', '12345'],
+    ['casey@example.com', ''],
+    ['casey@example.com', 'x'.repeat(73)],
   ])(
-    'rejects login %j with code %j before reaching the SDK',
+    'rejects login %j with password %j before reaching the SDK',
     async (login, code) => {
       const hook = renderHook(useHouseholdSession);
       await expect(
         hook.result.current.signInWithCode(login, code, true),
-      ).rejects.toThrow('access code');
+      ).rejects.toThrow('Enter your email and password.');
       expect(sdk.auth.signInWithPassword).not.toHaveBeenCalled();
     },
   );
-  it('gives one generic message when the SDK refuses the code', async () => {
+  it('gives one generic message when the SDK refuses the password', async () => {
     sdk.auth.signInWithPassword.mockResolvedValueOnce({
       error: { message: 'Invalid login credentials' },
     });
     const hook = renderHook(useHouseholdSession);
     await expect(
-      hook.result.current.signInWithCode('bobby', 'wrongcode1', true),
-    ).rejects.toThrow('The email, username or access code was not accepted.');
+      hook.result.current.signInWithCode(
+        'casey@example.com',
+        'wrongcode1',
+        true,
+      ),
+    ).rejects.toThrow('The email or password was not accepted.');
   });
   it('ignores a completed mutation from an earlier login of the same user', async () => {
     const hook = await authenticated();

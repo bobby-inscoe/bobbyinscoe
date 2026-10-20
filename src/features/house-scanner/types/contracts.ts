@@ -233,6 +233,8 @@ export const memberSchema = z.strictObject({
   userId: id,
   displayName: z.string().min(1).max(80),
   role: z.enum(['owner', 'member']),
+  // Sent with memberships, so a person in several households can tell them apart.
+  householdName: z.string().min(1).max(80).optional(),
 });
 export const favoriteSchema = z.strictObject({
   householdId: id,

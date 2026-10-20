@@ -1,13 +1,24 @@
 import { Anchor, Flex, Stack, Text, Title } from '@mantine/core';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { HouseScannerAccess } from '@/features/house-scanner/components/house-scanner-access';
 import { HouseholdWorkspace } from '@/features/house-scanner/components/household-workspace';
 import styles from '@/features/house-scanner/components/household-workspace.module.css';
 import { SyntheticWorkspace } from '@/features/house-scanner/components/synthetic-workspace';
+import { validateBrowseSearch } from '@/features/house-scanner/utils/browse-search';
+
+// On the invitation page: the token in the address, or '' when it is missing or malformed. Elsewhere: null.
+function readInviteToken() {
+  if (!/^\/projects\/house-scanner\/invite\/?$/.test(window.location.pathname))
+    return null;
+  const token = new URLSearchParams(window.location.search).get('token') ?? '';
+  return /^[a-f0-9]{64}$/.test(token) ? token : '';
+}
 
 export function HouseScannerPage() {
   const [demo, setDemo] = useState(false);
+  const [inviteToken, setInviteToken] = useState(readInviteToken);
+  const navigate = useNavigate();
   return (
     <Flex
       component="main"
@@ -41,7 +52,18 @@ export function HouseScannerPage() {
         {demo ? (
           <SyntheticWorkspace onLeaveDemo={() => setDemo(false)} />
         ) : (
-          <HouseScannerAccess onDemo={() => setDemo(true)}>
+          <HouseScannerAccess
+            onDemo={() => setDemo(true)}
+            inviteToken={inviteToken}
+            onInviteDone={() => {
+              setInviteToken(null);
+              void navigate({
+                to: '/projects/house-scanner/listings',
+                search: validateBrowseSearch({}),
+                replace: true,
+              });
+            }}
+          >
             {(household, signOut) => (
               <HouseholdWorkspace
                 key={`${household.snapshot.householdId}:${household.userId}`}
