@@ -5,8 +5,9 @@ skipping it broke the app once.
 
 - Check the visible home count before a live run or a change that adds homes. The snapshot function and the contract
   both cap the household at 1500 visible listings, and above the cap `hs_snapshot` raises for every member, so the app
-  shows nothing. Count what the snapshot would show (listings of sources whose policy is current and unexpired, plus any
-  favorited or noted home, plus manual ones) and keep at least 100 of margin. A new source can add several hundred homes
+  shows nothing. Count what the snapshot would show (catalog listings of sources whose policy is current and unexpired
+  that pass a hard rule of an enabled profile or that the household hid, plus any favorited or noted home, plus manual
+  ones) and keep at least 100 of margin. Loosening a household's criteria can raise its count too. A new source can add several hundred homes
   in one run: Svensk Fastighetsförmedling added 140 and took the household from 392 to 532 against the old cap of 500.
 - If the snapshot is already failing, disable the newest source's policy at once (`hs.admin_set_source_policy` with the
   stored policy patched to status `disabled` and a higher revision). Its homes leave the snapshot immediately. Then
