@@ -1236,3 +1236,117 @@ describe('catalog administration and grants', () => {
     ).rejects.toThrow('permission denied');
   });
 });
+
+// Checks kept from the suites that tested the schema before the shared catalog. Each guards behaviour that still runs.
+describe('carried-over guards', () => {
+  const REMOVE = Symbol('remove');
+  const dbAccepts = async (body: unknown) =>
+    (await rpc('select hs.valid_policy($1::jsonb) as value', [
+      JSON.stringify(body),
+    ])) as boolean;
+  // A URL refinement in the schema can throw rather than fail, which still means rejected.
+  const schemaAccepts = (body: unknown) => {
+    try {
+      return sourcePolicySchema.safeParse(JSON.parse(JSON.stringify(body)))
+        .success;
+    } catch {
+      return false;
+    }
+  };
+
+  it('validates a source policy exactly as the shared schema does', async () => {
+    const base = policy('alpha');
+    expect(await dbAccepts(base)).toBe(true);
+    const paths = [
+      ...Object.keys(base).map((key) => [key]),
+      ...Object.keys(base.capabilities).map((key) => ['capabilities', key]),
+      ['extra'],
+      ['capabilities', 'extra'],
+    ];
+    for (const path of paths)
+      for (const next of [REMOVE, null, 'text', 42, -1, true, [], {}]) {
+        const [key, inner] = path;
+        const candidate: Record<string, unknown> = structuredClone(base);
+        const target = (inner ? candidate[key] : candidate) as Record<
+          string,
+          unknown
+        >;
+        const field = inner ?? key;
+        if (next === REMOVE) delete target[field];
+        else target[field] = next;
+        expect({
+          path,
+          next: String(next),
+          db: await dbAccepts(candidate),
+        }).toEqual({
+          path,
+          next: String(next),
+          db: schemaAccepts(candidate),
+        });
+      }
+  });
+
+  it('uses each ingest one-time code once, within five minutes, and forgets it after an hour', async () => {
+    const consume = (
+      nonce: string,
+      timestamp = Math.floor(Date.now() / 1000),
+    ) =>
+      as('service_role', null, () =>
+        rpc('select public.hs_consume_nonce($1,$2,$3) as value', [
+          KEY,
+          nonce,
+          timestamp,
+        ]),
+      );
+    await db.query(
+      "insert into hs.ingest_nonces(key_id,nonce,used_at) values($1,'synthetic_nonce_old',now()-interval '2 hours')",
+      [KEY],
+    );
+    expect(await consume('synthetic_nonce_0001')).toEqual({ ok: true });
+    await expect(consume('synthetic_nonce_0001')).rejects.toMatchObject({
+      code: '23505',
+    });
+    for (const skew of [-301, 301])
+      await expect(
+        consume('synthetic_nonce_0002', Math.floor(Date.now() / 1000) + skew),
+      ).rejects.toMatchObject({ code: '42501' });
+    const left = await db.query<{ nonce: string }>(
+      'select nonce from hs.ingest_nonces where key_id=$1 order by nonce',
+      [KEY],
+    );
+    expect(left.rows.map((row) => row.nonce)).toEqual(['synthetic_nonce_0001']);
+  });
+
+  it('never lets the operator remove the last active owner', async () => {
+    const setMember = (user: string, role: string, active: boolean) =>
+      rpc(
+        "select hs.admin_set_member($1,$2,'Synthetic member',$3,$4) as value",
+        [HOUSE_A, user, role, active],
+      );
+    await expect(setMember(OWNER_A, 'member', true)).rejects.toThrow(
+      'Household needs an active owner',
+    );
+    await expect(setMember(OWNER_A, 'owner', false)).rejects.toThrow(
+      'Household needs an active owner',
+    );
+    await setMember(MEMBER_A, 'owner', true);
+    await setMember(OWNER_A, 'member', true);
+    await setMember(OWNER_A, 'owner', true);
+    await setMember(MEMBER_A, 'member', true);
+  });
+
+  it('refuses bookmarks with credentials or an overlong note', async () => {
+    const add = (url: string, note = '') =>
+      asUser(
+        OWNER_A,
+        'select public.hs_add_manual($1,$2,$3,$4,$5::jsonb) as value',
+        [HOUSE_A, url, 'Bookmark', note, '[]'],
+      );
+    await expect(add('https://user:pass@example.invalid/home')).rejects.toThrow(
+      'Invalid bookmark',
+    );
+    await expect(add(`${ORIGIN}/long-note`, '😀'.repeat(1001))).rejects.toThrow(
+      'Invalid bookmark',
+    );
+  });
+});
