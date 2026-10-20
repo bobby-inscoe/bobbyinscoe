@@ -10,10 +10,11 @@ export interface CollectorBounds {
 }
 
 // What the shared catalog collects, independent of any household's criteria.
+// Apartments only for now, as Göteborg only; houses are a later expansion.
 // Room count does not filter collection; households filter on it themselves.
 export const COLLECTOR_MUNICIPALITY = 'Göteborg';
 export const COLLECTOR_BOUNDS: CollectorBounds = {
-  propertyTypes: ['apartment', 'house'],
+  propertyTypes: ['apartment'],
   minAreaM2: 60,
   minPriceSek: 2_000_000,
   maxPriceSek: 6_000_000,

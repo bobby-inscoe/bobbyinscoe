@@ -49,9 +49,9 @@ function listing(
 }
 
 describe('prefilterObservations with the collector bounds', () => {
-  it('collects apartments and houses of at least 60 m² at known prices from 2M through 6M SEK', () => {
+  it('collects apartments of at least 60 m² at known prices from 2M through 6M SEK', () => {
     expect(COLLECTOR_BOUNDS).toEqual({
-      propertyTypes: ['apartment', 'house'],
+      propertyTypes: ['apartment'],
       minAreaM2: 60,
       minPriceSek: 2_000_000,
       maxPriceSek: 6_000_000,
@@ -64,6 +64,7 @@ describe('prefilterObservations with the collector bounds', () => {
     ['living area below 60 m²', { livingAreaM2: 55 }, 'living-area'],
     ['price below 2M SEK', { askingPriceSek: 1_500_000 }, 'asking-price'],
     ['price above 6M SEK', { askingPriceSek: 6_000_001 }, 'asking-price'],
+    ['a house', { propertyType: 'house' }, 'property-type'],
   ] as const)('drops %s and counts it under %s', (_label, facts, reason) => {
     const { kept, dropped } = prefilterObservations([listing(facts)]);
     expect(kept).toEqual([]);
@@ -76,7 +77,6 @@ describe('prefilterObservations with the collector bounds', () => {
     ['exactly 2M SEK', { askingPriceSek: 2_000_000 }],
     ['exactly 6M SEK', { askingPriceSek: 6_000_000 }],
     ['one room, since rooms never filter collection', { rooms: 1 }],
-    ['a house', { propertyType: 'house' }],
     ['unknown living area', { livingAreaM2: null }],
     ['unknown price, which is never zero', { askingPriceSek: null }],
     ['unknown property type', { propertyType: null }],
@@ -99,13 +99,14 @@ describe('prefilterObservations with the collector bounds', () => {
     const c = listing({ livingAreaM2: 90, propertyType: 'house' });
     const bounds = {
       ...COLLECTOR_BOUNDS,
-      propertyTypes: ['apartment'] as const,
+      propertyTypes: ['apartment', 'house'] as const,
+      minAreaM2: 80,
     };
     const { kept, dropped } = prefilterObservations([a, b, c], bounds);
-    expect(kept).toEqual([a]);
+    expect(kept).toEqual([c]);
     expect(dropped).toEqual({
-      'property-type': 1,
-      'living-area': 1,
+      'property-type': 0,
+      'living-area': 2,
       'asking-price': 0,
     });
   });
