@@ -91,6 +91,9 @@ export const ListingCard = memo(function ListingCard({
     const memberName = (id: string | null) =>
       snapshot.members.find((member) => member.userId === id)?.displayName ||
       'Household member';
+    const hiddenBy = snapshot.hides?.find(
+      (hide) => hide.listingId === listing.id,
+    )?.userId;
     const chips = reasonChips(listing);
     const position =
       estimatedPositionLabel(listing.coordinates) ??
@@ -133,7 +136,11 @@ export const ListingCard = memo(function ListingCard({
                 </Badge>
               )}
               {stale && <Badge variant="outline">Not in latest scan</Badge>}
-              {hidden && <Badge variant="outline">Hidden</Badge>}
+              {hidden && (
+                <Badge variant="outline">
+                  {hiddenBy ? `Hidden by ${memberName(hiddenBy)}` : 'Hidden'}
+                </Badge>
+              )}
             </Group>
           )}
           <div className={styles.desktopSummary}>

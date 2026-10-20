@@ -140,6 +140,12 @@ export function matchListing(
     if (f[key] === null || listing.conflicts.includes(key)) missing.push(key);
     return f[key] !== null && !listing.conflicts.includes(key);
   };
+  if (
+    criteria.sourceIds &&
+    listing.sourceId &&
+    !criteria.sourceIds.includes(listing.sourceId)
+  )
+    excluded.push('Source not selected');
   if (required('purchase') && !f.purchase)
     excluded.push('Not offered for purchase');
   if (!listing.conflicts.includes('tenure') && f.tenure === 'rental')

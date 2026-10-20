@@ -4,6 +4,7 @@ export const CONTRACT_VERSION = 1;
 const id = z.uuid();
 const timestamp = z.iso.datetime({ offset: true });
 const money = z.number().int().nonnegative().max(1_000_000_000);
+const sourceId = z.string().regex(/^[a-z0-9-]{1,60}$/);
 // z.url() can accept strings that the URL constructor then rejects (for example
 // some punycode or numeric hosts). A throw inside a refinement escapes safeParse,
 // so every URL refinement goes through this guard and fails validation instead.
@@ -66,6 +67,8 @@ export const criteriaSchema = z
       preferredJourneyMinutes: z.number().positive().max(240),
       tradeoffJourneyMinutes: z.number().positive().max(240),
     }),
+    // The sources this household browses. Absent means every source; it never changes collection.
+    sourceIds: z.array(sourceId).min(1).max(20).optional(),
   })
   .refine(
     (c) => c.maxAreaM2 === null || c.maxAreaM2 >= c.minAreaM2,
@@ -192,7 +195,7 @@ export const observationSchema = z.strictObject({
   viewings: z.array(viewingSchema).max(10).optional(),
 });
 export const sourcePolicySchema = z.strictObject({
-  sourceId: z.string().regex(/^[a-z0-9-]{1,60}$/),
+  sourceId,
   revision: z.number().int().positive(),
   status: z.enum(['disabled', 'pending', 'approved']),
   /** When source collection/display permissions were reviewed. */
@@ -238,6 +241,12 @@ export const favoriteSchema = z.strictObject({
   /** When this member favorited the listing; independent of source observations. */
   savedAt: timestamp,
 });
+// A listing hidden for the whole household, by the member who hid it last.
+export const hideSchema = z.strictObject({
+  listingId: id,
+  userId: id,
+  hiddenAt: timestamp,
+});
 // One member's note on one listing, as the snapshot carries it.
 export const snapshotNoteSchema = z.strictObject({
   listingId: id,
@@ -260,6 +269,8 @@ export const listingSchema = z.strictObject({
   id,
   householdId: id,
   origin: z.enum(['source', 'manual', 'synthetic']),
+  // The catalog source of a source listing. Absent on manual listings and in older snapshots.
+  sourceId: sourceId.optional(),
   title: z.string().min(1).max(200),
   sourceUrls: z.array(listingUrlSchema).min(1).max(20),
   facts: factsSchema,
@@ -308,8 +319,11 @@ export const snapshotSchema = z.strictObject({
   profiles: z.array(profileSchema).max(20),
   listings: z.array(listingSchema).max(1500),
   favorites: z.array(favoriteSchema).max(5000),
-  // The signed-in member's own hidden listings. The database leaves the key out when there are none,
-  // so an app built before it still parses the snapshot. Absent means none.
+  // The household's hidden listings, each with the member and time of its latest hide. Left out when
+  // there are none.
+  hides: z.array(hideSchema).max(1500).optional(),
+  // shortcut: the signed-in member's own hides, as the database sent them before shared hides; remove once
+  // the shared hides migration is live.
   hiddenListingIds: z.array(id).max(1500).optional(),
   // Every member's notes on the listings above, so opening a listing needs no request. Ten members on
   // 500 listings is the ceiling. The database leaves the key out when there are none; absent means none.

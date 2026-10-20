@@ -100,13 +100,20 @@ export function useDemoHousehold() {
     }));
   }
   async function setHidden(listingIds: string[], hidden: boolean) {
+    const hiddenAt = new Date().toISOString();
     setSnapshot((current) => {
-      const ids = new Set(current.hiddenListingIds);
-      for (const id of listingIds) {
-        if (hidden) ids.add(id);
-        else ids.delete(id);
-      }
-      return { ...current, hiddenListingIds: ids.size ? [...ids] : undefined };
+      const ids = new Set(listingIds);
+      const hides = [
+        ...(current.hides ?? []).filter((hide) => !ids.has(hide.listingId)),
+        ...(hidden
+          ? [...ids].map((listingId) => ({
+              listingId,
+              userId: DEMO_USER_ID,
+              hiddenAt,
+            }))
+          : []),
+      ];
+      return { ...current, hides: hides.length ? hides : undefined };
     });
   }
   async function addManual(submission: ManualSubmission) {

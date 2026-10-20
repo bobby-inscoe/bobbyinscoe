@@ -532,7 +532,9 @@ test('hiding a home removes it from the list, keeps it findable and leaves brows
   await applyFilters(page);
   await expect(page.getByText('1 active')).toBeVisible();
   await expect(page.getByRole('article')).toHaveCount(1);
-  await expect(home.getByText('Hidden', { exact: true })).toBeVisible();
+  await expect(
+    home.getByText('Hidden by Demo Alex', { exact: true }),
+  ).toBeVisible();
   await page.getByRole('button', { name: 'Filters', exact: true }).click();
   await page.getByRole('radio', { name: 'Both' }).check();
   await applyFilters(page);
@@ -546,7 +548,7 @@ test('hiding a home removes it from the list, keeps it findable and leaves brows
     await expect(
       home.getByRole('button', { name: 'Hide this home' }),
     ).toBeVisible();
-  await expect(home.getByText('Hidden', { exact: true })).toHaveCount(0);
+  await expect(home.getByText('Hidden by Demo Alex')).toHaveCount(0);
   await page.getByRole('button', { name: 'Filters', exact: true }).click();
   await page.getByRole('radio', { name: 'Not hidden' }).check();
   await applyFilters(page);
@@ -559,7 +561,7 @@ test('hiding a home removes it from the list, keeps it findable and leaves brows
   ).toEqual({ local: [], session: [] });
 });
 
-test('hiding from the details sheet applies to Favorites too and never changes favorites', async ({
+test('a home hidden from the details sheet stays in Favorites, marked, and keeps its favorites', async ({
   page,
 }) => {
   await openDemo(page);
@@ -581,15 +583,14 @@ test('hiding from the details sheet applies to Favorites too and never changes f
   ).toBeVisible();
   await details.getByRole('button', { name: 'Back to listings' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Favorites', exact: true }).click();
   await expect(home).toHaveCount(0);
-  await page.getByRole('button', { name: 'Filters', exact: true }).click();
-  await page.getByRole('radio', { name: 'Both' }).check();
-  await applyFilters(page);
+  await page.getByRole('button', { name: 'Favorites', exact: true }).click();
   if (test.info().project.name === 'narrow')
     await expect(home.getByText('Saved by 1 member')).toBeVisible();
   else await expect(home.getByText('Saved by Demo Alex')).toBeVisible();
-  await expect(home.getByText('Hidden', { exact: true })).toBeVisible();
+  await expect(
+    home.getByText('Hidden by Demo Alex', { exact: true }),
+  ).toBeVisible();
 });
 
 test('a hidden home keeps a dimmed, selectable pin when hidden homes are shown', async ({
@@ -1450,7 +1451,10 @@ test('Settings uses dropdowns, names the places and the search circle, and expla
     await expect(page.getByRole('combobox', { name })).toBeVisible();
   await expect(page.getByLabel(/longitude|latitude/i)).toHaveCount(0);
   // The field itself is a thin input inside a box that takes the click.
-  await page.locator('div.mantine-MultiSelect-input').click();
+  await page
+    .locator('div.mantine-MultiSelect-input')
+    .filter({ hasText: 'Example municipality' })
+    .click();
   await expect(
     page.getByRole('option', { name: 'Mölndal (coming soon)', exact: true }),
   ).toHaveAttribute('aria-disabled', 'true');

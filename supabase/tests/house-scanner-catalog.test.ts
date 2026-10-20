@@ -428,25 +428,40 @@ async function seedHouseholdA(database: PGlite) {
   const hide =
     'select public.hs_set_hidden($1,array[$2]::uuid[],true) as value';
   await call(OWNER_A, hide, [HOUSE_A, idOf('hidden')]);
+  // Both members hide this one; the shared hides migration keeps the later hide.
+  await call(MEMBER_A, hide, [HOUSE_A, idOf('hidden')]);
   await call(MEMBER_A, hide, [HOUSE_A, manual]);
   // Two homes age out of a one-day window; the saved and noted ones stay visible to this household.
   await database.query(
     "update hs.source_policies set policy=jsonb_set(policy,'{retentionDays}','1') where source_id='alpha'",
   );
-  return { manual, fresh: idOf('fresh'), expired: idOf('expired') };
+  return {
+    manual,
+    fresh: idOf('fresh'),
+    expired: idOf('expired'),
+    hidden: idOf('hidden'),
+  };
 }
 
 let seeded: Awaited<ReturnType<typeof seedHouseholdA>>;
 let before: Record<string, unknown>;
+let afterMove: Record<string, unknown>;
+
+async function memberSnapshots() {
+  const result: Record<string, unknown> = {};
+  for (const user of [OWNER_A, MEMBER_A])
+    for (const call of ['hs_snapshot', 'hs_snapshot_neighborhoods'])
+      result[`${user}:${call}`] = await snapshot(HOUSE_A, user, db, call);
+  return result;
+}
 
 beforeAll(async () => {
   db = await freshDatabase('before');
   seeded = await seedHouseholdA(db);
-  before = {};
-  for (const user of [OWNER_A, MEMBER_A])
-    for (const call of ['hs_snapshot', 'hs_snapshot_neighborhoods'])
-      before[`${user}:${call}`] = await snapshot(HOUSE_A, user, db, call);
+  before = await memberSnapshots();
   await db.exec(await migration(CATALOG));
+  // Later migrations change the snapshot on purpose, so the move is compared before they run.
+  afterMove = await memberSnapshots();
   await applyAfterCatalog(db);
 });
 
@@ -456,11 +471,7 @@ afterAll(async () => {
 
 describe('catalog data move', () => {
   it('leaves every member snapshot of the existing household unchanged', async () => {
-    for (const user of [OWNER_A, MEMBER_A])
-      for (const call of ['hs_snapshot', 'hs_snapshot_neighborhoods'])
-        expect(await snapshot(HOUSE_A, user, db, call)).toEqual(
-          before[`${user}:${call}`],
-        );
+    expect(afterMove).toEqual(before);
     const state = before[`${OWNER_A}:hs_snapshot_neighborhoods`] as z.infer<
       typeof snapshotSchema
     >;
@@ -638,7 +649,7 @@ describe('a second household on the shared catalog', () => {
     );
     expect(state.favorites).toEqual([]);
     expect(state.notes).toBeUndefined();
-    expect(state.hiddenListingIds).toBeUndefined();
+    expect(state.hides).toBeUndefined();
     expect(state.members.map((member) => member.userId)).toEqual([OWNER_B]);
   });
 
@@ -695,6 +706,63 @@ describe('a second household on the shared catalog', () => {
         'Should not save',
       ]),
     ).rejects.toThrow('Note changed; reload before saving');
+  });
+
+  it('shares hides across the household with the latest hider, and keeps them from other households', async () => {
+    const hides = async (household: string, user: string) =>
+      (await snapshot(household, user)).hides?.map(({ listingId, userId }) => ({
+        listingId,
+        userId,
+      }));
+    // Each member's earlier hides now apply to both; the listing both hid keeps the later hide.
+    const merged = [
+      { listingId: seeded.hidden, userId: MEMBER_A },
+      { listingId: seeded.manual, userId: MEMBER_A },
+    ].sort((a, b) => (a.listingId < b.listingId ? -1 : 1));
+    expect(await hides(HOUSE_A, OWNER_A)).toEqual(merged);
+    expect(await hides(HOUSE_A, MEMBER_A)).toEqual(merged);
+    expect((await snapshot(HOUSE_A, OWNER_A)).hiddenListingIds).toBeUndefined();
+
+    const setHidden = (user: string, house: string, id: string, on: boolean) =>
+      asUser(
+        user,
+        'select public.hs_set_hidden($1,array[$2]::uuid[],$3) as value',
+        [house, id, on],
+      );
+    // The owner hides the member's favorite: it stays saved and returned, marked with the owner.
+    await setHidden(OWNER_A, HOUSE_A, seeded.fresh, true);
+    const member = await snapshot(HOUSE_A, MEMBER_A);
+    expect(member.listings.some((item) => item.id === seeded.fresh)).toBe(true);
+    expect(
+      member.favorites.some(
+        (item) => item.listingId === seeded.fresh && item.userId === MEMBER_A,
+      ),
+    ).toBe(true);
+    expect(member.hides).toContainEqual(
+      expect.objectContaining({ listingId: seeded.fresh, userId: OWNER_A }),
+    );
+    // Another household sees none of it, and its own hide leaves this household alone.
+    expect(await hides(HOUSE_B, OWNER_B)).toBeUndefined();
+    await setHidden(OWNER_B, HOUSE_B, seeded.fresh, true);
+    expect(await hides(HOUSE_B, OWNER_B)).toEqual([
+      { listingId: seeded.fresh, userId: OWNER_B },
+    ]);
+    expect(await hides(HOUSE_A, OWNER_A)).toContainEqual({
+      listingId: seeded.fresh,
+      userId: OWNER_A,
+    });
+    // Hiding again records the latest member; either member unhides it for everyone.
+    await setHidden(MEMBER_A, HOUSE_A, seeded.fresh, true);
+    expect(await hides(HOUSE_A, OWNER_A)).toContainEqual({
+      listingId: seeded.fresh,
+      userId: MEMBER_A,
+    });
+    await setHidden(OWNER_A, HOUSE_A, seeded.fresh, false);
+    expect(await hides(HOUSE_A, MEMBER_A)).toEqual(merged);
+    expect(await hides(HOUSE_B, OWNER_B)).toEqual([
+      { listingId: seeded.fresh, userId: OWNER_B },
+    ]);
+    await setHidden(OWNER_B, HOUSE_B, seeded.fresh, false);
   });
 
   it('adds its own manual listing for a shared URL and reuses a visible catalog listing', async () => {
@@ -818,13 +886,21 @@ describe('candidates filtered by household criteria', () => {
   const shared = { ...criteria, ...HARD_RULE_CRITERIA };
 
   it('applies the hard rules shared with the client matcher', async () => {
-    for (const { name, facts, conflicts = [], excluded } of HARD_RULE_CASES) {
+    for (const {
+      name,
+      facts,
+      conflicts = [],
+      sourceId = null,
+      sourceIds,
+      excluded,
+    } of HARD_RULE_CASES) {
       const fails = await rpc(
-        'select hs.fails_hard_rule($1::jsonb,$2::jsonb,$3::jsonb) as value',
+        'select hs.fails_hard_rule($1::jsonb,$2::jsonb,$3::jsonb,$4) as value',
         [
           JSON.stringify({ ...HARD_RULE_BASE_FACTS, ...facts }),
           JSON.stringify(conflicts),
-          JSON.stringify(shared),
+          JSON.stringify({ ...shared, sourceIds }),
+          sourceId,
         ],
       );
       expect({ name, fails }).toEqual({ name, fails: excluded });
@@ -902,19 +978,99 @@ describe('candidates filtered by household criteria', () => {
     );
   });
 
-  it('rolls back to returning every live listing, and applies again', async () => {
+  it('keeps a household to the sources its criteria select, plus saved and hidden ones', async () => {
+    const revision = async () =>
+      (
+        await db.query<{ revision: number }>(
+          'select revision from hs.profiles where id=$1',
+          [PROFILE_B],
+        )
+      ).rows[0].revision;
+    const save = async (value: unknown) =>
+      asUser(
+        OWNER_B,
+        'select public.hs_save_profile($1,$2,$3,$4,true,$5::jsonb) as value',
+        [
+          HOUSE_B,
+          PROFILE_B,
+          String(await revision()),
+          'Second profile',
+          JSON.stringify(value),
+        ],
+      );
+    for (const sourceIds of [[], ['Not a source id'], [1], 'alpha'])
+      await expect(save({ ...criteria, sourceIds })).rejects.toThrow(
+        'Invalid profile',
+      );
+    await save({ ...criteria, sourceIds: ['alpha'] });
+    const b = await snapshot(HOUSE_B, OWNER_B);
+    const sources = new Set(
+      b.listings
+        .filter((item) => item.origin === 'source')
+        .map((item) => item.sourceId),
+    );
+    expect(sources).toEqual(new Set(['alpha', 'beta']));
+    // Only the beta listings this household saved or hid remain.
+    expect(
+      b.listings
+        .filter((item) => item.sourceId === 'beta')
+        .map((item) => item.title)
+        .sort(),
+    ).toEqual(['hidden-by-b', 'saved-by-b']);
+    expect(
+      (await snapshot(HOUSE_A, OWNER_A)).listings.some(
+        (item) => item.sourceId === 'beta' && item.title === 'fits-both',
+      ),
+    ).toBe(true);
+    // Manual listings carry no source.
+    expect(
+      (await snapshot(HOUSE_A, OWNER_A)).listings.find(
+        (item) => item.origin === 'manual',
+      )?.sourceId,
+    ).toBeUndefined();
+    await save({ ...criteria, minAreaM2: 60 });
+    expect(
+      (await snapshot(HOUSE_B, OWNER_B)).listings.map((item) => item.title),
+    ).toContain('fits-both');
+  });
+
+  it('rolls back shared hides, then the criteria filter, and applies both again', async () => {
+    const shared = '20261020210000_house_scanner_shared_hides';
     const filter = '20261020180000_house_scanner_criteria_filter';
+    const down = async (name: string) =>
+      db.exec(
+        await readFile(
+          new URL(`../rollbacks/${name}_down.sql`, import.meta.url),
+          'utf8',
+        ),
+      );
     const titles = async () =>
       (await snapshot(HOUSE_B, OWNER_B)).listings.map((item) => item.title);
-    await db.exec(
-      await readFile(
-        new URL(`../rollbacks/${filter}_down.sql`, import.meta.url),
-        'utf8',
-      ),
+    await db.query(
+      `update hs.profiles set criteria=criteria||'{"sourceIds":["alpha","beta"]}' where id=$1`,
+      [PROFILE_B],
     );
+    await down(shared);
+    // Merged hides go back to the member who hid them last; source selections are dropped.
+    const member = await snapshot(HOUSE_A, MEMBER_A);
+    expect(member.hides).toBeUndefined();
+    expect(member.hiddenListingIds).toEqual(
+      [seeded.hidden, seeded.manual].sort(),
+    );
+    expect(member.listings.every((item) => item.sourceId === undefined)).toBe(
+      true,
+    );
+    expect((await snapshot(HOUSE_A, OWNER_A)).hiddenListingIds).toBeUndefined();
+    expect(
+      (await snapshot(HOUSE_B, OWNER_B)).profiles[0].criteria.sourceIds,
+    ).toBeUndefined();
+    expect(await titles()).not.toContain('too-small-for-b');
+    await down(filter);
     expect(await titles()).toContain('too-small-for-b');
     await db.exec(await migration(`${filter}.sql`));
+    await db.exec(await migration(`${shared}.sql`));
     expect(await titles()).not.toContain('too-small-for-b');
+    expect((await snapshot(HOUSE_A, OWNER_A)).hides).toHaveLength(2);
   });
 });
 

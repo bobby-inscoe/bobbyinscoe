@@ -33,6 +33,20 @@ export const MUNICIPALITIES: readonly { value: string; supported: boolean }[] =
     { value: 'Mölndal', supported: false },
   ];
 
+/**
+ * Sources the collector reads, for the Sources picker. Kept in step with the live sources in
+ * `tools/house-scanner/source-registry.ts` by a test there.
+ */
+export const SOURCES: readonly { value: string; label: string }[] = [
+  { value: 'bjurfors', label: 'Bjurfors' },
+  { value: 'boneo', label: 'Boneo' },
+  { value: 'erik-olsson', label: 'Erik Olsson' },
+  { value: 'husman-hagberg', label: 'Husman Hagberg' },
+  { value: 'lundin', label: 'Lundin' },
+  { value: 'stadshem', label: 'Stadshem' },
+  { value: 'svenskfast', label: 'Svensk Fastighetsförmedling' },
+];
+
 /** Brunnsparken, the anchor the search circle was designed around: [longitude, latitude]. */
 export const BRUNNSPARKEN: readonly [number, number] = [11.9694, 57.7067];
 

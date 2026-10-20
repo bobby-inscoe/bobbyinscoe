@@ -27,6 +27,7 @@ import {
   MUNICIPALITIES,
   RADIUS_OPTIONS_KM,
   ROOM_OPTIONS,
+  SOURCES,
 } from '@/features/house-scanner/utils/criteria-options';
 import { formatDate } from '@/features/house-scanner/utils/format';
 
@@ -211,6 +212,31 @@ export function ProfileEditor({
             }))
           }
           data={places(criteria.geography.municipalities)}
+          comboboxProps={{ withinPortal: false }}
+          disabled={!canEdit || !onSave}
+        />
+        <MultiSelect
+          label="Sources"
+          description="Show homes from these brokers only. Leave empty for every source."
+          placeholder={criteria.sourceIds ? undefined : 'Every source'}
+          value={criteria.sourceIds ?? []}
+          onChange={(sourceIds) =>
+            setCriteria((current) => ({
+              ...current,
+              sourceIds: sourceIds.length ? sourceIds : undefined,
+            }))
+          }
+          data={[
+            ...SOURCES,
+            // A saved source the collector no longer reads stays visible, as places do.
+            ...(criteria.sourceIds ?? [])
+              .filter((id) => !SOURCES.some(({ value }) => value === id))
+              .map((value) => ({
+                value,
+                label: `${value} (not collected)`,
+                disabled: true,
+              })),
+          ]}
           comboboxProps={{ withinPortal: false }}
           disabled={!canEdit || !onSave}
         />

@@ -70,12 +70,20 @@ export function HouseholdWorkspace({
     });
   const synthetic = snapshot.edition?.coverage === 'synthetic';
   const [satellite, setSatellite] = useState(false);
-  const deferredFilters = useDeferredValue(filters);
+  const deferredSearch = useDeferredValue(filters);
+  // Favorites keep hidden homes in view, marked on the card, so a member's save never disappears.
+  const deferredFilters = useMemo(
+    () =>
+      tab === 'favorites'
+        ? { ...deferredSearch, hidden: 'both' as const }
+        : deferredSearch,
+    [tab, deferredSearch],
+  );
   const scoped = useMemo(
     () => scopeListings(snapshot, { tab, person, section, userId }),
     [snapshot, tab, person, userId, section],
   );
-  // Personal to the member: the database keeps them, and the demo keeps them in memory.
+  // Shared by the household: the database keeps them, and the demo keeps them in memory.
   const hiddenActions = useHiddenListings({
     snapshot,
     userId,

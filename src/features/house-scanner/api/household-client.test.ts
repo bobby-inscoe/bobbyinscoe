@@ -262,6 +262,30 @@ describe('House Scanner RPC boundaries', () => {
       },
     ],
     [
+      'household hide of a listing that is not in the snapshot',
+      (s) => {
+        s.hides = [
+          {
+            listingId: '00000000-0000-4000-8000-0000000000ff',
+            userId: USER_ID,
+            hiddenAt: '2026-10-20T12:00:00Z',
+          },
+        ];
+      },
+    ],
+    [
+      'household hide by someone who is not a member',
+      (s) => {
+        s.hides = [
+          {
+            listingId: s.listings[0].id,
+            userId: OTHER_HOUSEHOLD_ID,
+            hiddenAt: '2026-10-20T12:00:00Z',
+          },
+        ];
+      },
+    ],
+    [
       'demo listing',
       (s) => {
         s.listings[0].origin = 'synthetic';

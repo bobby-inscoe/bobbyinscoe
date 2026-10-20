@@ -151,6 +151,24 @@ describe('size and room dropdowns', () => {
   });
 });
 
+describe('sources', () => {
+  it('saves no source list when none is picked, meaning every source', async () => {
+    const onSave = show(demo);
+    expect(
+      screen
+        .getByRole('combobox', { name: 'Sources' })
+        .getAttribute('placeholder'),
+    ).toBe('Every source');
+    expect((await save(onSave)).sourceIds).toBeUndefined();
+  });
+
+  it('saves the picked sources', async () => {
+    const onSave = show(profileWith({ sourceIds: ['boneo'] }));
+    await choose('Sources', 'Lundin');
+    expect((await save(onSave)).sourceIds).toEqual(['boneo', 'lundin']);
+  });
+});
+
 describe('places and the search circle', () => {
   it('lists Göteborg as pickable and Mölndal as coming soon and disabled', async () => {
     show(

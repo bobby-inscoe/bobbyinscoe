@@ -6,7 +6,7 @@ import { hasViewingWithin } from '@/features/house-scanner/utils/viewings';
 export const MANUAL_HOST = 'Added by household';
 export const ALL_HOSTS = 'all';
 
-// Which of this member's hidden homes to include.
+// Which of the household's hidden homes to include.
 export type HiddenView = 'not-hidden' | 'hidden-only' | 'both';
 export type Freshness = 'all' | 'latest-scan' | '1-day' | '3-days' | '7-days';
 

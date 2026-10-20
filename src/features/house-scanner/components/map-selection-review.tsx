@@ -85,7 +85,7 @@ export function MapSelectionReview({
         ))}
         <Stack gap="xs" className={styles.selectionBar}>
           <Text role="status" aria-live="polite">
-            {checked.length} selected · Hidden only for you
+            {checked.length} selected · Hidden for the household
             {savedCount > 0 &&
               ` · Includes ${savedCount} saved ${savedCount === 1 ? 'home' : 'homes'}`}
           </Text>
