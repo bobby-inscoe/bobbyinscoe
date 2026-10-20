@@ -43,10 +43,7 @@ export function MapStackSelection({
           const unavailable = disabled || (checkedIds.size >= 500 && !checked);
           return (
             <Group key={listing.id} wrap="nowrap" align="flex-start">
-              <div
-                className={styles.viewingPhoto}
-                style={{ width: 88, flexShrink: 0 }}
-              >
+              <div style={{ width: 88, flexShrink: 0 }}>
                 <ListingPhoto
                   listing={listing}
                   onOpen={() => onToggle(listing.id)}

@@ -89,7 +89,7 @@ export function ViewingsPanel({
                   key={`${listing.id}-${viewing.startsAt}`}
                   className={styles.card}
                 >
-                  <Box className={styles.viewingPhoto}>
+                  <Box>
                     <ListingPhoto listing={listing} />
                   </Box>
                   <Stack gap={4} className={styles.grow}>
