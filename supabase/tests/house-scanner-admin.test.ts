@@ -585,6 +585,7 @@ beforeAll(async () => {
     '202610170002_house_scanner_snapshot_notes.sql',
     '202610180001_house_scanner_viewings.sql',
     '202610180002_house_scanner_snapshot_limit.sql',
+    '20261020120000_house_scanner_snapshot_limit_1500.sql',
   ])
     await db.exec(
       await readFile(

@@ -280,7 +280,7 @@ These rules cover the hosted House Scanner project and the collector in `tools/h
 skipping it broke the app once.
 
 - Check the visible home count before a live run or a change that adds homes. The snapshot function and the contract
-  both cap the household at 1000 visible listings, and above the cap `hs_snapshot` raises for every member, so the app
+  both cap the household at 1500 visible listings, and above the cap `hs_snapshot` raises for every member, so the app
   shows nothing. Count what the snapshot would show (listings of sources whose policy is current and unexpired, plus any
   favorited or noted home, plus manual ones) and keep at least 100 of margin. A new source can add several hundred homes
   in one run: Svensk Fastighetsförmedling added 140 and took the household from 392 to 532 against the old cap of 500.

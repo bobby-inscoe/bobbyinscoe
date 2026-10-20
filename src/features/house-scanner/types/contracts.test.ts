@@ -125,7 +125,7 @@ describe('optional fields added without a version bump', () => {
         .success,
     ).toBe(false);
     const many = Array.from(
-      { length: 1001 },
+      { length: 1501 },
       (_, index) =>
         `10000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
     );

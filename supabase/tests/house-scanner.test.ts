@@ -674,6 +674,7 @@ beforeAll(async () => {
     '202610170002_house_scanner_snapshot_notes.sql',
     '202610180001_house_scanner_viewings.sql',
     '202610180002_house_scanner_snapshot_limit.sql',
+    '20261020120000_house_scanner_snapshot_limit_1500.sql',
   ])
     await db.exec(
       await readFile(
@@ -2670,7 +2671,7 @@ describe('bounded retention purge', () => {
       await db.query(
         `insert into hs.listings(household_id,origin,source_id,source_listing_id,episode_id,value,observed_at)
          select $1,'source','alpha','n'||i,'e',jsonb_build_object('title','n'||i,'sourceUrl',$2::text||'/n'||i),now()-interval '40 days'
-         from generate_series(1,1001) i`,
+         from generate_series(1,1501) i`,
         [HOUSE_A, ORIGIN],
       );
       const save = (from: number, to: number) =>
@@ -2681,11 +2682,11 @@ describe('bounded retention purge', () => {
           [HOUSE_A, OWNER_A, from, to],
         );
       expect((await snapshot()).listings).toEqual([]);
-      await save(1, 1000);
+      await save(1, 1500);
       const state = await snapshot();
-      expect(state.listings).toHaveLength(1000);
-      expect(state.favorites).toHaveLength(1000);
-      await save(1001, 1001);
+      expect(state.listings).toHaveLength(1500);
+      expect(state.favorites).toHaveLength(1500);
+      await save(1501, 1501);
       await expect(snapshot()).rejects.toThrow(
         'Household exceeds snapshot limit',
       );
