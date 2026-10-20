@@ -1,4 +1,13 @@
-import { Alert, Button, Group, Stack, Text, Title } from '@mantine/core';
+import {
+  Alert,
+  Button,
+  Center,
+  Group,
+  Loader,
+  Stack,
+  Text,
+  Title,
+} from '@mantine/core';
 import { type ReactNode, useState } from 'react';
 
 import { InvitePanel } from '@/features/house-scanner/components/invite-panel';
@@ -126,7 +135,12 @@ export function HouseScannerAccess({
           () => void perform(session.signOut),
         )
       ) : state.status === 'loading' ? (
-        <Text role="status">Loading your household…</Text>
+        <Center mih={280}>
+          <Stack align="center" gap="sm" role="status">
+            <Loader color="moss" />
+            <Text c="dimmed">Loading your household…</Text>
+          </Stack>
+        </Center>
       ) : state.status === 'signed-out' ? (
         signIn(<Title order={2}>Sign in</Title>, true)
       ) : state.status === 'choose-household' ? (
