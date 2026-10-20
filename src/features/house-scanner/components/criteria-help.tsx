@@ -7,8 +7,8 @@ const SECTIONS: { heading: string; lines: string[] }[] = [
   {
     heading: 'What gets collected',
     lines: [
-      'Once a day the collector reads the for-sale listings of each source for the places in your list. Today that is Göteborg. New homes appear after the next daily run.',
-      'A place that is not supported yet is greyed out in the list and brings in nothing.',
+      'The collector reads the for-sale apartments of each source in Göteborg, for every household alike. New homes appear after the next collector run.',
+      'Your criteria decide which of those apartments you see; changing them never changes what is collected.',
     ],
   },
   {
@@ -28,9 +28,8 @@ const SECTIONS: { heading: string; lines: string[] }[] = [
     lines: [
       'Budget: preferred and stretch are the two price lines above.',
       'Living area and rooms: a home outside these limits is left out. Leave the maximum area on "No maximum" to allow any size.',
-      'Apartments and houses: the home types you want to see.',
       'Apartment rules: ground floor, lift, balcony and glazed outdoor space. Missing one of these moves a home to "Close to your criteria" instead of removing it.',
-      'Places to search: the areas the collector reads, and the areas a home can be in to count as inside your search.',
+      'Places to search: the areas a home can be in to count as inside your search.',
       'Search circle: a home also counts as inside your search when it sits within the radius of the centre point, even when its place is not on the list.',
     ],
   },
