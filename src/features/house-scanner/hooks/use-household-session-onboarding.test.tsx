@@ -114,20 +114,49 @@ describe('password reset and account setup', () => {
     );
   });
 
-  it('asks the invite function to start account setup for the link and email', async () => {
+  it('asks the invite function to create the account, then signs in with the same password', async () => {
     const hook = renderHook(useHouseholdSession);
+    await expect(
+      hook.result.current.createAccount(TOKEN, 'new@example.com', 'short'),
+    ).rejects.toThrow('8 to 72 characters');
     await act(() =>
-      hook.result.current.startAccountSetup(TOKEN, ' new@example.com '),
+      hook.result.current.createAccount(
+        TOKEN,
+        ' new@example.com ',
+        'a long password',
+      ),
     );
     expect(sdk.functions.invoke).toHaveBeenCalledWith('house-scanner-invite', {
-      body: { token: TOKEN, email: 'new@example.com' },
+      body: {
+        token: TOKEN,
+        email: 'new@example.com',
+        password: 'a long password',
+      },
+    });
+    expect(sdk.auth.signInWithPassword).toHaveBeenCalledWith({
+      email: 'new@example.com',
+      password: 'a long password',
     });
     sdk.functions.invoke.mockResolvedValueOnce({
       error: { message: 'Edge Function returned a non-2xx status code' },
     });
     await expect(
-      hook.result.current.startAccountSetup(TOKEN, 'new@example.com'),
+      hook.result.current.createAccount(
+        TOKEN,
+        'new@example.com',
+        'a long password',
+      ),
     ).rejects.toThrow('cannot be used with that email');
+    sdk.auth.signInWithPassword.mockResolvedValueOnce({
+      error: { message: 'Invalid login credentials' },
+    });
+    await expect(
+      hook.result.current.createAccount(
+        TOKEN,
+        'known@example.com',
+        'a long password',
+      ),
+    ).rejects.toThrow('already has an account');
   });
 });
 

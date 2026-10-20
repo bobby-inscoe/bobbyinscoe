@@ -58,7 +58,7 @@ describe('invitation page', () => {
   function showInvite(preview: InvitationPreview, signedIn: boolean) {
     const actions = {
       onPreview: vi.fn(async () => preview),
-      onStartAccountSetup: vi.fn(async () => {}),
+      onCreateAccount: vi.fn(async () => {}),
       onAccept: vi.fn(async () => {}),
     };
     view(
@@ -87,20 +87,21 @@ describe('invitation page', () => {
     expect(screen.queryByText('Sign-in form')).toBeNull();
   });
 
-  it('lets a new person ask for an account email, beside the sign-in form', async () => {
+  it('lets a new person create an account with email and password, beside the sign-in form', async () => {
     const actions = showInvite(create, false);
     expect(await screen.findByText('Create your own household')).toBeTruthy();
     expect(screen.getByText(/It shares nothing with theirs/)).toBeTruthy();
     expect(screen.getByText('Sign-in form')).toBeTruthy();
     type(/Your email/, 'new@example.com');
-    fireEvent.click(screen.getByRole('button', { name: 'Email me a link' }));
+    type(/Choose a password/, 'a long password');
+    fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
     await waitFor(() =>
-      expect(actions.onStartAccountSetup).toHaveBeenCalledWith(
+      expect(actions.onCreateAccount).toHaveBeenCalledWith(
         TOKEN,
         'new@example.com',
+        'a long password',
       ),
     );
-    expect(await screen.findByText(/Check your email/)).toBeTruthy();
   });
 
   it('asks a signed-in person for a household name and their own name', async () => {

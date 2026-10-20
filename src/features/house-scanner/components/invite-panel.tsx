@@ -8,7 +8,11 @@ interface InvitePanelProps {
   token: string;
   signedIn: boolean;
   onPreview: (token: string) => Promise<InvitationPreview>;
-  onStartAccountSetup: (token: string, email: string) => Promise<void>;
+  onCreateAccount: (
+    token: string,
+    email: string,
+    password: string,
+  ) => Promise<void>;
   onAccept: (
     token: string,
     householdName: string | null,
@@ -18,13 +22,13 @@ interface InvitePanelProps {
   signIn: ReactNode;
 }
 
-// What an invitation link grants, and the one way through it: a new person enters their email and gets an account
-// email, an existing one signs in, and a signed-in person names the household or themselves and accepts.
+// What an invitation link grants, and the one way through it: a new person creates an account with their email and a
+// password, an existing one signs in, and a signed-in person names the household or themselves and accepts.
 export function InvitePanel({
   token,
   signedIn,
   onPreview,
-  onStartAccountSetup,
+  onCreateAccount,
   onAccept,
   signIn,
 }: InvitePanelProps) {
@@ -32,6 +36,7 @@ export function InvitePanel({
     'loading',
   );
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [householdName, setHouseholdName] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [busy, setBusy] = useState(false);
@@ -145,13 +150,16 @@ export function InvitePanel({
             onSubmit={(event) => {
               event.preventDefault();
               void perform(async () => {
-                await onStartAccountSetup(token, email);
-                return 'Check your email. If this address is new, a link to choose your password is on its way. If you already have an account, sign in below.';
+                await onCreateAccount(token, email, password);
+                return undefined;
               });
             }}
           >
             <Stack align="flex-start" gap="md">
               <Title order={3}>New to House Scanner?</Title>
+              <Text size="sm">
+                Create your account with the email this link was sent to.
+              </Text>
               <TextInput
                 label="Your email"
                 type="email"
@@ -164,8 +172,22 @@ export function InvitePanel({
                 disabled={busy}
                 onChange={(event) => setEmail(event.currentTarget.value)}
               />
+              <TextInput
+                label="Choose a password"
+                description="8 to 72 characters."
+                type="password"
+                autoComplete="new-password"
+                w="100%"
+                maw="22rem"
+                required
+                minLength={8}
+                maxLength={72}
+                value={password}
+                disabled={busy}
+                onChange={(event) => setPassword(event.currentTarget.value)}
+              />
               <Button type="submit" loading={busy}>
-                Email me a link
+                Create account
               </Button>
             </Stack>
           </form>

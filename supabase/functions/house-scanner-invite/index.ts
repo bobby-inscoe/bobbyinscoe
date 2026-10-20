@@ -1,14 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 
-// Starts account setup for a House Scanner invitation. It reserves the link for the email first, so an invalid or
-// already bound link never creates an Auth account, then asks Supabase Auth to email an invitation that returns to the
-// same link. An address that already has an account gets the same link from an app email instead, and the response
-// never says whether an account exists. The service key stays on this server.
+// Serves a House Scanner invitation link. Both calls reserve the link for the email first, so an invalid or already
+// bound link never creates an Auth account. With a password it creates the confirmed account, the link being the proof
+// of the invitation; without one it mails the link to that address. The service key stays on this server.
 const ORIGINS = new Set(['https://bobbyinscoe.com', 'http://localhost:5173']);
 const inputSchema = z.strictObject({
   token: z.string().regex(/^[a-f0-9]{64}$/),
   email: z.email().max(254),
+  password: z.string().min(8).max(72).optional(),
 });
 const reservationSchema = z.object({ ok: z.boolean() });
 
@@ -37,9 +37,9 @@ const previewSchema = z.object({
   issuerName: z.string().nullable(),
 });
 
-// Mails the link to someone who already has an account, through Resend. Without RESEND_API_KEY it does nothing, and
-// a failure never changes the answer. The preview is public to the anon role, so it runs with the anon key.
-async function emailExistingAccount(
+// Mails the link through Resend. The preview is public to the anon role, so it runs with the anon key. Returns whether
+// Resend accepted the message.
+async function emailLink(
   url: string,
   email: string,
   link: string,
@@ -47,7 +47,7 @@ async function emailExistingAccount(
 ) {
   const resendKey = Deno.env.get('RESEND_API_KEY');
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
-  if (!resendKey || !anonKey) return;
+  if (!resendKey || !anonKey) return false;
   try {
     const { data } = await createClient(url, anonKey, {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -58,7 +58,7 @@ async function emailExistingAccount(
       preview.purpose === 'join'
         ? `join ${preview.householdName ?? 'their household'} on House Scanner`
         : 'start your own household on House Scanner';
-    await fetch('https://api.resend.com/emails', {
+    const sent = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${resendKey}`,
@@ -68,11 +68,12 @@ async function emailExistingAccount(
         from: 'House Scanner <no-reply@auth.bobbyinscoe.com>',
         to: [email],
         subject: `${from} invited you to House Scanner`,
-        text: `${from} invited you to ${what}.\n\nOpen this link and sign in with this email address:\n${link}\n\nThe link works once and expires in 7 days.`,
+        text: `${from} invited you to ${what}.\n\nOpen this link, then create your account or sign in with this email address:\n${link}\n\nThe link works once and expires in 7 days.`,
       }),
     });
+    return sent.ok;
   } catch {
-    // The sender still has the link on their clipboard.
+    return false;
   }
 }
 
@@ -112,17 +113,23 @@ Deno.serve(async (request: Request) => {
   if (error || !reservation.success || !reservation.data.ok)
     return response(400, { error: 'This invitation cannot be used' }, origin);
   const link = `${origin}/projects/house-scanner/invite?token=${input.token}`;
-  const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(
+  if (input.password === undefined) {
+    const sent = await emailLink(url, email, link, input.token);
+    return sent
+      ? response(200, { status: 'sent' }, origin)
+      : response(502, { error: 'The email could not be sent' }, origin);
+  }
+  const { error: createError } = await admin.auth.admin.createUser({
     email,
-    { redirectTo: link },
-  );
-  // An existing account makes Auth send nothing, so that person gets the same link from the app's own email. The
-  // answer stays the same either way.
+    password: input.password,
+    email_confirm: true,
+  });
+  // An address that already has an account is not told so; the caller signs in with the password and fails there.
   if (
-    inviteError &&
-    (inviteError.code === 'email_exists' ||
-      /already (been )?registered/i.test(inviteError.message))
+    createError &&
+    createError.code !== 'email_exists' &&
+    !/already (been )?registered/i.test(createError.message)
   )
-    await emailExistingAccount(url, email, link, input.token);
-  return response(200, { status: 'sent' }, origin);
+    return response(400, { error: 'The account could not be created' }, origin);
+  return response(200, { status: 'created' }, origin);
 });
