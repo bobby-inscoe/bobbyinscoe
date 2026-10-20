@@ -339,8 +339,7 @@ const ACCESS_ERRORS: Record<string, string> = {
   'Already a member': 'You are already a member of this household.',
   'Invitation unavailable':
     'This invitation has expired, been used or revoked, or was sent to a different email. Ask for a fresh link.',
-  'Confirm your email before accepting':
-    'Confirm your email before accepting.',
+  'Confirm your email before accepting': 'Confirm your email before accepting.',
   'Invalid email': 'Enter a valid email address.',
   'Invalid name': 'Enter a name of 1 to 80 characters.',
 };

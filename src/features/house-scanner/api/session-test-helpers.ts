@@ -45,6 +45,24 @@ export const sdk = {
         error: null as { message: string } | null,
       }),
     ),
+    setSession: vi.fn(
+      async (_tokens: { access_token: string; refresh_token: string }) => ({
+        error: null as { message: string } | null,
+      }),
+    ),
+    resetPasswordForEmail: vi.fn(
+      async (_email: string, _options: { redirectTo: string }) => ({
+        error: null as { message: string } | null,
+      }),
+    ),
+    updateUser: vi.fn(async (_changes: { password: string }) => ({
+      error: null as { message: string } | null,
+    })),
+  },
+  functions: {
+    invoke: vi.fn(async (_name: string, _options: { body: object }) => ({
+      error: null as { message: string } | null,
+    })),
   },
   rpc: vi.fn<(name: string, args: object) => Promise<Reply>>(),
 };
@@ -99,6 +117,10 @@ export function resetSdk() {
   sdk.auth.getUser.mockReset().mockResolvedValue(userReply());
   sdk.auth.signOut.mockReset().mockResolvedValue({ error: null });
   sdk.auth.signInWithPassword.mockClear();
+  sdk.auth.setSession.mockClear();
+  sdk.auth.resetPasswordForEmail.mockClear();
+  sdk.auth.updateUser.mockClear();
+  sdk.functions.invoke.mockClear();
   sdk.rpc.mockReset().mockImplementation(async (name) => {
     if (name === 'hs_memberships') return reply([fixtureSnapshot().members[0]]);
     if (name === 'hs_snapshot' || name === 'hs_snapshot_neighborhoods')

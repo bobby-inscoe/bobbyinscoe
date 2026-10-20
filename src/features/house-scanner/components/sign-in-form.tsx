@@ -3,7 +3,11 @@ import { type ReactNode, useState } from 'react';
 
 interface SignInFormProps {
   title: ReactNode;
-  onSignIn: (email: string, password: string, remember: boolean) => Promise<void>;
+  onSignIn: (
+    email: string,
+    password: string,
+    remember: boolean,
+  ) => Promise<void>;
   onResetPassword: (email: string) => Promise<void>;
   children?: ReactNode;
 }

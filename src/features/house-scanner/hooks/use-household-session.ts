@@ -552,8 +552,7 @@ export function useHouseholdSession() {
       rename: async (name) => {
         await renameHousehold(client, household, name);
       },
-      makeOwner: (userId) =>
-        thenReload(makeOwner(client, household, userId)),
+      makeOwner: (userId) => thenReload(makeOwner(client, household, userId)),
       deactivate: (userId) =>
         thenReload(deactivateMember(client, household, userId)),
       leave: async () => {

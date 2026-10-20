@@ -102,11 +102,7 @@ export function InvitePanel({
           onSubmit={(event) => {
             event.preventDefault();
             void perform(async () => {
-              await onAccept(
-                token,
-                create ? householdName : null,
-                displayName,
-              );
+              await onAccept(token, create ? householdName : null, displayName);
               return undefined;
             });
           }}
