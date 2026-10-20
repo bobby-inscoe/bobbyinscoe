@@ -12,10 +12,17 @@ skipping it broke the app once.
 - If the snapshot is already failing, disable the newest source's policy at once (`hs.admin_set_source_policy` with the
   stored policy patched to status `disabled` and a higher revision). Its homes leave the snapshot immediately. Then
   raise the cap or narrow the source, and re-enable with a higher revision.
-- Deploy in this order: the app (strict schemas reject unknown keys), the ingest function, the migration, then the
-  policy revisions that switch a feature on. Never switch on first.
-- A migration applied with `supabase db query --linked -f` leaves no row in `supabase_migrations.schema_migrations`;
-  add it by hand so the history matches.
+- Deploy in this order: the app (strict schemas reject unknown keys), then any Edge Function that must accept new
+  fields, the migration, then the policy revisions or collector change that switch a feature on. Never switch on first.
+- A migration applied with `supabase db query --linked -f` or the SQL connector leaves no row in
+  `supabase_migrations.schema_migrations`; add it by hand so the history matches. Deploy functions with
+  `npx supabase functions deploy <name> --project-ref <ref> --no-verify-jwt` from the main checkout.
+- Some configuration lives outside the repository. Supabase Auth (dashboard): Site URL `https://bobbyinscoe.com`,
+  redirect URLs for `/projects/house-scanner/invite**` and `/projects/house-scanner/listings`, public signup off, email
+  confirmation on, custom SMTP through Resend from `no-reply@auth.bobbyinscoe.com`. Function secrets:
+  `HS_INGEST_KEYS_JSON`. The collector's keys, run scripts and Windows scheduled task are private to the owner's PC.
+  A new page or domain that sends people back from Auth emails needs its address in the redirect list and in
+  `ORIGINS` of `supabase/functions/house-scanner-invite`.
 - Compare a new source's times and prices with another source's page for the same home before trusting a time zone or
   a unit. Boneo and Husman Hagberg label Stockholm wall-clock time with a Z.
 - Live collector runs, hosted writes and key changes need the owner's go-ahead for the named steps. A grant for one
