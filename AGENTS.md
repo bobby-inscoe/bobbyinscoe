@@ -16,7 +16,7 @@ as the source of truth; a past conversation is not required to continue work.
 - For a failure, use `.agents/skills/diagnose/SKILL.md`. For a requested review, use
   `.agents/skills/review/SKILL.md`. For interrupted work, use `.agents/skills/handoff/SKILL.md`.
 - For any implementation, follow `instructions/workflow.md` and the relevant
-  parts of `instructions/engineering.md`. Read `docs/architecture.md` when
+  parts of `instructions/engineering.md`. Read `instructions/architecture.md` when
   placing code or changing a boundary. Read only the files the task needs.
 
 A ready spec records a clear outcome. A request to implement it authorizes

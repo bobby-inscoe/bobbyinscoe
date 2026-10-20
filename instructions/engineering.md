@@ -25,7 +25,7 @@ affected flows.
 
 ## Code placement
 
-Use `docs/architecture.md` for the actual module map and route pattern. The
+Use `instructions/architecture.md` for the actual module map and route pattern. The
 `@/*` import alias points to `src/*`; source files use it rather than long
 relative paths. Keep tests beside the behavior they cover. Add a feature
 subdirectory only when it contains code, not for symmetry. Avoid barrel files.

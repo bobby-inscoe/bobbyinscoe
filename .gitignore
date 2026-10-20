@@ -35,6 +35,10 @@ yarn.lock
 /.browser-test-results/
 /playwright-report/
 
+# Specs and planning docs stay on this machine
+/specs/
+/docs/
+
 # Private House Scanner search profiles (real preferences stay out of git)
 house-scanner.profiles*.json
 *.private.json

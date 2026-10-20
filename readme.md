@@ -5,10 +5,10 @@ Repository for the site at bobbyinscoe.com, built with React, TypeScript, and Vi
 ## Working on the site
 
 Start with [AGENTS.md](AGENTS.md) for the repository workflow and
-[architecture](docs/architecture.md) for code placement. Feature ideas become
-tracked specs under `specs/` when their behavior is clear enough to review.
-An agent can continue a ready spec from a new conversation without a pasted
-implementation prompt.
+[architecture](instructions/architecture.md) for code placement. Feature ideas become
+specs under `specs/` when their behavior is clear enough to review. Specs stay on
+the working machine and are not committed. An agent there can continue a ready
+spec from a new conversation without a pasted implementation prompt.
 
 ## Local development
 
