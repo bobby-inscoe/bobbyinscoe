@@ -137,9 +137,9 @@ describe('neighborhood filters', () => {
     expect(
       passes(assigned(first), { ...filters, minPriceSek: 2_800_001 }),
     ).toBe(false);
-    expect(passes(assigned(first), { ...filters, host: 'other.invalid' })).toBe(
-      false,
-    );
+    expect(
+      passes(assigned(first), { ...filters, hosts: ['other.invalid'] }),
+    ).toBe(false);
   });
 
   it('matches any candidate instead of the legacy primary and still applies other filters', () => {
@@ -160,7 +160,10 @@ describe('neighborhood filters', () => {
       passes(fringe, { neighborhoodIds: [second.id], minPriceSek: 2_800_001 }),
     ).toBe(false);
     expect(
-      passes(fringe, { neighborhoodIds: [second.id], host: 'other.invalid' }),
+      passes(fringe, {
+        neighborhoodIds: [second.id],
+        hosts: ['other.invalid'],
+      }),
     ).toBe(false);
   });
 
@@ -356,10 +359,13 @@ describe('applyListingFilters', () => {
       {},
       { origin: 'manual', sourceUrls: ['https://example.invalid/x'] },
     );
-    expect(passes(source, { host: 'www.hemnet.se' })).toBe(true);
-    expect(passes(source, { host: MANUAL_HOST })).toBe(false);
-    expect(passes(manual, { host: MANUAL_HOST })).toBe(true);
-    expect(passes(manual, { host: 'example.invalid' })).toBe(false);
+    expect(passes(source, { hosts: ['www.hemnet.se'] })).toBe(true);
+    expect(passes(source, { hosts: [MANUAL_HOST, 'www.hemnet.se'] })).toBe(
+      true,
+    );
+    expect(passes(source, { hosts: [MANUAL_HOST] })).toBe(false);
+    expect(passes(manual, { hosts: [MANUAL_HOST] })).toBe(true);
+    expect(passes(manual, { hosts: ['example.invalid'] })).toBe(false);
   });
 
   it('counts a range as one active filter and ignores invalid values', () => {

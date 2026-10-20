@@ -485,10 +485,10 @@ test('Lift only and Glazed only narrow the list and count as active filters', as
 }) => {
   await openDemo(page);
   await page.getByRole('button', { name: 'Filters', exact: true }).click();
-  await page.getByRole('checkbox', { name: 'Lift only' }).check();
+  await page.getByRole('checkbox', { name: 'Lift', exact: true }).check();
   await expect(page.getByText('1 active')).toHaveCount(0);
   await expect(page.getByRole('article')).toHaveCount(5);
-  await page.getByRole('checkbox', { name: 'Glazed only' }).check();
+  await page.getByRole('checkbox', { name: 'Glazed', exact: true }).check();
   await expect(page.getByText('2 active')).toHaveCount(0);
   await expect(
     page.getByRole('button', { name: 'Show 2 homes', exact: true }),
@@ -1403,7 +1403,7 @@ test('the filter drawer fits the viewport, exposes its controls, and returns foc
     drawer.getByRole('combobox', { name: 'Minimum rooms' }),
   ).toBeVisible();
   await expect(
-    drawer.getByRole('checkbox', { name: 'Lift only' }),
+    drawer.getByRole('checkbox', { name: 'Lift', exact: true }),
   ).toBeVisible();
   const apply = drawer.getByRole('button', { name: /^Show \d+ homes$/ });
   await expect(apply).toBeVisible();

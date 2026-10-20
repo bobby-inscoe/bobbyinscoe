@@ -21,7 +21,6 @@ import {
   ROOM_OPTIONS,
 } from '@/features/house-scanner/utils/criteria-options';
 import {
-  ALL_HOSTS,
   emptyFilters,
   type HiddenView,
   type ListingFilters,
@@ -98,6 +97,27 @@ export function ListingFilterPanel({
       </Stack>
     );
   }
+  function flag(
+    label: string,
+    key:
+      | 'outdoorOnly'
+      | 'aboveGroundOnly'
+      | 'liftOnly'
+      | 'glazedOnly'
+      | 'notOnMapOnly'
+      | 'showDuplicates'
+      | 'includeUnknown',
+  ) {
+    return (
+      <Checkbox
+        label={label}
+        checked={filters[key]}
+        onChange={(event) =>
+          onChange({ ...filters, [key]: event.currentTarget.checked })
+        }
+      />
+    );
+  }
   return (
     <Collapse expanded={open} id="listing-filters">
       <Stack gap="sm">
@@ -163,13 +183,13 @@ export function ListingFilterPanel({
             comboboxProps={{ withinPortal: false }}
             flex="1 1 15rem"
           />
-          <Select
-            label="Source"
-            value={filters.host}
-            onChange={(value) =>
-              onChange({ ...filters, host: value ?? ALL_HOSTS })
-            }
-            data={[{ value: ALL_HOSTS, label: 'All sources' }, ...hosts]}
+          <MultiSelect
+            label="Sources"
+            placeholder={filters.hosts.length === 0 ? 'All sources' : undefined}
+            clearable
+            value={filters.hosts}
+            onChange={(selected) => onChange({ ...filters, hosts: selected })}
+            data={hosts}
             comboboxProps={{ withinPortal: false }}
             flex="1 1 15rem"
           />
@@ -218,72 +238,25 @@ export function ListingFilterPanel({
             })
           }
         />
-        <Flex gap="md" wrap="wrap">
-          <Checkbox
-            label="Balcony or terrace only"
-            checked={filters.outdoorOnly}
-            onChange={(event) =>
-              onChange({
-                ...filters,
-                outdoorOnly: event.currentTarget.checked,
-              })
-            }
-          />
-          <Checkbox
-            label="Above ground floor only"
-            checked={filters.aboveGroundOnly}
-            onChange={(event) =>
-              onChange({
-                ...filters,
-                aboveGroundOnly: event.currentTarget.checked,
-              })
-            }
-          />
-          <Checkbox
-            label="Lift only"
-            checked={filters.liftOnly}
-            onChange={(event) =>
-              onChange({ ...filters, liftOnly: event.currentTarget.checked })
-            }
-          />
-          <Checkbox
-            label="Glazed only"
-            checked={filters.glazedOnly}
-            onChange={(event) =>
-              onChange({ ...filters, glazedOnly: event.currentTarget.checked })
-            }
-          />
-          <Checkbox
-            label="Not on the map only"
-            checked={filters.notOnMapOnly}
-            onChange={(event) =>
-              onChange({
-                ...filters,
-                notOnMapOnly: event.currentTarget.checked,
-              })
-            }
-          />
-          <Checkbox
-            label="Show duplicate listings"
-            checked={filters.showDuplicates}
-            onChange={(event) =>
-              onChange({
-                ...filters,
-                showDuplicates: event.currentTarget.checked,
-              })
-            }
-          />
-          <Checkbox
-            label="Keep homes with unknown or disputed values"
-            checked={filters.includeUnknown}
-            onChange={(event) =>
-              onChange({
-                ...filters,
-                includeUnknown: event.currentTarget.checked,
-              })
-            }
-          />
-        </Flex>
+        <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="md">
+          <Stack gap="xs">
+            <Text size="sm" fw={700}>
+              Only homes with
+            </Text>
+            {flag('Balcony or terrace', 'outdoorOnly')}
+            {flag('Above ground floor', 'aboveGroundOnly')}
+            {flag('Lift', 'liftOnly')}
+            {flag('Glazed', 'glazedOnly')}
+          </Stack>
+          <Stack gap="xs">
+            <Text size="sm" fw={700}>
+              Also
+            </Text>
+            {flag('Not on the map only', 'notOnMapOnly')}
+            {flag('Show duplicate listings', 'showDuplicates')}
+            {flag('Keep unknown or disputed values', 'includeUnknown')}
+          </Stack>
+        </SimpleGrid>
         <Radio.Group
           label="Hidden homes"
           value={filters.hidden}
