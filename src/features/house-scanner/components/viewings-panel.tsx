@@ -84,41 +84,37 @@ export function ViewingsPanel({
               {day.label}
             </Title>
             {day.entries.map(({ listing, viewing }) => (
-              <Group
+              <Box
                 key={`${listing.id}-${viewing.startsAt}`}
-                justify="space-between"
-                align="flex-start"
-                wrap="wrap"
+                className={`${styles.card} ${styles.viewingCard}`}
               >
-                <Group gap="sm" align="flex-start" wrap="nowrap">
-                  <Box
-                    className={styles.viewingPhoto}
-                    w={120}
-                    style={{ flexShrink: 0 }}
-                  >
-                    <ListingPhoto listing={listing} />
-                  </Box>
-                  <Stack gap={2} style={{ minWidth: 0 }}>
+                <Box className={styles.viewingPhoto}>
+                  <ListingPhoto listing={listing} />
+                </Box>
+                <Stack gap="xs" justify="space-between" style={{ minWidth: 0 }}>
+                  <Stack gap={4}>
+                    <Text size="lg" fw={700}>
+                      {formatViewing(viewing)}
+                    </Text>
                     <Text fw={600}>{listing.title}</Text>
-                    <Text size="sm">{formatViewing(viewing)}</Text>
                     <Text size="sm" c="dimmed">
                       Saved by {names(listing.id)}
                     </Text>
                   </Stack>
-                </Group>
-                <Group gap="xs">
-                  <CalendarButton listing={listing} viewing={viewing} />
-                  <Anchor
-                    size="sm"
-                    href={listing.sourceUrls[0]}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    referrerPolicy="no-referrer"
-                  >
-                    Original listing
-                  </Anchor>
-                </Group>
-              </Group>
+                  <Group gap="md">
+                    <CalendarButton listing={listing} viewing={viewing} />
+                    <Anchor
+                      size="sm"
+                      href={listing.sourceUrls[0]}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      referrerPolicy="no-referrer"
+                    >
+                      Original listing
+                    </Anchor>
+                  </Group>
+                </Stack>
+              </Box>
             ))}
           </Stack>
         ))
