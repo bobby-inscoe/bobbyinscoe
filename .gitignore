@@ -14,7 +14,6 @@
 
 # misc
 /skills-backup
-.agents/
 .DS_Store
 .notes/
 .env.local
@@ -35,12 +34,12 @@ yarn.lock
 
 /.browser-test-results/
 /playwright-report/
+
+# Specs and planning docs stay on this machine
 /specs/
+/docs/
 
 # Private House Scanner search profiles (real preferences stay out of git)
 house-scanner.profiles*.json
 *.private.json
 house-scanner.cache*.json
-
-# Planning and decision docs stay on this machine
-/docs/
