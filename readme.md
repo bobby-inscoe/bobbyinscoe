@@ -2,6 +2,14 @@
 
 Repository for the site at bobbyinscoe.com, built with React, TypeScript, and Vite.
 
+## Working on the site
+
+Start with [AGENTS.md](AGENTS.md) for the repository workflow and
+[architecture](docs/architecture.md) for code placement. Feature ideas become
+tracked specs under `specs/` when their behavior is clear enough to review.
+An agent can continue a ready spec from a new conversation without a pasted
+implementation prompt.
+
 ## Local development
 
 Install dependencies, then start the Vite development server:
@@ -23,11 +31,11 @@ npm run typecheck # Check TypeScript types
 ```
 
 GitHub Pages hosts the deployed production build; it is not used for local development.
+
 ## Textile workshop experiment
 
 The experimental portfolio opens at `/`; Duck Feed remains playable at
-`/duck-feed`. The workshop's visual choices, project content, accessibility
-behavior, and verification notes are in [docs/textile-workshop.md](docs/textile-workshop.md).
+`/duck-feed`. The workshop code and content live in `src/features/workshop/`.
 
 ## House Scanner browsing
 

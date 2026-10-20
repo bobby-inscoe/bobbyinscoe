@@ -16,7 +16,7 @@ Static checks cover syntax, types and bundling. Behavioral, permission-denial an
 
 Count the homes the household can see against the 1500-listing ceiling of `hs_snapshot` and the contract, and keep a
 margin of 100: above the ceiling the snapshot raises for every member. A new source adds hundreds of homes in one run.
-The full rules, including how to recover, are in the House Scanner section of `instructions/engineering.md`.
+The full rules, including how to recover, are in `instructions/house-scanner.md`.
 
 ## Boneo reader (pending source)
 
