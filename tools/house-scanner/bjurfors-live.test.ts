@@ -15,6 +15,7 @@ import {
   fakeFetch,
   type Reply,
 } from '@house-scanner-tools/live-test-helpers';
+import { COLLECTOR_BOUNDS } from '@house-scanner-tools/prefilter';
 import { parseRobots, robotsAllows } from '@house-scanner-tools/robots';
 import {
   emptyMemory,
@@ -358,13 +359,13 @@ describe('Bjurfors listing pages', () => {
   });
 
   it('fetches details only for the listings the profile keeps, judged from the cards', async () => {
-    const planning = profilePlanning({
+    const options = liveOptions({
       minAreaM2: 60,
       stretchPriceSek: 10_000_000,
     });
     const { impl, calls } = fakeFetch(fixtureSite());
     const prepared = await prepareLiveRun(
-      { capability: bjurfors(), planning },
+      { capability: bjurfors(), ...options },
       deps(impl),
     );
     // Dropped from the cards alone: 35.5 and 58 m2, and the 11.9 million house.
@@ -551,6 +552,21 @@ function profilePlanning(overrides: {
     maxPartitions: 5,
   };
 }
+// Run options with bounds that keep what the fixtures need.
+function liveOptions(overrides: {
+  minAreaM2: number;
+  stretchPriceSek: number;
+}) {
+  return {
+    planning: profilePlanning(overrides),
+    bounds: {
+      ...COLLECTOR_BOUNDS,
+      minAreaM2: overrides.minAreaM2,
+      minPriceSek: 0,
+      maxPriceSek: overrides.stretchPriceSek,
+    },
+  };
+}
 
 describe('Bjurfors registry entry and run', () => {
   it('registers bjurfors as a pending source with an honest policy', () => {
@@ -607,7 +623,7 @@ describe('Bjurfors registry entry and run', () => {
         runId: '00000000-0000-4000-8000-000000000301',
         batchId: '00000000-0000-4000-8000-000000000302',
         capability: bjurfors(),
-        planning: profilePlanning({
+        ...liveOptions({
           minAreaM2: 20,
           stretchPriceSek: 20_000_000,
         }),
@@ -642,7 +658,7 @@ describe('Bjurfors registry entry and run', () => {
     const prepared = await prepareLiveRun(
       {
         capability: bjurfors(),
-        planning: profilePlanning({
+        ...liveOptions({
           minAreaM2: 20,
           stretchPriceSek: 20_000_000,
         }),
@@ -793,7 +809,7 @@ describe('executor guards', () => {
       prepareLiveRun(
         {
           capability,
-          planning: profilePlanning({
+          ...liveOptions({
             minAreaM2: 20,
             stretchPriceSek: 20_000_000,
           }),

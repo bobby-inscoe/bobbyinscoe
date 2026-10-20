@@ -10,6 +10,7 @@ import {
   fakeFetch,
   nextPage,
 } from '@house-scanner-tools/live-test-helpers';
+import { COLLECTOR_BOUNDS } from '@house-scanner-tools/prefilter';
 import { planQueries } from '@house-scanner-tools/query-plan';
 import { emptyMemory } from '@house-scanner-tools/run-memory';
 import { sourceRegistry } from '@house-scanner-tools/source-registry';
@@ -44,6 +45,14 @@ describe('prepared run', () => {
     collectionPriceCapSek: null,
     maxPartitions: 5,
   };
+  // Loose enough to keep every fixture home.
+  const bounds = {
+    ...COLLECTOR_BOUNDS,
+    minAreaM2: 20,
+    minPriceSek: 0,
+    maxPriceSek: 10_000_000,
+  };
+  const strict = { ...bounds, minAreaM2: 5000 };
 
   it('registers boneo as pending with honest capabilities', () => {
     expect(capability.policy).toMatchObject({
@@ -87,6 +96,7 @@ describe('prepared run', () => {
         batchId: '00000000-0000-4000-8000-000000000202',
         capability,
         planning,
+        bounds,
       },
       deps(impl),
     );
@@ -112,7 +122,10 @@ describe('prepared run', () => {
           : boneoFixture('search-page.html'),
       })),
     );
-    const prepared = await prepareLiveRun({ capability, planning }, deps(impl));
+    const prepared = await prepareLiveRun(
+      { capability, planning, bounds },
+      deps(impl),
+    );
     const pages = calls.filter((call) => call.url.includes('/bostad/'));
     expect(pages.length).toBeGreaterThan(0);
     expect(prepared.result.detailRead).toBe(pages.length);
@@ -137,21 +150,8 @@ describe('prepared run', () => {
           : boneoFixture('search-page.html'),
       })),
     );
-    const strict = {
-      ...planning,
-      profiles: [
-        {
-          ...planning.profiles[0],
-          criteria: {
-            ...planning.profiles[0].criteria,
-            minAreaM2: 5000,
-            maxAreaM2: null,
-          },
-        },
-      ],
-    };
     const prepared = await prepareLiveRun(
-      { capability, planning: strict },
+      { capability, planning, bounds: strict },
       deps(impl),
     );
     expect(prepared.prefilter.kept).toBe(0);
@@ -174,7 +174,7 @@ describe('prepared run', () => {
       );
     const memory = { memory: emptyMemory(), reset: true };
     const one = await prepareLiveRun(
-      { capability, planning, memory },
+      { capability, planning, bounds, memory },
       deps(serveAll().impl),
     );
     const kept = one.prefilter.kept;
@@ -187,7 +187,7 @@ describe('prepared run', () => {
       ).toISOString();
     const second = serveAll();
     const two = await prepareLiveRun(
-      { capability, planning, memory: { ...memory, reset: false } },
+      { capability, planning, bounds, memory: { ...memory, reset: false } },
       deps(second.impl),
     );
     expect(second.calls.filter((c) => c.url.includes('/bostad/'))).toEqual([]);
@@ -235,21 +235,8 @@ describe('prepared run', () => {
     const { impl } = fakeFetch(
       boneoRobotsOr(() => ({ body: boneoFixture('search-page.html') })),
     );
-    const strict = {
-      ...planning,
-      profiles: [
-        {
-          ...planning.profiles[0],
-          criteria: {
-            ...planning.profiles[0].criteria,
-            minAreaM2: 5000,
-            maxAreaM2: null,
-          },
-        },
-      ],
-    };
     const prepared = await prepareLiveRun(
-      { capability, planning: strict },
+      { capability, planning, bounds: strict },
       deps(impl),
     );
     expect(prepared.result.observations).toHaveLength(8);
@@ -267,7 +254,7 @@ describe('prepared run', () => {
     });
     expect(
       publish.action === 'publish' && publish.results[0].coverageNote,
-    ).toContain('kept 0 that fit your profile and dropped 8');
+    ).toContain('kept 0 within collector bounds and dropped 8');
   });
 
   it('splits kept observations into stage requests of at most one hundred', async () => {
@@ -287,6 +274,7 @@ describe('prepared run', () => {
         batchId: '00000000-0000-4000-8000-000000000202',
         capability,
         planning,
+        bounds,
       },
       deps(impl),
     );
@@ -314,7 +302,10 @@ describe('prepared run', () => {
     const { impl } = fakeFetch(
       boneoRobotsOr(() => ({ body: boneoFixture('blocked-page.html') })),
     );
-    const prepared = await prepareLiveRun({ capability, planning }, deps(impl));
+    const prepared = await prepareLiveRun(
+      { capability, planning, bounds },
+      deps(impl),
+    );
     expect(prepared.publishStatus).toBe('failed');
     expect(prepared.requests.map((r) => r.action)).toEqual([
       'begin',
@@ -326,7 +317,7 @@ describe('prepared run', () => {
     const demo = sourceRegistry()[0];
     const { impl, calls } = fakeFetch(() => ({ body: '' }));
     await expect(
-      prepareLiveRun({ capability: demo, planning }, deps(impl)),
+      prepareLiveRun({ capability: demo, planning, bounds }, deps(impl)),
     ).rejects.toThrow('No permitted executor');
     expect(calls).toHaveLength(0);
   });

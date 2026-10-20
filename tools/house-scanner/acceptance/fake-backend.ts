@@ -10,8 +10,8 @@ export interface Flaws {
   leakSnapshotToOutsiders?: boolean;
   /** Anonymous callers are allowed to run the household functions. */
   anonAllowed?: boolean;
-  /** Authenticated callers may run hs_purge_expired. */
-  purgeAllowed?: boolean;
+  /** Authenticated callers may run the service-only ingest functions. */
+  serviceAllowed?: boolean;
   /** The hs schema is reachable through the API. */
   hsSchemaExposed?: boolean;
   /** A stale note save fails with this code instead of 40001. */
@@ -94,7 +94,6 @@ interface Note {
 }
 
 const SERVICE_ONLY = new Set([
-  'hs_purge_expired',
   'hs_ingest_credential',
   'hs_consume_nonce',
   'hs_ingest_policies',
@@ -155,7 +154,7 @@ export function createFakeGateway(
     if (userId === null && !flaws.anonAllowed)
       return denied(401, '42501', `permission denied for function ${name}`);
     if (SERVICE_ONLY.has(name))
-      return flaws.purgeAllowed
+      return flaws.serviceAllowed
         ? ok({ dryRun: true })
         : denied(403, '42501', `permission denied for function ${name}`);
     if (name.startsWith('admin_'))

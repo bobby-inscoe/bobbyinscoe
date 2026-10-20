@@ -22,40 +22,11 @@ The full rules, including how to recover, are in the House Scanner section of `i
 
 `boneo-parser.ts` turns a public Boneo search page into contract observations from the embedded `__NEXT_DATA__` JSON. `live-reader.ts` is the guarded fetcher, shared with Bjurfors: pacing, caps, stop rules, run memory and the listing page phase live there once, and `robots.ts` parses and applies `robots.txt`. `live-run.ts` turns a run into begin, stage and publish requests and writes the coverage note. `page-read.ts` holds what both parsers share: the page result types, number helpers and the house-number rule for position precision. `source-adapters.ts` holds what differs per source (search URL, request headers, page readers, hosts). The registry entry is `pending`, not approved: approval is an operator step in the database, so nothing here publishes anything. The household owner chose to read public pages for personal use at their own judgment; that is recorded in the policy rights basis and is not a reuse license.
 
-Live use needs all three flags: `--live --source=boneo --confirm-personal-read`, plus `--profiles <file>` (below). Without them the CLI refuses and stays fixture-only. `--mode live` is still rejected. A live run reads robots.txt first and refuses a disallowed path, sends `HouseScannerPersonalReader/0.1 (private household tool)`, waits between 2 and 4 seconds between requests (`MIN_INTERVAL_MS` 2000 and `MAX_INTERVAL_MS` 4000; each gap is drawn at random per request so a run does not hit the site in lockstep, and the random source is injectable for tests), reads at most 40 pages per partition (25 results per page) and makes at most 250 requests per run including robots.txt. It sends no cookies and handles no login or CAPTCHA. Any non-200 (including 403 and 429), redirect, network error, timeout or page without embedded data on a search page stops the whole run with no retry. A page without embedded data is failed coverage, not an empty result. Output is counts, statuses and partition names; listing values are never logged, saved or printed, apart from the ids and two facts in the run memory below.
+Live use needs all three flags: `--live --source=boneo --confirm-personal-read`, Without them the CLI refuses and stays fixture-only. `--mode live` is still rejected. A live run reads robots.txt first and refuses a disallowed path, sends `HouseScannerPersonalReader/0.1 (private household tool)`, waits between 2 and 4 seconds between requests (`MIN_INTERVAL_MS` 2000 and `MAX_INTERVAL_MS` 4000; each gap is drawn at random per request so a run does not hit the site in lockstep, and the random source is injectable for tests), reads at most 40 pages per partition (25 results per page) and makes at most 250 requests per run including robots.txt. It sends no cookies and handles no login or CAPTCHA. Any non-200 (including 403 and 429), redirect, network error, timeout or page without embedded data on a search page stops the whole run with no retry. A page without embedded data is failed coverage, not an empty result. Output is counts, statuses and partition names; listing values are never logged, saved or printed, apart from the ids and two facts in the run memory below.
 
-### Profiles file, pre-filter and sending
+### Collector bounds, pre-filter and sending
 
-`--profiles <path>` names a private JSON file that is never committed. It holds an array of enabled-or-disabled profiles: `id` and `revision` must match the household's profile rows, because the ingest function rejects a run whose profile versions differ from the enabled profiles it stores. `criteria` is checked with the same `criteriaSchema` the app uses. The collector reads the municipalities from it. Fictional example:
-
-```json
-[
-  {
-    "id": "00000000-0000-4000-8000-0000000000aa",
-    "revision": 1,
-    "enabled": true,
-    "criteria": {
-      "minAreaM2": 60,
-      "maxAreaM2": 110,
-      "minRooms": 2,
-      "preferredPriceSek": 4000000,
-      "stretchPriceSek": 4500000,
-      "propertyTypes": ["apartment"],
-      "excludeGroundFloor": false,
-      "requireLift": false,
-      "requireOutdoor": false,
-      "preferGlazing": false,
-      "feeReferenceSek": 5000,
-      "geography": { "municipalities": ["Göteborg"], "center": [11.97, 57.71], "radiusKm": 10 },
-      "nature": { "preferImmediateGreenery": false, "preferredWalkMinutes": 10 },
-      "transit": { "preferredWalkMinutes": 10, "preferredJourneyMinutes": 30, "tradeoffJourneyMinutes": 45 }
-    }
-  }
-]
-```
-
-Before staging, an observation is dropped only when it is confirmed to fail every enabled profile: living area below `minAreaM2`, rooms below `minRooms`, asking price above `stretchPriceSek`, or a property type outside `propertyTypes`. Unknown or conflicting values always pass, an absent price is unknown and bounds are inclusive. The summary prints `droppedByReason` counts only. The run ceiling is applied before this filter.
-
+The collector fills the shared catalog and does not read household profiles. Its bounds are constants in `prefilter.ts` (`COLLECTOR_BOUNDS`, `COLLECTOR_MUNICIPALITY`): Göteborg, apartments and houses, at least 60 m², known asking prices from 2,000,000 through 6,000,000 SEK, any room count. Before staging, an observation is dropped only when a known, undisputed fact is outside them. Unknown or conflicting values always pass, an absent price is unknown and bounds are inclusive. The summary prints `droppedByReason` counts only. The run ceiling is applied before this filter. Households filter the catalog with their own saved criteria in the app. `--profiles` is still accepted and ignored so older run scripts keep working; the begin request no longer carries profile versions.
 After the filter, each kept listing's own page is read (same guards, same 2 to 4 second gap, robots check on the exact path) for balcony, terrace, glazing and the floor, at most 150 pages per run. `property_detail.field_property_balcony` and `field_property_terrace` give `outdoor`: both true is `both`, one true is `balcony` or `terrace`, anything else is unknown, never `none`, because the broker may leave a box unticked. `glazed` is `true` only when `property_detail.body` says a glazed balcony, terrace or conservatory in Swedish ("inglasad balkong") and not "ej inglasad"; otherwise unknown. The text is matched and dropped. A listing page that returns a non-200 other than 403 or 429, has no embedded data or has an unexpected shape leaves that listing's two facts unknown and is counted in `detailFailed`; 403, 429, a network error or a timeout still stops the run. Listings past the 150 page cap, past the request cap or disallowed by robots.txt count in `detailSkipped`. The summary prints `detailRead`, `detailCached`, `detailFailed` and `detailSkipped`. Lift and build year are not collected.
 
 ### Floor rule (both sources)
@@ -99,7 +70,7 @@ Fixtures under `fixtures/boneo/` are synthetic: invented addresses, prices and i
 
 ## Bjurfors reader (pending source)
 
-Same guards and the same CLI as Boneo, with `--source=bjurfors`: `--live --source=bjurfors --confirm-personal-read --profiles <file>`. The registry entry is `pending` at revision 1, executor `bjurfors-personal-read`, retention 14 days. The owner reads public search pages for personal use at their own judgment, on the same basis as Boneo. robots.txt for www.bjurfors.se (checked 16 October 2026) allows everything except `/globalassets/ragnar/`, `/contentassets/*.pdf` and one office path. The reader still checks the exact path of every request.
+Same guards and the same CLI as Boneo, with `--source=bjurfors`: `--live --source=bjurfors --confirm-personal-read`. The registry entry is `pending` at revision 1, executor `bjurfors-personal-read`, retention 14 days. The owner reads public search pages for personal use at their own judgment, on the same basis as Boneo. robots.txt for www.bjurfors.se (checked 16 October 2026) allows everything except `/globalassets/ragnar/`, `/contentassets/*.pdf` and one office path. The reader still checks the exact path of every request.
 
 `bjurfors-parser.ts` reads server-rendered HTML. The search page has no embedded JSON, so the parser matches the card markup. Without ordinary `Accept` and `Accept-Language` headers the site answers 200 with an empty body, so the reader sends `text/html,application/xhtml+xml` and `sv-SE,sv;q=0.9,en;q=0.8` beside the honest user agent. An empty or tiny body, or a page without the results list, is failed coverage (`no-results-list`), never an empty result.
 
@@ -111,7 +82,7 @@ Same guards and the same CLI as Boneo, with `--source=bjurfors`: `--live --sourc
 - Pre-filter: area, rooms and price come from the cards, so the pre-filter runs on the cards and only kept listings get a page request. A card does not carry the property type, so houses pass until their page is read; the pre-filter then runs again with the page's type, area and price.
 - Listing page: one `RealEstateListing` JSON block (price in `offers.price`, availability, `geo`, floor size, rooms) plus definition lists. The reader takes Utgångspris or the offer price, Boarea (fallback floor size), Antal rum or Rum, Avgift or Avgift/hyra, Typ, Upplåtelseform (Bostadsrätt is cooperative, Friköpt or Äganderätt ownership, Hyresrätt rental), Våningsplan (floor rule above), Balkong and Hiss. Only `Ja` is a fact for Balkong (`balcony`) and Hiss (`lift`). `Nej`, a missing row or anything else is unknown, because it reads like an unticked box. `InStock` is available and `PreOrder` upcoming (inferred). A missing or non-numeric value is unknown, never zero. Glazing is not collected. Descriptions, seller details and all other text are read past and dropped.
 - Coordinates: from `geo`. Four of four listings matched an independent geocoder (Nominatim) within 12 m of the street address, so a title with a house number is labelled `address` and any other `approximate_area`. The sample is small.
-- Operator steps: `node .house-scanner-build/collector.mjs --print-policy-sql --source=bjurfors --household=<uuid>` prints the approval SQL for the operator to run in the SQL editor. The ingest credential is issued per source, so Bjurfors needs its own key id and secret in `HS_INGEST_KEY_ID` and `HS_INGEST_SECRET` for its run. Boneo's policy must be printed and run again because its revision is now 4.
+- Operator steps: `node .house-scanner-build/collector.mjs --print-policy-sql --source=bjurfors` prints the approval SQL for the operator to run in the SQL editor. The ingest credential is issued per source, so Bjurfors needs its own key id and secret in `HS_INGEST_KEY_ID` and `HS_INGEST_SECRET` for its run. Boneo's policy must be printed and run again because its revision is now 4.
 
 Fixtures under `fixtures/bjurfors/` are synthetic: fake addresses, values and ids in the same markup shape, with search pages 1 and 2, an empty page, a page missing its total, a blocked page, and listing pages with every field, with missing fields and with the wrong shape. No real listing data, captured page or image is committed.
 
@@ -125,7 +96,7 @@ Fixtures under `fixtures/bjurfors/` are synthetic: fake addresses, values and id
 - Identity: the number at the end of the listing path is `sourceListingId`; the episode is the constant `listed`.
 - Pre-filter: area, rooms and price come from the cards, so only kept homes get a listing-page request, as for Bjurfors.
 - Listing page: the facts sit in the framework's streamed data (`self.__next_f.push` string chunks), as a `"home":{...}` object with a numeric id. The reader joins the chunks, finds that object by counting braces outside strings and reads livingSpace, monthlyFee, rooms, price (`startingPrice`), property type, tenure, `floor` and `elevator`, balcony and patio flags, status and the broker's coordinates. Balcony and patio are facts only when `true`; `elevator` counts only as `Yes`; a zero or missing price is unknown; coordinates are dropped when the broker hides the address. The photo is the first entry of `home.images` that is not a floor plan; its account comes from the `imagedelivery.net` address the page itself uses (the social preview image), and the adapter requests a 640 by 480 thumbnail variant, valid for seven days like Bjurfors photos. On one sample that variant loaded as a JPEG of about 39 kB, and `imagedelivery.net` serves no robots.txt (it answers 400). Descriptions, broker and nearby-place data are read past. Glazing is not collected.
-- Operator steps: `node .house-scanner-build/collector.mjs --print-policy-sql --source=erik-olsson --household=<uuid>`, then a credential for this source (`hs.admin_issue_credential`), as for Bjurfors.
+- Operator steps: `node .house-scanner-build/collector.mjs --print-policy-sql --source=erik-olsson`, then a credential for this source (`hs.admin_issue_credential`), as for Bjurfors.
 
 Tests use pages authored in `erik-olsson-test-pages.ts` (fictional streets and values in the same markup shape). The parser was also run once against the five pages fetched for the probe, which are not kept in the repository.
 
@@ -136,7 +107,7 @@ Tests use pages authored in `erik-olsson-test-pages.ts` (fictional streets and v
 - List: `https://stadshem.se/api/estates?per_page=100&orderby=published&order=desc&status[]=till-salu&status[]=snart-till-salu-kommande&page=N`. It answers `{ total, page, num_pages, estates, filter }`. One answer held all 94 homes on 17 October, so a run is usually one request; the adapter's `pageUrl` hook changes `page=` when `num_pages` says there is more. The list covers all of Sweden, so the reader passes the partition's municipality (a new `municipality` field of the read context) and keeps only that one; Göteborg is the only one supported. The rest count as skipped.
 - Estate: `estateId` (letters, digits and sometimes an underscore) is the identity; `id` is `estate-<estateId>-<slug>`, and the public page is `https://stadshem.se/objekt/<estateId>-<slug>`, without a trailing slash (the slash form redirects, and the reader never follows redirects). Facts: `livingSpace`, `numberOfRooms`, `monthlyFee`, `price.startingPrice` (zero or `hidePrice` is unknown), `type` (`lägenhet` is an apartment, `radhus`, `hus` and similar are houses), `status.slug` (`till-salu` is available, `snart-till-salu-kommande` is upcoming) and the broker's `address.coordinates`, labelled address-level when the title has a house number.
 - Record: the adapter's `detailUrl` hook sends the per-home read to `/api/estates/<estateId>` while the observation keeps the public page address. It gives `floorAndElevator.floor` (the shared floor rule), `elevator` (only `Yes` is a fact) and `baseInformation.tenure`. Balcony and glazing have no structured field and stay unknown. Descriptions, agent and association text are read past.
-- Operator steps: `node .house-scanner-build/collector.mjs --print-policy-sql --source=stadshem --household=<uuid>`, then a credential for this source, as for the others.
+- Operator steps: `node .house-scanner-build/collector.mjs --print-policy-sql --source=stadshem`, then a credential for this source, as for the others.
 
 Tests use answers authored in `stadshem-test-pages.ts` (fictional streets and values in the same shape). The parser was also run once against the real list and record saved from the probe, which are not kept in the repository; that run found real ids with an underscore, now accepted.
 
@@ -148,7 +119,7 @@ Tests use answers authored in `stadshem-test-pages.ts` (fictional streets and va
 - Identity is `Guid`; the public page is `DescrUrl`, which must be `/beskrivning/<Guid>/<slug>`. Facts: `Price` (zero is unknown), `Rent` (the monthly fee), `Area`, `Rooms`, `Type` (`CMBoLgh` in any letter case is a tenant-owner apartment, `CMVilla` and `CMFritidshus` are houses; plots and new production are skipped), `Status` (`Till salu` is available, `Snart till salu` is upcoming; `Såld` is skipped).
 - The list has no municipality. `City` and `ParentLocation` place a home in Göteborg (city Göteborg, or a district such as Innerstaden or Västra Göteborg) or Mölndal (city Mölndal, or `Mölndals kommun`). Anything else is skipped rather than guessed. Run against the saved answer: 90 Göteborg and 13 Mölndal homes kept.
 - There are no coordinates, so the geocoder estimates a position for the homes that are kept.
-- Operator steps as for the others: `--print-policy-sql --source=lundin --household=<uuid>`, then a credential for this source.
+- Operator steps as for the others: `--print-policy-sql --source=lundin`, then a credential for this source.
 
 Tests use answers authored in `lundin-test-pages.ts` (fictional streets and values in the same shape); the parser was also run once against the saved real answer, which is not kept in the repository.
 
@@ -163,7 +134,7 @@ Tests use answers authored in `lundin-test-pages.ts` (fictional streets and valu
 - Paging: no parameter was found. If the answer holds fewer homes than its `count`, the partition is reported truncated (`empty-page-before-total`), never complete.
 - Only Göteborg is supported. The match is on text, and the broker's own municipality list counted 206 for Göteborg against 143 returned, so some homes may be missed; the reason was not checked.
 - Run against the saved real answer: 141 of 143 kept (63 available, 78 upcoming), 134 apartments and 7 houses; 81 with a price, 134 with a fee, 139 with a position, 93 with a floor above ground.
-- Operator steps as for the others: `--print-policy-sql --source=husman-hagberg --household=<uuid>`, then a credential for this source.
+- Operator steps as for the others: `--print-policy-sql --source=husman-hagberg`, then a credential for this source.
 
 Tests use answers authored in `husman-hagberg-test-pages.ts` (fictional streets and values in the same shape).
 
@@ -174,7 +145,7 @@ Tests use answers authored in `husman-hagberg-test-pages.ts` (fictional streets 
 - List: `https://www.svenskfast.se/bostad/vastra-gotaland/goteborg/`, then `?p=2` and on (robots.txt disallows other query strings such as `?minp=` but not `?p=`). Each page holds up to 35 cards as `RealEstateListing` JSON-LD, and a `WebPage` block gives the total in its name ("607 Bostäder till salu - Göteborg"), which ends the read. A card gives the id (the number ending the path), the street, flat or house, rooms, area, availability, one photo and, in its path, the municipality. It gives no price, fee, floor, lift or position. Flats are read as tenant-owned; a house's tenure is unknown. `Place` cards and anything not `InStock` or `PreOrder` are skipped. `PreOrder` as upcoming is inferred.
 - Home page (one request per kept home, at its public address, reused for a week): the `RealEstateListing` block gives the price (`0` means none) and the position (comma decimals, sometimes empty) and the ownership form; the visible facts give `Månadsavgift`, `Våning: N av M` and `Hiss: Ja`. Only floor 2 or higher, or 0, is a floor fact and only a yes counts for a lift. Viewing rows show a day, a month and a weekday with a start and an end but no year; the year is worked out from the weekday as for Erik Olsson.
 - A first run is about 18 list pages plus up to 150 home pages of about 300 kB, two to four seconds apart: roughly ten minutes.
-- Operator steps as for the others: `--print-policy-sql --source=svenskfast --household=<uuid>`, then a credential for this source.
+- Operator steps as for the others: `--print-policy-sql --source=svenskfast`, then a credential for this source.
 
 Tests use pages authored in `svenskfast-test-pages.ts` (fictional streets and values in the same shape); the parsers were also run once against saved real pages, which are not kept in the repository.
 
@@ -185,9 +156,9 @@ Kept homes with a house number in the title and no source position are looked up
 
 ### Stored listings, saves and changes
 
-The collector fetches source pages and sends signed begin, stage and publish requests. It does not download favorites or hidden IDs. The database owns those records independently of collection. Current search-profile prefilters still decide what is collected; a favorite outside those filters is retained but is not automatically prioritized for refresh. Listings are identified by household, source, source listing ID and episode ID; another source or a new episode is a separate record. Cross-posted copies are folded by the app without merging database rows.
+The collector fetches source pages and sends signed begin, stage and publish requests. It does not download favorites or hidden IDs. The database owns those records independently of collection. The collector bounds decide what is collected; a favorite outside them is retained but is not automatically prioritized for refresh. Listings form one shared catalog identified by source, source listing ID and episode ID; another source or a new episode is a separate record. Each household sees catalog listings while the source policy is current and they are within retention, plus any it favorited or noted. Manual links live in a separate table owned by one household. Cross-posted copies are folded by the app without merging database rows.
 
-Publishing is atomic. An unchanged home keeps its ID, favorites, notes and personal hides. A hidden home can still be refreshed because other household members may use it. Failed sources preserve their previous data. A missing home is not deleted immediately; the app may mark it as not seen in the latest scan. Retention cleanup can remove expired homes without saves or nonblank notes. Any member's favorite or nonblank note protects a stored home; hiding alone does not. Source display restrictions still apply to what can be shown.
+Publishing is atomic. An unchanged home keeps its ID, favorites, notes and personal hides. A hidden home can still be refreshed because other household members may use it. Failed sources preserve their previous data. A missing home is not deleted immediately; the app may mark it as not seen in the latest scan. Expired homes leave browsing but stay stored; nothing deletes them. A household's favorite or nonblank note keeps a home visible to that household only; hiding does not. Source display restrictions still apply to what can be shown.
 
 The local detail cache stores small facts for seven days. A separate cache holds address lookup answers for 90 days and misses for seven. These caches reduce requests; they do not replace database history or carry user saves/hides.
 

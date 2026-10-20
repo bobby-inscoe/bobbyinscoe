@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { prepareFixtureRun } from '@house-scanner-tools/collector';
@@ -12,7 +11,7 @@ import {
   type LiveEvent,
 } from '@house-scanner-tools/live-reader';
 import { prepareLiveRun } from '@house-scanner-tools/live-run';
-import { queryPlanInputSchema } from '@house-scanner-tools/query-plan';
+import { COLLECTOR_MUNICIPALITY } from '@house-scanner-tools/prefilter';
 import {
   DEFAULT_CACHE_PATH,
   RunTooSoonError,
@@ -96,15 +95,19 @@ async function live(values: Values) {
     throw new Error('Live reading needs --confirm-personal-read.');
   if (values.at !== undefined)
     throw new Error('Live reads use the fetch time; --at does not apply.');
-  if (values.profiles === undefined)
-    throw new Error('Live reading needs --profiles <private file>.');
   const capability = sourceRegistry().find(
     (entry) => entry.policy.sourceId === values.source,
   );
   if (!capability) throw new Error('Unknown source.');
-  const profiles = queryPlanInputSchema.shape.profiles.parse(
-    JSON.parse(readFileSync(values.profiles, 'utf8')),
-  );
+  // The planner reads only the municipality and home types from this; collector bounds decide what is kept.
+  const profiles = [
+    {
+      id: '00000000-0000-4000-8000-000000000000',
+      revision: 1,
+      enabled: true,
+      criteria: fixtureCriteria([COLLECTOR_MUNICIPALITY]),
+    },
+  ];
   // Checked before the read so a bad environment costs no requests to the source.
   const sender = values.send ? senderConfig(process.env) : null;
   adapterFor(capability);
@@ -173,21 +176,14 @@ async function live(values: Values) {
   if (delivery?.stopped) process.exitCode = 1;
 }
 
-// Prints the SQL that approves a source for one household. Review the source's rights first.
-function printPolicySql(
-  source: string | undefined,
-  household: string | undefined,
-) {
+// Prints the SQL that approves a source for the shared catalog. Review the source's rights first.
+function printPolicySql(source: string | undefined) {
   if (source === undefined || !LIVE_SOURCES.includes(source))
     throw new Error(
       '--print-policy-sql supports --source=boneo, --source=bjurfors, --source=erik-olsson, --source=stadshem, --source=lundin, --source=husman-hagberg and --source=svenskfast only.',
     );
-  if (!household || !z.uuid().safeParse(household).success)
-    throw new Error('--print-policy-sql needs --household <household uuid>.');
   const json = JSON.stringify(approvedPolicy(source)).replaceAll("'", "''");
-  console.log(
-    `select hs.admin_set_source_policy('${household}', '${json}'::jsonb);`,
-  );
+  console.log(`select hs.admin_set_source_policy('${json}'::jsonb);`);
 }
 async function main() {
   const { values } = parseArgs({
@@ -199,19 +195,18 @@ async function main() {
       'batch-id': { type: 'string' },
       live: { type: 'boolean', default: false },
       'confirm-personal-read': { type: 'boolean', default: false },
+      // shortcut: accepted and ignored so older run scripts keep working; remove once run-collector.ps1 drops it.
       profiles: { type: 'string' },
       send: { type: 'boolean', default: false },
       'confirm-send': { type: 'boolean', default: false },
       'print-policy-sql': { type: 'boolean', default: false },
-      household: { type: 'string' },
       cache: { type: 'string' },
       force: { type: 'boolean', default: false },
     },
     allowPositionals: false,
     strict: true,
   });
-  if (values['print-policy-sql'])
-    return printPolicySql(values.source, values.household);
+  if (values['print-policy-sql']) return printPolicySql(values.source);
   if (values.mode !== 'fixture') throw new Error('Only fixture mode exists.');
   if (values['confirm-personal-read'] && !values.live)
     throw new Error('The confirmation flag applies to live reads only.');

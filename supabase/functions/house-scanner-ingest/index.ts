@@ -13,7 +13,8 @@ import {
 const MAX_BYTES = 1024 * 1024;
 const encoder = new TextEncoder();
 const credentialSchema = z.strictObject({
-  householdId: z.uuid(),
+  // Only the database before the shared catalog returns it; accepted so this function can deploy first.
+  householdId: z.uuid().optional(),
   sourceIds: z.array(z.string()).min(1).max(20),
   scopes: z.array(z.literal('ingest')).min(1),
 });
@@ -204,6 +205,7 @@ Deno.serve(async (request: Request) => {
       throw new Error('Invalid source scope');
     if (
       input.action === 'begin' &&
+      input.profileVersions &&
       new Set(input.profileVersions.map((profile) => profile.profileId))
         .size !== input.profileVersions.length
     )
