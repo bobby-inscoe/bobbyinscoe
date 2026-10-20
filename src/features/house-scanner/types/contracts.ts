@@ -303,11 +303,11 @@ export const snapshotSchema = z.strictObject({
     .nullable(),
   members: z.array(memberSchema).max(10),
   profiles: z.array(profileSchema).max(20),
-  listings: z.array(listingSchema).max(1000),
+  listings: z.array(listingSchema).max(1500),
   favorites: z.array(favoriteSchema).max(5000),
   // The signed-in member's own hidden listings. The database leaves the key out when there are none,
   // so an app built before it still parses the snapshot. Absent means none.
-  hiddenListingIds: z.array(id).max(1000).optional(),
+  hiddenListingIds: z.array(id).max(1500).optional(),
   // Every member's notes on the listings above, so opening a listing needs no request. Ten members on
   // 500 listings is the ceiling. The database leaves the key out when there are none; absent means none.
   notes: z.array(snapshotNoteSchema).max(5000).optional(),
