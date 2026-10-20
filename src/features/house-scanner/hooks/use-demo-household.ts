@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+import type { HouseholdAccess } from '@/features/house-scanner/api/household-client';
+
 import {
   createDemoNoteStore,
   DEMO_USER_ID,
@@ -10,6 +12,7 @@ import type {
   SearchProfile,
   Snapshot,
 } from '@/features/house-scanner/types/contracts';
+import type { HouseholdAccessActions } from '@/features/house-scanner/types/household';
 import { normalizeManualUrl } from '@/features/house-scanner/utils/manual-url';
 
 const HOUR = 3_600_000;
@@ -196,8 +199,64 @@ export function useDemoHousehold() {
   async function saveNote(listingId: string, body: string, revision: number) {
     return notes.save(DEMO_USER_ID, listingId, body, revision);
   }
+  // Members and invitations live in memory; nothing is sent, and a link only points back at the demo.
+  const [household, setHousehold] = useState<HouseholdAccess>(() => ({
+    name: 'Demo household',
+    members: SYNTHETIC_SNAPSHOT.members.map(
+      ({ userId, displayName, role }) => ({
+        userId,
+        displayName,
+        role,
+        active: true,
+      }),
+    ),
+    invitations: [],
+  }));
+  const access: HouseholdAccessActions = {
+    load: async () => household,
+    createLink: async (purpose) =>
+      `${window.location.origin}/projects/house-scanner/invite?token=${purpose}`,
+    sendLink: async (purpose, email) => {
+      const now = Date.now();
+      setHousehold((current) => ({
+        ...current,
+        invitations: [
+          ...current.invitations,
+          {
+            id: crypto.randomUUID(),
+            email,
+            createdAt: new Date(now).toISOString(),
+            expiresAt: new Date(now + 7 * 24 * HOUR).toISOString(),
+          },
+        ],
+      }));
+      return `${window.location.origin}/projects/house-scanner/invite?token=${purpose}`;
+    },
+    revoke: async (id) =>
+      setHousehold((current) => ({
+        ...current,
+        invitations: current.invitations.filter((entry) => entry.id !== id),
+      })),
+    rename: async (name) => setHousehold((current) => ({ ...current, name })),
+    makeOwner: async (userId) =>
+      setHousehold((current) => ({
+        ...current,
+        members: current.members.map((member) =>
+          member.userId === userId ? { ...member, role: 'owner' } : member,
+        ),
+      })),
+    deactivate: async (userId) =>
+      setHousehold((current) => ({
+        ...current,
+        members: current.members.map((member) =>
+          member.userId === userId ? { ...member, active: false } : member,
+        ),
+      })),
+    leave: async () => {},
+  };
   return {
     snapshot,
+    access,
     saveFavorite,
     saveFavorites,
     removeFavorite,

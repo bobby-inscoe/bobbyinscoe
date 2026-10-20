@@ -27,9 +27,9 @@ export function SettingsPanel({
 }: SettingsPanelProps) {
   const member = snapshot.members.find((entry) => entry.userId === userId);
   return (
-    <Stack w="100%" maw="48rem" mx="auto">
+    <Stack w="100%" maw="48rem">
       <Flex gap="sm" align="center" wrap="wrap">
-        <Title order={2}>Search criteria</Title>
+        <Title order={2}>Default filter</Title>
         <CriteriaHelp />
       </Flex>
       {synthetic && (
@@ -49,9 +49,7 @@ export function SettingsPanel({
       ) : (
         <Text>No search profiles yet.</Text>
       )}
-      {access && !synthetic && (
-        <HouseholdAccessPanel access={access} userId={userId} />
-      )}
+      {access && <HouseholdAccessPanel access={access} userId={userId} />}
     </Stack>
   );
 }

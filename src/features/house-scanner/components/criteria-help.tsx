@@ -1,54 +1,15 @@
-import { Button, Modal, Stack, Text, Title } from '@mantine/core';
+import { Button, Modal, Stack, Text } from '@mantine/core';
 import { useState } from 'react';
 
 import styles from '@/features/house-scanner/components/household-workspace.module.css';
 
-const SECTIONS: { heading: string; lines: string[] }[] = [
-  {
-    heading: 'What gets collected',
-    lines: [
-      'The collector reads the for-sale apartments of each source in Göteborg, for every household alike. New homes appear after the next collector run.',
-      'Your criteria decide which of those apartments you see; changing them never changes what is collected.',
-    ],
-  },
-  {
-    heading: 'How a home is sorted',
-    lines: [
-      'Each home is compared with the saved criteria. The result decides which Match group it belongs to:',
-      'Within budget: it fits everything and costs your preferred budget or less.',
-      'Stretch budget: it fits everything and costs more than your preferred budget, up to your stretch budget.',
-      'Close to your criteria: it misses one rule that can bend, such as a lift or a balcony.',
-      'Missing info: a fact is unknown, so it cannot be judged yet.',
-      'Links we added: homes pasted in by the household.',
-      'Homes that break a hard rule (above the stretch budget, too small, too few rooms, wrong home type, outside the area) are left out.',
-    ],
-  },
-  {
-    heading: 'What each setting does',
-    lines: [
-      'Budget: preferred and stretch are the two price lines above.',
-      'Living area and rooms: a home outside these limits is left out. Leave the maximum area on "No maximum" to allow any size.',
-      'Apartment rules: ground floor, lift, balcony and glazed outdoor space. Missing one of these moves a home to "Close to your criteria" instead of removing it.',
-      'Places to search: the areas a home can be in to count as inside your search.',
-      'Search circle: a home also counts as inside your search when it sits within the radius of the centre point, even when its place is not on the list.',
-    ],
-  },
-  {
-    heading: 'When a fact is unknown',
-    lines: [
-      'A missing fact never removes a home. It shows as missing so you can check it with the broker.',
-    ],
-  },
-  {
-    heading: 'Criteria and filters',
-    lines: [
-      'The search criteria are shared by the household, and only owners can change them.',
-      'Filters on the Listings tab are yours alone. They change what you see, not how homes are sorted, and they reset when you reload the page.',
-    ],
-  },
+const ABOUT = [
+  'House Scanner follows apartments for sale in Göteborg.',
+  'The settings below are your default filter for the Listings tab. Adjust budget, size, rooms, features and areas to fit what you are looking for.',
+  'Filters on the Listings tab are yours alone and reset when you reload. Only owners can change these defaults.',
 ];
 
-/** A button that opens a plain-language explanation of how the search criteria work. */
+/** A button that opens a short explanation of what House Scanner is and how the settings are used. */
 export function CriteriaHelp() {
   const [opened, setOpened] = useState(false);
   return (
@@ -64,24 +25,17 @@ export function CriteriaHelp() {
       <Modal
         opened={opened}
         onClose={() => setOpened(false)}
-        title="How the search works"
-        size="lg"
+        title="About House Scanner"
+        size="md"
         // Rendered in place so the feature's scoped CSS variables still apply.
         withinPortal={false}
         classNames={{ root: styles.drawerRoot, inner: styles.drawerInner }}
       >
-        <Stack gap="md">
-          {SECTIONS.map(({ heading, lines }) => (
-            <Stack key={heading} gap={4}>
-              <Title order={3} size="h5">
-                {heading}
-              </Title>
-              {lines.map((line) => (
-                <Text key={line} size="sm">
-                  {line}
-                </Text>
-              ))}
-            </Stack>
+        <Stack gap="xs">
+          {ABOUT.map((line) => (
+            <Text key={line} size="sm">
+              {line}
+            </Text>
           ))}
         </Stack>
       </Modal>

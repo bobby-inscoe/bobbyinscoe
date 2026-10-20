@@ -211,14 +211,11 @@ describe('places and the search circle', () => {
       }),
     );
     const centre = screen.getByRole('combobox', {
-      name: 'Centre of the search circle',
+      name: 'Search from',
     });
     expect(centre).toHaveProperty('value', 'Current point (58.200, 12.500)');
     expect(screen.queryByLabelText(/longitude|latitude/i)).toBeNull();
-    await choose(
-      'Centre of the search circle',
-      'Brunnsparken, central Göteborg',
-    );
+    await choose('Search from', 'Brunnsparken, central Göteborg');
     expect((await save(onSave)).geography.center).toEqual([...BRUNNSPARKEN]);
   });
 
@@ -228,7 +225,7 @@ describe('places and the search circle', () => {
       profileWith({ geography: { ...demo.criteria.geography, center } }),
     );
     expect(
-      screen.getByRole('combobox', { name: 'Centre of the search circle' }),
+      screen.getByRole('combobox', { name: 'Search from' }),
     ).toHaveProperty('value', 'Brunnsparken, central Göteborg');
     expect((await save(onSave)).geography.center).toEqual(center);
   });
@@ -252,7 +249,7 @@ describe('who can edit', () => {
       'Maximum living area (m²)',
       'Minimum rooms',
       'Radius',
-      'Centre of the search circle',
+      'Search from',
       'Places to search',
     ])
       expect(screen.getByRole('combobox', { name })).toHaveProperty(
@@ -263,7 +260,7 @@ describe('who can edit', () => {
 });
 
 describe('How does this work?', () => {
-  it('opens a dialog that explains the criteria, and closes with Escape', async () => {
+  it('opens a dialog that explains the page, and closes with Escape', async () => {
     render(
       <MantineProvider>
         <CriteriaHelp />
@@ -273,18 +270,11 @@ describe('How does this work?', () => {
       screen.getByRole('button', { name: 'How does this work?' }),
     );
     const dialog = await screen.findByRole('dialog', {
-      name: 'How the search works',
+      name: 'About House Scanner',
     });
-    for (const heading of [
-      'What gets collected',
-      'How a home is sorted',
-      'What each setting does',
-      'When a fact is unknown',
-      'Criteria and filters',
-    ])
-      expect(
-        within(dialog).getByRole('heading', { name: heading }),
-      ).toBeTruthy();
+    expect(
+      within(dialog).getByText(/apartments for sale in Göteborg/),
+    ).toBeTruthy();
     fireEvent.keyDown(dialog, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });

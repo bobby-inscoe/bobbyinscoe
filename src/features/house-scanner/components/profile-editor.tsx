@@ -1,6 +1,7 @@
 import {
   Button,
   Checkbox,
+  Group,
   MultiSelect,
   NumberInput,
   Paper,
@@ -8,8 +9,9 @@ import {
   SimpleGrid,
   Stack,
   Text,
-  Title,
+  Tooltip,
 } from '@mantine/core';
+import { Info } from 'lucide-react';
 import { useState } from 'react';
 
 import { NumberSelect } from '@/features/house-scanner/components/number-select';
@@ -29,7 +31,6 @@ import {
   ROOM_OPTIONS,
   SOURCES,
 } from '@/features/house-scanner/utils/criteria-options';
-import { formatDate } from '@/features/house-scanner/utils/format';
 
 // Supported places can be picked; the rest show why they cannot. A saved name that is in neither
 // stays visible, so opening the editor never drops it silently.
@@ -49,6 +50,18 @@ function places(saved: string[]) {
         disabled: true,
       })),
   ];
+}
+
+// A field label with the field's explanation in a hover tooltip.
+function LabelWithInfo({ info, children }: { info: string; children: string }) {
+  return (
+    <Group gap={4} wrap="nowrap">
+      {children}
+      <Tooltip multiline w={240} label={info}>
+        <Info size={14} aria-hidden />
+      </Tooltip>
+    </Group>
+  );
 }
 
 export function ProfileEditor({
@@ -136,12 +149,8 @@ export function ProfileEditor({
     }
   }
   return (
-    <Paper withBorder p="md">
+    <Paper>
       <Stack>
-        <Title order={3}>{profile.name}</Title>
-        <Text size="sm">
-          Revision {profile.revision} · edited {formatDate(profile.editedAt)}
-        </Text>
         <Checkbox
           label="Enabled search profile"
           checked={enabled}
@@ -202,8 +211,11 @@ export function ProfileEditor({
         )}
         {numeric('feeReferenceSek', 'Monthly fee reference (SEK, a cost flag)')}
         <MultiSelect
-          label="Places to search"
-          description="The areas the collector reads, and the areas a home can be in to count as inside your search."
+          label={
+            <LabelWithInfo info="The areas the collector reads, and the areas a home can be in to count as inside your search.">
+              Places to search
+            </LabelWithInfo>
+          }
           value={criteria.geography.municipalities}
           onChange={(municipalities) =>
             setCriteria((current) => ({
@@ -216,8 +228,11 @@ export function ProfileEditor({
           disabled={!canEdit || !onSave}
         />
         <MultiSelect
-          label="Sources"
-          description="Show homes from these brokers only. Leave empty for every source."
+          label={
+            <LabelWithInfo info="Show homes from these brokers only. Leave empty for every source.">
+              Sources
+            </LabelWithInfo>
+          }
           placeholder={criteria.sourceIds ? undefined : 'Every source'}
           value={criteria.sourceIds ?? []}
           onChange={(sourceIds) =>
@@ -242,8 +257,11 @@ export function ProfileEditor({
         />
         <SimpleGrid cols={{ base: 1, sm: 2 }}>
           <Select
-            label="Centre of the search circle"
-            description="A home within the radius of this point also counts as inside your search."
+            label={
+              <LabelWithInfo info="Homes within the radius of this point count as inside your search, even when their area is not on the list.">
+                Search from
+              </LabelWithInfo>
+            }
             value={
               isNear(criteria.geography.center, BRUNNSPARKEN)
                 ? 'brunnsparken'
