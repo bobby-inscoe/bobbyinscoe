@@ -65,6 +65,11 @@ beforeAll(async () => {
     "insert into hs.members(household_id,user_id,display_name,role) values ($1,$2,'Synthetic member','owner')",
     [HOUSE, USER],
   );
+  // The snapshot returns catalog listings that an enabled profile can use.
+  await db.query(
+    "insert into hs.profiles(household_id,name,enabled,criteria,edited_by) values ($1,'Synthetic profile',true,$2::jsonb,$3)",
+    [HOUSE, JSON.stringify(SYNTHETIC_SNAPSHOT.profiles[0].criteria), USER],
+  );
   const policy = {
     sourceId: 'synthetic',
     status: 'approved',

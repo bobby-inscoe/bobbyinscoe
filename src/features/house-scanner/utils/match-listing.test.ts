@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { SYNTHETIC_SNAPSHOT } from '@/features/house-scanner/mock/synthetic-household';
 import type { Listing } from '@/features/house-scanner/types/contracts';
 import {
+  HARD_RULE_BASE_FACTS,
+  HARD_RULE_CASES,
+  HARD_RULE_CRITERIA,
+} from '@/features/house-scanner/utils/hard-rule-cases';
+import {
   matchListing,
   reasonChips,
 } from '@/features/house-scanner/utils/match-listing';
@@ -14,6 +19,17 @@ function home(
 ): Listing {
   return { ...original, ...changes, facts: { ...original.facts, ...facts } };
 }
+
+describe('hard rules shared with the database candidate filter', () => {
+  const shared = { ...criteria, ...HARD_RULE_CRITERIA };
+  it.each(HARD_RULE_CASES)('$name', ({ facts, conflicts = [], excluded }) => {
+    const listing = home(
+      { ...HARD_RULE_BASE_FACTS, ...facts },
+      { conflicts, coordinates: null },
+    );
+    expect(matchListing(listing, shared).section === 'outside').toBe(excluded);
+  });
+});
 
 describe('buyer matching under incomplete evidence', () => {
   it.each([

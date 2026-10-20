@@ -14,6 +14,11 @@ import {
   snapshotSchema,
   sourcePolicySchema,
 } from '@/features/house-scanner/types/contracts';
+import {
+  HARD_RULE_BASE_FACTS,
+  HARD_RULE_CASES,
+  HARD_RULE_CRITERIA,
+} from '@/features/house-scanner/utils/hard-rule-cases';
 
 // The shared catalog migration (S1): one household's data before it, many households after it.
 const CATALOG = '20261020150000_house_scanner_catalog.sql';
@@ -171,6 +176,14 @@ async function freshDatabase(through: 'before' | 'all') {
 
 function migration(name: string) {
   return readFile(new URL(`../migrations/${name}`, import.meta.url), 'utf8');
+}
+
+// Migrations after the catalog, in order, so the suite tests the current snapshot.
+async function applyAfterCatalog(database: PGlite) {
+  const names = (await readdir(new URL('../migrations/', import.meta.url)))
+    .filter((name) => name.endsWith('.sql') && name > CATALOG)
+    .sort();
+  for (const name of names) await database.exec(await migration(name));
 }
 
 let db: PGlite;
@@ -434,6 +447,7 @@ beforeAll(async () => {
     for (const call of ['hs_snapshot', 'hs_snapshot_neighborhoods'])
       before[`${user}:${call}`] = await snapshot(HOUSE_A, user, db, call);
   await db.exec(await migration(CATALOG));
+  await applyAfterCatalog(db);
 });
 
 afterAll(async () => {
@@ -797,6 +811,110 @@ describe('ingest into the catalog', () => {
         ),
       );
     expect(policies.map((item) => item.sourceId)).toEqual(['alpha', 'beta']);
+  });
+});
+
+describe('candidates filtered by household criteria', () => {
+  const shared = { ...criteria, ...HARD_RULE_CRITERIA };
+
+  it('applies the hard rules shared with the client matcher', async () => {
+    for (const { name, facts, conflicts = [], excluded } of HARD_RULE_CASES) {
+      const fails = await rpc(
+        'select hs.fails_hard_rule($1::jsonb,$2::jsonb,$3::jsonb) as value',
+        [
+          JSON.stringify({ ...HARD_RULE_BASE_FACTS, ...facts }),
+          JSON.stringify(conflicts),
+          JSON.stringify(shared),
+        ],
+      );
+      expect({ name, fails }).toEqual({ name, fails: excluded });
+    }
+  });
+
+  it('returns a household only the listings its enabled profiles can use, plus saved and hidden ones', async () => {
+    const now = new Date().toISOString();
+    const candidate = (id: string, overrides: Partial<Observation['facts']>) =>
+      home(id, {
+        observedAt: now,
+        facts: { ...home(id).facts, ...overrides },
+      });
+    await publish(
+      [
+        candidate('fits-both', { livingAreaM2: 90 }),
+        candidate('too-small-for-b', { livingAreaM2: 55 }),
+        candidate('saved-by-b', { livingAreaM2: 40 }),
+        candidate('hidden-by-b', { livingAreaM2: 40 }),
+        candidate('area-unknown', { livingAreaM2: null }),
+      ],
+      { source: 'beta' },
+    );
+    await db.query(
+      'update hs.profiles set criteria=$1::jsonb where household_id=$2',
+      [JSON.stringify({ ...criteria, minAreaM2: 60 }), HOUSE_B],
+    );
+    const idOf = async (title: string) =>
+      (
+        await db.query<{ id: string }>(
+          "select id from hs.listings where value->>'title'=$1",
+          [title],
+        )
+      ).rows[0].id;
+    // Saved and hidden before the criteria exclude them, as a member would from the list.
+    await db.query(
+      "insert into hs.favorites(household_id,listing_id,user_id,bookmark_url) values($1,$2,$3,'https://example.invalid/saved-by-b')",
+      [HOUSE_B, await idOf('saved-by-b'), OWNER_B],
+    );
+    await db.query(
+      'insert into hs.hidden_listings(household_id,listing_id,user_id) values($1,$2,$3)',
+      [HOUSE_B, await idOf('hidden-by-b'), OWNER_B],
+    );
+    const titles = async (household: string, user: string) =>
+      (await snapshot(household, user)).listings.map((item) => item.title);
+    const b = await titles(HOUSE_B, OWNER_B);
+    expect(b).toEqual(
+      expect.arrayContaining([
+        'fits-both',
+        'saved-by-b',
+        'hidden-by-b',
+        'area-unknown',
+      ]),
+    );
+    expect(b).not.toContain('too-small-for-b');
+    // Household A's 50 m² minimum keeps the 55 m² home, but not the unsaved 40 m² ones.
+    const a = await titles(HOUSE_A, OWNER_A);
+    expect(a).toEqual(
+      expect.arrayContaining(['fits-both', 'too-small-for-b', 'area-unknown']),
+    );
+    expect(a).not.toContain('saved-by-b');
+    expect(a).not.toContain('hidden-by-b');
+
+    await db.query(
+      'update hs.profiles set enabled=false where household_id=$1',
+      [HOUSE_B],
+    );
+    expect(await titles(HOUSE_B, OWNER_B)).toEqual(
+      expect.arrayContaining(['saved-by-b', 'hidden-by-b']),
+    );
+    expect(await titles(HOUSE_B, OWNER_B)).not.toContain('fits-both');
+    await db.query(
+      'update hs.profiles set enabled=true where household_id=$1',
+      [HOUSE_B],
+    );
+  });
+
+  it('rolls back to returning every live listing, and applies again', async () => {
+    const filter = '20261020180000_house_scanner_criteria_filter';
+    const titles = async () =>
+      (await snapshot(HOUSE_B, OWNER_B)).listings.map((item) => item.title);
+    await db.exec(
+      await readFile(
+        new URL(`../rollbacks/${filter}_down.sql`, import.meta.url),
+        'utf8',
+      ),
+    );
+    expect(await titles()).toContain('too-small-for-b');
+    await db.exec(await migration(`${filter}.sql`));
+    expect(await titles()).not.toContain('too-small-for-b');
   });
 });
 
