@@ -7,9 +7,12 @@ const money = z.number().int().nonnegative().max(1_000_000_000);
 // z.url() can accept strings that the URL constructor then rejects (for example
 // some punycode or numeric hosts). A throw inside a refinement escapes safeParse,
 // so every URL refinement goes through this guard and fails validation instead.
+// Punycode (xn--) hosts are refused outright, as the database does: whether the URL constructor
+// accepts an invalid one such as xn--a differs between Node and browser versions.
 function parseUrl(value: string): URL | null {
   try {
-    return new URL(value);
+    const url = new URL(value);
+    return /(^|\.)xn--/i.test(url.hostname) ? null : url;
   } catch {
     return null;
   }

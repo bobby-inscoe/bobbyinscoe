@@ -1,7 +1,6 @@
 import {
   Button,
   Checkbox,
-  Group,
   MultiSelect,
   NumberInput,
   Paper,
@@ -15,7 +14,6 @@ import { useState } from 'react';
 
 import { NumberSelect } from '@/features/house-scanner/components/number-select';
 import {
-  type Criteria,
   criteriaSchema,
   type SearchProfile,
 } from '@/features/house-scanner/types/contracts';
@@ -117,7 +115,12 @@ export function ProfileEditor({
     if (!canEdit || !onSave) return;
     setBusy(true);
     try {
-      await onSave({ ...profile, enabled, criteria: result.data });
+      // House Scanner covers apartments only; an older profile that also chose houses is narrowed on save.
+      await onSave({
+        ...profile,
+        enabled,
+        criteria: { ...result.data, propertyTypes: ['apartment'] },
+      });
       setMessage(
         'Profile saved. Stored homes are re-evaluated against the saved criteria. Collection coverage is unchanged.',
       );
@@ -130,14 +133,6 @@ export function ProfileEditor({
     } finally {
       setBusy(false);
     }
-  }
-  function setType(type: Criteria['propertyTypes'][number], checked: boolean) {
-    setCriteria((current) => ({
-      ...current,
-      propertyTypes: checked
-        ? [...new Set([...current.propertyTypes, type])]
-        : current.propertyTypes.filter((value) => value !== type),
-    }));
   }
   return (
     <Paper withBorder p="md">
@@ -193,22 +188,6 @@ export function ProfileEditor({
             disabled={!canEdit || !onSave}
           />
         </SimpleGrid>
-        <Group>
-          <Checkbox
-            label="Apartments"
-            checked={criteria.propertyTypes.includes('apartment')}
-            disabled={!canEdit || !onSave}
-            onChange={(event) =>
-              setType('apartment', event.currentTarget.checked)
-            }
-          />
-          <Checkbox
-            label="Houses"
-            checked={criteria.propertyTypes.includes('house')}
-            disabled={!canEdit || !onSave}
-            onChange={(event) => setType('house', event.currentTarget.checked)}
-          />
-        </Group>
         <Text size="sm">Apartment rules</Text>
         {toggle(
           'excludeGroundFloor',
