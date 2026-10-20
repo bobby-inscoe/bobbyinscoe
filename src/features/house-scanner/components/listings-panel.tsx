@@ -690,7 +690,8 @@ export function ListingsPanel({
             style={{
               position: 'sticky',
               bottom: 0,
-              paddingBlock: 12,
+              padding: 16,
+              borderTop: '1px solid var(--mantine-color-default-border)',
               background: 'var(--scanner-surface)',
             }}
           >

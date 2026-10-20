@@ -4,7 +4,6 @@ import { hasPin } from '@/features/house-scanner/utils/listing-position';
 import { hasViewingWithin } from '@/features/house-scanner/utils/viewings';
 
 export const MANUAL_HOST = 'Added by household';
-export const ALL_HOSTS = 'all';
 
 // Which of the household's hidden homes to include.
 export type HiddenView = 'not-hidden' | 'hidden-only' | 'both';
@@ -17,7 +16,8 @@ export interface ListingFilters {
   minAreaM2: number | null;
   maxAreaM2: number | null;
   minRooms: number | null;
-  host: string;
+  // Empty means every source.
+  hosts: string[];
   freshness: Freshness;
   /** A home matches any selected candidate area, alongside the other filters. */
   neighborhoodIds: string[];
@@ -43,7 +43,7 @@ export const emptyFilters: ListingFilters = {
   minAreaM2: null,
   maxAreaM2: null,
   minRooms: null,
-  host: ALL_HOSTS,
+  hosts: [],
   freshness: 'all',
   neighborhoodIds: [],
   includeUnassignedNeighborhoods: false,
@@ -77,7 +77,7 @@ export function activeFilterCount(filters: ListingFilters): number {
     clean(filters.minPriceSek) !== null || clean(filters.maxPriceSek) !== null,
     clean(filters.minAreaM2) !== null || clean(filters.maxAreaM2) !== null,
     clean(filters.minRooms) !== null,
-    filters.host !== ALL_HOSTS,
+    filters.hosts.length > 0,
     filters.freshness !== 'all',
     filters.neighborhoodIds.length > 0,
     filters.outdoorOnly,
@@ -144,7 +144,8 @@ export function applyListingFilters(
       ) &&
       inRange(facts.livingAreaM2, minArea, maxArea) &&
       inRange(facts.rooms, minRooms, null) &&
-      (filters.host === ALL_HOSTS || listingHost(listing) === filters.host) &&
+      (filters.hosts.length === 0 ||
+        filters.hosts.includes(listingHost(listing))) &&
       (filters.neighborhoodIds.length === 0 ||
         (neighborhoods.length > 0
           ? neighborhoods.some(({ id }) => filters.neighborhoodIds.includes(id))

@@ -12,7 +12,7 @@ const filtersSchema = z.object({
   minAreaM2: number,
   maxAreaM2: number,
   minRooms: number,
-  host: z.string().max(253).catch('all'),
+  hosts: z.array(z.string().max(253)).max(32).catch([]),
   freshness: z
     .enum(['all', 'latest-scan', '1-day', '3-days', '7-days'])
     .catch('all'),
