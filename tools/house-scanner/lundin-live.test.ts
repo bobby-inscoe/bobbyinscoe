@@ -1,9 +1,15 @@
-import { runCollection, USER_AGENT } from '@house-scanner-tools/live-reader';
+import {
+  type LiveEvent,
+  MAX_BODY_CHARS,
+  runCollection,
+  USER_AGENT,
+} from '@house-scanner-tools/live-reader';
 import {
   deps,
   fakeFetch,
   type Reply,
 } from '@house-scanner-tools/live-test-helpers';
+import { LUNDIN_MAX_CHARS } from '@house-scanner-tools/lundin-parser';
 import {
   lundinHome,
   lundinList,
@@ -106,6 +112,32 @@ describe('Lundin guarded run', () => {
       reason: 'invalid-embedded-data',
     });
     expect(result.stopped).toBe('invalid-embedded-data');
+  });
+
+  it('accepts a list past the shared size cap and stops only past its own', async () => {
+    const home = lundinList([numbered(1)]);
+    const reply = (padding: number) => (url: string) =>
+      url.endsWith('/robots.txt')
+        ? robotsReply
+        : { body: home + ' '.repeat(padding) };
+    const grown = await run(goteborg, deps(fakeFetch(reply(4_950_000)).impl));
+    expect(grown.stopped).toBeNull();
+    expect(grown.partitions[0]).toMatchObject({
+      status: 'read',
+      observations: 1,
+    });
+    const events: LiveEvent[] = [];
+    const runaway = await run(
+      goteborg,
+      deps(fakeFetch(reply(LUNDIN_MAX_CHARS)).impl, events),
+    );
+    expect(runaway.stopped).toBe('oversize');
+    expect(
+      events.find((event) => event.event === 'request-stopped')?.bodyChars,
+    ).toBeGreaterThan(LUNDIN_MAX_CHARS);
+    // Every other source keeps the shared cap.
+    expect(boneoAdapter.maxBodyChars).toBeUndefined();
+    expect(MAX_BODY_CHARS).toBe(3_000_000);
   });
 
   it.each([403, 429])('stops at once on %i without a retry', async (status) => {
