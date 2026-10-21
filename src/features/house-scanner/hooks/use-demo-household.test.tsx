@@ -135,6 +135,45 @@ describe('demo household notes', () => {
     ]);
   });
 
+  it('edits a manual listing and deletes it with its favorites, never a catalog one', async () => {
+    const { result } = renderHook(useDemoHousehold);
+    await act(() =>
+      result.current.addManual({
+        url: 'https://example.invalid/edit-me',
+        title: 'Before',
+        note: '',
+        imageUrls: [],
+        facts: NO_MANUAL_FACTS,
+      }),
+    );
+    const find = () =>
+      result.current.snapshot.listings.find((l) => l.origin === 'manual');
+    const id = find()?.id ?? '';
+    await act(() =>
+      result.current.updateManual(id, {
+        title: 'After',
+        imageUrls: ['https://example.invalid/p.jpg'],
+        facts: { ...NO_MANUAL_FACTS, rooms: 4 },
+      }),
+    );
+    expect(find()).toMatchObject({
+      title: 'After',
+      photo: { url: 'https://example.invalid/p.jpg' },
+      facts: { rooms: 4 },
+    });
+    await act(() => result.current.saveFavorite(id));
+    const catalog = result.current.snapshot.listings.find(
+      (l) => l.origin !== 'manual',
+    );
+    await act(() => result.current.deleteManual(catalog?.id ?? ''));
+    expect(result.current.snapshot.listings).toContainEqual(catalog);
+    await act(() => result.current.deleteManual(id));
+    expect(find()).toBeUndefined();
+    expect(
+      result.current.snapshot.favorites.some((f) => f.listingId === id),
+    ).toBe(false);
+  });
+
   it('adds no note for a blank initial note', async () => {
     const { result } = renderHook(useDemoHousehold);
     await act(() =>

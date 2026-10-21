@@ -54,6 +54,14 @@ export const PUBLIC_RPC_PROBES: Record<string, Record<string, unknown>> = {
     p_image_urls: [],
     p_facts: {},
   },
+  hs_update_manual: {
+    p_household_id: NIL_UUID,
+    p_listing_id: NIL_UUID,
+    p_title: 'FICTIONAL probe',
+    p_image_urls: [],
+    p_facts: {},
+  },
+  hs_delete_manual: { p_household_id: NIL_UUID, p_listing_id: NIL_UUID },
   hs_notes: { p_household_id: NIL_UUID, p_listing_id: NIL_UUID },
   hs_save_note: {
     p_household_id: NIL_UUID,

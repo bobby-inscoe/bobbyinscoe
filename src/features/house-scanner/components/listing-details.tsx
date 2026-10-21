@@ -11,6 +11,7 @@ import type { ReactNode } from 'react';
 
 import styles from '@/features/house-scanner/components/household-workspace.module.css';
 import { ListingNotes } from '@/features/house-scanner/components/listing-notes';
+import { ManualListingActions } from '@/features/house-scanner/components/manual-listing-actions';
 import { ViewingRows } from '@/features/house-scanner/components/viewing-list';
 import type { ListingNotesController } from '@/features/house-scanner/hooks/use-listing-notes';
 import type {
@@ -132,6 +133,7 @@ export function ListingDetails({
       <Title order={headingOrder} size="h4">
         Facts and source evidence
       </Title>
+      <ManualListingActions listing={listing} />
       <Stack gap="md">
         <FactList
           rows={[

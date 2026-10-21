@@ -13,6 +13,8 @@ export function SyntheticWorkspace() {
       onSaveFavorites={demo.saveFavorites}
       onRemoveFavorite={demo.removeFavorite}
       onAddManual={demo.addManual}
+      onUpdateManual={demo.updateManual}
+      onDeleteManual={demo.deleteManual}
       onSaveProfile={demo.saveProfile}
       onSetHidden={demo.setHidden}
       onLoadNotes={demo.loadNotes}

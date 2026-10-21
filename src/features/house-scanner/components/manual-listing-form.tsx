@@ -1,27 +1,16 @@
-import {
-  ActionIcon,
-  Button,
-  Group,
-  NumberInput,
-  Select,
-  SimpleGrid,
-  Stack,
-  Text,
-  Textarea,
-  TextInput,
-  Title,
-} from '@mantine/core';
+import { Button, Stack, Text, Textarea, TextInput, Title } from '@mantine/core';
 import { useState } from 'react';
-
+import {
+  EMPTY_FIELDS,
+  ManualFields,
+  submissionOf,
+} from '@/features/house-scanner/components/manual-listing-fields';
 import {
   type ManualSubmission,
   manualSubmissionSchema,
   type Snapshot,
 } from '@/features/house-scanner/types/contracts';
 import { normalizeManualUrl } from '@/features/house-scanner/utils/manual-url';
-
-const asNumber = (value: number | string) =>
-  typeof value === 'number' ? value : null;
 
 export function ManualListingForm({
   snapshot,
@@ -35,12 +24,7 @@ export function ManualListingForm({
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
   const [note, setNote] = useState('');
-  const [imageUrls, setImageUrls] = useState(['']);
-  const [propertyType, setPropertyType] = useState<string | null>(null);
-  const [outdoor, setOutdoor] = useState<string | null>(null);
-  const [price, setPrice] = useState<number | string>('');
-  const [area, setArea] = useState<number | string>('');
-  const [rooms, setRooms] = useState<number | string>('');
+  const [fields, setFields] = useState(EMPTY_FIELDS);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   async function submit(event: React.SubmitEvent<HTMLFormElement>) {
@@ -49,14 +33,7 @@ export function ManualListingForm({
       url: url.trim(),
       title,
       note,
-      imageUrls: imageUrls.map((value) => value.trim()).filter(Boolean),
-      facts: {
-        propertyType,
-        outdoor,
-        askingPriceSek: asNumber(price),
-        livingAreaM2: asNumber(area),
-        rooms: asNumber(rooms),
-      },
+      ...submissionOf(fields),
     });
     if (!result.success) {
       setMessage(result.error.issues.map((issue) => issue.message).join(' '));
@@ -80,12 +57,7 @@ export function ManualListingForm({
       setUrl('');
       setTitle('');
       setNote('');
-      setImageUrls(['']);
-      setPropertyType(null);
-      setOutdoor(null);
-      setPrice('');
-      setArea('');
-      setRooms('');
+      setFields(EMPTY_FIELDS);
       setMessage('Link added. Save it separately if you want it in Favorites.');
     } catch (error) {
       setMessage(
@@ -125,106 +97,7 @@ export function ManualListingForm({
           onChange={(event) => setNote(event.currentTarget.value)}
           maxLength={2000}
         />
-        <Text size="sm" fw={500}>
-          Details you know (optional)
-        </Text>
-        <SimpleGrid cols={2}>
-          <Select
-            label="Type"
-            data={[
-              { value: 'apartment', label: 'Apartment' },
-              { value: 'house', label: 'House' },
-            ]}
-            value={propertyType}
-            onChange={setPropertyType}
-            clearable
-          />
-          <Select
-            label="Outdoor space"
-            data={[
-              { value: 'balcony', label: 'Balcony' },
-              { value: 'terrace', label: 'Terrace' },
-              { value: 'both', label: 'Balcony and terrace' },
-              { value: 'none', label: 'None' },
-            ]}
-            value={outdoor}
-            onChange={setOutdoor}
-            clearable
-          />
-          <NumberInput
-            label="Asking price (SEK)"
-            value={price}
-            onChange={setPrice}
-            min={1}
-            max={1_000_000_000}
-            allowDecimal={false}
-            thousandSeparator=" "
-          />
-          <NumberInput
-            label="Living area (m²)"
-            value={area}
-            onChange={setArea}
-            min={1}
-            max={10000}
-          />
-          <NumberInput
-            label="Rooms"
-            value={rooms}
-            onChange={setRooms}
-            min={0.5}
-            max={100}
-            step={0.5}
-          />
-        </SimpleGrid>
-        <Stack gap={4}>
-          <Text size="sm" fw={500}>
-            Photo link (optional)
-          </Text>
-          <Text size="xs" c="dimmed">
-            Right-click a photo on the listing page and copy its image address.
-            The photos stay on the original site.
-          </Text>
-          {imageUrls.map((value, index) => {
-            const last = index === imageUrls.length - 1;
-            return (
-              // The list is only appended to or trimmed from the end, so the index is a stable key.
-              // biome-ignore lint/suspicious/noArrayIndexKey: see above
-              <Group key={index} gap="xs" wrap="nowrap">
-                <TextInput
-                  flex={1}
-                  aria-label={`Photo link ${index + 1}`}
-                  type="url"
-                  value={value}
-                  onChange={(event) =>
-                    setImageUrls(
-                      imageUrls.map((existing, at) =>
-                        at === index ? event.currentTarget.value : existing,
-                      ),
-                    )
-                  }
-                  maxLength={2048}
-                />
-                <ActionIcon
-                  variant="default"
-                  size={36}
-                  aria-label={
-                    last ? 'Add another photo link' : 'Remove photo link'
-                  }
-                  disabled={last && (!value.trim() || imageUrls.length >= 10)}
-                  onClick={() =>
-                    setImageUrls(
-                      last
-                        ? [...imageUrls, '']
-                        : imageUrls.filter((_, at) => at !== index),
-                    )
-                  }
-                >
-                  {last ? '+' : '−'}
-                </ActionIcon>
-              </Group>
-            );
-          })}
-        </Stack>
+        <ManualFields fields={fields} onChange={setFields} />
         <Button type="submit" loading={busy} disabled={!onAdd}>
           Add link
         </Button>

@@ -2,8 +2,10 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 
 import {
+  type ManualEdit,
   type ManualSubmission,
   type Member,
+  manualEditSchema,
   manualSubmissionSchema,
   memberSchema,
   profileSchema,
@@ -235,9 +237,6 @@ export function addManual(
 ) {
   const value = manualSubmissionSchema.parse(submission);
   const url = new URL(value.url);
-  const facts = Object.fromEntries(
-    Object.entries(value.facts).filter(([, fact]) => fact !== null),
-  );
   for (const key of [...url.searchParams.keys()])
     if (/^(utm_|fbclid$|gclid$|msclkid$)/i.test(key))
       url.searchParams.delete(key);
@@ -250,11 +249,50 @@ export function addManual(
       p_title: value.title,
       p_note: value.note,
       p_tags: [],
-      // Left out when empty, so adding a link works before the photo migration is live.
-      ...(value.imageUrls.length ? { p_image_urls: value.imageUrls } : {}),
-      ...(Object.keys(facts).length ? { p_facts: facts } : {}),
+      ...manualExtras(value),
     },
     manualResultSchema,
+  );
+}
+function manualExtras(value: Pick<ManualSubmission, 'imageUrls' | 'facts'>) {
+  const facts = Object.fromEntries(
+    Object.entries(value.facts).filter(([, fact]) => fact !== null),
+  );
+  return { p_image_urls: value.imageUrls, p_facts: facts };
+}
+export function updateManual(
+  client: SupabaseClient,
+  householdId: string,
+  listingId: string,
+  edit: ManualEdit,
+) {
+  const value = manualEditSchema.parse(edit);
+  return rpc(
+    client,
+    'hs_update_manual',
+    {
+      p_household_id: z.uuid().parse(householdId),
+      p_listing_id: z.uuid().parse(listingId),
+      p_title: value.title,
+      ...manualExtras(value),
+    },
+    okSchema,
+  );
+}
+// Removes the listing and every member's favorite and note on it.
+export function deleteManual(
+  client: SupabaseClient,
+  householdId: string,
+  listingId: string,
+) {
+  return rpc(
+    client,
+    'hs_delete_manual',
+    {
+      p_household_id: z.uuid().parse(householdId),
+      p_listing_id: z.uuid().parse(listingId),
+    },
+    okSchema,
   );
 }
 export function saveProfile(

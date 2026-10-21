@@ -8,6 +8,7 @@ import {
   SYNTHETIC_SNAPSHOT,
 } from '@/features/house-scanner/mock/synthetic-household';
 import type {
+  ManualEdit,
   ManualSubmission,
   SearchProfile,
   Snapshot,
@@ -37,6 +38,17 @@ function demoViewings(snapshot: Snapshot): Snapshot {
     ),
   };
 }
+
+const memberPhotos = (urls: string[]) =>
+  urls.map((url) => ({
+    url,
+    attribution: 'Added by a household member',
+    rightsBasis: 'Linked by a household member, not stored.',
+    expiresAt: new Date(Date.now() + 365 * 86400000).toISOString(),
+    observedAt: new Date().toISOString(),
+    displayAllowed: true as const,
+    hotlinkAllowed: true as const,
+  }));
 
 export function useDemoHousehold() {
   const [snapshot, setSnapshot] = useState<Snapshot>(() =>
@@ -131,15 +143,7 @@ export function useDemoHousehold() {
     )
       return;
     const listingId = crypto.randomUUID();
-    const photos = submission.imageUrls.map((photoUrl) => ({
-      url: photoUrl,
-      attribution: 'Added by a household member',
-      rightsBasis: 'Linked by a household member, not stored.',
-      expiresAt: new Date(Date.now() + 365 * 86400000).toISOString(),
-      observedAt: now,
-      displayAllowed: true as const,
-      hotlinkAllowed: true as const,
-    }));
+    const photos = memberPhotos(submission.imageUrls);
     // Like hs_add_manual, a non-blank initial note becomes the adder's shared note.
     const note = submission.note.trim();
     if (note) notes.save(DEMO_USER_ID, listingId, note, 0);
@@ -183,6 +187,35 @@ export function useDemoHousehold() {
         ],
       };
     });
+  }
+  async function updateManual(listingId: string, edit: ManualEdit) {
+    const photos = memberPhotos(edit.imageUrls);
+    setSnapshot((current) => ({
+      ...current,
+      listings: current.listings.map((listing) =>
+        listing.id === listingId && listing.origin === 'manual'
+          ? {
+              ...listing,
+              title: edit.title || new URL(listing.sourceUrls[0]).hostname,
+              facts: { ...listing.facts, ...edit.facts },
+              photo: photos[0] ?? null,
+              photos,
+            }
+          : listing,
+      ),
+    }));
+  }
+  async function deleteManual(listingId: string) {
+    setSnapshot((current) => ({
+      ...current,
+      listings: current.listings.filter(
+        (listing) => listing.id !== listingId || listing.origin !== 'manual',
+      ),
+      favorites: current.favorites.filter(
+        (favorite) => favorite.listingId !== listingId,
+      ),
+      hides: current.hides?.filter((hide) => hide.listingId !== listingId),
+    }));
   }
   async function saveProfile(profile: SearchProfile) {
     setSnapshot((current) => ({
@@ -268,6 +301,8 @@ export function useDemoHousehold() {
     removeFavorite,
     setHidden,
     addManual,
+    updateManual,
+    deleteManual,
     saveProfile,
     loadNotes,
     saveNote,

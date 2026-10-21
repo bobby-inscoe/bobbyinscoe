@@ -9,6 +9,7 @@ import {
   createHouseholdClient,
   createInvitation,
   deactivateMember,
+  deleteManual,
   householdAccess,
   householdSnapshot,
   invokeInvite,
@@ -25,8 +26,10 @@ import {
   setFavorite,
   setHidden,
   setRememberDevice,
+  updateManual,
 } from '@/features/house-scanner/api/household-client';
 import type {
+  ManualEdit,
   ManualSubmission,
   Member,
   SearchProfile,
@@ -612,6 +615,12 @@ export function useHouseholdSession() {
     onSetHidden: setPersonalHidden,
     onAddManual: (value: ManualSubmission) =>
       mutate((active, household) => addManual(active, household, value)),
+    onUpdateManual: (listingId: string, value: ManualEdit) =>
+      mutate((active, household) =>
+        updateManual(active, household, listingId, value),
+      ),
+    onDeleteManual: (listingId: string) =>
+      mutate((active, household) => deleteManual(active, household, listingId)),
     onSaveProfile: (value: SearchProfile) =>
       mutate((active, household) => saveProfile(active, household, value)),
     onLoadNotes: loadNotes,
