@@ -1,14 +1,8 @@
 import { Anchor, Stack, Text, Title } from '@mantine/core';
 import { Link, Outlet } from '@tanstack/react-router';
-import { BackToTop } from '@/app/back-to-top';
 
 export function AppShell() {
-  return (
-    <>
-      <Outlet />
-      <BackToTop />
-    </>
-  );
+  return <Outlet />;
 }
 
 export function NotFound() {
