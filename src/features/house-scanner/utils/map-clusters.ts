@@ -105,3 +105,14 @@ export function clusterExpansionZoom(group: MapGroup, zoom: number): number {
   }
   return MAX_CLUSTER_ZOOM;
 }
+
+// The lowest zoom at which this home is a marker of its own, not folded into a cluster of other places.
+export function isolationZoom(points: MapPoint[], id: string): number {
+  for (let zoom = 0; zoom < MAX_CLUSTER_ZOOM; zoom++) {
+    const group = clusterMapPoints(points, zoom).find((candidate) =>
+      candidate.points.some((point) => point.id === id),
+    );
+    if (group && !group.nearby) return zoom;
+  }
+  return MAX_CLUSTER_ZOOM;
+}

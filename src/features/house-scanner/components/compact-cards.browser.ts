@@ -34,13 +34,13 @@ test('title and thumbnail open internal details with explicit source access', as
     .getByRole('button', { name: 'Example balcony home', exact: true })
     .click();
   await expect(details).toBeVisible();
-  await details.getByRole('button', { name: 'Back to listings' }).click();
+  await details.getByRole('button', { name: 'Close listing details' }).click();
   await expect(details).not.toBeVisible();
   await page.getByRole('button', { name: 'Favorites', exact: true }).click();
   await card
     .getByRole('button', { name: 'Example balcony home', exact: true })
     .click();
-  await details.getByRole('button', { name: 'Back to favorites' }).click();
+  await details.getByRole('button', { name: 'Close listing details' }).click();
   await expect(details).not.toBeVisible();
   await expect(
     page.getByRole('button', { name: 'Favorites', exact: true }),

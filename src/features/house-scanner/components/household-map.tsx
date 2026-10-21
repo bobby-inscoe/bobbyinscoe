@@ -18,6 +18,7 @@ import type { MapPoint } from '@/features/house-scanner/utils/listing-view';
 import {
   clusterExpansionZoom,
   clusterMapPoints,
+  isolationZoom,
   type MapGroup,
 } from '@/features/house-scanner/utils/map-clusters';
 import { mapSelectionIds } from '@/features/house-scanner/utils/map-selection';
@@ -196,6 +197,8 @@ export function HouseholdMap({
   const pickerRef = useRef<HTMLDivElement>(null);
   const markers = useRef<MarkerEntry[]>([]);
   const selectedIdRef = useRef(selectedId);
+  // A home already selected when the map opens came from See on map, so frame it up close once.
+  const zoomToId = useRef(selectedId);
   selectedIdRef.current = selectedId;
   const satelliteRef = useRef(satellite);
   satelliteRef.current = satellite;
@@ -494,6 +497,18 @@ export function HouseholdMap({
       x <= clientWidth - MARKER_MARGIN &&
       y >= freeTop &&
       y <= clientHeight - inset - MARKER_MARGIN;
+    if (zoomToId.current === point.id) {
+      zoomToId.current = null;
+      instance.jumpTo({
+        center,
+        zoom: Math.min(
+          instance.getMaxZoom(),
+          Math.max(instance.getZoom(), isolationZoom(points, point.id)),
+        ),
+        padding: { top, bottom: inset },
+      });
+      return;
+    }
     // Keep the first view, which frames every marker, when the pin is already in sight.
     if (!inFreeArea)
       instance.jumpTo({ center, padding: { top, bottom: inset } });

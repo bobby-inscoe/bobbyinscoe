@@ -1,4 +1,4 @@
-import { Stack, Text, UnstyledButton } from '@mantine/core';
+import { Badge, Stack, Text, UnstyledButton } from '@mantine/core';
 import { House } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -11,12 +11,15 @@ export function ListingPhoto({
   actionLabel,
   disabled,
   pressed,
+  isNew,
 }: {
   listing: Listing;
   onOpen?: () => void;
   actionLabel?: string;
   disabled?: boolean;
   pressed?: boolean;
+  // Flags a fresh find in the photo's bottom-left corner, clear of the credit line below.
+  isNew?: boolean;
 }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const photo = listing.photo;
@@ -55,30 +58,37 @@ export function ListingPhoto({
   );
   return (
     <Stack gap="xs">
-      {onOpen ? (
-        <UnstyledButton
-          type="button"
-          className={classes.photoButton}
-          onClick={onOpen}
-          aria-label={actionLabel ?? `View ${listing.title}`}
-          aria-pressed={pressed}
-          disabled={disabled}
-        >
-          {content}
-        </UnstyledButton>
-      ) : permitted ? (
-        <a
-          className={classes.photoLink}
-          href={listing.sourceUrls[0]}
-          target="_blank"
-          rel="noopener noreferrer"
-          referrerPolicy="no-referrer"
-        >
-          {content}
-        </a>
-      ) : (
-        content
-      )}
+      <div className={classes.photoFrame}>
+        {onOpen ? (
+          <UnstyledButton
+            type="button"
+            className={classes.photoButton}
+            onClick={onOpen}
+            aria-label={actionLabel ?? `View ${listing.title}`}
+            aria-pressed={pressed}
+            disabled={disabled}
+          >
+            {content}
+          </UnstyledButton>
+        ) : permitted ? (
+          <a
+            className={classes.photoLink}
+            href={listing.sourceUrls[0]}
+            target="_blank"
+            rel="noopener noreferrer"
+            referrerPolicy="no-referrer"
+          >
+            {content}
+          </a>
+        ) : (
+          content
+        )}
+        {isNew && (
+          <Badge variant="new" className={classes.newFlag}>
+            New
+          </Badge>
+        )}
+      </div>
       {permitted && (
         <Text size="xs" c="dimmed" className={classes.photoAttribution}>
           {photo.attribution}

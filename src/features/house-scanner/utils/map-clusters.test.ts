@@ -3,6 +3,7 @@ import type { MapPoint } from '@/features/house-scanner/utils/listing-view';
 import {
   clusterExpansionZoom,
   clusterMapPoints,
+  isolationZoom,
   MAX_CLUSTER_ZOOM,
 } from '@/features/house-scanner/utils/map-clusters';
 import { mapSelectionIds } from '@/features/house-scanner/utils/map-selection';
@@ -148,4 +149,14 @@ describe('clusterMapPoints', () => {
       expect(performance.now() - started).toBeLessThan(1000);
     },
   );
+});
+
+describe('isolationZoom', () => {
+  it('zooms in until the home leaves its cluster', () => {
+    const points = [home('a'), home('b', 11.975), home('far', 12.1)];
+    const zoom = isolationZoom(points, 'a');
+    expect(zoom).toBeGreaterThan(11);
+    expect(clusterMapPoints(points, zoom - 1)[0].nearby).toBe(true);
+    expect(isolationZoom(points, 'far')).toBeLessThan(zoom);
+  });
 });
