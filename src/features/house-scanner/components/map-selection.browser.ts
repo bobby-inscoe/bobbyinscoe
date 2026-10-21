@@ -21,6 +21,20 @@ test.beforeEach(async ({ context, page }) => {
       },
     }),
   );
+  // Stack the two demo homes so the map shows one "2 homes at this point" pin.
+  await page.route(
+    '**/src/features/house-scanner/mock/synthetic-household.ts*',
+    async (route) => {
+      const response = await route.fetch();
+      await route.fulfill({
+        response,
+        body: `${await response.text()}
+          SYNTHETIC_SNAPSHOT.listings.find((home) => home.title === 'Example detached home').coordinates =
+            SYNTHETIC_SNAPSHOT.listings.find((home) => home.title === 'Example balcony home').coordinates;
+        `,
+      });
+    },
+  );
   await page.goto('/shellter/listings');
   await page
     .getByRole('button', { name: 'Explore the synthetic demo' })

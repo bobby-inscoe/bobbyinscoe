@@ -40,7 +40,7 @@ export function SettingsPanel({
       {snapshot.profiles.length ? (
         snapshot.profiles.map((profile) => (
           <ProfileEditor
-            key={`${profile.id}:${profile.revision}`}
+            key={profile.id}
             profile={profile}
             canEdit={member?.role === 'owner'}
             onSave={onSaveProfile}
