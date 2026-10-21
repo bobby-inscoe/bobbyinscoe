@@ -29,7 +29,7 @@ test('a large list mounts cards in batches while browsing controls work', async 
       });
     },
   );
-  await page.goto('/projects/house-scanner/listings');
+  await page.goto('/shellter/listings');
   await page
     .getByRole('button', { name: 'Explore the synthetic demo' })
     .click();

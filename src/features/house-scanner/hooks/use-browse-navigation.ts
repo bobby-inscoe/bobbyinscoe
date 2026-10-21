@@ -3,6 +3,7 @@ import { useCallback, useEffect } from 'react';
 import type { WorkspaceTab } from '@/features/house-scanner/types/household';
 import {
   type BrowseSearch,
+  toUrlSearch,
   validateBrowseSearch,
 } from '@/features/house-scanner/utils/browse-search';
 
@@ -19,13 +20,13 @@ declare module '@tanstack/react-router' {
   }
 }
 
-const PREFIX = '/projects/house-scanner';
+const PREFIX = '/shellter';
 const destinations = {
-  suggestions: '/projects/house-scanner/listings',
-  favorites: '/projects/house-scanner/favorites',
-  viewings: '/projects/house-scanner/viewings',
-  manual: '/projects/house-scanner/add-link',
-  settings: '/projects/house-scanner/settings',
+  suggestions: '/shellter/listings',
+  favorites: '/shellter/favorites',
+  viewings: '/shellter/viewings',
+  manual: '/shellter/add-link',
+  settings: '/shellter/settings',
 } as const;
 
 export function useBrowseNavigation() {
@@ -36,7 +37,7 @@ export function useBrowseNavigation() {
     select: (state) => validateBrowseSearch(state.location.search),
     structuralSharing: true,
   });
-  const detailMatch = /^\/projects\/house-scanner\/listings\/([^/]+)\/?$/.exec(
+  const detailMatch = /^\/shellter\/listings\/([^/]+)\/?$/.exec(
     location.pathname,
   );
   const listingId = detailMatch?.[1] ?? null;
@@ -56,7 +57,11 @@ export function useBrowseNavigation() {
 
   useEffect(() => {
     if (location.pathname === PREFIX || location.pathname === `${PREFIX}/`) {
-      void navigate({ to: destinations.suggestions, search, replace: true });
+      void navigate({
+        to: destinations.suggestions,
+        search: toUrlSearch(search),
+        replace: true,
+      });
     }
   }, [location.pathname, navigate, search]);
 
@@ -79,7 +84,7 @@ export function useBrowseNavigation() {
     }
     await navigate({
       to: previous.pathname,
-      search: nextSearch,
+      search: toUrlSearch(nextSearch),
       replace: distance >= 0,
       state: { houseScannerLayers: nextLayers },
       resetScroll: false,
@@ -90,11 +95,11 @@ export function useBrowseNavigation() {
     (patch: Partial<BrowseSearch>) => {
       void navigate({
         to: location.pathname,
-        search: {
+        search: toUrlSearch({
           ...search,
           ...patch,
           ...(patch.filters ? { filterOpen: false } : {}),
-        },
+        }),
         state: {
           houseScannerLayers: patch.filters
             ? { ...layers, filterOpen: undefined }
@@ -122,7 +127,7 @@ export function useBrowseNavigation() {
     else
       void navigate({
         to: location.pathname,
-        search: nextSearch,
+        search: toUrlSearch(nextSearch),
         state: { houseScannerLayers: nextLayers },
         replace: true,
         resetScroll: false,
@@ -133,7 +138,7 @@ export function useBrowseNavigation() {
     else
       void navigate({
         to: location.pathname,
-        search: { ...search, [layer]: true },
+        search: toUrlSearch({ ...search, [layer]: true }),
         state: { houseScannerLayers: { ...layers, [layer]: origin() } },
         resetScroll: false,
       });
@@ -152,7 +157,7 @@ export function useBrowseNavigation() {
           // Back closes selection before restoring an earlier committed search.
           void navigate({
             to: next.pathname,
-            search: { ...search, select: false },
+            search: toUrlSearch({ ...search, select: false }),
             state: { houseScannerLayers: { ...layers, select: undefined } },
             replace: true,
             resetScroll: false,
@@ -165,18 +170,18 @@ export function useBrowseNavigation() {
   const changeTab = (value: WorkspaceTab) => {
     void navigate({
       to: destinations[value],
-      search: { ...search, select: false, filterOpen: false },
+      search: toUrlSearch({ ...search, select: false, filterOpen: false }),
       resetScroll: false,
     });
   };
   const openListing = (id: string) => {
     void navigate({
-      to: '/projects/house-scanner/listings/$listingId',
+      to: '/shellter/listings/$listingId',
       params: { listingId: id },
-      search: {
+      search: toUrlSearch({
         ...search,
         from: tab === 'favorites' ? 'favorites' : 'listings',
-      },
+      }),
       state: { houseScannerDetailOrigin: origin(), houseScannerLayers: layers },
       resetScroll: false,
     });
@@ -187,7 +192,7 @@ export function useBrowseNavigation() {
     else
       void navigate({
         to: destinations[tab === 'favorites' ? 'favorites' : 'suggestions'],
-        search: { ...search, from: 'listings' },
+        search: toUrlSearch({ ...search, from: 'listings' }),
         replace: true,
         resetScroll: false,
       });
@@ -195,7 +200,7 @@ export function useBrowseNavigation() {
   const seeSelectedOnMap = () => {
     void navigate({
       to: destinations[tab === 'favorites' ? 'favorites' : 'suggestions'],
-      search: { ...search, view: 'map' },
+      search: toUrlSearch({ ...search, view: 'map' }),
       state: { houseScannerLayers: layers },
       resetScroll: false,
     });

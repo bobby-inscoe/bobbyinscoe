@@ -54,9 +54,7 @@ async function openMap(page: Page, count = 4) {
       });
     },
   );
-  await page.goto(
-    `/projects/house-scanner/listings${count === 4 ? '' : '?view=map'}`,
-  );
+  await page.goto(`/shellter/listings${count === 4 ? '' : '?view=map'}`);
   await page
     .getByRole('button', { name: 'Explore the synthetic demo' })
     .click();
@@ -133,7 +131,7 @@ test('keyboard expansion keeps exact stacks, saved state and marker focus', asyn
 });
 
 test('the synthetic demo exposes a nearby cluster', async ({ page }) => {
-  await page.goto('/projects/house-scanner/listings?view=map');
+  await page.goto('/shellter/listings?view=map');
   await page
     .getByRole('button', { name: 'Explore the synthetic demo' })
     .click();

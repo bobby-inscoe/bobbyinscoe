@@ -270,7 +270,7 @@ describe('How does this work?', () => {
       screen.getByRole('button', { name: 'How does this work?' }),
     );
     const dialog = await screen.findByRole('dialog', {
-      name: 'About House Scanner',
+      name: 'About Shellter',
     });
     expect(
       within(dialog).getByText(/apartments for sale in Göteborg/),

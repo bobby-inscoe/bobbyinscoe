@@ -368,7 +368,7 @@ async function accessRpc<T>(
 }
 
 export function invitationUrl(value: string) {
-  return `${window.location.origin}/projects/house-scanner/invite?token=${token.parse(value)}`;
+  return `${window.location.origin}/shellter/invite?token=${token.parse(value)}`;
 }
 export async function createInvitation(
   client: SupabaseClient,

@@ -4,12 +4,12 @@ import { useState } from 'react';
 import styles from '@/features/house-scanner/components/household-workspace.module.css';
 
 const ABOUT = [
-  'House Scanner follows apartments for sale in Göteborg.',
+  'Shellter follows apartments for sale in Göteborg.',
   'The settings below are your default filter for the Listings tab. Adjust budget, size, rooms, features and areas to fit what you are looking for.',
   'Filters on the Listings tab are yours alone and reset when you reload. Only owners can change these defaults.',
 ];
 
-/** A button that opens a short explanation of what House Scanner is and how the settings are used. */
+/** A button that opens a short explanation of what Shellter is and how the settings are used. */
 export function CriteriaHelp() {
   const [opened, setOpened] = useState(false);
   return (
@@ -25,7 +25,7 @@ export function CriteriaHelp() {
       <Modal
         opened={opened}
         onClose={() => setOpened(false)}
-        title="About House Scanner"
+        title="About Shellter"
         size="md"
         // Rendered in place so the feature's scoped CSS variables still apply.
         withinPortal={false}

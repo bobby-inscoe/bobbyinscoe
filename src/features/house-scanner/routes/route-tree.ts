@@ -5,6 +5,7 @@ import { createHouseScannerRoute } from '@/features/house-scanner/routes/house-s
 import { createInviteRoute } from '@/features/house-scanner/routes/invite-route';
 import { createListingDetailRoute } from '@/features/house-scanner/routes/listing-detail-route';
 import { createListingsRoute } from '@/features/house-scanner/routes/listings-route';
+import { createOldPathRoute } from '@/features/house-scanner/routes/old-path-route';
 import { createSettingsRoute } from '@/features/house-scanner/routes/settings-route';
 import { createViewingsRoute } from '@/features/house-scanner/routes/viewings-route';
 
@@ -12,13 +13,16 @@ export function createHouseScannerRouteTree<TParent extends AnyRoute>(
   parentRoute: TParent,
 ) {
   const route = createHouseScannerRoute(parentRoute);
-  return route.addChildren([
-    createListingsRoute(route),
-    createListingDetailRoute(route),
-    createFavoritesRoute(route),
-    createViewingsRoute(route),
-    createAddLinkRoute(route),
-    createSettingsRoute(route),
-    createInviteRoute(route),
-  ]);
+  return [
+    route.addChildren([
+      createListingsRoute(route),
+      createListingDetailRoute(route),
+      createFavoritesRoute(route),
+      createViewingsRoute(route),
+      createAddLinkRoute(route),
+      createSettingsRoute(route),
+      createInviteRoute(route),
+    ]),
+    createOldPathRoute(parentRoute),
+  ];
 }

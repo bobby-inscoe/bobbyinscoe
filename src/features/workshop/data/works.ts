@@ -50,7 +50,7 @@ export const WORKS = [
   },
   {
     id: 'house-scanner',
-    title: 'House Scanner',
+    title: 'Shellter',
     label: 'Private shortlist',
     description:
       'A shared home shortlist with source details, attributed favorites and a map.',

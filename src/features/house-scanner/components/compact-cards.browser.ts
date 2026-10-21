@@ -7,7 +7,7 @@ test.beforeEach(async ({ context, page }) => {
       await route.continue();
     else await route.abort('blockedbyclient');
   });
-  await page.goto('/projects/house-scanner');
+  await page.goto('/shellter');
   await page
     .getByRole('button', { name: 'Explore the synthetic demo' })
     .click();

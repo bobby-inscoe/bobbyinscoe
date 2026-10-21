@@ -6,7 +6,7 @@ test.beforeEach(async ({ context, page }) => {
     if (host === 'localhost' || host === '127.0.0.1') await route.continue();
     else await route.abort('blockedbyclient');
   });
-  await page.goto('/projects/house-scanner/listings');
+  await page.goto('/shellter/listings');
   await page
     .getByRole('button', { name: 'Explore the synthetic demo' })
     .click();

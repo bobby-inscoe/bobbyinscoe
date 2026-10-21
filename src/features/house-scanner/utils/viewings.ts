@@ -155,7 +155,7 @@ export function viewingCalendar(
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//House Scanner//Viewings//EN',
+    'PRODID:-//Shellter//Viewings//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'BEGIN:VEVENT',

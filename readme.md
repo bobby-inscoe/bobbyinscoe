@@ -37,12 +37,14 @@ GitHub Pages hosts the deployed production build; it is not used for local devel
 The experimental portfolio opens at `/`; Duck Feed remains playable at
 `/duck-feed`. The workshop code and content live in `src/features/workshop/`.
 
-## House Scanner browsing
+## Shellter browsing
 
-House Scanner opens at `/projects/house-scanner/listings`. Favorites, viewings,
-adding links, sources and settings have their own routes. Listing titles and
-photos open `/projects/house-scanner/listings/:listingId`; private details still
-require household access. Filters, sort order and list/map mode live in the URL.
+Shellter (code name House Scanner, in `src/features/house-scanner/`) opens at
+`/shellter/listings`. Favorites, viewings, adding links and settings have their
+own routes. Listing titles and photos open `/shellter/listings/:listingId`;
+private details still require household access. Filters, sort order and
+list/map mode live in the URL, which holds only settings that differ from the
+defaults. Old `/projects/house-scanner/...` links redirect to `/shellter/...`.
 Browser Back closes detail and filter views before returning to earlier results.
 
 Use **Select** to hide up to 500 matching homes at once. **Select unsaved** excludes

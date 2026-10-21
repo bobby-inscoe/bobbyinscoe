@@ -3,6 +3,10 @@
 These rules cover the hosted House Scanner project and the collector in `tools/house-scanner`. Each exists because
 skipping it broke the app once.
 
+Users see the app as Shellter at `/shellter`; code, tables and functions keep the house-scanner name. Hosted Auth
+redirect URLs still allow only `/projects/house-scanner/...`, so invite and password emails return there and the app
+redirects them. Add `/shellter/...` to those URLs before pointing Auth at the new path.
+
 - Check the visible home count before a live run or a change that adds homes. The snapshot function and the contract
   both cap the household at 1500 visible listings, and above the cap `hs_snapshot` raises for every member, so the app
   shows nothing. Count what the snapshot would show (catalog listings of sources whose policy is current and unexpired

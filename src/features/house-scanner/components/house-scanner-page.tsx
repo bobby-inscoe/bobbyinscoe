@@ -5,12 +5,10 @@ import { HouseScannerAccess } from '@/features/house-scanner/components/house-sc
 import { HouseholdWorkspace } from '@/features/house-scanner/components/household-workspace';
 import styles from '@/features/house-scanner/components/household-workspace.module.css';
 import { SyntheticWorkspace } from '@/features/house-scanner/components/synthetic-workspace';
-import { validateBrowseSearch } from '@/features/house-scanner/utils/browse-search';
 
 // On the invitation page: the token in the address, or '' when it is missing or malformed. Elsewhere: null.
 function readInviteToken() {
-  if (!/^\/projects\/house-scanner\/invite\/?$/.test(window.location.pathname))
-    return null;
+  if (!/^\/shellter\/invite\/?$/.test(window.location.pathname)) return null;
   const token = new URLSearchParams(window.location.search).get('token') ?? '';
   return /^[a-f0-9]{64}$/.test(token) ? token : '';
 }
@@ -48,7 +46,7 @@ export function HouseScannerPage() {
               fz={{ base: 'lg', sm: 'h2' }}
               className={styles.pageTitle}
             >
-              House Scanner
+              Shellter
             </Title>
           </Group>
         </Group>
@@ -61,8 +59,8 @@ export function HouseScannerPage() {
             onInviteDone={() => {
               setInviteToken(null);
               void navigate({
-                to: '/projects/house-scanner/listings',
-                search: validateBrowseSearch({}),
+                to: '/shellter/listings',
+                search: {},
                 replace: true,
               });
             }}

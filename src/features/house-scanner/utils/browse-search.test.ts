@@ -1,7 +1,23 @@
+import {
+  defaultParseSearch,
+  defaultStringifySearch,
+} from '@tanstack/react-router';
 import { describe, expect, it } from 'vitest';
 import neighborhoods from '@/features/house-scanner/assets/neighborhoods.json';
-import { validateBrowseSearch } from '@/features/house-scanner/utils/browse-search';
+import {
+  type BrowseSearch,
+  toUrlSearch,
+  validateBrowseSearch,
+} from '@/features/house-scanner/utils/browse-search';
 import { emptyFilters } from '@/features/house-scanner/utils/listing-filters';
+
+const defaults = validateBrowseSearch({});
+// What a browser gets back after the router writes and reads the URL.
+const roundTrip = (search: BrowseSearch) =>
+  validateBrowseSearch(
+    defaultParseSearch(defaultStringifySearch(toUrlSearch(search))),
+  );
+const code = (index: number) => neighborhoods[index].id.split('-')[1];
 
 describe('browse URL search', () => {
   it('defaults invalid or missing values without trusting URL input', () => {
@@ -25,8 +41,41 @@ describe('browse URL search', () => {
     });
   });
 
-  it('restores filters, map and favorites context through a shareable URL', () => {
+  it('leaves the URL empty for the default state', () => {
+    expect(defaultStringifySearch(toUrlSearch(defaults))).toBe('');
+  });
+
+  it('writes only changed settings, with short flat keys', () => {
+    const search: BrowseSearch = {
+      ...defaults,
+      view: 'map',
+      filters: {
+        ...emptyFilters,
+        maxPriceSek: 4000000,
+        minRooms: 3,
+        liftOnly: true,
+        glazedOnly: true,
+        neighborhoodIds: [neighborhoods[0].id, neighborhoods[1].id],
+      },
+    };
+    expect(defaultStringifySearch(toUrlSearch(search))).toBe(
+      `?view=map&maxPrice=4000000&rooms=3&districts=${code(0)}%2C${code(1)}&only=lift%2Cglazed`,
+    );
+  });
+
+  it('writes one district without quotes', () => {
     const search = {
+      ...defaults,
+      filters: { ...emptyFilters, neighborhoodIds: [neighborhoods[0].id] },
+    };
+    expect(defaultStringifySearch(toUrlSearch(search))).toBe(
+      `?districts=${code(0)}`,
+    );
+    expect(roundTrip(search)).toEqual(search);
+  });
+
+  it('restores filters, map and favorites context through a shareable URL', () => {
+    const search: BrowseSearch = {
       view: 'map',
       sort: 'price-asc',
       person: 'mine',
@@ -35,19 +84,32 @@ describe('browse URL search', () => {
       select: true,
       filterOpen: false,
       filters: {
-        ...emptyFilters,
+        titleQuery: '123',
+        minPriceSek: 1000000,
         maxPriceSek: 3500000,
+        minAreaM2: 40,
+        maxAreaM2: 90,
         minRooms: 3,
-        hidden: 'both',
-        showDuplicates: true,
+        hosts: ['example.invalid', 'Added by household'],
         freshness: 'latest-scan',
         neighborhoodIds: [neighborhoods[0].id, neighborhoods[1].id],
         includeUnassignedNeighborhoods: true,
+        outdoorOnly: true,
+        aboveGroundOnly: true,
+        liftOnly: true,
+        glazedOnly: true,
+        notOnMapOnly: true,
+        includeUnknown: false,
+        hidden: 'hidden-only',
+        showDuplicates: true,
+        viewingWithinDays: 7,
       },
     };
-    expect(validateBrowseSearch(JSON.parse(JSON.stringify(search)))).toEqual(
-      search,
-    );
+    expect(roundTrip(search)).toEqual(search);
+    expect(
+      roundTrip({ ...search, filters: { ...search.filters, hidden: 'both' } })
+        .filters.hidden,
+    ).toBe('both');
   });
 
   it('restores next viewing sort and drops the removed latest check sort', () => {
@@ -59,74 +121,64 @@ describe('browse URL search', () => {
 
   it('accepts all official neighborhoods and removes duplicate selections', () => {
     const ids = neighborhoods.map(({ id }) => id);
+    const codes = ids.map((id) => id.split('-')[1]);
     expect(
-      validateBrowseSearch({ filters: { neighborhoodIds: ids } }).filters
+      validateBrowseSearch({ districts: codes.join(',') }).filters
         .neighborhoodIds,
     ).toEqual(ids);
     expect(
-      validateBrowseSearch({ filters: { neighborhoodIds: [ids[0], ids[0]] } })
-        .filters.neighborhoodIds,
+      validateBrowseSearch({ districts: `${codes[0]},${codes[0]}` }).filters
+        .neighborhoodIds,
     ).toEqual([ids[0]]);
   });
 
   it.each(
     [
       'goteborg-101',
-      [null],
-      ['goteborg-999'],
-      ['outside-101'],
-      Array.from({ length: 97 }, () => neighborhoods[0].id),
-    ].map((neighborhoodIds) => ({ neighborhoodIds })),
-  )(
-    'defaults invalid neighborhood selections: $neighborhoodIds',
-    ({ neighborhoodIds }) => {
-      const filters = validateBrowseSearch({
-        filters: {
-          neighborhoodIds,
-          minRooms: 3,
-          includeUnknown: false,
-          includeUnassignedNeighborhoods: 'true',
-        },
-      }).filters;
-      expect(filters).toEqual({
-        ...emptyFilters,
-        minRooms: 3,
-        includeUnknown: false,
-      });
-    },
-  );
+      [code(0)],
+      '999',
+      `${code(0)},999`,
+      Array.from({ length: 97 }, () => code(0)).join(','),
+    ].map((districts) => ({ districts })),
+  )('defaults invalid neighborhood selections: $districts', ({ districts }) => {
+    const filters = validateBrowseSearch({
+      districts,
+      rooms: 3,
+      unknown: false,
+      unassigned: 'true',
+    }).filters;
+    expect(filters).toEqual({
+      ...emptyFilters,
+      minRooms: 3,
+      includeUnknown: false,
+    });
+  });
 
   it('rejects invalid filter fields individually and drops unrelated data', () => {
     expect(
       validateBrowseSearch({
-        filters: {
-          ...emptyFilters,
-          minPriceSek: -1,
-          maxAreaM2: '80',
-          liftOnly: 'true',
-          includeUnknown: 'false',
-          note: 'private',
-        },
-        private: 'discard',
+        minPrice: -1,
+        maxArea: '80',
+        only: ['lift'],
+        unknown: 'false',
+        note: 'private',
       }).filters,
     ).toEqual(emptyFilters);
   });
 
   it('keeps a short title search and drops an oversized one', () => {
     expect(
-      validateBrowseSearch({ filters: { titleQuery: '  Linnégatan 12 ' } })
-        .filters.titleQuery,
+      validateBrowseSearch({ q: '  Linnégatan 12 ' }).filters.titleQuery,
     ).toBe('  Linnégatan 12 ');
     expect(
-      validateBrowseSearch({ filters: { titleQuery: 'a'.repeat(129) } }).filters
-        .titleQuery,
+      validateBrowseSearch({ q: 'a'.repeat(129) }).filters.titleQuery,
     ).toBe('');
   });
 
   it.each(['all', 'latest-scan', '1-day', '3-days', '7-days'])(
     'restores freshness %s from the URL',
     (freshness) => {
-      expect(validateBrowseSearch({ filters: { freshness } }).filters).toEqual({
+      expect(validateBrowseSearch({ added: freshness }).filters).toEqual({
         ...emptyFilters,
         freshness,
       });
@@ -135,10 +187,8 @@ describe('browse URL search', () => {
 
   it.each([undefined, null, 'today', 1, ['latest-scan']])(
     'defaults missing or invalid freshness %s without resetting other filters',
-    (freshness) => {
-      expect(
-        validateBrowseSearch({ filters: { freshness, minRooms: 3 } }).filters,
-      ).toEqual({
+    (added) => {
+      expect(validateBrowseSearch({ added, rooms: 3 }).filters).toEqual({
         ...emptyFilters,
         minRooms: 3,
       });

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-const prefix = '/projects/house-scanner';
+const prefix = '/shellter';
 const balconyId = '00000000-0000-4000-8000-000000000010';
 
 test.beforeEach(async ({ context }) => {
@@ -28,7 +28,7 @@ test('routed favorites survive details, Back, Forward and section changes', asyn
     page.getByRole('dialog', { name: 'Example balcony home' }),
   ).toBeVisible();
   await page.goBack();
-  await expect(page).toHaveURL(/house-scanner\/favorites/);
+  await expect(page).toHaveURL(/shellter\/favorites/);
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('article')).toHaveCount(2);
   await page.goForward();
@@ -38,7 +38,7 @@ test('routed favorites survive details, Back, Forward and section changes', asyn
   await page.goBack();
   await page.getByRole('button', { name: 'More', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Add link', exact: true }).click();
-  await expect(page).toHaveURL(/house-scanner\/add-link/);
+  await expect(page).toHaveURL(/shellter\/add-link/);
   await page.goBack();
   await expect(page.getByRole('article')).toHaveCount(2);
   await expect(page.getByRole('button', { name: 'Leave demo' })).toBeVisible();
@@ -47,10 +47,7 @@ test('routed favorites survive details, Back, Forward and section changes', asyn
 test('direct detail links require access and resolve independently of filters', async ({
   page,
 }) => {
-  const filters = encodeURIComponent(
-    JSON.stringify({ minPriceSek: 999999999 }),
-  );
-  await page.goto(`${prefix}/listings/${balconyId}?filters=${filters}`);
+  await page.goto(`${prefix}/listings/${balconyId}?minPrice=999999999`);
   await expect(page.getByRole('article')).toHaveCount(0);
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page
@@ -71,7 +68,7 @@ test('direct detail links require access and resolve independently of filters', 
     .getByRole('dialog')
     .getByRole('button', { name: 'Back to listings', exact: true })
     .click();
-  await expect(page).toHaveURL(/house-scanner\/listings(?:\?|$)/);
+  await expect(page).toHaveURL(/shellter\/listings(?:\?|$)/);
 });
 
 test('a missing direct detail has a safe Listings fallback', async ({
@@ -88,7 +85,7 @@ test('a missing direct detail has a safe Listings fallback', async ({
   await page
     .getByRole('button', { name: 'Back to Listings', exact: true })
     .click();
-  await expect(page).toHaveURL(/house-scanner\/listings(?:\?|$)/);
+  await expect(page).toHaveURL(/shellter\/listings(?:\?|$)/);
   await expect(page.getByRole('article')).toHaveCount(5);
 });
 
@@ -107,7 +104,7 @@ test('browser Back dismisses selection before leaving results', async ({
     }),
   ).toBeVisible();
   await page.goBack();
-  await expect(page).toHaveURL(/house-scanner\/listings(?:\?|$)/);
+  await expect(page).toHaveURL(/shellter\/listings(?:\?|$)/);
   await expect(
     page.getByRole('checkbox', {
       name: 'Select Example balcony home',
@@ -180,7 +177,7 @@ for (const id of [balconyId, '00000000-0000-4000-8000-999999999999']) {
       .getByRole('button', { name: 'Explore the synthetic demo' })
       .click();
     await page.getByRole('button', { name: /^Back to favorites$/i }).click();
-    await expect(page).toHaveURL(/house-scanner\/favorites(?:\?|$)/);
+    await expect(page).toHaveURL(/shellter\/favorites(?:\?|$)/);
     await expect(page.getByRole('article')).toHaveCount(2);
   });
 }
