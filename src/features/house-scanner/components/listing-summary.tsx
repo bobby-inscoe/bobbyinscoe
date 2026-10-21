@@ -154,7 +154,8 @@ export function OriginalListingButton({ listing }: { listing: Listing }) {
       rel="noopener noreferrer"
       referrerPolicy="no-referrer"
       // The global `a { color: inherit }` rule would otherwise override the button's label color.
-      style={{ color: 'var(--button-color)', textDecoration: 'none' }}
+      c="var(--button-color)"
+      td="none"
     >
       Open original listing
     </Button>

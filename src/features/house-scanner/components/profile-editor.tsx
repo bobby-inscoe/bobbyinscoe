@@ -224,7 +224,6 @@ export function ProfileEditor({
             }))
           }
           data={places(criteria.geography.municipalities)}
-          comboboxProps={{ withinPortal: false }}
           disabled={!canEdit || !onSave}
         />
         <MultiSelect
@@ -252,7 +251,6 @@ export function ProfileEditor({
                 disabled: true,
               })),
           ]}
-          comboboxProps={{ withinPortal: false }}
           disabled={!canEdit || !onSave}
         />
         <SimpleGrid cols={{ base: 1, sm: 2 }}>
@@ -292,7 +290,6 @@ export function ProfileEditor({
                   ]),
             ]}
             allowDeselect={false}
-            comboboxProps={{ withinPortal: false }}
             disabled={!canEdit || !onSave}
           />
           <NumberSelect

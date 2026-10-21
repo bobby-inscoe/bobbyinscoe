@@ -2,7 +2,6 @@ import { Button, Drawer, Group, Stack, Text } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { FavoriteStar } from '@/features/house-scanner/components/favorite-star';
 import { HideButton } from '@/features/house-scanner/components/hide-button';
-import styles from '@/features/house-scanner/components/household-workspace.module.css';
 import { ListingDetails } from '@/features/house-scanner/components/listing-details';
 import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
 import {
@@ -15,6 +14,7 @@ import {
 } from '@/features/house-scanner/components/listing-summary';
 import { EstimateLine } from '@/features/house-scanner/components/price-estimate';
 import type { ListingNotesController } from '@/features/house-scanner/hooks/use-listing-notes';
+import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type {
   Listing,
   Snapshot,
@@ -64,22 +64,18 @@ export function ListingDrawer({
       closeButtonProps={{ 'aria-label': 'Close listing details' }}
       position={wide ? 'right' : 'bottom'}
       size={wide ? 'lg' : '85%'}
-      // Rendered in place so the feature's scoped CSS variables still apply.
-      withinPortal={false}
       classNames={{
-        root: styles.drawerRoot,
-        inner: styles.drawerInner,
-        title: styles.drawerTitle,
+        title: classes.drawerTitle,
       }}
     >
       {listing && (
-        <Stack gap="sm" className={styles.drawerBody}>
+        <Stack gap="sm" className={classes.drawerBody}>
           <Group>
             <Button variant="subtle" mih={44} onClick={onClose}>
               {backLabel}
             </Button>
           </Group>
-          <div className={styles.photoWrap}>
+          <div className={classes.photoWrap}>
             <ListingPhoto listing={listing} />
             <HideButton
               listingId={listing.id}

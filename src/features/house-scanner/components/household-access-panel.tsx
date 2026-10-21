@@ -112,7 +112,7 @@ export function HouseholdAccessPanel({
     >
       <Group align="flex-end" wrap="nowrap" maw="30rem">
         <TextInput
-          style={{ flex: 1 }}
+          flex={1}
           label={label}
           description={description}
           type="email"
@@ -377,7 +377,6 @@ export function HouseholdAccessPanel({
                 }))}
                 value={nextOwner}
                 onChange={setNextOwner}
-                comboboxProps={{ withinPortal: false }}
               />
             </>
           ) : others.length === 0 ? (

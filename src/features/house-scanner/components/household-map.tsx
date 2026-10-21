@@ -12,8 +12,8 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
-import styles from '@/features/house-scanner/components/household-map.module.css';
 import { MapPinGuide } from '@/features/house-scanner/components/map-pin-guide';
+import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type { MapPoint } from '@/features/house-scanner/utils/listing-view';
 import {
   clusterExpansionZoom,
@@ -255,7 +255,7 @@ export function HouseholdMap({
       // MapLibre also reports a click on a marker, and none after a drag.
       instance.on('click', ({ originalEvent }) => {
         const { target } = originalEvent;
-        if (target instanceof Element && target.closest(`.${styles.marker}`))
+        if (target instanceof Element && target.closest(`.${classes.marker}`))
           return;
         onDeselectRef.current();
       });
@@ -311,7 +311,7 @@ export function HouseholdMap({
           let entry = existing.get(group.key);
           if (!entry) {
             const markerElement = document.createElement('div');
-            markerElement.className = styles.markerRoot;
+            markerElement.className = classes.markerRoot;
             const button = document.createElement('button');
             button.type = 'button';
             markerElement.append(button);
@@ -359,12 +359,12 @@ export function HouseholdMap({
           const savedCount = group.points.filter(
             (point) => point.savedByHousehold,
           ).length;
-          button.classList.add(styles.marker);
-          button.classList.toggle(styles.cluster, group.nearby);
-          button.classList.toggle(styles.dimmed, dimmed);
-          button.classList.toggle(styles.savedByMe, savedByMe);
+          button.classList.add(classes.marker);
+          button.classList.toggle(classes.cluster, group.nearby);
+          button.classList.toggle(classes.dimmed, dimmed);
+          button.classList.toggle(classes.savedByMe, savedByMe);
           button.classList.toggle(
-            styles.savedByHousehold,
+            classes.savedByHousehold,
             !savedByMe && savedByHousehold,
           );
           button.textContent =
@@ -596,7 +596,6 @@ export function HouseholdMap({
           position="bottom-start"
           width="min(340px, calc(100vw - 48px))"
           trapFocus
-          withinPortal={false}
         >
           <Popover.Target>
             <Button
@@ -613,7 +612,7 @@ export function HouseholdMap({
             ref={pickerRef}
             role="dialog"
             aria-label="Not located homes"
-            className={styles.unlocatedPicker}
+            className={classes.unlocatedPicker}
           >
             <Stack gap="xs">
               <Text size="sm">These homes have no known position.</Text>
@@ -640,7 +639,7 @@ export function HouseholdMap({
                       point.dimmed === true ||
                       (checkedIds.size >= 500 && !checkedIds.has(point.id)))
                   }
-                  className={styles.unlocatedChoice}
+                  className={classes.unlocatedChoice}
                   onClick={() => {
                     setStack([]);
                     onSelect(point.id);
@@ -657,7 +656,7 @@ export function HouseholdMap({
         </Popover>
       )}
       {located.length === 0 && unlocated.length > 0 && (
-        <Text size="xs" className={styles.noPositions}>
+        <Text size="xs" className={classes.noPositions}>
           These homes have no known position. Choose Not located to view their
           details.
         </Text>
@@ -671,23 +670,22 @@ export function HouseholdMap({
   const count = availableStack.length;
   const at = Math.max(0, availableStack.indexOf(selectedId ?? ''));
   return (
-    <Stack gap="sm" className={fillMobile ? styles.fillMobile : undefined}>
+    <Stack gap="sm" className={fillMobile ? classes.fillMobile : undefined}>
       {error && <Text role="alert">{error}</Text>}
       {!error && !loaded && <Text role="status">Loading map…</Text>}
-      <div ref={stageRef} className={styles.stage}>
+      <div ref={stageRef} className={classes.stage}>
         <section
           ref={container}
-          className={styles.map}
+          className={classes.map}
           aria-label="Listing map"
         />
         {(controls || onCaptureView || unlocated.length > 0) && (
-          <div ref={controlsRef} className={styles.controls}>
+          <div ref={controlsRef} className={classes.controls}>
             {mobile ? (
               <Popover
                 opened={mobileOptionsOpen}
                 onChange={setMobileOptionsOpen}
                 position="bottom-end"
-                withinPortal={false}
               >
                 <Popover.Target>
                   <ActionIcon
@@ -715,7 +713,7 @@ export function HouseholdMap({
       {availableStack.length > 1 && (
         <Group
           aria-label="Homes at selected point"
-          className={styles.stackNavigation}
+          className={classes.stackNavigation}
         >
           {availableStack.length > MAX_STACK_BUTTONS ? (
             <>

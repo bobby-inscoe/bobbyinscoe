@@ -1,7 +1,8 @@
 import { MantineProvider } from '@mantine/core';
 import { RouterProvider } from '@tanstack/react-router';
+import { cssVariablesResolver } from '@/app/colors';
 import { router } from '@/app/router';
-import { cssVariablesResolver, theme } from '@/app/theme';
+import { theme } from '@/app/theme';
 
 export function App() {
   return (

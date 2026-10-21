@@ -1,9 +1,8 @@
 import { Anchor, Box, Group, Select, Stack, Text, Title } from '@mantine/core';
 import { useMemo, useState } from 'react';
-
-import styles from '@/features/house-scanner/components/household-workspace.module.css';
 import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
 import { CalendarButton } from '@/features/house-scanner/components/viewing-list';
+import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type { Snapshot } from '@/features/house-scanner/types/contracts';
 import { formatDate } from '@/features/house-scanner/utils/format';
 import {
@@ -70,7 +69,6 @@ export function ViewingsPanel({
             label: member.displayName,
           })),
         ]}
-        comboboxProps={{ withinPortal: false }}
       />
       {days.length === 0 ? (
         <Text>
@@ -83,16 +81,16 @@ export function ViewingsPanel({
             <Title order={3} size="h4">
               {day.label}
             </Title>
-            <Box className={styles.viewingList}>
+            <Box className={classes.viewingList}>
               {day.entries.map(({ listing, viewing }) => (
                 <Box
                   key={`${listing.id}-${viewing.startsAt}`}
-                  className={styles.card}
+                  className={classes.card}
                 >
                   <Box>
                     <ListingPhoto listing={listing} />
                   </Box>
-                  <Stack gap={4} className={styles.grow}>
+                  <Stack gap={4} className={classes.grow}>
                     <Text size="lg" fw={700}>
                       {formatViewing(viewing)}
                     </Text>

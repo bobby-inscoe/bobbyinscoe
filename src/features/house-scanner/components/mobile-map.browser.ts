@@ -66,7 +66,7 @@ test('mobile map fills the viewport and List restores the full listing view', as
     shell.getByRole('button', { name: 'Select', exact: true }),
   ).toBeVisible();
   await shell.getByRole('button', { name: 'Map options' }).click();
-  await expect(shell.getByRole('group', { name: 'Basemap' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Basemap' })).toBeVisible();
   await shell.getByRole('button', { name: 'Map options' }).click();
   await expect(page.getByLabel('Listing map')).toBeVisible();
 
@@ -122,7 +122,7 @@ test('mobile map fills the viewport and List restores the full listing view', as
   await page.getByRole('button', { name: 'Show 3 homes', exact: true }).click();
   await expect(shell.getByText('3 homes', { exact: true })).toBeVisible();
   await shell.getByRole('button', { name: 'Map options' }).click();
-  await shell
+  await page
     .getByRole('button', { name: 'Not located (3)', exact: true })
     .click();
   const unlocated = page.getByRole('dialog', { name: 'Not located (3)' });

@@ -141,7 +141,7 @@ export function HouseScannerAccess({
       ) : state.status === 'loading' ? (
         <Center mih={280}>
           <Stack align="center" gap="sm" role="status">
-            <Loader color="moss" />
+            <Loader />
             <Text c="dimmed">Loading your household…</Text>
           </Stack>
         </Center>

@@ -1,3 +1,12 @@
+@media (prefers-reduced-motion: reduce) {
+  :root .workshop *,
+  :root .workshop *::before,
+  :root .workshop *::after,
+  :root .project-folio * {
+    animation: none;
+    transition: none;
+  }
+}
 .workshop {
   --ink: #383a2e;
   --muted: #67695a;
@@ -90,7 +99,7 @@
   pointer-events: none;
 }
 
-h1 {
+:where(.workshop) h1 {
   font:
     400 clamp(58px, 6.5vw, 100px) / 1.03 Libron,
     Georgia,
@@ -98,7 +107,7 @@ h1 {
     serif;
   letter-spacing: -0.055em;
 }
-h1 em {
+:where(.workshop) h1 em {
   color: #737657;
   font-weight: normal;
 }
@@ -813,7 +822,7 @@ h1 em {
     gap: 24px;
   }
 
-  h1 {
+  :where(.workshop) h1 {
     font-size: clamp(51px, 10vw, 70px);
   }
   .entrance .eyebrow {
@@ -938,7 +947,7 @@ h1 em {
   .overview-position-notes {
     top: 220px;
   }
-  h1 {
+  :where(.workshop) h1 {
     font-size: 47px;
   }
 }

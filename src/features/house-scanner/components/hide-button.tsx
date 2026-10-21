@@ -1,6 +1,6 @@
 import { ActionIcon } from '@mantine/core';
 
-import styles from '@/features/house-scanner/components/household-workspace.module.css';
+import { classes } from '@/features/house-scanner/theme/shellter-theme';
 
 // Lucide's "eye-off": an eye with a slash through it.
 function EyeOffIcon() {
@@ -36,9 +36,8 @@ interface HideButtonProps {
 export function HideButton({ listingId, hidden, onToggle }: HideButtonProps) {
   return (
     <ActionIcon
-      className={styles.hide}
+      className={classes.hide}
       variant={hidden ? 'filled' : 'default'}
-      color="moss"
       size="lg"
       radius="xl"
       aria-label={hidden ? 'Unhide this home' : 'Hide this home'}

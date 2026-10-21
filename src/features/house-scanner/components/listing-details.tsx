@@ -8,12 +8,11 @@ import {
   Title,
 } from '@mantine/core';
 import type { ReactNode } from 'react';
-
-import styles from '@/features/house-scanner/components/household-workspace.module.css';
 import { ListingNotes } from '@/features/house-scanner/components/listing-notes';
 import { ManualListingActions } from '@/features/house-scanner/components/manual-listing-actions';
 import { ViewingRows } from '@/features/house-scanner/components/viewing-list';
 import type { ListingNotesController } from '@/features/house-scanner/hooks/use-listing-notes';
+import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type {
   Listing,
   Snapshot,
@@ -59,9 +58,9 @@ const capitalized = (text: string) =>
 // A label and its value on one line each. An unknown value is dimmed, so what is missing stands out.
 function FactList({ rows }: { rows: [string, ReactNode | null][] }) {
   return (
-    <dl className={styles.factList}>
+    <dl className={classes.factList}>
       {rows.map(([label, value]) => (
-        <div key={label} className={styles.factRow}>
+        <div key={label} className={classes.factRow}>
           <dt>{label}</dt>
           <dd>
             {value ?? (

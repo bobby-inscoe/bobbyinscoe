@@ -1,6 +1,6 @@
 import { ActionIcon } from '@mantine/core';
 
-import styles from '@/features/house-scanner/components/household-workspace.module.css';
+import { classes } from '@/features/house-scanner/theme/shellter-theme';
 
 interface FavoriteStarProps {
   // Whether the signed-in member has saved the home.
@@ -19,9 +19,8 @@ export function FavoriteStar({
 }: FavoriteStarProps) {
   return (
     <ActionIcon
-      className={styles.star}
+      className={classes.star}
       variant={mine ? 'filled' : 'default'}
-      color="moss"
       size="lg"
       radius="xl"
       aria-label={mine ? 'Remove my favorite' : 'Save favorite'}
