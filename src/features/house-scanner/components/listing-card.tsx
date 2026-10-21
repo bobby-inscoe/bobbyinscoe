@@ -22,7 +22,10 @@ import {
   PriceLine,
   ReasonChips,
 } from '@/features/house-scanner/components/listing-summary';
-import { EstimateLine } from '@/features/house-scanner/components/price-estimate';
+import {
+  EstimateLine,
+  useHasEstimate,
+} from '@/features/house-scanner/components/price-estimate';
 import { NextViewing } from '@/features/house-scanner/components/viewing-list';
 import type { ListingNotesController } from '@/features/house-scanner/hooks/use-listing-notes';
 import type {
@@ -176,6 +179,7 @@ export const ListingCard = memo(function ListingCard({
     ),
     [listing.id, listing.title, checked, selectionDisabled, onToggleSelection],
   );
+  const estimated = useHasEstimate(listing);
   const selectionLabel = `${checked ? 'Deselect' : 'Select'} ${listing.title}`;
   const openPrimary = () => {
     if (selectionMode) {
@@ -243,10 +247,11 @@ export const ListingCard = memo(function ListingCard({
         />
       </div>
       <div className={styles.cardPrice}>
-        <PriceLine listing={listing} />
-      </div>
-      <div className={styles.cardEstimate}>
-        <EstimateLine listing={listing} />
+        {estimated ? (
+          <EstimateLine listing={listing} />
+        ) : (
+          <PriceLine listing={listing} />
+        )}
       </div>
       <Title order={3} size="h5" className={styles.cardTitle}>
         <button

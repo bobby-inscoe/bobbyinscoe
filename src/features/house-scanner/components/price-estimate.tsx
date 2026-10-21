@@ -22,6 +22,11 @@ export function PriceEstimateProvider({
   return <Estimates.Provider value={estimates}>{children}</Estimates.Provider>;
 }
 
+/** True when the home has no asking price and the range stands in for it. */
+export function useHasEstimate(listing: Listing) {
+  return useContext(Estimates).has(listing.id);
+}
+
 /** "Estimate 3,9M–5,3M": a guide for a home with no asking price, and how it was worked out. */
 export function EstimateLine({ listing }: { listing: Listing }) {
   const estimate = useContext(Estimates).get(listing.id);
