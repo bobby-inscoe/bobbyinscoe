@@ -12,6 +12,7 @@ import {
   TextInput,
   Title,
   Tooltip,
+  VisuallyHidden,
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import {
@@ -446,9 +447,10 @@ export function ListingsPanel({
       tabIndex={mobileMap ? -1 : undefined}
       aria-label={mobileMap ? 'Map browsing' : 'Listing results'}
     >
-      <Title order={2} className={styles.visuallyHidden}>
+      {/* Stays in the accessibility tree while the active tab already names the view. */}
+      <VisuallyHidden renderRoot={(props) => <Title order={2} {...props} />}>
         {tab === 'favorites' ? 'Favorites' : 'Listings'}
-      </Title>
+      </VisuallyHidden>
       {mobileMap && (
         <header className={styles.mobileMapHeader}>
           <Group gap="xs" wrap="wrap">
@@ -683,12 +685,12 @@ export function ListingsPanel({
           />
           <Group
             justify="space-between"
+            pos="sticky"
+            bottom={0}
+            p={16}
+            bg="var(--scanner-surface)"
             style={{
-              position: 'sticky',
-              bottom: 0,
-              padding: 16,
               borderTop: '1px solid var(--mantine-color-default-border)',
-              background: 'var(--scanner-surface)',
             }}
           >
             <Button

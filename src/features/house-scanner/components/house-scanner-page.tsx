@@ -11,7 +11,6 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { HouseScannerAccess } from '@/features/house-scanner/components/house-scanner-access';
 import { HouseholdWorkspace } from '@/features/house-scanner/components/household-workspace';
-import styles from '@/features/house-scanner/components/household-workspace.module.css';
 import { SyntheticWorkspace } from '@/features/house-scanner/components/synthetic-workspace';
 import {
   shellterScope,
@@ -53,12 +52,7 @@ export function HouseScannerPage() {
                   {demo ? 'Leave demo' : 'Demo'}
                 </Button>
               )}
-              <Title
-                order={1}
-                size="h2"
-                fz={{ base: 'lg', sm: 'h2' }}
-                className={styles.pageTitle}
-              >
+              <Title order={1} size="h2" fz={{ base: 'lg', sm: 'h2' }}>
                 Shellter
               </Title>
             </Group>

@@ -1,4 +1,4 @@
-import { Stack, Text } from '@mantine/core';
+import { Stack, Text, UnstyledButton } from '@mantine/core';
 import { useEffect, useState } from 'react';
 
 import styles from '@/features/house-scanner/components/household-workspace.module.css';
@@ -52,7 +52,7 @@ export function ListingPhoto({
   return (
     <Stack gap="xs">
       {onOpen ? (
-        <button
+        <UnstyledButton
           type="button"
           className={styles.photoButton}
           onClick={onOpen}
@@ -61,7 +61,7 @@ export function ListingPhoto({
           disabled={disabled}
         >
           {content}
-        </button>
+        </UnstyledButton>
       ) : permitted ? (
         <a
           className={styles.photoLink}

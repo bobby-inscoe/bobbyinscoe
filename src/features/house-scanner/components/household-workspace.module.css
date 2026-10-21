@@ -132,11 +132,6 @@
   margin: 0;
   overflow-wrap: anywhere;
 }
-.facts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: var(--mantine-spacing-sm);
-}
 .mapPanel {
   min-width: 0;
   display: flex;
@@ -286,34 +281,6 @@
     white-space: normal;
   }
 }
-/* One row that never wraps; on a narrow screen it scrolls sideways. */
-.tabs {
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.tabs::-webkit-scrollbar {
-  display: none;
-}
-.tabs > * {
-  flex-shrink: 0;
-}
-/* Stays in the accessibility tree while the active tab already names the view. */
-.visuallyHidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-/* The workshop stylesheet sets an unlayered, page-wide h1 size that beats Mantine's layered size prop. */
-.pageTitle {
-  font-size: var(--title-fz);
-  line-height: var(--title-lh);
-  letter-spacing: normal;
-}
 /* A full-width photo in a wide sheet would fill most of its height. */
 .drawerBody .photo {
   max-height: 320px;
@@ -335,27 +302,9 @@
 .matchHelp:hover {
   background: transparent;
 }
-.toolbarFilters {
-  grid-area: filters;
-  min-width: 0;
-}
-.toolbarFilters[data-open="true"] {
-  padding-top: var(--mantine-spacing-sm);
-}
 .toolbarView {
   grid-area: view;
   padding-top: var(--mantine-spacing-sm);
-}
-.photoButton,
-.titleButton {
-  appearance: none;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: start;
-  cursor: pointer;
 }
 .photoButton {
   display: block;
@@ -369,9 +318,6 @@
 .titleButton {
   min-height: 44px;
   overflow-wrap: anywhere;
-}
-.mobileSummary {
-  display: none;
 }
 .selectionRow :global(.mantine-Checkbox-body) {
   min-height: 44px;
@@ -400,12 +346,8 @@
   .list > .compactCard {
     max-width: none;
   }
-  .compactCard .desktopSummary,
   .compactCard .grow {
     display: none;
-  }
-  .compactCard .mobileSummary {
-    display: block;
   }
   /* The photo leads the card at full width, like a viewing. */
   .compactCard .cardPhoto {

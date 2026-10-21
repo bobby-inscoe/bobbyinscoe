@@ -1,4 +1,12 @@
-import { Button, Checkbox, Drawer, Group, Stack, Text } from '@mantine/core';
+import {
+  Box,
+  Button,
+  Checkbox,
+  Drawer,
+  Group,
+  Stack,
+  Text,
+} from '@mantine/core';
 import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
 import {
   KeyFacts,
@@ -41,7 +49,7 @@ export function MapStackSelection({
           const unavailable = disabled || (checkedIds.size >= 500 && !checked);
           return (
             <Group key={listing.id} wrap="nowrap" align="flex-start">
-              <div style={{ width: 88, flexShrink: 0 }}>
+              <Box w={88} flex="none">
                 <ListingPhoto
                   listing={listing}
                   onOpen={() => onToggle(listing.id)}
@@ -49,8 +57,8 @@ export function MapStackSelection({
                   pressed={checked}
                   disabled={unavailable}
                 />
-              </div>
-              <Stack gap={4} style={{ minWidth: 0 }}>
+              </Box>
+              <Stack gap={4} miw={0}>
                 <Checkbox
                   checked={checked}
                   disabled={unavailable}

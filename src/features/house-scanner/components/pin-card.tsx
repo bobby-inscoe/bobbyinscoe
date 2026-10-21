@@ -1,4 +1,12 @@
-import { Badge, Button, CloseButton, Group, Text, Title } from '@mantine/core';
+import {
+  Badge,
+  Button,
+  CloseButton,
+  Group,
+  Text,
+  Title,
+  UnstyledButton,
+} from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 
 import { FavoriteStar } from '@/features/house-scanner/components/favorite-star';
@@ -64,13 +72,13 @@ export function PinCard({
         align="flex-start"
       >
         <Title order={3} size="h5">
-          <button
+          <UnstyledButton
             type="button"
             className={styles.titleButton}
             onClick={onDetails}
           >
             {listing.title}
-          </button>
+          </UnstyledButton>
           {listing.isNew && (
             <>
               {' '}
@@ -124,7 +132,8 @@ export function PinCard({
             rel="noopener noreferrer"
             referrerPolicy="no-referrer"
             // The global `a { color: inherit }` rule would otherwise hide the label on the filled button.
-            style={{ color: 'var(--button-color)', textDecoration: 'none' }}
+            c="var(--button-color)"
+            td="none"
           >
             Open original listing
           </Button>

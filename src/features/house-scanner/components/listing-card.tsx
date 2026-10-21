@@ -1,11 +1,13 @@
 import {
   Badge,
+  Box,
   Button,
   Checkbox,
   Group,
   Menu,
   Text,
   Title,
+  UnstyledButton,
 } from '@mantine/core';
 import { memo, useMemo } from 'react';
 import { FavoriteStar } from '@/features/house-scanner/components/favorite-star';
@@ -58,6 +60,12 @@ interface ListingCardProps {
   onToggleHidden?: (listingId: string) => void;
   onSeeOnMap?: (listingId: string) => void;
 }
+
+// Compact cards swap to the phone summary below xs; a card with details always shows the full one.
+const desktopOnly = (details?: boolean) =>
+  details ? {} : { visibleFrom: 'xs' as const };
+const phoneOnly = (details?: boolean) =>
+  details ? { display: 'none' } : { hiddenFrom: 'xs' as const };
 
 export const ListingCard = memo(function ListingCard({
   listing,
@@ -114,17 +122,17 @@ export const ListingCard = memo(function ListingCard({
       mine,
       summary: (
         <>
-          <div className={styles.desktopSummary}>
+          <Box {...desktopOnly(details)}>
             <ReasonChips listing={listing} />
-          </div>
-          <div className={`${styles.mobileSummary} ${styles.cardAmenities}`}>
+          </Box>
+          <Box {...phoneOnly(details)} className={styles.cardAmenities}>
             {chips.length > 0 && <Text size="sm">{chips.join(' · ')}</Text>}
             {position && (
               <Text size="sm" c="dimmed">
                 {position}
               </Text>
             )}
-          </div>
+          </Box>
           {(listing.isNew ||
             showStatus ||
             listing.origin === 'manual' ||
@@ -150,15 +158,15 @@ export const ListingCard = memo(function ListingCard({
               )}
             </Group>
           )}
-          <div className={styles.desktopSummary}>
+          <Box {...desktopOnly(details)}>
             <MatchLines
               listing={listing}
               snapshot={snapshot}
               details={details}
             />
-          </div>
+          </Box>
           {saved.length > 0 && (
-            <Text size="sm" className={styles.desktopSummary}>
+            <Text size="sm" {...desktopOnly(details)}>
               Saved by{' '}
               {saved.map((favorite) => memberName(favorite.userId)).join(', ')}
             </Text>
@@ -230,7 +238,7 @@ export const ListingCard = memo(function ListingCard({
           pressed={selectionMode ? checked === true : undefined}
           disabled={selectionMode && selectionDisabled}
         />
-        <div className={styles.desktopSummary}>
+        <Box {...desktopOnly(details)}>
           {onToggleHidden && (
             <HideButton
               listingId={listing.id}
@@ -238,7 +246,7 @@ export const ListingCard = memo(function ListingCard({
               onToggle={onToggleHidden}
             />
           )}
-        </div>
+        </Box>
         <FavoriteStar
           mine={mine}
           canSave={canSave}
@@ -254,7 +262,7 @@ export const ListingCard = memo(function ListingCard({
         )}
       </div>
       <Title order={3} size="h5" className={styles.cardTitle}>
-        <button
+        <UnstyledButton
           type="button"
           className={styles.titleButton}
           onClick={openPrimary}
@@ -263,26 +271,26 @@ export const ListingCard = memo(function ListingCard({
           disabled={selectionMode && selectionDisabled}
         >
           {listing.title}
-        </button>
+        </UnstyledButton>
       </Title>
-      <div className={styles.desktopSummary}>
+      <Box {...desktopOnly(details)}>
         <FactsLine listing={listing} />
-      </div>
-      <div className={`${styles.mobileSummary} ${styles.cardFacts}`}>
+      </Box>
+      <Box {...phoneOnly(details)} className={styles.cardFacts}>
         <KeyFacts listing={listing} />
-      </div>
-      <div className={styles.desktopSummary}>
+      </Box>
+      <Box {...desktopOnly(details)}>
         <AlsoOn sites={alsoOn} />
-      </div>
+      </Box>
       <div className={styles.cardViewing}>
         <NextViewing listing={listing} />
       </div>
       {summary}
       <div className={styles.grow} />
       <Group gap="xs" className={styles.cardActions}>
-        <div className={styles.desktopSummary}>
+        <Box {...desktopOnly(details)}>
           <OriginalListingButton listing={listing} />
-        </div>
+        </Box>
         <Button
           size="xs"
           variant="default"
@@ -293,7 +301,7 @@ export const ListingCard = memo(function ListingCard({
           Details
         </Button>
         {onSeeOnMap && hasPin(listing.coordinates) && (
-          <div className={styles.desktopSummary}>
+          <Box {...desktopOnly(details)}>
             <Button
               size="xs"
               variant="default"
@@ -301,10 +309,10 @@ export const ListingCard = memo(function ListingCard({
             >
               See on map
             </Button>
-          </div>
+          </Box>
         )}
         {(onToggleHidden || (onSeeOnMap && hasPin(listing.coordinates))) && (
-          <div className={styles.mobileSummary}>
+          <Box {...phoneOnly(details)}>
             <Menu
               position="bottom-end"
               classNames={{ item: styles.cardMenuItem }}
@@ -331,10 +339,10 @@ export const ListingCard = memo(function ListingCard({
                 )}
               </Menu.Dropdown>
             </Menu>
-          </div>
+          </Box>
         )}
         {saved.length > 0 && (
-          <Text size="xs" className={styles.mobileSummary}>
+          <Text size="xs" {...phoneOnly(details)}>
             Saved by {saved.length} {saved.length === 1 ? 'member' : 'members'}
           </Text>
         )}
