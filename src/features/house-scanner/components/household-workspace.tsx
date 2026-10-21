@@ -170,7 +170,7 @@ export function HouseholdWorkspace({
       : null;
   return (
     <ManualActionsProvider value={manualActions}>
-      <section className={styles.scope} aria-label="Household shortlist">
+      <section className={styles.workspace} aria-label="Household shortlist">
         {/* A new household starts with one profile at revision 1, set to the collector bounds. */}
         {!synthetic &&
           tab !== 'settings' &&

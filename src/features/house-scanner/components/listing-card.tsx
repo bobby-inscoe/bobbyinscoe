@@ -305,7 +305,10 @@ export const ListingCard = memo(function ListingCard({
         )}
         {(onToggleHidden || (onSeeOnMap && hasPin(listing.coordinates))) && (
           <div className={styles.mobileSummary}>
-            <Menu withinPortal={false} position="bottom-end">
+            <Menu
+              position="bottom-end"
+              classNames={{ item: styles.cardMenuItem }}
+            >
               <Menu.Target>
                 <Button
                   size="xs"

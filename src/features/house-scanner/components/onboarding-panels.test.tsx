@@ -295,7 +295,10 @@ describe('household settings section', () => {
     fireEvent.click(
       within(dialog).getByRole('combobox', { name: 'New owner' }),
     );
-    fireEvent.click(await within(dialog).findByText('Robin'));
+    // The dropdown portals out of the dialog, and jsdom never finishes its open transition.
+    fireEvent.click(
+      await screen.findByRole('option', { name: 'Robin', hidden: true }),
+    );
     await waitFor(() => expect(leave.hasAttribute('disabled')).toBe(false));
     fireEvent.click(leave);
     await waitFor(() => expect(access.leave).toHaveBeenCalled());

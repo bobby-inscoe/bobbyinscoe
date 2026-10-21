@@ -515,7 +515,6 @@ export function ListingsPanel({
                     label: entry.displayName,
                   })),
                 ]}
-                comboboxProps={{ withinPortal: false }}
               />
             ) : (
               <Stack gap={4} w={{ base: 140, sm: 180 }}>
@@ -559,7 +558,6 @@ export function ListingsPanel({
                       label,
                     })),
                   ]}
-                  comboboxProps={{ withinPortal: false }}
                 />
               </Stack>
             )}
@@ -579,7 +577,6 @@ export function ListingsPanel({
                 { value: 'price-desc', label: 'Price: high to low' },
               ]}
               w={{ base: 140, sm: 180 }}
-              comboboxProps={{ withinPortal: false }}
             />
             <TextInput
               type="search"
@@ -668,7 +665,6 @@ export function ListingsPanel({
         title="Filters"
         position="right"
         size="md"
-        classNames={{ root: `${styles.scope} ${styles.touch}` }}
         closeButtonProps={{ 'aria-label': 'Close filters' }}
       >
         <Stack>

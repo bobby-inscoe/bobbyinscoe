@@ -180,7 +180,6 @@ export function ListingFilterPanel({
               { value: '7', label: 'Next 7 days' },
               { value: '14', label: 'Next 14 days' },
             ]}
-            comboboxProps={{ withinPortal: false }}
             flex="1 1 15rem"
           />
           <MultiSelect
@@ -190,7 +189,6 @@ export function ListingFilterPanel({
             value={filters.hosts}
             onChange={(selected) => onChange({ ...filters, hosts: selected })}
             data={hosts}
-            comboboxProps={{ withinPortal: false }}
             flex="1 1 15rem"
           />
           <Select
@@ -205,7 +203,6 @@ export function ListingFilterPanel({
               })
             }
             data={FRESHNESS_OPTIONS}
-            comboboxProps={{ withinPortal: false }}
             flex="1 1 15rem"
           />
           <MultiSelect
@@ -223,7 +220,6 @@ export function ListingFilterPanel({
               label: name,
             }))}
             nothingFoundMessage="No matching neighborhoods"
-            comboboxProps={{ withinPortal: false }}
             flex="1 1 15rem"
           />
         </Flex>

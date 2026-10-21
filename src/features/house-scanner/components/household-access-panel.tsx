@@ -377,7 +377,6 @@ export function HouseholdAccessPanel({
                 }))}
                 value={nextOwner}
                 onChange={setNextOwner}
-                comboboxProps={{ withinPortal: false }}
               />
             </>
           ) : others.length === 0 ? (

@@ -40,7 +40,6 @@ export function MapSelectionReview({
       title="Review homes in this view"
       position="right"
       size="md"
-      classNames={{ root: `${styles.scope} ${styles.touch}` }}
       closeButtonProps={{ 'aria-label': 'Close map selection review' }}
     >
       <Stack>

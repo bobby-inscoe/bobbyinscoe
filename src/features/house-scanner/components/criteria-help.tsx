@@ -1,8 +1,6 @@
 import { Button, Modal, Stack, Text } from '@mantine/core';
 import { useState } from 'react';
 
-import styles from '@/features/house-scanner/components/household-workspace.module.css';
-
 const ABOUT = [
   'Shellter follows apartments for sale in Göteborg.',
   'The settings below are your default filter for the Listings tab. Adjust budget, size, rooms, features and areas to fit what you are looking for.',
@@ -27,9 +25,6 @@ export function CriteriaHelp() {
         onClose={() => setOpened(false)}
         title="About Shellter"
         size="md"
-        // Rendered in place so the feature's scoped CSS variables still apply.
-        withinPortal={false}
-        classNames={{ root: styles.drawerRoot, inner: styles.drawerInner }}
       >
         <Stack gap="xs">
           {ABOUT.map((line) => (

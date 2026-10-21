@@ -38,7 +38,6 @@ export function HideButton({ listingId, hidden, onToggle }: HideButtonProps) {
     <ActionIcon
       className={styles.hide}
       variant={hidden ? 'filled' : 'default'}
-      color="moss"
       size="lg"
       radius="xl"
       aria-label={hidden ? 'Unhide this home' : 'Hide this home'}

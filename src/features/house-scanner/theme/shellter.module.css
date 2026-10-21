@@ -1,0 +1,39 @@
+/* Shellter tokens, and Mantine's variables pointed at them. The page root and every portal carry this class. */
+.scope {
+  --scanner-surface: var(--mantine-color-flax-0);
+  --scanner-ink: var(--mantine-color-text);
+  --scanner-line: var(--mantine-color-flax-3);
+  --scanner-accent: var(--mantine-color-moss-7);
+  --scanner-accent-strong: var(--mantine-color-moss-8);
+  --scanner-accent-wash: var(--mantine-color-moss-0);
+  --mantine-color-anchor: var(--scanner-accent);
+  --mantine-color-default: var(--scanner-surface);
+  --mantine-color-default-color: var(--scanner-ink);
+  --mantine-color-default-border: var(--scanner-line);
+  --mantine-color-white: var(--scanner-surface);
+  --mantine-color-dark-6: var(--scanner-surface);
+  --mantine-primary-color-filled: var(--scanner-accent);
+  --mantine-primary-color-filled-hover: var(--scanner-accent-strong);
+  --mantine-primary-color-light: var(--scanner-accent-wash);
+  --mantine-primary-color-light-hover: var(--scanner-accent-wash);
+  --mantine-primary-color-light-color: var(--scanner-accent);
+  color: var(--scanner-ink);
+}
+/* Fingers need 44 px. */
+@media (pointer: coarse) {
+  .scope :global(.mantine-Button-root),
+  .scope :global(.mantine-ActionIcon-root),
+  .scope :global(.mantine-CloseButton-root),
+  .scope :global(.mantine-Input-input) {
+    min-height: 44px;
+    font-size: 16px;
+  }
+  .scope :global(.mantine-ActionIcon-root),
+  .scope :global(.mantine-CloseButton-root) {
+    min-width: 44px;
+  }
+  /* The stepper arrows cannot reach 44 px inside a 44 px field; touch users type the number. */
+  .scope :global(.mantine-NumberInput-controls) {
+    display: none;
+  }
+}

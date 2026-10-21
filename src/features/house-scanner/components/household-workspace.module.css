@@ -1,25 +1,7 @@
-.scope {
-  --scanner-surface: var(--mantine-color-flax-0);
-  --scanner-ink: var(--mantine-color-text);
-  --scanner-line: var(--mantine-color-flax-3);
-  --scanner-accent: var(--mantine-color-moss-7);
-  --scanner-accent-strong: var(--mantine-color-moss-8);
-  --scanner-accent-wash: var(--mantine-color-moss-0);
-  --mantine-color-anchor: var(--scanner-accent);
-  --mantine-color-default: var(--scanner-surface);
-  --mantine-color-default-color: var(--scanner-ink);
-  --mantine-color-default-border: var(--scanner-line);
-  --mantine-color-white: var(--scanner-surface);
-  --mantine-color-dark-6: var(--scanner-surface);
-  --mantine-primary-color-filled: var(--scanner-accent);
-  --mantine-primary-color-filled-hover: var(--scanner-accent-strong);
-  --mantine-primary-color-light: var(--scanner-accent-wash);
-  --mantine-primary-color-light-hover: var(--scanner-accent-wash);
-  --mantine-primary-color-light-color: var(--scanner-accent);
+.workspace {
   display: flex;
   flex-direction: column;
   gap: var(--mantine-spacing-lg);
-  color: var(--scanner-ink);
   min-width: 0;
 }
 .selectionBar {
@@ -189,7 +171,7 @@
   :global(body):has(.mobileMapShell) {
     overflow: hidden;
   }
-  .scope:has(> .mobileMapShell) > :not(.mobileMapShell) {
+  .workspace:has(> .mobileMapShell) > :not(.mobileMapShell) {
     display: none;
   }
   .mobileMapShell {
@@ -304,24 +286,6 @@
     white-space: normal;
   }
 }
-/* Fingers need 44 px; the page root carries this class so the demo and sign-in controls count too. */
-@media (pointer: coarse) {
-  .touch :global(.mantine-Button-root),
-  .touch :global(.mantine-ActionIcon-root),
-  .touch :global(.mantine-CloseButton-root),
-  .touch :global(.mantine-Input-input) {
-    min-height: 44px;
-    font-size: 16px;
-  }
-  .touch :global(.mantine-ActionIcon-root),
-  .touch :global(.mantine-CloseButton-root) {
-    min-width: 44px;
-  }
-  /* The stepper arrows cannot reach 44 px inside a 44 px field; touch users type the number. */
-  .touch :global(.mantine-NumberInput-controls) {
-    display: none;
-  }
-}
 /* One row that never wraps; on a narrow screen it scrolls sideways. */
 .tabs {
   overflow-x: auto;
@@ -353,15 +317,6 @@
 /* A full-width photo in a wide sheet would fill most of its height. */
 .drawerBody .photo {
   max-height: 320px;
-}
-/* Out of a portal the fixed sheet would start at its static position, so pin it to the viewport edge. */
-/* Takes the empty root out of the flex flow, where it would add a gap; the z-index keeps the sheet above the map. */
-.drawerRoot {
-  position: fixed;
-  z-index: var(--mb-z-index);
-}
-.drawerInner {
-  left: 0;
 }
 .drawerTitle {
   font-family: var(--mantine-font-family-headings);
@@ -486,7 +441,7 @@
     overflow-wrap: anywhere;
   }
   .compactCard .cardActions :global(.mantine-Button-root),
-  .compactCard :global(.mantine-Menu-item) {
+  .cardMenuItem {
     min-height: 44px;
   }
   .compactCard :global(.mantine-Badge-root) {
@@ -509,7 +464,7 @@
   }
 }
 @media (max-width: 36em) {
-  .scope {
+  .workspace {
     gap: var(--mantine-spacing-xs);
   }
 }

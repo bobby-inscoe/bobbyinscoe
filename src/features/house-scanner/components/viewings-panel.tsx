@@ -70,7 +70,6 @@ export function ViewingsPanel({
             label: member.displayName,
           })),
         ]}
-        comboboxProps={{ withinPortal: false }}
       />
       {days.length === 0 ? (
         <Text>

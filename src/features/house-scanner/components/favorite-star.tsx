@@ -21,7 +21,6 @@ export function FavoriteStar({
     <ActionIcon
       className={styles.star}
       variant={mine ? 'filled' : 'default'}
-      color="moss"
       size="lg"
       radius="xl"
       aria-label={mine ? 'Remove my favorite' : 'Save favorite'}

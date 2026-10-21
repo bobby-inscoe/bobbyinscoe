@@ -44,7 +44,6 @@ export function NumberSelect({
         ...steps.map((step) => ({ value: String(step), label: format(step) })),
       ]}
       allowDeselect={false}
-      comboboxProps={{ withinPortal: false }}
       disabled={disabled}
     />
   );

@@ -64,11 +64,7 @@ export function ListingDrawer({
       closeButtonProps={{ 'aria-label': 'Close listing details' }}
       position={wide ? 'right' : 'bottom'}
       size={wide ? 'lg' : '85%'}
-      // Rendered in place so the feature's scoped CSS variables still apply.
-      withinPortal={false}
       classNames={{
-        root: styles.drawerRoot,
-        inner: styles.drawerInner,
         title: styles.drawerTitle,
       }}
     >

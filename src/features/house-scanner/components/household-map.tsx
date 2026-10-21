@@ -596,7 +596,6 @@ export function HouseholdMap({
           position="bottom-start"
           width="min(340px, calc(100vw - 48px))"
           trapFocus
-          withinPortal={false}
         >
           <Popover.Target>
             <Button
@@ -687,7 +686,6 @@ export function HouseholdMap({
                 opened={mobileOptionsOpen}
                 onChange={setMobileOptionsOpen}
                 position="bottom-end"
-                withinPortal={false}
               >
                 <Popover.Target>
                   <ActionIcon

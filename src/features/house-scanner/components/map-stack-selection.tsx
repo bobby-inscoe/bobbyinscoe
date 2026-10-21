@@ -1,5 +1,4 @@
 import { Button, Checkbox, Drawer, Group, Stack, Text } from '@mantine/core';
-import styles from '@/features/house-scanner/components/household-workspace.module.css';
 import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
 import {
   KeyFacts,
@@ -31,7 +30,6 @@ export function MapStackSelection({
       size="md"
       position="right"
       closeButtonProps={{ 'aria-label': 'Close pin selection' }}
-      classNames={{ root: `${styles.scope} ${styles.touch}` }}
     >
       <Stack>
         <Text size="sm">

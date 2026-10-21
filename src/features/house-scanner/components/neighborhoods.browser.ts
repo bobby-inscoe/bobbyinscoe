@@ -39,9 +39,9 @@ test('the complete catalog retains zero-match selections and Back restores the u
     exact: true,
   });
   await input.click();
-  await expect(dialog.getByRole('option')).toHaveCount(96);
+  await expect(page.getByRole('option')).toHaveCount(96);
   await input.fill(unused.name);
-  await dialog.getByRole('option', { name: unused.name, exact: true }).click();
+  await page.getByRole('option', { name: unused.name, exact: true }).click();
   await input.press('Escape');
   await dialog
     .getByRole('button', { name: 'Show 0 homes', exact: true })
@@ -53,7 +53,7 @@ test('the complete catalog retains zero-match selections and Back restores the u
   await page.getByRole('button', { name: 'Filters', exact: true }).click();
   await expect(dialog.locator('.mantine-Pill-label')).toHaveText([unused.name]);
   await input.click();
-  await expect(dialog.getByRole('option')).toHaveCount(96);
+  await expect(page.getByRole('option')).toHaveCount(96);
   await input.press('Escape');
   await dialog
     .getByRole('checkbox', {
@@ -122,7 +122,7 @@ test('multiple neighborhoods show their official names and survive a reload', as
   });
   for (const neighborhood of [first, second]) {
     await input.fill(neighborhood.name);
-    await dialog
+    await page
       .getByRole('option', { name: neighborhood.name, exact: true })
       .click();
   }
