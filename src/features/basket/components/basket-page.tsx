@@ -58,6 +58,7 @@ import {
   changedKitItems,
   type Item,
   type Kit,
+  nameSchema,
   type SavedKit,
   searchSchema,
   tokenSchema,
@@ -122,6 +123,59 @@ export function BasketPage() {
     }
     previousIdentity.current = next;
   }, [state.user?.id, state.unavailable]);
+  function rememberName(value: string) {
+    setName(value);
+    const parsed = nameSchema.safeParse(value);
+    if (!state.user || !parsed.success) return;
+    try {
+      localStorage.setItem(`basket.name.${state.user.id}`, parsed.data);
+    } catch {
+      // The current page still remembers the name when browser storage is unavailable.
+    }
+  }
+  useEffect(() => {
+    const data = state.data;
+    if (!client || !data || data.userId !== state.user?.id) return;
+    const currentData = data;
+    const currentClient = client;
+    let active = true;
+    const key = `basket.name.${currentData.userId}`;
+    async function restoreName() {
+      try {
+        const stored = nameSchema.safeParse(localStorage.getItem(key));
+        if (stored.success) {
+          if (active) setName((current) => current || stored.data);
+          return;
+        }
+      } catch {
+        // Membership names also provide a default when storage is unavailable.
+      }
+      try {
+        const known =
+          currentData.basket ??
+          (currentData.baskets[0]
+            ? (await currentClient.snapshot(currentData.baskets[0].id)).basket
+            : null);
+        const member = known?.members.find(
+          (person) => person.id === currentData.userId,
+        );
+        if (!active || !member) return;
+        setName((current) => current || member.name);
+        try {
+          if (!nameSchema.safeParse(localStorage.getItem(key)).success)
+            localStorage.setItem(key, member.name);
+        } catch {
+          /* Storage is optional. */
+        }
+      } catch {
+        // A failed lookup leaves the name editable.
+      }
+    }
+    void restoreName();
+    return () => {
+      active = false;
+    };
+  }, [client, state.data, state.user?.id]);
   const basket = state.data?.basket ?? null;
   const owner = basket?.role === 'owner';
   const writable = !!basket && !basket.archived;
@@ -152,6 +206,21 @@ export function BasketPage() {
       {state.error}
     </Alert>
   );
+
+  async function reset(current: Basket) {
+    if (
+      await state.run(
+        { type: 'reset', basketId: current.id, revision: current.revision },
+        'Basket reset to saved kits.',
+      )
+    )
+      close();
+  }
+  function requestReset(current: Basket) {
+    if (current.members.length > 1 || changedKitItems(current) > 0)
+      open({ type: 'reset', basket: current });
+    else void reset(current);
+  }
 
   async function archive(current: Basket) {
     const result = await state.run(
@@ -235,7 +304,9 @@ export function BasketPage() {
                       label="Your name"
                       autoComplete="nickname"
                       value={name}
-                      onChange={(event) => setName(event.currentTarget.value)}
+                      onChange={(event) =>
+                        rememberName(event.currentTarget.value)
+                      }
                       required
                       maxLength={60}
                     />
@@ -340,13 +411,6 @@ export function BasketPage() {
                             Rename basket
                           </Menu.Item>
                           <Menu.Item
-                            leftSection={<RotateCcw size={17} />}
-                            disabled={!writable || !basket.savedKits.length}
-                            onClick={() => open({ type: 'reset', basket })}
-                          >
-                            Reset to saved kits
-                          </Menu.Item>
-                          <Menu.Item
                             leftSection={<Archive size={17} />}
                             onClick={() => {
                               if (
@@ -413,6 +477,17 @@ export function BasketPage() {
                     </Button>
                   )}
                 </Group>
+                {owner && writable && (
+                  <Button
+                    mt="sm"
+                    variant="light"
+                    leftSection={<RotateCcw size={16} />}
+                    disabled={state.busy || !basket.savedKits.length}
+                    onClick={() => requestReset(basket)}
+                  >
+                    Reset basket
+                  </Button>
+                )}
                 {basket.items.length ? (
                   <ul className={classes.list} aria-label="Checklist items">
                     {basket.items.map((item) => (
@@ -780,7 +855,7 @@ export function BasketPage() {
             <CreateBasket
               id={sheet.id}
               name={name}
-              onName={setName}
+              onName={rememberName}
               busy={state.busy}
               run={state.run}
               onCreated={go}
@@ -936,18 +1011,8 @@ export function BasketPage() {
               <Button
                 loading={state.busy}
                 leftSection={<RotateCcw size={18} />}
-                onClick={async () => {
-                  if (
-                    await state.run(
-                      {
-                        type: 'reset',
-                        basketId: sheet.basket.id,
-                        revision: sheet.basket.revision,
-                      },
-                      'Basket reset to saved kits.',
-                    )
-                  )
-                    close();
+                onClick={() => {
+                  void reset(sheet.basket);
                 }}
               >
                 Reset basket

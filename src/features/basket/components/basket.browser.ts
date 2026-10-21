@@ -4,6 +4,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { browserBackend } from '../../../../tools/basket-backend/browser-backend';
 import {
   addIdentity,
+  asIdentity,
   createDatabase,
 } from '../../../../tools/basket-backend/test-database';
 
@@ -132,18 +133,22 @@ test('phone-first kits, reset confirmation, archive, and keyboard controls', asy
   await expect(
     page.getByText('1 item differs from saved kits.', { exact: false }),
   ).toBeVisible();
-  await action(page, 'Reset to saved kits');
+  await page.getByRole('button', { name: 'Reset basket', exact: true }).click();
   await expect(
     page.getByRole('dialog', { name: 'Reset to saved kits?' }),
   ).toBeVisible();
   await page
     .getByRole('button', { name: 'Keep current list', exact: true })
     .click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(
     page.getByRole('checkbox', { name: 'Birthday candles', exact: true }),
   ).toBeVisible();
-  await action(page, 'Reset to saved kits');
   await page.getByRole('button', { name: 'Reset basket', exact: true }).click();
+  await page
+    .getByRole('dialog', { name: 'Reset to saved kits?' })
+    .getByRole('button', { name: 'Reset basket', exact: true })
+    .click();
   await expect(page.getByRole('checkbox')).toHaveCount(2);
   await expect(
     page.getByRole('checkbox', { name: 'Toothbrush', exact: true }),
@@ -161,6 +166,14 @@ test('phone-first kits, reset confirmation, archive, and keyboard controls', asy
     path: test.info().outputPath('basket-checklist.png'),
     fullPage: true,
   });
+  await add(page, 'One-off item');
+  await page.getByRole('checkbox', { name: 'Socks', exact: true }).check();
+  await page.getByRole('button', { name: 'Reset basket', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('checkbox')).toHaveCount(2);
+  await expect(
+    page.getByRole('checkbox', { name: 'Socks', exact: true }),
+  ).not.toBeChecked();
   await action(page, 'Archive basket');
   await expect(page.getByText('Taking a break', { exact: true })).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -176,6 +189,33 @@ test('two guest browsers share a basket and receive periodic updates without rel
 }) => {
   await create(page, 'Groceries');
   await add(page, 'Milk');
+  const membership = (
+    await db.query<{ user_id: string; basket_id: string }>(
+      'select user_id, basket_id from bk.members',
+    )
+  ).rows[0];
+  const kitId = randomUUID();
+  for (const command of [
+    {
+      type: 'kit_save',
+      id: kitId,
+      title: 'Grocery staples',
+      items: [{ id: randomUUID(), text: 'Bread' }],
+    },
+    {
+      type: 'kit_attach',
+      basketId: membership.basket_id,
+      id: randomUUID(),
+      kitId,
+    },
+  ])
+    await asIdentity(
+      db,
+      membership.user_id,
+      'select public.basket_command($1,$2) as value',
+      [randomUUID(), command],
+    );
+  await page.reload();
   await page.getByRole('button', { name: 'Share basket', exact: true }).click();
   await page
     .getByRole('button', { name: 'Create a join link', exact: true })
@@ -227,6 +267,9 @@ test('two guest browsers share a basket and receive periodic updates without rel
     await expect(
       page.getByRole('checkbox', { name: 'Milk', exact: true }),
     ).toBeChecked({ timeout: 22000 });
+    await expect(
+      friend.getByRole('button', { name: 'Reset basket', exact: true }),
+    ).toHaveCount(0);
     await action(friend, 'Basket settings');
     await expect(
       friend.getByRole('button', { name: 'Leave basket', exact: true }),
@@ -236,6 +279,15 @@ test('two guest browsers share a basket and receive periodic updates without rel
     ).toHaveCount(0);
     await closePanel(friend);
     await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await page
+      .getByRole('button', { name: 'Reset basket', exact: true })
+      .click();
+    await expect(
+      page.getByRole('dialog', { name: 'Reset to saved kits?' }),
+    ).toBeVisible();
+    await page
+      .getByRole('button', { name: 'Keep current list', exact: true })
+      .click();
     await action(page, 'Archive basket');
     await expect(
       page.getByRole('dialog', { name: 'Archive for everyone?' }),
@@ -253,6 +305,50 @@ test('two guest browsers share a basket and receive periodic updates without rel
   } finally {
     await friendContext.close();
   }
+});
+
+test('display name survives new baskets and reloads, with membership fallback for older sessions', async ({
+  page,
+}) => {
+  await create(page, 'First basket');
+  await page.goto('/basket');
+  await page
+    .getByRole('button', { name: 'Create a basket', exact: true })
+    .click();
+  await expect(
+    page.getByRole('textbox', { name: 'Your name', exact: true }),
+  ).toHaveValue('Alex');
+  await page
+    .getByRole('textbox', { name: 'Your name', exact: true })
+    .fill('Sam');
+  await page
+    .getByRole('textbox', { name: 'Basket name', exact: true })
+    .fill('Second basket');
+  await page
+    .getByRole('button', { name: 'Create basket', exact: true })
+    .click();
+  await expect(
+    page.getByRole('heading', { name: 'Second basket', exact: true }),
+  ).toBeVisible();
+  await page.goto('/basket');
+  await page
+    .getByRole('button', { name: 'Create a basket', exact: true })
+    .click();
+  await expect(
+    page.getByRole('textbox', { name: 'Your name', exact: true }),
+  ).toHaveValue('Sam');
+  await closePanel(page);
+  await page.evaluate(() => {
+    for (const key of Object.keys(localStorage))
+      if (key.startsWith('basket.name.')) localStorage.removeItem(key);
+  });
+  await page.reload();
+  await page
+    .getByRole('button', { name: 'Create a basket', exact: true })
+    .click();
+  await expect(
+    page.getByRole('textbox', { name: 'Your name', exact: true }),
+  ).toHaveValue('Sam');
 });
 
 test('new account verification preserves guest ownership and kits', async ({
