@@ -1,4 +1,4 @@
--- Reverses 20261020120000_house_scanner_snapshot_limit_1500.sql: the ceiling goes back to 1000 listings. Run it only
+-- Reverses 20261020093229_house_scanner_snapshot_limit_1500.sql: the ceiling goes back to 1000 listings. Run it only
 -- when fewer than 1000 listings are visible, or the snapshot raises again.
 begin;
 CREATE OR REPLACE FUNCTION hs.snapshot_base(p_household_id uuid)

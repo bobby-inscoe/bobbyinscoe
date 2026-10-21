@@ -1,4 +1,4 @@
--- Reverses 20261021180000_house_scanner_maintenance.sql: one-time codes are kept again, and the API roles get execute on
+-- Reverses 20261020190838_house_scanner_maintenance.sql: one-time codes are kept again, and the API roles get execute on
 -- the hosted RLS helper back. Codes already deleted stay deleted.
 begin;
 create or replace function public.hs_consume_nonce(p_key_id text,p_nonce text,p_timestamp bigint) returns jsonb language plpgsql security definer set search_path=pg_catalog,hs as $$ begin
