@@ -116,6 +116,7 @@ export function HouseholdAccessPanel({
           label={label}
           description={description}
           type="email"
+          placeholder="name@example.com"
           autoComplete="off"
           required
           value={emails[purpose]}

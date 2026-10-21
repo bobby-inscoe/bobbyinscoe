@@ -36,6 +36,7 @@ import { ListingFilterPanel } from '@/features/house-scanner/components/listing-
 import { MapSelectionReview } from '@/features/house-scanner/components/map-selection-review';
 import { MapStackSelection } from '@/features/house-scanner/components/map-stack-selection';
 import { PinCard } from '@/features/house-scanner/components/pin-card';
+import { ScrollToTop } from '@/features/house-scanner/components/scroll-to-top';
 import type { ListingNotesController } from '@/features/house-scanner/hooks/use-listing-notes';
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type {
@@ -780,6 +781,7 @@ export function ListingsPanel({
           {activeFilterCount(filters) > 0 && ' Clear the filters to see more.'}
         </Text>
       )}
+      {mobile && view === 'list' && <ScrollToTop />}
       {view === 'list' ? (
         <div className={classes.list}>
           {ordered.slice(0, renderedCount).map((listing) => (
