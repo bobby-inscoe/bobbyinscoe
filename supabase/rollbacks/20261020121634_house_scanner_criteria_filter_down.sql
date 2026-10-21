@@ -1,5 +1,5 @@
--- Reverses 20261020180000_house_scanner_criteria_filter.sql: the snapshot returns every live catalog listing again.
--- The definition below is the one 20261020150000_house_scanner_catalog.sql installed.
+-- Reverses 20261020121634_house_scanner_criteria_filter.sql: the snapshot returns every live catalog listing again.
+-- The definition below is the one 20261020111540_house_scanner_catalog.sql installed.
 begin;
 create or replace function hs.snapshot_base(p_household_id uuid) returns jsonb language plpgsql stable security definer set search_path=pg_catalog,hs as $$
 declare visible jsonb; edition jsonb; people jsonb; profiles jsonb; favorites jsonb;

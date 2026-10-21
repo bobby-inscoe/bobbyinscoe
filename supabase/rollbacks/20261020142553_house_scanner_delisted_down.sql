@@ -1,16 +1,9 @@
--- Reverses 20261020210000_house_scanner_shared_hides.sql. Each merged hide stays with the member who hid it last; hides
--- the merge removed are not restored. Saved source selections are removed, because the earlier criteria check and an app
--- built before S3 reject the key. The definitions below are the ones 20261020180000_house_scanner_criteria_filter.sql
--- (snapshot_base) and 20261020150000_house_scanner_catalog.sql (hs_snapshot, hs_set_hidden) installed.
+-- Reverses 20261020142553_house_scanner_delisted.sql. Marks and miss counts are dropped. The snapshot_base below is the
+-- one 20261020133201_house_scanner_shared_hides.sql installed.
 begin;
-drop function hs.fails_hard_rule(jsonb,jsonb,jsonb,text);
-update hs.profiles set criteria=criteria-'sourceIds' where criteria ? 'sourceIds';
-drop function hs.valid_criteria(jsonb);
-alter function hs.valid_criteria_base(jsonb) rename to valid_criteria;
-drop policy active_household_read on hs.hidden_listings;
-create policy own_read on hs.hidden_listings for select to authenticated using(hs.is_member(household_id) and user_id=auth.uid());
-drop index hs.hidden_listings_household_listing;
-create unique index hidden_listings_member_listing on hs.hidden_listings(household_id,user_id,coalesce(listing_id,manual_listing_id));
+drop trigger mark_delisted on hs.runs;
+drop function hs.mark_delisted();
+drop function hs.seen_in(uuid,jsonb,hs.listings);
 create or replace function hs.snapshot_base(p_household_id uuid) returns jsonb language plpgsql stable security definer set search_path=pg_catalog,hs as $$
 declare visible jsonb; edition jsonb; people jsonb; profiles jsonb; favorites jsonb;
 begin
@@ -18,7 +11,7 @@ begin
  select jsonb_build_object('id',id,'publishedAt',published_at,'coverage',coverage,'sourceSummary',source_summary) into edition from hs.editions order by published_at desc,id desc limit 1;
  select coalesce(jsonb_agg(item order by observed_at desc,id),'[]'::jsonb) into visible from (
  select l.id,l.observed_at,jsonb_build_object(
- 'id',l.id,'householdId',p_household_id,'origin','source','title',l.value->>'title',
+ 'id',l.id,'householdId',p_household_id,'origin','source','sourceId',l.source_id,'title',l.value->>'title',
  'sourceUrls',jsonb_build_array(l.value->>'sourceUrl'),
  'facts',v.facts,
  'conflicts',v.conflicts,
@@ -32,7 +25,7 @@ begin
   coalesce((select jsonb_agg(c) from jsonb_array_elements(l.value->'conflicts') c where p.policy->'allowedFactFields' ? (c#>>'{}')),'[]'::jsonb) conflicts) v
  where hs.listing_interacted(p_household_id,l.id) or (hs.policy_current(p.policy) and p.policy->'listingOrigins' ? hs.origin(l.value->>'sourceUrl') and l.observed_at>=now()-make_interval(days=>(p.policy->>'retentionDays')::int)
   and (exists(select 1 from hs.hidden_listings h where h.household_id=p_household_id and h.listing_id=l.id)
-   or exists(select 1 from hs.profiles pr where pr.household_id=p_household_id and pr.enabled and not hs.fails_hard_rule(v.facts,v.conflicts,pr.criteria))))
+   or exists(select 1 from hs.profiles pr where pr.household_id=p_household_id and pr.enabled and not hs.fails_hard_rule(v.facts,v.conflicts,pr.criteria,l.source_id))))
  union all
  select m.id,m.observed_at,jsonb_build_object(
  'id',m.id,'householdId',m.household_id,'origin','manual','title',m.value->>'title','sourceUrls',m.value->'sourceUrls',
@@ -46,35 +39,6 @@ begin
  if jsonb_array_length(visible)>1500 or jsonb_array_length(people)>10 or jsonb_array_length(profiles)>20 or jsonb_array_length(favorites)>5000 then raise exception 'Household exceeds snapshot limit; refine backend delivery before continuing'; end if;
  return jsonb_build_object('contractVersion',1,'householdId',p_household_id,'edition',edition,'listings',visible,'members',people,'profiles',profiles,'favorites',favorites);
 end; $$;
-
-create or replace function public.hs_snapshot(p_household_id uuid) returns jsonb language plpgsql stable security definer set search_path=pg_catalog,hs as $$
-declare base jsonb; ids jsonb; shared jsonb;
-begin
- base:=hs.with_viewings(hs.snapshot_base(p_household_id),p_household_id);
- select jsonb_agg(coalesce(h.listing_id,h.manual_listing_id) order by coalesce(h.listing_id,h.manual_listing_id)) into ids from hs.hidden_listings h
-  where h.household_id=p_household_id and h.user_id=auth.uid() and exists(select 1 from jsonb_array_elements(base->'listings') v where v->>'id'=coalesce(h.listing_id,h.manual_listing_id)::text);
- select jsonb_agg(jsonb_build_object('listingId',coalesce(n.listing_id,n.manual_listing_id),'userId',n.user_id,'body',n.body,'revision',n.revision,'editedAt',n.edited_at) order by coalesce(n.listing_id,n.manual_listing_id),n.user_id) into shared from hs.notes n
-  where n.household_id=p_household_id and exists(select 1 from jsonb_array_elements(base->'listings') v where v->>'id'=coalesce(n.listing_id,n.manual_listing_id)::text);
- return base||case when ids is null then '{}'::jsonb else jsonb_build_object('hiddenListingIds',ids) end||case when shared is null then '{}'::jsonb else jsonb_build_object('notes',shared) end;
-end; $$;
-
--- Hides stay per member until S3. Every id must be a catalog listing or one of the household's manual listings.
-create or replace function public.hs_set_hidden(p_household_id uuid,p_listing_ids uuid[],p_hidden boolean) returns jsonb language plpgsql security definer set search_path=pg_catalog,hs as $$
-declare ids uuid[];
-begin
- perform hs.require_member(p_household_id);
- perform 1 from hs.households where id=p_household_id for update;
- perform hs.require_member(p_household_id);
- if p_hidden is null or p_listing_ids is null or cardinality(p_listing_ids) not between 1 and 500 or array_position(p_listing_ids,null) is not null then raise exception 'Invalid hide request'; end if;
- select array_agg(distinct x) into ids from unnest(p_listing_ids) x;
- if (select count(*) from unnest(ids) x where exists(select 1 from hs.listings where id=x) or exists(select 1 from hs.manual_listings where id=x and household_id=p_household_id))<>cardinality(ids) then raise exception 'Listing unavailable'; end if;
- if p_hidden then
-  insert into hs.hidden_listings(household_id,listing_id,manual_listing_id,user_id)
-   select p_household_id,case when m.id is null then x end,m.id,auth.uid() from unnest(ids) x left join hs.manual_listings m on m.id=x and m.household_id=p_household_id
-   on conflict do nothing;
- else delete from hs.hidden_listings where household_id=p_household_id and user_id=auth.uid() and coalesce(listing_id,manual_listing_id)=any(ids); end if;
- return jsonb_build_object('ok',true);
-end; $$;
-
+alter table hs.listings drop column missed_full_reads, drop column delisted_at;
 revoke all on all functions in schema hs from public,anon,authenticated,service_role;
 commit;

@@ -18,8 +18,11 @@ redirects them. Add `/shellter/...` to those URLs before pointing Auth at the ne
   raise the cap or narrow the source, and re-enable with a higher revision.
 - Deploy in this order: the app (strict schemas reject unknown keys), then any Edge Function that must accept new
   fields, the migration, then the policy revisions or collector change that switch a feature on. Never switch on first.
-- A migration applied with `supabase db query --linked -f` or the SQL connector leaves no row in
-  `supabase_migrations.schema_migrations`; add it by hand so the history matches. Deploy functions with
+- Name a new migration and its rollback with the UTC time you create them, to the second
+  (`date -u +%Y%m%d%H%M%S`), never a rounded or future slot, and record that same version on the hosted project.
+  The connector's `apply_migration` stamps its own apply time, so apply with `supabase db query --linked -f` or the
+  SQL connector instead; both leave no row in `supabase_migrations.schema_migrations`, so insert one with the file's
+  version and name. Files from before 19 October keep their old 12-digit names. Deploy functions with
   `npx supabase functions deploy <name> --project-ref <ref> --no-verify-jwt` from the main checkout.
 - Some configuration lives outside the repository. Supabase Auth (dashboard): Site URL `https://bobbyinscoe.com`,
   redirect URLs for `/projects/house-scanner/invite**` and `/projects/house-scanner/listings`, public signup off, email

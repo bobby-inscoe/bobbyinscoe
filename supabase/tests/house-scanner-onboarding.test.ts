@@ -642,7 +642,7 @@ describe('onboarding grants and rollback', () => {
   });
 
   it('rolls back and applies again', async () => {
-    const name = '20261021120000_house_scanner_onboarding';
+    const name = '20261020155317_house_scanner_onboarding';
     await db.exec(
       await readFile(
         new URL(`../rollbacks/${name}_down.sql`, import.meta.url),

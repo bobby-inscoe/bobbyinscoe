@@ -1,4 +1,4 @@
--- Reverses 20261021120000_house_scanner_onboarding.sql. Households and memberships created through links stay; archived
+-- Reverses 20261020155317_house_scanner_onboarding.sql. Households and memberships created through links stay; archived
 -- households lose their archive time, and their members stay inactive. Pending and used links are dropped.
 begin;
 drop function public.hs_invitation_create(text,uuid,text);

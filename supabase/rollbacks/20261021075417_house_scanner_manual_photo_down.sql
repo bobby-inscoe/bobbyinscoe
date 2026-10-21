@@ -1,4 +1,4 @@
--- Reverses 20261022090000_house_scanner_manual_photo.sql. Photo addresses already saved stay in the stored value but are not shown.
+-- Reverses 20261021075417_house_scanner_manual_photo.sql. Photo addresses already saved stay in the stored value but are not shown.
 begin;
 drop function if exists public.hs_add_manual(uuid,text,text,text,jsonb,jsonb,jsonb);
 create or replace function public.hs_add_manual(p_household_id uuid,p_url text,p_title text,p_note text,p_tags jsonb) returns jsonb language plpgsql security definer set search_path=pg_catalog,hs as $$ declare lid uuid; begin

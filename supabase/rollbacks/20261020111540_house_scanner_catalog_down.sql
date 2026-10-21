@@ -1,4 +1,4 @@
--- Reverses 20261020150000_house_scanner_catalog.sql. Catalog rows, policies, credentials and runs go back to the one
+-- Reverses 20261020111540_house_scanner_catalog.sql. Catalog rows, policies, credentials and runs go back to the one
 -- household, manual listings return to hs.listings with their ids, and the household-scoped functions, including the
 -- purge, are restored as the earlier migrations defined them. Valid only while one household exists: with more, catalog
 -- rows have no single owner and this stops. Source policy and credential log rows written without a household get it.
