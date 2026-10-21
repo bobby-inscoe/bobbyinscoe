@@ -24,7 +24,8 @@ declare visible jsonb; edition jsonb; people jsonb; profiles jsonb; favorites js
 begin
  perform hs.require_member(p_household_id);
  select jsonb_build_object('id',id,'publishedAt',published_at,'coverage',coverage,'sourceSummary',source_summary) into edition from hs.editions order by published_at desc,id desc limit 1;
- with p as materialized (select source_id,policy,hs.policy_current(policy) live,now()-make_interval(days=>(policy->>'retentionDays')::int) cutoff from hs.source_policies),
+ -- Policies are stored out of line; ||'{}' reads each once, where the bare column is read again at every reference.
+ with p as materialized (select source_id,policy||'{}'::jsonb policy,hs.policy_current(policy) live,now()-make_interval(days=>(policy->>'retentionDays')::int) cutoff from hs.source_policies),
  touched as materialized (select listing_id id from hs.favorites where household_id=p_household_id and listing_id is not null
   union select listing_id from hs.notes where household_id=p_household_id and listing_id is not null and body ~ '\S'),
  hidden as materialized (select listing_id id from hs.hidden_listings where household_id=p_household_id and listing_id is not null),
