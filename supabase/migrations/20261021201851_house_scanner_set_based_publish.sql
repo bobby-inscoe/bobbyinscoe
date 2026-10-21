@@ -63,27 +63,28 @@ language sql stable set search_path=pg_catalog,hs as $$
    where hole @> l.projected and (l.projected <-> path(hole))>l.radius)))
 $$;
 
--- Homes a publish result saw on the search pages or staged. Replaces hs.seen_in, which expanded the seen list once per
--- listing of the source; seen_in stays because the delisting rollback drops it.
-create function hs.seen_listings(p_run uuid,p_result jsonb) returns table(source_listing_id text,episode_id text) language sql stable as $$
- select x->>'sourceListingId',x->>'episodeId' from jsonb_array_elements(case when jsonb_typeof(p_result->'seen')='array' then p_result->'seen' else '[]'::jsonb end) x
- union select o.source_listing_id,o.episode_id from hs.staged_observations o where o.run_id=p_run and o.source_id=p_result->>'sourceId'
-$$;
-
+-- The seen set (homes on the search pages or staged) is built once per result instead of expanding the seen list once
+-- per listing of the source, as hs.seen_in did. seen_in stays because the delisting rollback drops it.
 create or replace function hs.mark_delisted() returns trigger language plpgsql set search_path=pg_catalog,hs as $$
 declare result jsonb;
 begin
  for result in select * from jsonb_array_elements(new.results) loop
   if result->>'status' not in ('success','partial') then continue; end if;
+  with seen as (
+   select x->>'sourceListingId' source_listing_id,x->>'episodeId' episode_id from jsonb_array_elements(case when jsonb_typeof(result->'seen')='array' then result->'seen' else '[]'::jsonb end) x
+   union select o.source_listing_id,o.episode_id from hs.staged_observations o where o.run_id=new.id and o.source_id=result->>'sourceId')
   update hs.listings l set missed_full_reads=0,delisted_at=null
-   from hs.seen_listings(new.id,result) seen
+   from seen
    where l.source_id=result->>'sourceId' and l.source_listing_id=seen.source_listing_id and l.episode_id=seen.episode_id
     and (l.missed_full_reads>0 or l.delisted_at is not null);
   if result->'fullRead'='true'::jsonb and jsonb_typeof(result->'seen')='array' then
+   with seen as (
+    select x->>'sourceListingId' source_listing_id,x->>'episodeId' episode_id from jsonb_array_elements(result->'seen') x
+    union select o.source_listing_id,o.episode_id from hs.staged_observations o where o.run_id=new.id and o.source_id=result->>'sourceId')
    update hs.listings l set missed_full_reads=l.missed_full_reads+1,
     delisted_at=case when l.missed_full_reads+1>=2 then coalesce(l.delisted_at,now()) else l.delisted_at end
    where l.source_id=result->>'sourceId'
-    and not exists(select 1 from hs.seen_listings(new.id,result) seen where seen.source_listing_id=l.source_listing_id and seen.episode_id=l.episode_id);
+    and not exists(select 1 from seen where seen.source_listing_id=l.source_listing_id and seen.episode_id=l.episode_id);
   end if;
  end loop;
  return new;

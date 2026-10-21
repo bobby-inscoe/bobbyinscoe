@@ -55,7 +55,6 @@ begin
  end loop;
  return new;
 end; $$;
-drop function hs.seen_listings(uuid,jsonb);
 
 create or replace function public.hs_ingest(p_key_id text,p_body_hash text,p_request jsonb) returns jsonb language plpgsql security definer set search_path=pg_catalog,hs as $$
 declare c hs.ingest_credentials; r hs.runs; b hs.batches; s text; p jsonb; o jsonb; result jsonb; ids text[]; existing hs.listings; lid uuid; edition_id uuid; obs record; meaningful boolean; success_count integer; batch_count integer;
