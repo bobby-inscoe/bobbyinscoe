@@ -236,6 +236,11 @@ Deno.serve(async (request: Request) => {
     p_body_hash: digest,
     p_request: input,
   });
+  // A statement timeout is not a conflict; answering 409 sends the operator after the wrong cause.
+  if (error?.code === '57014') {
+    console.error('house-scanner-ingest stopped: statement-timeout');
+    return response(503, { error: 'Ingestion timed out' });
+  }
   const result = resultSchema.safeParse(data);
   if (error || !result.success)
     return response(409, {

@@ -1123,6 +1123,32 @@ describe('candidates filtered by household criteria', () => {
     await db.exec(await migration(`${speed}.sql`));
     expect(await both()).toEqual(fast);
   });
+
+  // The delisting rollback above re-applied the row-by-row trigger; applying the set-based publish again puts the
+  // current one back for the delisting tests below.
+  it('rolls back the set-based publish, publishes with the old function, and applies it again', async () => {
+    const setBased = '20261021201851_house_scanner_set_based_publish';
+    await db.exec(
+      await readFile(
+        new URL(`../rollbacks/${setBased}_down.sql`, import.meta.url),
+        'utf8',
+      ),
+    );
+    await publish(
+      [home('after-rollback', { observedAt: new Date().toISOString() })],
+      { source: 'beta' },
+    );
+    await db.exec(await migration(`${setBased}.sql`));
+    const rows = await db.query<{ closed: number; unhashed: number }>(
+      `select (select count(*)::int from hs.staged_observations o join hs.runs r on r.id=o.run_id where r.state<>'staging') closed,
+        (select count(*)::int from hs.listings where content_hash is null) unhashed`,
+    );
+    expect(rows.rows[0]).toEqual({ closed: 0, unhashed: 0 });
+    const published = await db.query<{ revision: number }>(
+      "select revision from hs.listings where source_listing_id='after-rollback'",
+    );
+    expect(published.rows).toEqual([{ revision: 1 }]);
+  });
 });
 
 describe('listings that leave their source', () => {
@@ -1208,6 +1234,281 @@ describe('listings that leave their source', () => {
       }),
     ).resolves.toMatchObject({ state: 'failed' });
     expect(await state('gone-b')).toEqual({ missed: 1, delisted: false });
+  });
+});
+
+describe('set-based publish', () => {
+  const SET_BASED_DOWN = new URL(
+    '../rollbacks/20261021201851_house_scanner_set_based_publish_down.sql',
+    import.meta.url,
+  );
+  const at = (hours: number) => new Date(baseTime + hours * HOUR).toISOString();
+  const place = (longitude: number, observedAt: string) => ({
+    longitude,
+    latitude: 0,
+    precision: 'address' as const,
+    source: 'Synthetic coordinates',
+    observedAt,
+  });
+  const priced = (id: string, askingPriceSek: number, observedAt: string) =>
+    home(id, { observedAt, facts: { ...home(id).facts, askingPriceSek } });
+
+  // One source and credential on the current schema, or with the set-based publish rolled back.
+  async function catalog(rowByRow: boolean) {
+    const database = await freshDatabase('all');
+    if (rowByRow) await database.exec(await readFile(SET_BASED_DOWN, 'utf8'));
+    await database.query(
+      'insert into hs.source_policies(source_id,policy) values($1,$2::jsonb)',
+      ['alpha', JSON.stringify(policy('alpha'))],
+    );
+    await database.query(
+      "insert into hs.ingest_credentials(key_id,source_ids,expires_at) values($1,array['alpha'],now()+interval '1 day')",
+      [KEY],
+    );
+    return database;
+  }
+
+  // Everything publish decides, without generated ids and the database clock.
+  async function catalogState(database: PGlite) {
+    const listings = await database.query<Record<string, unknown>>(
+      `select l.source_listing_id,l.value,l.observed_at,l.revision,l.previous_asking_price,l.previous_price_observed_at,
+        l.missed_full_reads,l.delisted_at is not null delisted,l.first_seen_run_id is not null discovered,
+        (select coalesce(jsonb_agg(o.value order by o.received_at,o.value::text),'[]'::jsonb) from hs.observations o where o.listing_id=l.id) history
+       from hs.listings l order by l.source_listing_id`,
+    );
+    const runs = await database.query(
+      `select r.state,r.results,(select e.coverage from hs.editions e where e.run_id=r.id) coverage
+       from hs.runs r order by r.created_at,r.id`,
+    );
+    return { listings: listings.rows, runs: runs.rows };
+  }
+
+  it('publishes the same catalog as the row-by-row publish it replaces', async () => {
+    const seen = ['steady', 'cheaper', 'conflicted', 'moving'];
+    // Discovery, an unchanged refresh, a price drop, a conflicted price, a moved home, two full reads that delist
+    // one home, a failed result, and a partial read that brings it back.
+    const steps = [
+      (database: PGlite) =>
+        publish(
+          [
+            home('steady', { observedAt: at(0), coordinates: place(0, at(0)) }),
+            priced('cheaper', 2_500_000, at(0)),
+            home('gone', { observedAt: at(0) }),
+            home('conflicted', { observedAt: at(0) }),
+          ],
+          { database },
+        ),
+      (database: PGlite) =>
+        publish(
+          [
+            home('steady', { observedAt: at(1), coordinates: place(0, at(1)) }),
+            priced('cheaper', 2_300_000, at(1)),
+            home('conflicted', {
+              observedAt: at(1),
+              conflicts: ['askingPriceSek'],
+            }),
+            home('moving', { observedAt: at(1), coordinates: place(1, at(1)) }),
+          ],
+          { database, seen, fullRead: true },
+        ),
+      (database: PGlite) =>
+        publish(
+          [home('moving', { observedAt: at(2), coordinates: place(2, at(2)) })],
+          { database, seen, fullRead: true },
+        ),
+      (database: PGlite) =>
+        publish([home('never', { observedAt: at(3) })], {
+          database,
+          status: 'failed',
+        }),
+      (database: PGlite) =>
+        publish([priced('cheaper', 2_300_000, at(4))], {
+          database,
+          status: 'partial',
+          seen: ['gone'],
+        }),
+    ];
+    const results = [];
+    for (const rowByRow of [true, false]) {
+      const database = await catalog(rowByRow);
+      try {
+        const states = [];
+        for (const step of steps) {
+          await step(database);
+          states.push(await catalogState(database));
+        }
+        results.push(states);
+      } finally {
+        await database.close();
+      }
+    }
+    expect(results[1]).toEqual(results[0]);
+    // The scenario reaches the cases it names.
+    const [, , delisting, , last] = results[1];
+    const row = (state: typeof last, id: string) =>
+      state.listings.find((item) => item.source_listing_id === id);
+    expect(row(delisting, 'gone')).toMatchObject({ delisted: true });
+    expect(row(last, 'gone')).toMatchObject({ delisted: false });
+    expect(row(last, 'cheaper')).toMatchObject({
+      previous_asking_price: 2_500_000,
+      revision: 2,
+    });
+    expect(row(last, 'steady')).toMatchObject({ revision: 1 });
+    expect(row(last, 'moving')).toMatchObject({ revision: 2 });
+    expect(row(last, 'never')).toBeUndefined();
+  });
+
+  it('refreshes an unchanged home without history and looks up the neighborhood only when it moves', async () => {
+    const database = await catalog(false);
+    try {
+      await database.exec(`create table hs.lookups(listing text);
+        create or replace function hs.assign_neighborhood() returns trigger language plpgsql set search_path=pg_catalog,hs as $$
+        begin
+         insert into hs.lookups values(new.source_listing_id);
+         new.neighborhood_id:=hs.neighborhood_for_coordinates(new.value->'coordinates');
+         return new;
+        end; $$;`);
+      const lookups = async () =>
+        (
+          await database.query<{ listing: string }>(
+            'delete from hs.lookups returning listing',
+          )
+        ).rows.map((item) => item.listing);
+      const viewing = (hours: number) => [
+        { startsAt: at(hours), endsAt: null },
+      ];
+      const stored = async () =>
+        (
+          await database.query<{
+            revision: number;
+            history: number;
+            observed: string;
+            viewing: string;
+          }>(
+            `select revision,(select count(*)::int from hs.observations o where o.listing_id=l.id) history,
+              value->>'observedAt' observed,value->'viewings'->0->>'startsAt' viewing
+             from hs.listings l where source_listing_id='steady'`,
+          )
+        ).rows[0];
+      await publish(
+        [
+          home('steady', {
+            observedAt: at(0),
+            coordinates: place(0, at(0)),
+            viewings: viewing(48),
+          }),
+        ],
+        { database },
+      );
+      expect(await lookups()).toEqual(['steady']);
+      await publish(
+        [
+          home('steady', {
+            observedAt: at(1),
+            coordinates: place(0, at(1)),
+            viewings: viewing(72),
+          }),
+        ],
+        { database },
+      );
+      expect(await lookups()).toEqual([]);
+      expect(await stored()).toEqual({
+        revision: 1,
+        history: 1,
+        observed: at(1),
+        viewing: at(72),
+      });
+      await publish(
+        [home('steady', { observedAt: at(2), coordinates: place(1, at(2)) })],
+        { database },
+      );
+      expect(await lookups()).toEqual(['steady']);
+      expect(await stored()).toMatchObject({ revision: 2, history: 2 });
+    } finally {
+      await database.close();
+    }
+  });
+
+  it('keeps staged rows only until their run closes, and closes runs abandoned for a day', async () => {
+    const database = await catalog(false);
+    try {
+      const staged = async () =>
+        (
+          await database.query<{ count: number }>(
+            'select count(*)::int count from hs.staged_observations',
+          )
+        ).rows[0].count;
+      await publish([home('published', { observedAt: at(0) })], { database });
+      expect(await staged()).toBe(0);
+      const runId = randomUUID();
+      await ingest(
+        { action: 'begin', contractVersion: 1, runId, sourceIds: ['alpha'] },
+        database,
+      );
+      await ingest(
+        {
+          action: 'stage',
+          contractVersion: 1,
+          runId,
+          batchId: randomUUID(),
+          sourceId: 'alpha',
+          observations: [home('abandoned', { observedAt: at(1) })],
+        },
+        database,
+      );
+      expect(await staged()).toBe(1);
+      await database.query(
+        "update hs.runs set created_at=now()-interval '25 hours' where id=$1",
+        [runId],
+      );
+      await ingest(
+        {
+          action: 'begin',
+          contractVersion: 1,
+          runId: randomUUID(),
+          sourceIds: ['alpha'],
+        },
+        database,
+      );
+      expect(await staged()).toBe(0);
+      const left = await database.query<{ state: string; listed: boolean }>(
+        "select state,exists(select 1 from hs.listings where source_listing_id='abandoned') listed from hs.runs where id=$1",
+        [runId],
+      );
+      expect(left.rows).toEqual([{ state: 'failed', listed: false }]);
+    } finally {
+      await database.close();
+    }
+  });
+
+  it('refuses a different observation for a time already published, and a home staged twice', async () => {
+    const database = await catalog(false);
+    try {
+      await publish([home('fixed', { observedAt: at(0) })], { database });
+      // An unchanged refresh moves the listing to a time that has no history row.
+      await publish([home('fixed', { observedAt: at(1) })], { database });
+      await expect(
+        publish([home('fixed', { observedAt: at(1), title: 'changed' })], {
+          database,
+        }),
+      ).rejects.toThrow('Conflicting same-time observation across runs');
+      await expect(
+        publish([home('fixed', { observedAt: at(0), title: 'other' })], {
+          database,
+        }),
+      ).rejects.toThrow('Conflicting historical same-time observation');
+      await expect(
+        publish(
+          [
+            home('twice', { observedAt: at(2) }),
+            home('twice', { observedAt: at(3) }),
+          ],
+          { database },
+        ),
+      ).rejects.toThrow('Listing staged more than once in run');
+    } finally {
+      await database.close();
+    }
   });
 });
 

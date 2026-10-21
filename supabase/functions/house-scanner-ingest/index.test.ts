@@ -309,6 +309,30 @@ describe('signed ingestion trust boundary', () => {
     );
     logged.mockRestore();
   });
+  it('reports a database statement timeout as 503, and other ingest errors as 409', async () => {
+    const original = database.rpc.getMockImplementation();
+    const failWith = (code: string) =>
+      database.rpc.mockImplementation(async (name, args) =>
+        name === 'hs_ingest'
+          ? {
+              data: null,
+              error: { code, message: 'private database diagnostics' },
+            }
+          : original?.(name, args),
+      );
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    failWith('57014');
+    const timedOut = await handler(signedRequest());
+    expect(timedOut.status).toBe(503);
+    expect(await timedOut.text()).not.toContain('private database diagnostics');
+    expect(logged.mock.calls.flat().join(' ')).toContain('statement-timeout');
+    failWith('P0001');
+    const refused = await handler(
+      signedRequest({ nonce: 'synthetic_nonce_5678' }),
+    );
+    expect(refused.status).toBe(409);
+    logged.mockRestore();
+  });
   it('rejects methods and paths before reading credentials', async () => {
     expect(
       (await handler(new Request(`https://local.example.invalid${path}`)))
