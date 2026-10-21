@@ -60,7 +60,7 @@ test('mobile map fills the viewport and List restores the full listing view', as
     shell.getByRole('button', { name: 'List', exact: true }),
   ).toBeVisible();
   await expect(
-    shell.getByRole('button', { name: 'Filters', exact: true }),
+    shell.getByRole('button', { name: /^Filters(?: \(\d+\))?$/ }),
   ).toBeVisible();
   await expect(
     shell.getByRole('button', { name: 'Select', exact: true }),
@@ -107,14 +107,14 @@ test('mobile map fills the viewport and List restores the full listing view', as
     );
   expect(smallControls).toEqual([]);
 
-  await shell.getByRole('button', { name: 'Filters', exact: true }).click();
+  await shell.getByRole('button', { name: /^Filters(?: \(\d+\))?$/ }).click();
   const filters = page.getByRole('dialog', { name: 'Filters' });
   await expect(filters).toBeVisible();
   await expect(shell).toBeVisible();
   await filters.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(filters).toHaveCount(0);
 
-  await shell.getByRole('button', { name: 'Filters', exact: true }).click();
+  await shell.getByRole('button', { name: /^Filters(?: \(\d+\))?$/ }).click();
   const notOnMap = page.getByRole('checkbox', {
     name: 'Not on the map only',
   });

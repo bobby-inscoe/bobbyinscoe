@@ -136,7 +136,7 @@
   z-index: 1;
   position: absolute;
   inset: 0;
-  transform: rotateX(24deg) rotateZ(-12deg);
+  transform: rotateZ(-14deg);
 }
 .overview-plane {
   position: absolute;
@@ -164,27 +164,27 @@
   width: 34%;
   top: 60px;
   left: 12%;
-  transform: rotate(3deg);
+  transform: rotate(4deg);
   z-index: 2;
 }
 .overview-common-basket {
   width: 28%;
-  top: 2px;
-  left: 59%;
-  transform: rotate(6deg);
+  top: -28px;
+  left: 54%;
+  transform: rotate(7deg);
 }
 .overview-across-the-ledger {
   width: 29%;
   top: 288px;
   left: 26%;
-  transform: rotate(-3deg);
+  transform: rotate(-5deg);
   z-index: 2;
 }
 .overview-position-notes {
-  width: 28%;
-  top: 260px;
-  left: 67%;
-  transform: rotate(4deg);
+  width: 30%;
+  top: 560px;
+  left: 43%;
+  transform: rotate(-6deg);
 }
 .overview-label {
   display: flex;
@@ -426,9 +426,11 @@
   position: absolute;
   z-index: 2;
   left: 6%;
-  font-size: 1.6cqw;
-  letter-spacing: 0.13em;
-  line-height: 1.5;
+  font:
+    400 5.2cqw / 1.1 Libron,
+    Georgia,
+    serif;
+  letter-spacing: -0.02em;
 }
 .art-corner {
   top: 7%;
@@ -835,7 +837,7 @@
   }
   .overview-planes {
     z-index: 1;
-    transform: rotateX(25deg) rotateZ(-12deg);
+    transform: rotateZ(-14deg);
   }
   .overview-plane {
     padding: 7px 7px 0;
@@ -856,9 +858,10 @@
     top: 288px;
   }
   .overview-position-notes {
-    width: 43%;
-    top: 230px;
-    left: 56%;
+    width: 46%;
+    top: 440px;
+    left: 28%;
+    transform: rotate(-4deg);
   }
   .overview-label {
     font-size: 7px;
@@ -974,10 +977,18 @@
   height: 780px;
 }
 .overview-house-scanner {
-  width: 30%;
-  top: 520px;
-  left: 43%;
-  transform: rotate(-4deg);
+  width: 28%;
+  top: 285px;
+  left: 62%;
+  transform: rotate(26deg);
+}
+@media (min-width: 701px) and (max-width: 1000px) {
+  .overview-position-notes {
+    top: 560px;
+  }
+  .overview-house-scanner {
+    top: 220px;
+  }
 }
 .surface-house-scanner {
   background: #cdd1b9;
@@ -991,26 +1002,59 @@
   background: #f3eddf;
   color: #526044;
 }
-.scanner-art svg {
-  display: block;
-  width: 100%;
+.scanner-art-timmy {
+  position: absolute;
+  top: 15%;
+  left: 50%;
+  width: 24%;
+  aspect-ratio: 1;
+  border: 5px solid #f3eddf;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 8px 18px #343b2c35;
+  transform: translateX(-50%);
+}
+.scanner-art .art-corner {
+  left: 6%;
+  font-size: 8cqw;
 }
 .scanner-art-caption {
   position: absolute;
-  left: 6%;
-  bottom: 8%;
+  left: 50%;
+  top: 55%;
+  white-space: nowrap;
   font:
-    400 4.5cqw / 1.1 Libron,
+    400 6.7cqw / 1.1 Libron,
     Georgia,
     serif;
+  transform: translateX(-50%);
+}
+.scanner-art-note {
+  position: absolute;
+  left: 50%;
+  top: 71%;
+  font-size: 2.5cqw;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transform: translateX(-50%);
 }
 @media (max-width: 700px) {
   .workshop .room-overview {
     height: 620px;
   }
   .overview-house-scanner {
-    width: 46%;
+    width: 43%;
+    top: 230px;
+    left: 56%;
+    transform: rotate(18deg);
+  }
+}
+@media (max-width: 380px) {
+  .overview-position-notes {
     top: 440px;
-    left: 28%;
+  }
+  .overview-house-scanner {
+    top: 220px;
   }
 }

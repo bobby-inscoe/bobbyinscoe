@@ -35,7 +35,7 @@ test('a large list mounts cards in batches while browsing controls work', async 
     .click();
   await expect(page.getByRole('article')).toHaveCount(32);
 
-  await page.getByRole('button', { name: 'Filters', exact: true }).click();
+  await page.getByRole('button', { name: /^Filters(?: \(\d+\))?$/ }).click();
   await expect(page.getByRole('dialog', { name: 'Filters' })).toBeVisible();
   await page
     .getByRole('dialog', { name: 'Filters' })

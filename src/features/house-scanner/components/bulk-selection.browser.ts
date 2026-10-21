@@ -100,14 +100,14 @@ test('applying filters removes excluded selections without adding new ones', asy
   await page
     .getByRole('button', { name: 'Select unsaved (3)', exact: true })
     .click();
-  await page.getByRole('button', { name: 'Filters', exact: true }).click();
+  await page.getByRole('button', { name: /^Filters(?: \(\d+\))?$/ }).click();
   await page
     .getByRole('checkbox', { name: 'Not on the map only', exact: true })
     .check();
   await page.getByRole('button', { name: /Show \d+ homes/ }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('checkbox', { checked: true })).toHaveCount(2);
-  await page.getByRole('button', { name: 'Filters', exact: true }).click();
+  await page.getByRole('button', { name: /^Filters(?: \(\d+\))?$/ }).click();
   await page
     .getByRole('button', { name: 'Clear filters', exact: true })
     .click();
