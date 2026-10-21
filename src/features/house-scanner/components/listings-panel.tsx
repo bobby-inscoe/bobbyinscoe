@@ -1,6 +1,6 @@
 import {
   ActionIcon,
-  Badge,
+  Anchor,
   Button,
   Drawer,
   Flex,
@@ -45,6 +45,7 @@ import type {
 import {
   activeFilterCount,
   applyListingFilters,
+  emptyFilters,
   type ListingFilters,
 } from '@/features/house-scanner/utils/listing-filters';
 import { listingNeighborhoods } from '@/features/house-scanner/utils/listing-neighborhoods';
@@ -599,28 +600,17 @@ export function ListingsPanel({
               w={{ base: 180, sm: 220 }}
               maw="100%"
             />
-            <Group gap="xs">
-              <Button
-                variant="default"
-                aria-expanded={filtersOpen}
-                aria-controls="listing-filters"
-                onClick={() => {
-                  setDraft(filters);
-                  onFiltersOpenChange(true);
-                }}
-              >
-                Filters
-              </Button>
-              {filtersActive > 0 && (
-                <Badge
-                  variant="light"
-                  color="gray"
-                  aria-label={`${filtersActive} active filters`}
-                >
-                  {filtersActive} active
-                </Badge>
-              )}
-            </Group>
+            <Button
+              variant="default"
+              aria-expanded={filtersOpen}
+              aria-controls="listing-filters"
+              onClick={() => {
+                setDraft(filters);
+                onFiltersOpenChange(true);
+              }}
+            >
+              Filters{filtersActive > 0 ? ` (${filtersActive})` : ''}
+            </Button>
           </Flex>
           <Group
             gap="sm"
@@ -633,6 +623,19 @@ export function ListingsPanel({
               {notLocated > 0 && ` · ${notLocated} not located`}
               {hiddenCount > 0 && ` · ${hiddenCount} hidden`}
               {duplicateCount > 0 && ` · ${duplicateCount} duplicates folded`}
+              {filtersActive > 0 && (
+                <>
+                  {' · '}
+                  <Anchor
+                    component="button"
+                    type="button"
+                    size="sm"
+                    onClick={() => onFiltersChange(emptyFilters)}
+                  >
+                    Clear filters
+                  </Anchor>
+                </>
+              )}
             </Text>
             <Group gap="xs" wrap="wrap">
               <Group gap="xs" role="group" aria-label="View">
@@ -982,9 +985,6 @@ export function ListingsPanel({
         />
       )}
       <ListingDrawer
-        backLabel={
-          tab === 'favorites' ? 'Back to favorites' : 'Back to listings'
-        }
         listing={selected}
         snapshot={snapshot}
         userId={userId}
@@ -996,7 +996,7 @@ export function ListingsPanel({
         onToggleHidden={toggleHidden}
         onFavorite={favoriteListing}
         onClose={onCloseListing}
-        onSeeOnMap={onSeeSelectedOnMap}
+        onSeeOnMap={view === 'map' ? undefined : onSeeSelectedOnMap}
       />
     </section>
   );

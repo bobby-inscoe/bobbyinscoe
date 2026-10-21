@@ -231,6 +231,7 @@ export const ListingCard = memo(function ListingCard({
       <div className={`${classes.photoWrap} ${classes.cardPhoto}`}>
         <ListingPhoto
           listing={listing}
+          isNew={listing.isNew}
           onOpen={openPrimary}
           actionLabel={selectionMode ? selectionLabel : undefined}
           pressed={selectionMode ? checked === true : undefined}
@@ -245,11 +246,6 @@ export const ListingCard = memo(function ListingCard({
             />
           )}
         </Box>
-        {listing.isNew && (
-          <Badge variant="new" className={classes.newFlag}>
-            New
-          </Badge>
-        )}
         <FavoriteStar
           mine={mine}
           others={saved.length > 0}

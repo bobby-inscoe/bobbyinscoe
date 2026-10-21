@@ -39,9 +39,9 @@ interface ListingDrawerProps {
   onToggleHidden: (listingId: string) => void;
   onFavorite: (listingId: string) => void;
   onClose: () => void;
-  onSeeOnMap: () => void;
+  // Absent when the map is already showing.
+  onSeeOnMap?: () => void;
   alsoOn?: string[];
-  backLabel?: 'Back to listings' | 'Back to favorites';
 }
 
 // A side sheet on wide screens and a bottom sheet on narrow ones.
@@ -58,7 +58,6 @@ export function ListingDrawer({
   onClose,
   onSeeOnMap,
   alsoOn,
-  backLabel = 'Back to listings',
 }: ListingDrawerProps) {
   const wide = useMediaQuery('(min-width: 48em)');
   return (
@@ -71,15 +70,12 @@ export function ListingDrawer({
       size={wide ? 'lg' : '85%'}
       classNames={{
         title: classes.drawerTitle,
+        header: classes.drawerHeader,
+        body: classes.drawerSheetBody,
       }}
     >
       {listing && (
         <Stack gap="sm" className={classes.drawerBody}>
-          <Group>
-            <Button variant="subtle" mih={44} onClick={onClose}>
-              {backLabel}
-            </Button>
-          </Group>
           <div className={classes.photoWrap}>
             <ListingPhoto listing={listing} />
             <HideButton
@@ -116,7 +112,7 @@ export function ListingDrawer({
           <MatchLines listing={listing} snapshot={snapshot} details />
           <Group>
             <OriginalListingButton listing={listing} />
-            {hasPin(listing.coordinates) && (
+            {onSeeOnMap && hasPin(listing.coordinates) && (
               <Button size="xs" variant="default" onClick={onSeeOnMap}>
                 See on map
               </Button>

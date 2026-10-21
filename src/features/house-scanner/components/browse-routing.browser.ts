@@ -66,7 +66,7 @@ test('direct detail links require access and resolve independently of filters', 
   ).toBeVisible();
   await page
     .getByRole('dialog')
-    .getByRole('button', { name: 'Back to listings', exact: true })
+    .getByRole('button', { name: 'Close listing details', exact: true })
     .click();
   await expect(page).toHaveURL(/shellter\/listings(?:\?|$)/);
 });
@@ -176,7 +176,7 @@ for (const id of [balconyId, '00000000-0000-4000-8000-999999999999']) {
     await page
       .getByRole('button', { name: 'Explore the synthetic demo' })
       .click();
-    await page.getByRole('button', { name: /^Back to favorites$/i }).click();
+    await page.getByRole('button', { name: 'Close listing details' }).click();
     await expect(page).toHaveURL(/shellter\/favorites(?:\?|$)/);
     await expect(page.getByRole('article')).toHaveCount(2);
   });

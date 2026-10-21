@@ -462,7 +462,9 @@ test('personal filters change the list and the map together, and Clear restores 
   await expect(page.getByText('1 homes', { exact: false })).toBeVisible();
   await expect(page.getByText('Showing 1 of 5 homes')).toBeVisible();
   await applyFilters(page);
-  await expect(page.getByText('1 active')).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Filters (1)', exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole('article')).toHaveCount(1);
   await page.getByRole('button', { name: 'Map', exact: true }).click();
   await expect(
@@ -485,15 +487,21 @@ test('Lift only and Glazed only narrow the list and count as active filters', as
   await openDemo(page);
   await page.getByRole('button', { name: 'Filters', exact: true }).click();
   await page.getByRole('checkbox', { name: 'Lift', exact: true }).check();
-  await expect(page.getByText('1 active')).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Filters (1)', exact: true }),
+  ).toHaveCount(0);
   await expect(page.getByRole('article')).toHaveCount(5);
   await page.getByRole('checkbox', { name: 'Glazed', exact: true }).check();
-  await expect(page.getByText('2 active')).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Filters (2)', exact: true }),
+  ).toHaveCount(0);
   await expect(
     page.getByRole('button', { name: 'Show 2 homes', exact: true }),
   ).toBeVisible();
   await applyFilters(page);
-  await expect(page.getByText('2 active')).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Filters (2)', exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole('article')).toHaveCount(2);
   await page.getByRole('button', { name: 'Filters', exact: true }).click();
   await page.getByRole('button', { name: 'Clear filters' }).click();
@@ -526,10 +534,14 @@ test('hiding a home removes it from the list, keeps it findable and leaves brows
     page.getByText('4 homes · 3 not located · 1 hidden'),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Filters', exact: true }).click();
-  await expect(page.getByText('1 active')).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Filters (1)', exact: true }),
+  ).toHaveCount(0);
   await page.getByRole('radio', { name: 'Hidden only' }).check();
   await applyFilters(page);
-  await expect(page.getByText('1 active')).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Filters (1)', exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole('article')).toHaveCount(1);
   await expect(
     home.getByText('Hidden by Demo Alex', { exact: true }),

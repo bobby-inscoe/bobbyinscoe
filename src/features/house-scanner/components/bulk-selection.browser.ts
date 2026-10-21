@@ -84,7 +84,7 @@ test('explicitly hiding a saved home keeps it in Favorites, marked, and Undo cle
   ).toBeVisible();
   await page
     .getByRole('dialog')
-    .getByRole('button', { name: 'Back to favorites' })
+    .getByRole('button', { name: 'Close listing details' })
     .click();
   await page
     .getByRole('button', { name: 'Undo hide (1)', exact: true })

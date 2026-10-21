@@ -105,6 +105,7 @@ it('searches listing titles without case or surrounding spaces', () => {
   const listing = home({}, { title: 'Linnégatan 12' });
   expect(passes(listing, { titleQuery: '  LINNÉGATAN  ' })).toBe(true);
   expect(passes(listing, { titleQuery: '14' })).toBe(false);
+  expect(passes(listing, { titleQuery: 'linegatan' })).toBe(true);
   expect(activeFilterCount({ ...emptyFilters, titleQuery: ' 12 ' })).toBe(1);
   expect(activeFilterCount({ ...emptyFilters, titleQuery: '  ' })).toBe(0);
 });

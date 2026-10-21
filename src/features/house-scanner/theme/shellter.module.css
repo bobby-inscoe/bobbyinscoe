@@ -367,6 +367,13 @@
   border-color: var(--shellter-teal-pale);
 }
 /* New homes are flagged on the photo, where a scan of the list lands first. */
+.photoAttribution {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.photoFrame {
+  position: relative;
+}
 .newFlag {
   position: absolute;
   left: 10px;
@@ -428,6 +435,26 @@
   padding: 0;
   border-radius: var(--mantine-radius-sm);
   font-size: var(--mantine-font-size-xs);
+}
+/* On a phone the photo leads the card at full width, like a listing. */
+@media (max-width: 35.99375em) {
+  .viewingCard {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 12px;
+  }
+  .viewingThumb {
+    grid-row: auto;
+    margin: -12px -12px 4px;
+  }
+  .viewingThumb .photo,
+  .viewingThumb .placeholder {
+    aspect-ratio: 3 / 2;
+    border-radius: 0;
+  }
+  .viewingThumb .photoAttribution {
+    padding-inline: 12px;
+    font-size: 0.625rem;
+  }
 }
 /* A label and its value, two columns; the labels are dimmed and the rows divide on a thin line. */
 .factList {
@@ -611,6 +638,22 @@
 /* A full-width photo in a wide sheet would fill most of its height. */
 .drawerBody .photo {
   max-height: 320px;
+}
+/* A phone sheet gives the photo and text the width the default padding takes. */
+@media (max-width: 47.99375em) {
+  .drawerHeader {
+    padding: 8px 8px 8px 12px;
+  }
+  .drawerSheetBody {
+    padding: 0 12px 12px;
+  }
+  .drawerBody > .photoWrap {
+    margin-inline: -12px;
+  }
+  .drawerBody .photoAttribution {
+    padding-inline: 12px;
+    overflow-wrap: anywhere;
+  }
 }
 .drawerTitle {
   font-family: var(--mantine-font-family-headings);
@@ -905,6 +948,12 @@
   filter: grayscale(1) opacity(0.5);
 }
 /* Fills show saves; check badges show batch selection. Preview adds no extra visual state. */
+.marker[data-preview="true"] {
+  box-shadow:
+    0 0 0 3px var(--shellter-surface),
+    0 0 0 6px var(--shellter-apricot);
+  transform: scale(1.15);
+}
 .marker[data-preview="true"],
 .marker[data-selection-mode="true"][data-batch-checked="true"] {
   filter: none;
