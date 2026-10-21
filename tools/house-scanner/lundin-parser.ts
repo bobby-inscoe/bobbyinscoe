@@ -1,6 +1,5 @@
 import {
   area,
-  MAX_HTML_CHARS,
   numberOf,
   type PageRead,
   positiveInt,
@@ -14,6 +13,10 @@ import {
 // Field meanings come from a structure-only look at the JSON the site's own list page loads from
 // /api/list?id=1 on 17 October 2026: one array of every object the broker has (245 that day). The route
 // is not documented as public. Items marked "inferred" were not proven.
+
+// The list grew from 245 objects to 3,900 (4.95 million characters) on 21 October 2026, when it started
+// carrying the sold archive; 231 were for sale or coming soon. Twice that size leaves room for the archive to grow.
+export const LUNDIN_MAX_CHARS = 10_000_000;
 
 type Facts = Observation['facts'];
 type Rec = Record<string, unknown>;
@@ -149,7 +152,7 @@ export function readLundinSearchPage(
   body: string,
   context: ReadContext,
 ): PageRead {
-  if (body.length > MAX_HTML_CHARS)
+  if (body.length > LUNDIN_MAX_CHARS)
     return { kind: 'failed', reason: 'too-large' };
   let data: unknown;
   try {

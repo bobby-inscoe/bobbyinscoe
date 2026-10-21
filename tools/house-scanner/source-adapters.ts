@@ -16,7 +16,10 @@ import {
   type SourceAdapter,
   USER_AGENT,
 } from '@house-scanner-tools/live-reader';
-import { readLundinSearchPage } from '@house-scanner-tools/lundin-parser';
+import {
+  LUNDIN_MAX_CHARS,
+  readLundinSearchPage,
+} from '@house-scanner-tools/lundin-parser';
 import {
   BJURFORS_ORIGIN,
   BJURFORS_SOURCE_ID,
@@ -226,6 +229,7 @@ export const lundinAdapter: SourceAdapter = {
   notCovered: 'Not covered: other cities, floor, lift and balcony.',
   // The list already holds everything, so the run is one request.
   listOnly: true,
+  maxBodyChars: LUNDIN_MAX_CHARS,
   partitionUrl(partition: LivePartitionInput) {
     return LUNDIN_MUNICIPALITIES.includes(
       partition.municipality.trim().toLowerCase(),

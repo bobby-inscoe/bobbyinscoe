@@ -1,11 +1,15 @@
 import { assertAdapterOutput } from '@house-scanner-tools/live-run';
-import { readLundinSearchPage } from '@house-scanner-tools/lundin-parser';
+import {
+  LUNDIN_MAX_CHARS,
+  readLundinSearchPage,
+} from '@house-scanner-tools/lundin-parser';
 import {
   GUID,
   IMAGE_GUID,
   lundinHome,
   lundinList,
 } from '@house-scanner-tools/lundin-test-pages';
+import { MAX_HTML_CHARS } from '@house-scanner-tools/page-read';
 import {
   LUNDIN_ORIGIN,
   sourceRegistry,
@@ -222,10 +226,16 @@ describe('Lundin list', () => {
       reason: 'unexpected-shape',
     });
     expect(fail('[]')).toEqual({ kind: 'failed', reason: 'no-results-list' });
-    expect(fail(' '.repeat(3_000_001))).toEqual({
+    expect(fail(' '.repeat(LUNDIN_MAX_CHARS + 1))).toEqual({
       kind: 'failed',
       reason: 'too-large',
     });
+  });
+
+  it('reads a list past the shared 3,000,000-character cap, as the list with its sold archive is', () => {
+    const body = lundinList([lundinHome()]) + ' '.repeat(4_950_000);
+    expect(body.length).toBeGreaterThan(MAX_HTML_CHARS);
+    expect(page(body).observations).toHaveLength(1);
   });
 
   it('never carries free text from the answer into the observation', () => {

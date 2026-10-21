@@ -124,6 +124,8 @@ export interface SourceAdapter {
   partitionUrl(partition: LivePartitionInput): string | { unsupported: string };
   /** Set when the search page already carries everything the source can give, so no home page is read. */
   listOnly?: boolean;
+  /** Largest response accepted from this source, in characters. Without it, MAX_BODY_CHARS. */
+  maxBodyChars?: number;
   /** Where a listing's extra facts are read, when that is not the page people open. */
   detailUrl?(observation: Observation): string;
   /** The photo a listing page's facts point to, for a source whose photos sit on an image host. */
@@ -197,6 +199,7 @@ export async function runCollection(
   // Listing pages read recently are merged from here instead of requested again.
   memory: RunMemory | null = null,
 ): Promise<LiveRunResult> {
+  const maxBodyChars = adapter.maxBodyChars ?? MAX_BODY_CHARS;
   let requestCount = 0;
   let detailRead = 0;
   let detailFailed = 0;
@@ -250,7 +253,7 @@ export async function runCollection(
       });
       const header = response.headers.get('content-length');
       declaredLength = header === null ? undefined : Number(header);
-      if (declaredLength !== undefined && declaredLength > MAX_BODY_CHARS) {
+      if (declaredLength !== undefined && declaredLength > maxBodyChars) {
         lastFinishedAt = deps.now();
         return {
           ok: false,
@@ -272,7 +275,7 @@ export async function runCollection(
       return { ok: false, stop: 'http-403', status: 403 };
     if (response.status !== 200)
       return { ok: false, stop: 'http-non-200', status: response.status };
-    if (body.length > MAX_BODY_CHARS)
+    if (body.length > maxBodyChars)
       return {
         ok: false,
         stop: 'oversize',
