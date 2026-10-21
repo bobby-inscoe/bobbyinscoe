@@ -1,4 +1,12 @@
-import { Anchor, Divider, Paper, Stack, Text, Title } from '@mantine/core';
+import {
+  Anchor,
+  Divider,
+  Group,
+  Paper,
+  Stack,
+  Text,
+  Title,
+} from '@mantine/core';
 import type { ReactNode } from 'react';
 
 import styles from '@/features/house-scanner/components/household-workspace.module.css';
@@ -177,6 +185,31 @@ export function ListingDetails({
             <ViewingRows listing={listing} />
           </Section>
         )}
+        {listing.photos && listing.photos.length > 1 && (
+          <Section title="Photos" order={sectionOrder}>
+            <Group gap="xs">
+              {listing.photos.map((photo) => (
+                <a
+                  key={photo.url}
+                  href={listing.sourceUrls[0]}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  referrerPolicy="no-referrer"
+                >
+                  <img
+                    src={photo.url}
+                    alt={listing.title}
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                    width={160}
+                    height={107}
+                    style={{ objectFit: 'cover' }}
+                  />
+                </a>
+              ))}
+            </Group>
+          </Section>
+        )}
         <Section title="Building and outdoor" order={sectionOrder}>
           <FactList
             rows={[
@@ -214,6 +247,16 @@ export function ListingDetails({
           <FactList
             rows={[
               ['Last observed', formatDate(listing.observedAt)],
+              ...(listing.origin === 'manual' &&
+              [
+                facts.propertyType,
+                facts.askingPriceSek,
+                facts.livingAreaM2,
+                facts.rooms,
+                facts.outdoor,
+              ].some((fact) => fact !== null)
+                ? ([['Facts', 'Entered by a member']] as [string, string][])
+                : []),
               ...timestamps.flatMap(({ label, value }) =>
                 value
                   ? ([[label, formatDate(value)]] as [string, string][])

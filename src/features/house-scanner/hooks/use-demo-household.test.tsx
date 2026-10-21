@@ -7,6 +7,7 @@ import {
   DEMO_OTHER_USER_ID,
   DEMO_USER_ID,
 } from '@/features/house-scanner/mock/synthetic-household';
+import { NO_MANUAL_FACTS } from '@/features/house-scanner/types/contracts';
 import { NoteConflictError } from '@/features/house-scanner/types/notes';
 
 afterEach(cleanup);
@@ -119,7 +120,8 @@ describe('demo household notes', () => {
         url: 'https://example.invalid/new-home',
         title: 'New fictional home',
         note: '  Initial thought  ',
-        tags: [],
+        imageUrls: [],
+        facts: NO_MANUAL_FACTS,
       }),
     );
     const added = result.current.snapshot.listings.find(
@@ -140,7 +142,8 @@ describe('demo household notes', () => {
         url: 'https://example.invalid/quiet-home',
         title: 'Quiet fictional home',
         note: '   ',
-        tags: [],
+        imageUrls: [],
+        facts: NO_MANUAL_FACTS,
       }),
     );
     const added = result.current.snapshot.listings.find(

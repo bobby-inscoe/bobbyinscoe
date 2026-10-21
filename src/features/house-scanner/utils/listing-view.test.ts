@@ -12,7 +12,6 @@ import { formatPrice } from '@/features/house-scanner/utils/format';
 import {
   mapPoints,
   scopeListings,
-  sourceSummaries,
 } from '@/features/house-scanner/utils/listing-view';
 
 const [balcony, terrace, needsDetails, detached, older] =
@@ -279,49 +278,6 @@ describe('mapPoints and hidden homes', () => {
       true,
       false,
       true,
-    ]);
-  });
-});
-
-describe('sourceSummaries', () => {
-  it('counts only source homes, by the host of their first link', () => {
-    const at = (url: string, id: string, changes: Partial<Listing> = {}) =>
-      variant({ origin: 'source', sourceUrls: [url], ...changes }, id);
-    const listings = [
-      at(
-        'https://www.hemnet.se/bostad/1',
-        '00000000-0000-4000-8000-000000000030',
-      ),
-      at(
-        'https://www.hemnet.se/bostad/2',
-        '00000000-0000-4000-8000-000000000031',
-      ),
-      at(
-        'https://www.bjurfors.se/objekt/3',
-        '00000000-0000-4000-8000-000000000032',
-      ),
-      at(
-        'https://www.hemnet.se/bostad/4',
-        '00000000-0000-4000-8000-000000000033',
-        {
-          origin: 'manual',
-        },
-      ),
-      balcony,
-    ];
-    expect(sourceSummaries(listings)).toEqual([
-      { host: 'www.hemnet.se', homes: 2 },
-      { host: 'www.bjurfors.se', homes: 1 },
-    ]);
-  });
-
-  it('is empty when no home came from a source', () => {
-    expect(sourceSummaries([balcony, terrace])).toEqual([]);
-  });
-
-  it('counts the demo’s one source home', () => {
-    expect(sourceSummaries(SYNTHETIC_SNAPSHOT.listings)).toEqual([
-      { host: 'example.invalid', homes: 1 },
     ]);
   });
 });

@@ -47,5 +47,4 @@ export type WorkspaceTab =
   | 'favorites'
   | 'viewings'
   | 'manual'
-  | 'sources'
   | 'settings';

@@ -280,6 +280,8 @@ export const listingSchema = z.strictObject({
   coordinates: coordinateSchema.nullable(),
   evidence: z.array(evidenceSchema).max(50),
   photo: photoSchema.nullable(),
+  // Every photo, the lead one first. Only manual links carry several; absent means just `photo`.
+  photos: z.array(photoSchema).max(10).optional(),
   /** Previous comparable, undisputed asking price in this source episode; unknown prices break the chain. */
   previousAskingPriceSek: money.positive().nullable(),
   /** Latest accepted collector observation time; not discovery, change or broker publication time. */
@@ -337,7 +339,23 @@ export const manualSubmissionSchema = z.strictObject({
   url: listingUrlSchema,
   title: z.string().trim().max(200),
   note: z.string().trim().max(2000),
-  tags: z.array(z.string().trim().min(1).max(40)).max(10),
+  // Photo addresses to hotlink, first one leads.
+  imageUrls: z
+    .array(
+      listingUrlSchema.refine(
+        (value) => value.startsWith('https://'),
+        'Photo links must start with https://.',
+      ),
+    )
+    .max(10),
+  // What the member knows; null for the rest.
+  facts: factsSchema.pick({
+    propertyType: true,
+    askingPriceSek: true,
+    livingAreaM2: true,
+    rooms: true,
+    outdoor: true,
+  }),
 });
 export const ingestRequestSchema = z.discriminatedUnion('action', [
   z.strictObject({
@@ -422,3 +440,10 @@ export type Snapshot = z.infer<typeof snapshotSchema>;
 export type SourcePolicy = z.infer<typeof sourcePolicySchema>;
 export type IngestRequest = z.infer<typeof ingestRequestSchema>;
 export type ManualSubmission = z.infer<typeof manualSubmissionSchema>;
+export const NO_MANUAL_FACTS: ManualSubmission['facts'] = {
+  propertyType: null,
+  askingPriceSek: null,
+  livingAreaM2: null,
+  rooms: null,
+  outdoor: null,
+};

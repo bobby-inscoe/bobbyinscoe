@@ -235,6 +235,9 @@ export function addManual(
 ) {
   const value = manualSubmissionSchema.parse(submission);
   const url = new URL(value.url);
+  const facts = Object.fromEntries(
+    Object.entries(value.facts).filter(([, fact]) => fact !== null),
+  );
   for (const key of [...url.searchParams.keys()])
     if (/^(utm_|fbclid$|gclid$|msclkid$)/i.test(key))
       url.searchParams.delete(key);
@@ -246,7 +249,10 @@ export function addManual(
       p_url: url.href,
       p_title: value.title,
       p_note: value.note,
-      p_tags: value.tags,
+      p_tags: [],
+      // Left out when empty, so adding a link works before the photo migration is live.
+      ...(value.imageUrls.length ? { p_image_urls: value.imageUrls } : {}),
+      ...(Object.keys(facts).length ? { p_facts: facts } : {}),
     },
     manualResultSchema,
   );

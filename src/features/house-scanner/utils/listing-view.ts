@@ -118,13 +118,3 @@ export function mapPoints(
         };
   });
 }
-
-export function sourceSummaries(listings: Listing[]) {
-  const counts = new Map<string, number>();
-  for (const listing of listings) {
-    if (listing.origin !== 'source') continue;
-    const host = new URL(listing.sourceUrls[0]).hostname;
-    counts.set(host, (counts.get(host) ?? 0) + 1);
-  }
-  return [...counts].map(([host, homes]) => ({ host, homes }));
-}
