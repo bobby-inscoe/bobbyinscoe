@@ -133,13 +133,11 @@ export const ListingCard = memo(function ListingCard({
               </Text>
             )}
           </Box>
-          {(listing.isNew ||
-            showStatus ||
+          {(showStatus ||
             listing.origin === 'manual' ||
             delisted ||
             hidden) && (
             <Group gap="xs" className={classes.cardStatus}>
-              {listing.isNew && <Badge variant="light">New</Badge>}
               {showStatus && (
                 <Badge variant="light">
                   {statusDisputed ? 'Status disputed' : listing.facts.status}
@@ -247,8 +245,14 @@ export const ListingCard = memo(function ListingCard({
             />
           )}
         </Box>
+        {listing.isNew && (
+          <Badge variant="new" className={classes.newFlag}>
+            New
+          </Badge>
+        )}
         <FavoriteStar
           mine={mine}
+          others={saved.length > 0}
           canSave={canSave}
           busy={busy}
           onToggle={() => onFavorite(listing.id)}

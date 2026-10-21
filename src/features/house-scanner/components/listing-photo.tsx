@@ -1,4 +1,5 @@
 import { Stack, Text, UnstyledButton } from '@mantine/core';
+import { House } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
@@ -47,7 +48,10 @@ export function ListingPhoto({
       onError={() => setFailedUrl(photo.url)}
     />
   ) : (
-    <div className={classes.placeholder}>No photo</div>
+    <div className={classes.placeholder}>
+      <House size={28} aria-hidden />
+      No photo
+    </div>
   );
   return (
     <Stack gap="xs">

@@ -39,7 +39,12 @@ export function PinCard({
 }: {
   listing: Listing;
   // The member's own favorite of this home.
-  favorite: { mine: boolean; canSave: boolean; busy: boolean };
+  favorite: {
+    mine: boolean;
+    others?: boolean;
+    canSave: boolean;
+    busy: boolean;
+  };
   hidden: boolean;
   alsoOn?: string[];
   onFavorite: (listingId: string) => void;
@@ -82,7 +87,7 @@ export function PinCard({
           {listing.isNew && (
             <>
               {' '}
-              <Badge component="span" variant="light">
+              <Badge component="span" variant="new">
                 New
               </Badge>
             </>
@@ -99,7 +104,7 @@ export function PinCard({
           <EstimateLine listing={listing} />
         </div>
       ) : (
-        <Text fw={600} className={classes.pinPrice}>
+        <Text fz="lg" className={`${classes.pinPrice} ${classes.priceText}`}>
           {formatPrice(listing.facts.askingPriceSek)}
           {listing.conflicts.includes('askingPriceSek') && ' (disputed)'}
         </Text>

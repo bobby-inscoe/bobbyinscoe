@@ -47,12 +47,12 @@ export function HouseScannerAccess({
   const state = session.state;
   if (state.status === 'unconfigured')
     return (
-      <Stack>
+      <Stack align="flex-start">
         <Title order={2}>Private access is not configured</Title>
         <Text>No household data is loaded.</Text>
         {onDemo && (
           <Button
-            variant="subtle"
+            variant="filled"
             aria-label="Explore the synthetic demo"
             onClick={onDemo}
           >

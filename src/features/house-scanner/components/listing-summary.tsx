@@ -1,5 +1,7 @@
 import { Badge, Button, Group, Stack, Text } from '@mantine/core';
 
+import { ArrowDown, ArrowUp } from 'lucide-react';
+import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type {
   Listing,
   Snapshot,
@@ -23,21 +25,26 @@ export function PriceLine({ listing }: { listing: Listing }) {
     previous !== current &&
     !listing.conflicts.includes('askingPriceSek');
   return (
-    <Text fz="lg" fw={700}>
+    <Text fz="1.5rem" className={classes.priceText}>
       {changed && (
         <>
           <s>{formatPrice(previous)}</s>{' '}
           <span
+            className={current < previous ? classes.priceDown : classes.priceUp}
             role="img"
             aria-label={
               current < previous ? 'Price decreased' : 'Price increased'
             }
           >
-            {current < previous ? '↓' : '↑'}
+            {current < previous ? (
+              <ArrowDown size="0.85em" strokeWidth={3} aria-hidden />
+            ) : (
+              <ArrowUp size="0.85em" strokeWidth={3} aria-hidden />
+            )}
           </span>{' '}
         </>
       )}
-      {formatPrice(current)}
+      <span className={classes.priceNow}>{formatPrice(current)}</span>
       {listing.conflicts.includes('askingPriceSek') && ' (disputed)'}
     </Text>
   );

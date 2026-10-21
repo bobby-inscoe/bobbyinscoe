@@ -1,23 +1,232 @@
-/* Shellter tokens, and Mantine's variables pointed at them. The page root and every portal carry this class. */
+/* Nunito Sans is Shellter's own face; only Shellter's scope names it. */
+@font-face {
+  font-family: "Nunito Sans";
+  src: url("../../../assets/fonts/nunito-sans/NunitoSans-latin.woff2")
+    format("woff2");
+  font-weight: 200 1000;
+  font-style: normal;
+  font-display: swap;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Nunito Sans";
+  src: url("../../../assets/fonts/nunito-sans/NunitoSans-latin-ext.woff2")
+    format("woff2");
+  font-weight: 200 1000;
+  font-style: normal;
+  font-display: swap;
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* Shellter's palette. The body carries it too while Shellter is mounted, so the page ground and portals share it. */
+.scope,
+:global(body):has(.scope) {
+  --shellter-teal: #0f6e6a;
+  --shellter-teal-strong: #0b5753;
+  --shellter-teal-deep: #08403d;
+  --shellter-teal-pale: #a9d8d2;
+  --shellter-teal-wash: #dff1ef;
+  --shellter-ground: #eef5f3;
+  --shellter-surface: #ffffff;
+  --shellter-hover: #f2f8f7;
+  --shellter-sunk: #d7eae6;
+  --shellter-line: #cde2de;
+  --shellter-ink: #142624;
+  --shellter-soft: #4a5e5b;
+  --shellter-apricot: #f29e4c;
+  --shellter-apricot-ink: #2a1606;
+  --shellter-apricot-wash: #fde6cf;
+  --shellter-good: #1d7a4a;
+  --shellter-shadow:
+    0 1px 2px rgb(20 38 36 / 6%), 0 4px 14px rgb(20 38 36 / 7%);
+  --shellter-shadow-raised:
+    0 2px 6px rgb(20 38 36 / 8%), 0 12px 32px rgb(20 38 36 / 16%);
+  --shellter-tabbar-height: 64px;
+  scrollbar-color: var(--shellter-teal-pale) var(--shellter-ground);
+}
+:global(body):has(.scope) {
+  background-color: var(--shellter-ground);
+}
+
+/* Mantine's variables pointed at the palette. The page root and every portal carry this class. */
 .scope {
-  --scanner-surface: var(--mantine-color-flax-0);
-  --scanner-ink: var(--mantine-color-text);
-  --scanner-line: var(--mantine-color-flax-3);
-  --scanner-accent: var(--mantine-color-moss-7);
-  --scanner-accent-strong: var(--mantine-color-moss-8);
-  --scanner-accent-wash: var(--mantine-color-moss-0);
-  --mantine-color-anchor: var(--scanner-accent);
-  --mantine-color-default: var(--scanner-surface);
-  --mantine-color-default-color: var(--scanner-ink);
-  --mantine-color-default-border: var(--scanner-line);
-  --mantine-color-white: var(--scanner-surface);
-  --mantine-color-dark-6: var(--scanner-surface);
-  --mantine-primary-color-filled: var(--scanner-accent);
-  --mantine-primary-color-filled-hover: var(--scanner-accent-strong);
-  --mantine-primary-color-light: var(--scanner-accent-wash);
-  --mantine-primary-color-light-hover: var(--scanner-accent-wash);
-  --mantine-primary-color-light-color: var(--scanner-accent);
-  color: var(--scanner-ink);
+  --mantine-font-family: "Nunito Sans", system-ui, sans-serif;
+  --mantine-font-family-headings: "Nunito Sans", system-ui, sans-serif;
+  --mantine-heading-font-weight: 700;
+  --mantine-h1-font-weight: 800;
+  --mantine-h2-font-weight: 800;
+  --mantine-h3-font-weight: 700;
+  --mantine-h4-font-weight: 700;
+  --mantine-h5-font-weight: 700;
+  --mantine-h6-font-weight: 700;
+  /* Components name the inherited primary colour, moss, in their own variables; Shellter repaints it teal. */
+  --mantine-color-moss-0: #e6f3f1;
+  --mantine-color-moss-1: #cfe8e4;
+  --mantine-color-moss-2: #a9d8d2;
+  --mantine-color-moss-3: #7fc2ba;
+  --mantine-color-moss-4: #55aba2;
+  --mantine-color-moss-5: #2f938b;
+  --mantine-color-moss-6: #1a817c;
+  --mantine-color-moss-7: #0f6e6a;
+  --mantine-color-moss-8: #0b5753;
+  --mantine-color-moss-9: #08403d;
+  --mantine-color-moss-filled: var(--shellter-teal);
+  --mantine-color-moss-filled-hover: var(--shellter-teal-strong);
+  --mantine-color-moss-light: var(--shellter-teal-wash);
+  --mantine-color-moss-light-hover: #cfe8e4;
+  --mantine-color-moss-light-color: var(--shellter-teal-strong);
+  --mantine-color-moss-outline: var(--shellter-teal);
+  --mantine-color-moss-outline-hover: var(--shellter-teal-wash);
+  --mantine-color-moss-text: var(--shellter-teal-strong);
+  --mantine-radius-sm: 8px;
+  --mantine-radius-md: 10px;
+  --mantine-radius-lg: 14px;
+  --mantine-color-body: var(--shellter-surface);
+  --mantine-color-text: var(--shellter-ink);
+  --mantine-color-dimmed: var(--shellter-soft);
+  --mantine-color-anchor: var(--shellter-teal);
+  --mantine-color-default: var(--shellter-surface);
+  --mantine-color-default-hover: var(--shellter-hover);
+  --mantine-color-default-color: var(--shellter-ink);
+  --mantine-color-default-border: var(--shellter-line);
+  --mantine-color-white: var(--shellter-surface);
+  --mantine-color-dark-6: var(--shellter-surface);
+  --mantine-primary-color-filled: var(--shellter-teal);
+  --mantine-primary-color-filled-hover: var(--shellter-teal-strong);
+  --mantine-primary-color-light: var(--shellter-teal-wash);
+  --mantine-primary-color-light-hover: #cfe8e4;
+  --mantine-primary-color-light-color: var(--shellter-teal-strong);
+  --mantine-primary-color-contrast: #ffffff;
+  --site-focus-ring: var(--shellter-teal);
+  --site-selection-color: #ffffff;
+  --site-selection-bg: var(--shellter-teal);
+  color: var(--shellter-ink);
+  font-family: var(--mantine-font-family);
+  caret-color: var(--shellter-teal);
+  accent-color: var(--shellter-teal);
+}
+
+/* Page shell: the teal app bar, the content column, and the phone tab bar. */
+.page {
+  min-height: 100svh;
+  background-color: var(--shellter-ground);
+}
+.appBar {
+  background: var(--shellter-teal);
+  color: #ffffff;
+}
+.appBarInner {
+  max-width: 72rem;
+  margin-inline: auto;
+  min-height: 56px;
+  padding: 8px var(--mantine-spacing-md);
+}
+@media (min-width: 62em) {
+  .appBarInner {
+    padding-inline: var(--mantine-spacing-xl);
+  }
+}
+.wordmark {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+}
+.appBarLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #ffffff;
+  font-weight: 600;
+}
+.inlineIcon {
+  flex-shrink: 0;
+  vertical-align: -0.125em;
+  margin-right: 4px;
+}
+/* Settings and household panels: white surface, padding from the theme. */
+.panel {
+  box-shadow: var(--shellter-shadow);
+}
+/* Mantine's default input border is grey; Shellter's is the teal-tinted line. Focus and error keep Mantine's colours. */
+.inputField[data-variant="default"]:not(:focus, :focus-within, [data-error]) {
+  --input-bd: var(--shellter-line);
+}
+.content {
+  max-width: 72rem;
+  margin-inline: auto;
+  padding: var(--mantine-spacing-md) var(--mantine-spacing-sm)
+    var(--mantine-spacing-xl);
+}
+@media (min-width: 62em) {
+  .content {
+    padding-inline: var(--mantine-spacing-xl);
+  }
+}
+.navTab {
+  font-weight: 700;
+}
+@media (max-width: 35.99375em) {
+  /* Room for the tab bar under the last card. */
+  .page:has(.tabBar) .content {
+    padding-bottom: calc(
+      var(--shellter-tabbar-height) +
+      env(safe-area-inset-bottom) +
+      16px
+    );
+  }
+  .tabBar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 90;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 0;
+    padding: 4px 8px env(safe-area-inset-bottom);
+    background: var(--shellter-surface);
+    border-top: 1px solid var(--shellter-line);
+    box-shadow: 0 -4px 16px rgb(20 38 36 / 6%);
+  }
+  .navTab {
+    height: var(--shellter-tabbar-height);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--shellter-soft);
+    font-size: 13px;
+  }
+  .navTab:hover {
+    background: transparent;
+  }
+  .navTab :global(.mantine-Button-inner) {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .navTab :global(.mantine-Button-section) {
+    margin: 0;
+    width: 56px;
+    height: 30px;
+    border-radius: var(--mantine-radius-xl);
+    display: grid;
+    place-items: center;
+    transition: background-color 150ms ease-out;
+  }
+  .navTab[data-variant="filled"] {
+    color: var(--shellter-teal-strong);
+    background: transparent;
+  }
+  .navTab[data-variant="filled"] :global(.mantine-Button-section) {
+    background: var(--shellter-teal-wash);
+  }
 }
 
 /* Workspace, cards, and sheets */
@@ -32,8 +241,21 @@
   bottom: 0;
   z-index: 5;
   padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
-  background: var(--scanner-surface);
-  border-top: 1px solid var(--scanner-line);
+  background: var(--shellter-surface);
+  border-top: 1px solid var(--shellter-line);
+  border-radius: var(--mantine-radius-lg) var(--mantine-radius-lg) 0 0;
+  box-shadow: 0 -4px 16px rgb(20 38 36 / 8%);
+}
+/* On a phone the tab bar owns the bottom edge, so the selection bar stops just above it. */
+@media (max-width: 35.99375em) {
+  .page:has(.tabBar) .selectionBar {
+    bottom: calc(
+      var(--shellter-tabbar-height) +
+      env(safe-area-inset-bottom) +
+      4px
+    );
+    padding-bottom: 12px;
+  }
 }
 .batchSelect {
   max-width: 100%;
@@ -44,29 +266,63 @@
   white-space: normal;
 }
 .list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
   align-items: stretch;
   gap: var(--mantine-spacing-md);
   min-width: 0;
 }
 .listEnd {
-  flex-basis: 100%;
+  grid-column: 1 / -1;
   height: 1px;
 }
 .card {
   position: relative;
-  background: var(--scanner-surface);
-  border: 1px solid var(--scanner-line);
+  background: var(--shellter-surface);
+  border: 1px solid transparent;
+  border-radius: var(--mantine-radius-lg);
+  box-shadow: var(--shellter-shadow);
+  overflow: hidden;
   padding: var(--mantine-spacing-md);
   display: flex;
   flex-direction: column;
-  gap: var(--mantine-spacing-sm);
+  gap: var(--mantine-spacing-xs);
+}
+/* The photo runs to the card's edges, as on every listing portal. */
+.card > .cardPhoto {
+  margin: calc(-1 * var(--mantine-spacing-md))
+    calc(-1 * var(--mantine-spacing-md)) var(--mantine-spacing-xs);
+}
+.priceText {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.priceText s {
+  font-weight: 600;
+  font-size: 0.8em;
+  color: var(--shellter-soft);
+}
+.priceNow {
+  white-space: nowrap;
+}
+.priceDown {
+  color: var(--shellter-good);
+}
+.priceUp {
+  color: var(--shellter-soft);
+}
+/* The next viewing reads as a tag, in the one warm colour. */
+.viewingTag {
+  display: inline-block;
+  width: fit-content;
+  padding: 2px 10px;
+  border-radius: var(--mantine-radius-sm);
+  background: var(--shellter-apricot-wash);
+  color: var(--shellter-apricot-ink);
 }
 /* Sizing applies only inside the list; the card is reused in column layouts elsewhere. */
 .list > .card {
-  flex: 1 1 320px;
-  max-width: 480px;
   min-width: 0;
 }
 /* Pushes the actions row to the bottom so cards in a row share a height. */
@@ -74,8 +330,9 @@
   flex-grow: 1;
 }
 .selected {
-  border-color: var(--scanner-accent);
-  outline: 1px solid var(--scanner-accent);
+  border-color: var(--shellter-teal);
+  outline: 2px solid var(--shellter-teal);
+  outline-offset: -1px;
 }
 /* 3:2 matches the source thumbnails, so nothing is cropped and the card does not jump while loading. */
 .photoLink {
@@ -88,19 +345,34 @@
 }
 .star {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 10px;
+  right: 10px;
   z-index: 1;
-  /* The glyph fills most of the circle. */
-  font-size: 1.6rem;
-  line-height: 1;
 }
 /* Left of the star: room for a 44 px star on a touch screen plus a gap. */
 .hide {
   position: absolute;
-  top: 8px;
-  right: 56px;
+  top: 10px;
+  right: 58px;
   z-index: 1;
+}
+.photoWrap .star,
+.photoWrap .hide {
+  box-shadow: 0 1px 4px rgb(20 38 36 / 22%);
+}
+/* Saved by another member: pale teal, the same step the map pins use. */
+.savedByOthers {
+  background: var(--shellter-teal-pale);
+  color: var(--shellter-teal-deep);
+  border-color: var(--shellter-teal-pale);
+}
+/* New homes are flagged on the photo, where a scan of the list lands first. */
+.newFlag {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 1;
+  box-shadow: 0 1px 4px rgb(20 38 36 / 22%);
 }
 .photo {
   display: block;
@@ -110,14 +382,22 @@
   object-fit: cover;
 }
 .placeholder {
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   min-height: 0;
   /* Same 3:2 box as a photo, so cards with and without one are the same height. */
   aspect-ratio: 3 / 2;
-  background: var(--mantine-color-flax-1);
-  color: var(--mantine-color-dimmed);
+  background: var(--shellter-sunk);
+  color: var(--shellter-soft);
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 600;
   padding: var(--mantine-spacing-md);
+}
+.placeholder svg {
+  color: var(--shellter-teal);
 }
 /* Viewing cards share the row and grow to fill it: one fills the width up to the cap, several wrap into columns. */
 .viewingList {
@@ -129,6 +409,25 @@
   flex: 1 1 360px;
   max-width: 640px;
   min-width: 0;
+}
+/* A viewing leads with its time; the photo is a thumbnail beside it. */
+.viewingCard {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  column-gap: var(--mantine-spacing-sm);
+  row-gap: var(--mantine-spacing-xs);
+  align-items: start;
+}
+.viewingThumb {
+  grid-row: span 2;
+}
+.viewingThumb .photo,
+.viewingThumb .placeholder {
+  width: 96px;
+  aspect-ratio: 1;
+  padding: 0;
+  border-radius: var(--mantine-radius-sm);
+  font-size: var(--mantine-font-size-xs);
 }
 /* A label and its value, two columns; the labels are dimmed and the rows divide on a thin line. */
 .factList {
@@ -142,7 +441,7 @@
   grid-template-columns: minmax(7rem, 10rem) minmax(0, 1fr);
   gap: var(--mantine-spacing-sm);
   padding-block: 6px;
-  border-bottom: 1px solid var(--scanner-line);
+  border-bottom: 1px solid var(--shellter-line);
   font-size: var(--mantine-font-size-sm);
 }
 .factRow:last-child {
@@ -176,9 +475,14 @@
   flex-direction: column;
   gap: var(--mantine-spacing-xs);
   padding: var(--mantine-spacing-sm);
-  background: var(--scanner-surface);
-  border: 1px solid var(--scanner-line);
-  box-shadow: 0 2px 10px rgb(0 0 0 / 18%);
+  background: var(--shellter-surface);
+  border: 0;
+  border-radius: var(--mantine-radius-lg);
+  box-shadow: var(--shellter-shadow-raised);
+}
+.pinCard .photo,
+.pinCard .placeholder {
+  border-radius: var(--mantine-radius-sm);
 }
 /* A wider, shorter photo keeps the card from covering most of the map. */
 .pinCard .photo {
@@ -204,14 +508,14 @@
     overscroll-behavior: contain;
     padding: env(safe-area-inset-top) env(safe-area-inset-right)
       env(safe-area-inset-bottom) env(safe-area-inset-left);
-    background: var(--scanner-surface);
+    background: var(--shellter-surface);
   }
   .mobileMapHeader {
     display: flex;
     flex-direction: column;
     gap: 4px;
     padding: 8px;
-    border-bottom: 1px solid var(--scanner-line);
+    border-bottom: 1px solid var(--shellter-line);
   }
   .mobileMapHeader :global(.mantine-Button-root) {
     min-height: 44px;
@@ -311,6 +615,7 @@
 .drawerTitle {
   font-family: var(--mantine-font-family-headings);
   font-size: var(--mantine-h4-font-size);
+  font-weight: 700;
 }
 /* Keep browse controls together, with the count and view buttons below. */
 .toolbar {
@@ -325,6 +630,25 @@
 .matchHelp:hover {
   background: transparent;
 }
+/* The help button keeps its touch size without pushing the Match label above the Sort label. */
+.matchHelp {
+  margin-block: -12px;
+}
+/* On a phone the browse controls form an even grid instead of a ragged row; at large text sizes it falls to one column. */
+@media (max-width: 35.99375em) {
+  .toolbarControls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+    align-items: end;
+  }
+  .toolbar .toolbarControls > * {
+    width: auto;
+    min-width: 0;
+  }
+  .toolbar .toolbarControls :global(.mantine-Button-root) {
+    width: 100%;
+  }
+}
 .toolbarView {
   grid-area: view;
   padding-top: var(--mantine-spacing-sm);
@@ -335,7 +659,7 @@
 }
 .photoButton:focus-visible,
 .titleButton:focus-visible {
-  outline: 2px solid var(--scanner-accent);
+  outline: 2px solid var(--shellter-teal);
   outline-offset: 3px;
 }
 .titleButton {
@@ -435,7 +759,7 @@
 }
 
 .card:focus-visible {
-  outline: 2px solid var(--scanner-accent);
+  outline: 2px solid var(--shellter-teal);
   outline-offset: 2px;
 }
 
@@ -451,7 +775,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 0 0 var(--mantine-radius-sm) 0;
-  background: var(--scanner-surface);
+  background: var(--shellter-surface);
 }
 .card > .selectionRow :global(.mantine-Checkbox-labelWrapper) {
   position: absolute;
@@ -494,22 +818,17 @@
   left: 12px;
   z-index: 2;
   padding: var(--mantine-spacing-xs);
-  background: color-mix(in srgb, var(--mantine-color-flax-0) 80%, transparent);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--scanner-line);
-  border-radius: var(--mantine-radius-sm);
-}
-@media (prefers-reduced-transparency: reduce) {
-  .controls {
-    background: var(--mantine-color-flax-0);
-    backdrop-filter: none;
-  }
+  background: var(--shellter-surface);
+  border-radius: var(--mantine-radius-md);
+  box-shadow: var(--shellter-shadow-raised);
 }
 .map {
   /* Tall enough that the selected-home card does not cover most of it. */
   height: clamp(430px, 70vh, 680px);
   width: 100%;
-  border: 1px solid var(--scanner-line);
+  border-radius: var(--mantine-radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shellter-shadow);
 }
 .markerRoot {
   display: inline-flex;
@@ -517,29 +836,31 @@
 .marker {
   box-sizing: border-box;
   padding-inline: 6px;
-  background: var(--mantine-color-flax-0);
-  color: var(--mantine-color-text);
-  border: 2px solid var(--mantine-color-moss-7);
+  background: var(--shellter-surface);
+  color: var(--shellter-ink);
+  border: 2px solid var(--shellter-teal);
   border-radius: var(--mantine-radius-xl);
   min-width: 36px;
   min-height: 36px;
-  font: 500 var(--mantine-font-size-xs) / 1.4 var(--mantine-font-family);
+  font: 700 var(--mantine-font-size-xs) / 1.4 var(--mantine-font-family);
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 1px 4px rgb(20 38 36 / 25%);
   cursor: pointer;
 }
 .savedByMe {
-  background: var(--mantine-color-moss-9);
-  border-color: var(--mantine-color-moss-9);
-  color: var(--mantine-color-flax-0);
+  background: var(--shellter-teal-deep);
+  border-color: var(--shellter-teal-deep);
+  color: #ffffff;
 }
 .cluster {
   min-width: 44px;
   min-height: 44px;
   padding-inline: 10px;
-  font-weight: 700;
-  box-shadow: 0 0 0 3px var(--mantine-color-flax-0);
+  font-weight: 800;
+  border-width: 3px;
 }
 .savedByHousehold:not(.savedByMe) {
-  background: var(--mantine-color-moss-2);
+  background: var(--shellter-teal-pale);
 }
 /* The bottom sheet takes about 330 px, so a phone map needs more height to leave the pin in sight. */
 @media (max-width: 35.99375em) {
@@ -548,8 +869,11 @@
     right: 12px;
     padding: 0;
     background: transparent;
-    border: 0;
-    backdrop-filter: none;
+    box-shadow: none;
+  }
+  .map {
+    border-radius: 0;
+    box-shadow: none;
   }
   .map {
     height: clamp(430px, 80svh, 680px);
@@ -587,7 +911,7 @@
   z-index: 1;
 }
 .marker[data-selection-mode="true"][data-batch-checked="true"]::after {
-  content: "✓";
+  content: "";
   position: absolute;
   top: -8px;
   right: -10px;
@@ -597,28 +921,37 @@
   box-sizing: border-box;
   width: 22px;
   height: 22px;
-  border: 2px solid var(--mantine-color-flax-0);
+  border: 2px solid var(--shellter-surface);
   border-radius: 50%;
-  background: var(--mantine-color-moss-9);
-  color: var(--mantine-color-flax-0);
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1;
+  background:
+    var(--shellter-teal-deep)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E")
+    center / 12px no-repeat;
 }
 .marker[data-selection-mode="true"][data-batch-checked="true"][data-batch-partial="true"]::after {
-  content: "−";
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round'%3E%3Cpath d='M5 12h14'/%3E%3C/svg%3E");
 }
 .marker:focus-visible {
-  outline: 3px solid var(--mantine-color-text);
+  outline: 3px solid var(--shellter-ink);
   outline-offset: 8px;
   z-index: 2;
 }
+/* The phone's map options open over the zoom buttons; hide them until the options close. */
+.stage:has([aria-label="Map options"][aria-expanded="true"])
+:global(.maplibregl-ctrl-top-right) {
+  visibility: hidden;
+}
+.map :global(.maplibregl-ctrl-group:not(:empty)) {
+  border-radius: var(--mantine-radius-md);
+  overflow: hidden;
+  box-shadow: var(--shellter-shadow-raised);
+}
 .map :global(.maplibregl-ctrl-attrib) {
-  background: var(--mantine-color-flax-0);
-  color: var(--mantine-color-text);
+  background: var(--shellter-surface);
+  color: var(--shellter-ink);
 }
 .map :global(.maplibregl-ctrl-attrib a) {
-  color: var(--mantine-color-moss-7);
+  color: var(--shellter-teal);
 }
 @media (prefers-reduced-motion: reduce) {
   .map :global(*) {
@@ -634,6 +967,9 @@
   height: auto;
   min-height: 44px;
   padding-block: var(--mantine-spacing-xs);
+}
+.unlocatedChoice svg {
+  color: var(--shellter-teal);
 }
 .unlocatedChoice :global(.mantine-Button-label) {
   white-space: normal;

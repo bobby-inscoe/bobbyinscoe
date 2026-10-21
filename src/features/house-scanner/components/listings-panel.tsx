@@ -15,6 +15,7 @@ import {
   VisuallyHidden,
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
+import { Info } from 'lucide-react';
 import {
   Component,
   type Dispatch,
@@ -430,6 +431,9 @@ export function ListingsPanel({
           (entry) => entry.listingId === selected.id && entry.userId === userId,
         )
       : false,
+    others: selected
+      ? snapshot.favorites.some((entry) => entry.listingId === selected.id)
+      : false,
     canSave: selected ? canSave(selected.id) : false,
     busy: saveBusy || (selected ? pending.includes(selected.id) : false),
   };
@@ -545,7 +549,7 @@ export function ListingsPanel({
                       className={classes.matchHelp}
                       aria-label="What the match options mean"
                     >
-                      ⓘ
+                      <Info size={16} aria-hidden />
                     </ActionIcon>
                   </Tooltip>
                 </Group>
@@ -688,7 +692,7 @@ export function ListingsPanel({
             pos="sticky"
             bottom={0}
             p={16}
-            bg="var(--scanner-surface)"
+            bg="var(--shellter-surface)"
             style={{
               borderTop: '1px solid var(--mantine-color-default-border)',
             }}

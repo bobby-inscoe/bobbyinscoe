@@ -46,3 +46,13 @@ house-scanner.cache*.json
 
 # Claude Code worktrees nest a full checkout, with its own Biome config
 /.claude/worktrees/
+
+# Impeccable design tool: skill, agents, hooks, and design records stay local
+/.claude/skills/impeccable/
+/.agents/skills/impeccable/
+/.claude/agents/impeccable-*
+/.claude/settings.json
+/.codex/hooks.json
+.impeccable/
+/src/features/house-scanner/DESIGN.md
+/src/features/house-scanner/PRODUCT.md
