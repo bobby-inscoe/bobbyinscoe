@@ -19,3 +19,11 @@ it('needs every word to match', () => {
   expect(fuzzyMatches('Linnégatan 12', 'linnegatan 12')).toBe(true);
   expect(fuzzyMatches('Linnégatan 12', 'linnegatan 14')).toBe(false);
 });
+
+it('accepts dropped letters and transpositions', () => {
+  const title = 'Example balcony home';
+  for (const query of ['blcony', 'bcony', 'exmple', 'exampl blc', 'balcnoy'])
+    expect(fuzzyMatches(title, query), query).toBe(true);
+  expect(fuzzyMatches(title, 'cabin')).toBe(false);
+  expect(fuzzyMatches(title, 'xyz')).toBe(false);
+});

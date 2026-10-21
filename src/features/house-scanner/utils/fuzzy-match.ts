@@ -21,11 +21,21 @@ function distance(a: string, b: string): number {
   return row[b.length];
 }
 
-// shortcut: typo budget by length only, so a short word never matches loosely; upgrade if real queries miss.
+// Typed letters in order, with gaps: "blc" and "bcony" both fit "balcony".
+function isSubsequence(token: string, word: string): boolean {
+  let at = 0;
+  for (const letter of word) if (letter === token[at]) at++;
+  return at === token.length;
+}
+
+// shortcut: loose on purpose (a typo budget by length, plus skipped letters); tighten if unrelated homes start matching.
 function tokenMatches(token: string, word: string): boolean {
   if (word.includes(token)) return true;
-  if (token.length < 4 || /\d/.test(token)) return false;
-  const allowed = token.length >= 8 ? 2 : 1;
+  if (token.length < 3 || /\d/.test(token)) return false;
+  // Skipped letters must keep the word's first letter, so "blc" cannot match "cabin".
+  if (token[0] === word[0] && isSubsequence(token, word)) return true;
+  if (token.length < 4) return false;
+  const allowed = token.length >= 9 ? 3 : token.length >= 6 ? 2 : 1;
   // A typo anywhere in the word, or in the typed start of a longer one.
   return (
     distance(token, word) <= allowed ||
