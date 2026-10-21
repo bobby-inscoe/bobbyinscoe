@@ -11,7 +11,6 @@ import { useMediaQuery } from '@mantine/hooks';
 
 import { FavoriteStar } from '@/features/house-scanner/components/favorite-star';
 import { HideButton } from '@/features/house-scanner/components/hide-button';
-import styles from '@/features/house-scanner/components/household-workspace.module.css';
 import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
 import {
   AlsoOn,
@@ -22,6 +21,7 @@ import {
   useHasEstimate,
 } from '@/features/house-scanner/components/price-estimate';
 import { NextViewing } from '@/features/house-scanner/components/viewing-list';
+import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type { Listing } from '@/features/house-scanner/types/contracts';
 import { formatPrice } from '@/features/house-scanner/utils/format';
 
@@ -62,11 +62,11 @@ export function PinCard({
   );
   return (
     <article
-      className={styles.pinCard}
+      className={classes.pinCard}
       aria-label={`Selected home: ${listing.title}`}
     >
       <Group
-        className={styles.pinHeader}
+        className={classes.pinHeader}
         justify="space-between"
         wrap="nowrap"
         align="flex-start"
@@ -74,7 +74,7 @@ export function PinCard({
         <Title order={3} size="h5">
           <UnstyledButton
             type="button"
-            className={styles.titleButton}
+            className={classes.titleButton}
             onClick={onDetails}
           >
             {listing.title}
@@ -90,26 +90,26 @@ export function PinCard({
         </Title>
         <CloseButton aria-label="Close selected home" onClick={onClose} />
       </Group>
-      <div className={`${styles.photoWrap} ${styles.pinPhoto}`}>
+      <div className={`${classes.photoWrap} ${classes.pinPhoto}`}>
         <ListingPhoto listing={listing} onOpen={onDetails} />
         {!mobile && !selection && personalActions}
       </div>
       {estimated ? (
-        <div className={styles.pinPrice}>
+        <div className={classes.pinPrice}>
           <EstimateLine listing={listing} />
         </div>
       ) : (
-        <Text fw={600} className={styles.pinPrice}>
+        <Text fw={600} className={classes.pinPrice}>
           {formatPrice(listing.facts.askingPriceSek)}
           {listing.conflicts.includes('askingPriceSek') && ' (disputed)'}
         </Text>
       )}
-      <div className={styles.pinFacts}>
+      <div className={classes.pinFacts}>
         <KeyFacts listing={listing} />
       </div>
       {!mobile && <AlsoOn sites={alsoOn} />}
       {!mobile && <NextViewing listing={listing} />}
-      <Group gap="xs" className={styles.pinActions}>
+      <Group gap="xs" className={classes.pinActions}>
         {selection ? (
           <Button
             size="sm"

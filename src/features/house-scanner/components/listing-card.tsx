@@ -12,7 +12,6 @@ import {
 import { memo, useMemo } from 'react';
 import { FavoriteStar } from '@/features/house-scanner/components/favorite-star';
 import { HideButton } from '@/features/house-scanner/components/hide-button';
-import styles from '@/features/house-scanner/components/household-workspace.module.css';
 import { ListingDetails } from '@/features/house-scanner/components/listing-details';
 import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
 import {
@@ -30,6 +29,7 @@ import {
 } from '@/features/house-scanner/components/price-estimate';
 import { NextViewing } from '@/features/house-scanner/components/viewing-list';
 import type { ListingNotesController } from '@/features/house-scanner/hooks/use-listing-notes';
+import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type {
   Listing,
   Snapshot,
@@ -125,7 +125,7 @@ export const ListingCard = memo(function ListingCard({
           <Box {...desktopOnly(details)}>
             <ReasonChips listing={listing} />
           </Box>
-          <Box {...phoneOnly(details)} className={styles.cardAmenities}>
+          <Box {...phoneOnly(details)} className={classes.cardAmenities}>
             {chips.length > 0 && <Text size="sm">{chips.join(' · ')}</Text>}
             {position && (
               <Text size="sm" c="dimmed">
@@ -138,7 +138,7 @@ export const ListingCard = memo(function ListingCard({
             listing.origin === 'manual' ||
             delisted ||
             hidden) && (
-            <Group gap="xs" className={styles.cardStatus}>
+            <Group gap="xs" className={classes.cardStatus}>
               {listing.isNew && <Badge variant="light">New</Badge>}
               {showStatus && (
                 <Badge variant="light">
@@ -196,7 +196,7 @@ export const ListingCard = memo(function ListingCard({
   };
   return (
     <article
-      className={`${styles.card} ${!details ? styles.compactCard : ''} ${selected || checked ? styles.selected : ''}`}
+      className={`${classes.card} ${!details ? classes.compactCard : ''} ${selected || checked ? classes.selected : ''}`}
       aria-label={listing.title}
       tabIndex={selectionMode ? 0 : undefined}
       onKeyDown={
@@ -227,10 +227,10 @@ export const ListingCard = memo(function ListingCard({
           : undefined
       }
     >
-      <div className={styles.selectionRow} hidden={!selectionMode}>
+      <div className={classes.selectionRow} hidden={!selectionMode}>
         {selectionControl}
       </div>
-      <div className={`${styles.photoWrap} ${styles.cardPhoto}`}>
+      <div className={`${classes.photoWrap} ${classes.cardPhoto}`}>
         <ListingPhoto
           listing={listing}
           onOpen={openPrimary}
@@ -254,17 +254,17 @@ export const ListingCard = memo(function ListingCard({
           onToggle={() => onFavorite(listing.id)}
         />
       </div>
-      <div className={styles.cardPrice}>
+      <div className={classes.cardPrice}>
         {estimated ? (
           <EstimateLine listing={listing} />
         ) : (
           <PriceLine listing={listing} />
         )}
       </div>
-      <Title order={3} size="h5" className={styles.cardTitle}>
+      <Title order={3} size="h5" className={classes.cardTitle}>
         <UnstyledButton
           type="button"
-          className={styles.titleButton}
+          className={classes.titleButton}
           onClick={openPrimary}
           aria-label={selectionMode ? selectionLabel : undefined}
           aria-pressed={selectionMode ? checked === true : undefined}
@@ -276,18 +276,18 @@ export const ListingCard = memo(function ListingCard({
       <Box {...desktopOnly(details)}>
         <FactsLine listing={listing} />
       </Box>
-      <Box {...phoneOnly(details)} className={styles.cardFacts}>
+      <Box {...phoneOnly(details)} className={classes.cardFacts}>
         <KeyFacts listing={listing} />
       </Box>
       <Box {...desktopOnly(details)}>
         <AlsoOn sites={alsoOn} />
       </Box>
-      <div className={styles.cardViewing}>
+      <div className={classes.cardViewing}>
         <NextViewing listing={listing} />
       </div>
       {summary}
-      <div className={styles.grow} />
-      <Group gap="xs" className={styles.cardActions}>
+      <div className={classes.grow} />
+      <Group gap="xs" className={classes.cardActions}>
         <Box {...desktopOnly(details)}>
           <OriginalListingButton listing={listing} />
         </Box>
@@ -315,7 +315,7 @@ export const ListingCard = memo(function ListingCard({
           <Box {...phoneOnly(details)}>
             <Menu
               position="bottom-end"
-              classNames={{ item: styles.cardMenuItem }}
+              classNames={{ item: classes.cardMenuItem }}
             >
               <Menu.Target>
                 <Button
@@ -348,7 +348,7 @@ export const ListingCard = memo(function ListingCard({
         )}
       </Group>
       {!canSave && (
-        <Text size="xs" className={styles.cardNotice}>
+        <Text size="xs" className={classes.cardNotice}>
           Favorite changes are unavailable in this view.
         </Text>
       )}

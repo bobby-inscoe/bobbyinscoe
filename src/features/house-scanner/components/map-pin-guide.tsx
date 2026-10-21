@@ -1,15 +1,15 @@
 import { Button, Group, Popover, Stack, Text } from '@mantine/core';
 import { useState } from 'react';
 
-import styles from '@/features/house-scanner/components/household-map.module.css';
+import { classes } from '@/features/house-scanner/theme/shellter-theme';
 
 const PIN_EXAMPLES = [
   { description: 'Not saved', text: '2,8M', className: '' },
-  { description: 'Saved by you', text: '2,8M', className: styles.savedByMe },
+  { description: 'Saved by you', text: '2,8M', className: classes.savedByMe },
   {
     description: 'Saved by another member',
     text: '2,8M',
-    className: styles.savedByHousehold,
+    className: classes.savedByHousehold,
   },
   { description: 'Selected', text: '2,8M', className: '', checked: true },
   {
@@ -37,7 +37,7 @@ export function MapPinGuide() {
         <Button
           size="xs"
           variant="default"
-          className={styles.guideButton}
+          className={classes.guideButton}
           aria-expanded={opened}
           aria-haspopup="dialog"
           onClick={() => setOpened((value) => !value)}
@@ -48,7 +48,7 @@ export function MapPinGuide() {
       <Popover.Dropdown
         role="dialog"
         aria-label="Pin guide"
-        className={styles.pinGuide}
+        className={classes.pinGuide}
       >
         <Stack gap="xs">
           <Group justify="space-between">
@@ -58,7 +58,7 @@ export function MapPinGuide() {
             <Button
               size="xs"
               variant="subtle"
-              className={styles.guideButton}
+              className={classes.guideButton}
               onClick={() => setOpened(false)}
             >
               Close
@@ -67,9 +67,9 @@ export function MapPinGuide() {
           <Stack gap={0}>
             {PIN_EXAMPLES.map((example) => (
               <Group key={example.description} wrap="nowrap" gap="xs">
-                <span className={styles.guideSwatchCell} aria-hidden="true">
+                <span className={classes.guideSwatchCell} aria-hidden="true">
                   <span
-                    className={`${styles.marker} ${styles.guideSwatch} ${example.className}`}
+                    className={`${classes.marker} ${classes.guideSwatch} ${example.className}`}
                     data-selection-mode={example.checked || undefined}
                     data-batch-checked={example.checked || undefined}
                     data-batch-partial={example.partial || undefined}

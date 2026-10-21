@@ -1,10 +1,10 @@
 import { Button, Checkbox, Drawer, Group, Stack, Text } from '@mantine/core';
 import { useState } from 'react';
-import styles from '@/features/house-scanner/components/household-workspace.module.css';
 import {
   KeyFacts,
   PriceLine,
 } from '@/features/house-scanner/components/listing-summary';
+import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type { Listing } from '@/features/house-scanner/types/contracts';
 
 interface MapSelectionReviewProps {
@@ -57,7 +57,7 @@ export function MapSelectionReview({
         {listings.map((listing) => (
           <Checkbox
             key={listing.id}
-            className={styles.selectionRow}
+            className={classes.selectionRow}
             checked={checked.includes(listing.id)}
             disabled={
               busy || (checked.length >= 500 && !checked.includes(listing.id))
@@ -82,7 +82,7 @@ export function MapSelectionReview({
             }
           />
         ))}
-        <Stack gap="xs" className={styles.selectionBar}>
+        <Stack gap="xs" className={classes.selectionBar}>
           <Text role="status" aria-live="polite">
             {checked.length} selected · Hidden for the household
             {savedCount > 0 &&

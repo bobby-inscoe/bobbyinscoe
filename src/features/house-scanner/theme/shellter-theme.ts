@@ -1,6 +1,9 @@
 import { createTheme, Portal } from '@mantine/core';
 import classes from '@/features/house-scanner/theme/shellter.module.css';
 
+// Layout classes for Shellter's own markup; components take them from here rather than importing CSS.
+export { classes };
+
 export const shellterScope = classes.scope;
 
 export const shellterTheme = createTheme({

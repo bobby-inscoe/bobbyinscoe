@@ -1,7 +1,7 @@
 import { Stack, Text, UnstyledButton } from '@mantine/core';
 import { useEffect, useState } from 'react';
 
-import styles from '@/features/house-scanner/components/household-workspace.module.css';
+import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type { Listing } from '@/features/house-scanner/types/contracts';
 
 export function ListingPhoto({
@@ -37,7 +37,7 @@ export function ListingPhoto({
     Date.parse(photo.expiresAt) > Date.now();
   const content = permitted ? (
     <img
-      className={styles.photo}
+      className={classes.photo}
       src={photo.url}
       alt={listing.title}
       loading="lazy"
@@ -47,14 +47,14 @@ export function ListingPhoto({
       onError={() => setFailedUrl(photo.url)}
     />
   ) : (
-    <div className={styles.placeholder}>No photo</div>
+    <div className={classes.placeholder}>No photo</div>
   );
   return (
     <Stack gap="xs">
       {onOpen ? (
         <UnstyledButton
           type="button"
-          className={styles.photoButton}
+          className={classes.photoButton}
           onClick={onOpen}
           aria-label={actionLabel ?? `View ${listing.title}`}
           aria-pressed={pressed}
@@ -64,7 +64,7 @@ export function ListingPhoto({
         </UnstyledButton>
       ) : permitted ? (
         <a
-          className={styles.photoLink}
+          className={classes.photoLink}
           href={listing.sourceUrls[0]}
           target="_blank"
           rel="noopener noreferrer"
@@ -76,7 +76,7 @@ export function ListingPhoto({
         content
       )}
       {permitted && (
-        <Text size="xs" c="dimmed" className={styles.photoAttribution}>
+        <Text size="xs" c="dimmed" className={classes.photoAttribution}>
           {photo.attribution}
         </Text>
       )}

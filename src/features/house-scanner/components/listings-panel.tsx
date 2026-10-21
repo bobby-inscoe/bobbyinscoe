@@ -29,7 +29,6 @@ import {
   useState,
 } from 'react';
 import type { MapCameraState } from '@/features/house-scanner/components/household-map';
-import styles from '@/features/house-scanner/components/household-workspace.module.css';
 import { ListingCard } from '@/features/house-scanner/components/listing-card';
 import { ListingDrawer } from '@/features/house-scanner/components/listing-drawer';
 import { ListingFilterPanel } from '@/features/house-scanner/components/listing-filter-panel';
@@ -37,6 +36,7 @@ import { MapSelectionReview } from '@/features/house-scanner/components/map-sele
 import { MapStackSelection } from '@/features/house-scanner/components/map-stack-selection';
 import { PinCard } from '@/features/house-scanner/components/pin-card';
 import type { ListingNotesController } from '@/features/house-scanner/hooks/use-listing-notes';
+import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type {
   Listing,
   Snapshot,
@@ -443,7 +443,7 @@ export function ListingsPanel({
   return (
     <section
       ref={shell}
-      className={mobileMap ? styles.mobileMapShell : styles.listingsPanel}
+      className={mobileMap ? classes.mobileMapShell : classes.listingsPanel}
       tabIndex={mobileMap ? -1 : undefined}
       aria-label={mobileMap ? 'Map browsing' : 'Listing results'}
     >
@@ -452,7 +452,7 @@ export function ListingsPanel({
         {tab === 'favorites' ? 'Favorites' : 'Listings'}
       </VisuallyHidden>
       {mobileMap && (
-        <header className={styles.mobileMapHeader}>
+        <header className={classes.mobileMapHeader}>
           <Group gap="xs" wrap="wrap">
             <Button variant="default" onClick={() => onViewChange('list')}>
               List
@@ -496,12 +496,12 @@ export function ListingsPanel({
         </header>
       )}
       {!mobileMap && (
-        <div className={styles.toolbar}>
+        <div className={classes.toolbar}>
           <Flex
             gap="sm"
             align="flex-end"
             wrap="wrap"
-            className={styles.toolbarControls}
+            className={classes.toolbarControls}
           >
             {tab === 'favorites' ? (
               <Select
@@ -542,7 +542,7 @@ export function ListingsPanel({
                       variant="transparent"
                       color="gray"
                       size="sm"
-                      className={styles.matchHelp}
+                      className={classes.matchHelp}
                       aria-label="What the match options mean"
                     >
                       ⓘ
@@ -622,7 +622,7 @@ export function ListingsPanel({
             gap="sm"
             justify="space-between"
             wrap="wrap"
-            className={styles.toolbarView}
+            className={classes.toolbarView}
           >
             <Text size="sm" c="dimmed">
               {visible.length} homes
@@ -708,7 +708,7 @@ export function ListingsPanel({
       {selecting && (
         <Stack
           gap="xs"
-          className={mobileMap ? styles.mobileMapStatus : undefined}
+          className={mobileMap ? classes.mobileMapStatus : undefined}
         >
           <Text role="status" aria-live="polite">
             {checkedIds.length} selected · Saves are yours; hiding is for the
@@ -721,7 +721,7 @@ export function ListingsPanel({
             {view === 'list' && (
               <Button
                 variant="subtle"
-                className={styles.batchSelect}
+                className={classes.batchSelect}
                 disabled={batchBusy || unsavedIds.length === 0}
                 onClick={() => setSelection(unsavedIds.slice(0, 500))}
               >
@@ -751,7 +751,7 @@ export function ListingsPanel({
       )}
       {(hideError || hideMessage) && (
         <Group
-          className={mobileMap ? styles.mobileMapStatus : undefined}
+          className={mobileMap ? classes.mobileMapStatus : undefined}
           role={hideError ? 'alert' : 'status'}
           aria-live="polite"
         >
@@ -774,7 +774,7 @@ export function ListingsPanel({
         </Text>
       )}
       {view === 'list' ? (
-        <div className={styles.list}>
+        <div className={classes.list}>
           {ordered.slice(0, renderedCount).map((listing) => (
             <ListingCard
               key={listing.id}
@@ -801,11 +801,11 @@ export function ListingsPanel({
             />
           ))}
           {renderedCount < ordered.length && (
-            <div ref={listEnd} className={styles.listEnd} aria-hidden="true" />
+            <div ref={listEnd} className={classes.listEnd} aria-hidden="true" />
           )}
         </div>
       ) : (
-        <div className={styles.mapPanel}>
+        <div className={classes.mapPanel}>
           {/* The same view the Hidden homes filter sets, so the list and the map stay in step. */}
           {!mobileMap && tab !== 'favorites' && (
             <Switch
@@ -915,7 +915,7 @@ export function ListingsPanel({
         </div>
       )}
       {selecting && (
-        <Group className={styles.selectionBar} justify="space-between">
+        <Group className={classes.selectionBar} justify="space-between">
           <Text>{checkedIds.length} selected</Text>
           <Group gap="xs">
             {onSaveMany && (

@@ -2,7 +2,6 @@ import { Badge, Button, Group, Menu, Text } from '@mantine/core';
 import { useDeferredValue, useMemo, useState } from 'react';
 
 import { AddLinkPanel } from '@/features/house-scanner/components/add-link-panel';
-import styles from '@/features/house-scanner/components/household-workspace.module.css';
 import { ListingsPanel } from '@/features/house-scanner/components/listings-panel';
 import { ManualActionsProvider } from '@/features/house-scanner/components/manual-listing-actions';
 import { PriceEstimateProvider } from '@/features/house-scanner/components/price-estimate';
@@ -15,6 +14,7 @@ import { useBrowseNavigation } from '@/features/house-scanner/hooks/use-browse-n
 import { useFavoriteToggle } from '@/features/house-scanner/hooks/use-favorite-toggle';
 import { useHiddenListings } from '@/features/house-scanner/hooks/use-hidden-listings';
 import { useListingNotes } from '@/features/house-scanner/hooks/use-listing-notes';
+import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type { Snapshot } from '@/features/house-scanner/types/contracts';
 import type {
   HouseholdAccessActions,
@@ -170,7 +170,7 @@ export function HouseholdWorkspace({
       : null;
   return (
     <ManualActionsProvider value={manualActions}>
-      <section className={styles.workspace} aria-label="Household shortlist">
+      <section className={classes.workspace} aria-label="Household shortlist">
         {/* A new household starts with one profile at revision 1, set to the collector bounds. */}
         {!synthetic &&
           tab !== 'settings' &&
