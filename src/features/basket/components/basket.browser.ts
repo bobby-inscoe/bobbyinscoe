@@ -166,11 +166,47 @@ test('phone-first kits, reset confirmation, archive, and keyboard controls', asy
     path: test.info().outputPath('basket-checklist.png'),
     fullPage: true,
   });
+  let releaseReset = () => {};
+  let resetStarted = () => {};
+  const resetGate = new Promise<void>((resolve) => {
+    releaseReset = resolve;
+  });
+  const resetSeen = new Promise<void>((resolve) => {
+    resetStarted = resolve;
+  });
+  await page.route('**/rest/v1/rpc/basket_command', async (route) => {
+    if (route.request().postDataJSON().p_action.type === 'reset') {
+      resetStarted();
+      await resetGate;
+    }
+    await route.fallback();
+  });
   await add(page, 'One-off item');
   await page.getByRole('checkbox', { name: 'Socks', exact: true }).check();
   await page.getByRole('button', { name: 'Reset basket', exact: true }).click();
-  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await resetSeen;
+  try {
+    await expect(
+      page.getByRole('button', { name: 'Basket actions', exact: true }),
+    ).toBeEnabled();
+    const plus = page.getByRole('button', { name: 'Add item', exact: true });
+    await expect(plus).toBeEnabled();
+    await expect(plus).not.toHaveAttribute('data-loading');
+    await expect(
+      page.getByRole('button', { name: 'Actions for Socks', exact: true }),
+    ).toBeEnabled();
+    await expect(
+      page.getByRole('checkbox', { name: 'Socks', exact: true }),
+    ).toBeEnabled();
+    await action(page, 'Basket settings');
+  } finally {
+    releaseReset();
+  }
   await expect(page.getByRole('checkbox')).toHaveCount(2);
+  await expect(
+    page.getByRole('dialog', { name: 'Basket settings', exact: true }),
+  ).toBeVisible();
+  await closePanel(page);
   await expect(
     page.getByRole('checkbox', { name: 'Socks', exact: true }),
   ).not.toBeChecked();
@@ -305,6 +341,69 @@ test('two guest browsers share a basket and receive periodic updates without rel
   } finally {
     await friendContext.close();
   }
+});
+
+test('slow saves keep controls steady and preserve rapid checkbox changes and additions', async ({
+  page,
+}) => {
+  await create(page);
+  await add(page, 'First item');
+  await add(page, 'Second item');
+  let release = () => {};
+  let started = () => {};
+  let blocked = false;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const seen = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  await page.route('**/rest/v1/rpc/basket_command', async (route) => {
+    if (
+      !blocked &&
+      route.request().postDataJSON().p_action.type === 'item_check'
+    ) {
+      blocked = true;
+      started();
+      await gate;
+    }
+    await route.fallback();
+  });
+  const first = page.getByRole('checkbox', { name: 'First item', exact: true });
+  const second = page.getByRole('checkbox', {
+    name: 'Second item',
+    exact: true,
+  });
+  await first.check();
+  await seen;
+  try {
+    await expect(
+      page.getByRole('button', { name: 'Basket actions', exact: true }),
+    ).toBeEnabled();
+    await expect(
+      page.getByRole('button', { name: 'Actions for First item', exact: true }),
+    ).toBeEnabled();
+    await first.uncheck();
+    await second.check();
+    await expect(first).not.toBeChecked();
+    await expect(second).toBeChecked();
+    const plus = page.getByRole('button', { name: 'Add item', exact: true });
+    await expect(plus).toBeEnabled();
+    await expect(plus).not.toHaveAttribute('data-loading');
+    await page
+      .getByRole('textbox', { name: 'Add an item', exact: true })
+      .fill('Third item');
+    await plus.click();
+  } finally {
+    release();
+  }
+  await expect(
+    page.getByRole('checkbox', { name: 'Third item', exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(first).not.toBeChecked();
+  await expect(second).toBeChecked();
+  await expect(page.getByRole('checkbox')).toHaveCount(3);
 });
 
 test('display name survives new baskets and reloads, with membership fallback for older sessions', async ({

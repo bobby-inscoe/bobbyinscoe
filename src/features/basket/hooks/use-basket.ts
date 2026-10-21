@@ -17,6 +17,8 @@ export function useBasket(client: BasketClient | null, basketId?: string) {
   const [unavailable, setUnavailable] = useState(false);
   const sequence = useRef(0);
   const currentUser = useRef<string | null>(null);
+  const mutations = useRef<Promise<unknown>>(Promise.resolve());
+  const pending = useRef(0);
 
   const reload = useCallback(async () => {
     if (!client) return;
@@ -50,6 +52,9 @@ export function useBasket(client: BasketClient | null, basketId?: string) {
       if (seq === sequence.current) setLoading(false);
     }
   }, [client, basketId]);
+
+  const refresh = useRef(reload);
+  refresh.current = reload;
 
   useEffect(() => {
     if (!client) return;
@@ -135,34 +140,45 @@ export function useBasket(client: BasketClient | null, basketId?: string) {
   }, [user, reload]);
 
   const run = useCallback(
-    async (action: Action, message = 'Saved.') => {
-      if (!client || busy) return null;
+    (action: Action, message = 'Saved.') => {
+      if (!client) return Promise.resolve(null);
+      const identity = currentUser.current;
+      pending.current += 1;
       setBusy(true);
-      setError('');
-      try {
-        if (!navigator.onLine)
-          throw new BasketError(
-            'You are offline. Your change has not been saved.',
+      const result = mutations.current.then(async () => {
+        setError('');
+        try {
+          if (currentUser.current !== identity)
+            throw new BasketError(
+              'Your session changed. Try the change again.',
+            );
+          if (!navigator.onLine)
+            throw new BasketError(
+              'You are offline. Your change has not been saved.',
+            );
+          await client.ensureGuest();
+          const saved = await client.command(action);
+          await refresh.current();
+          setStatus(message);
+          return saved;
+        } catch (cause) {
+          if (cause instanceof BasketError && cause.code === '40001')
+            await refresh.current();
+          setError(
+            cause instanceof Error
+              ? cause.message
+              : 'Your change was not saved. Please try again.',
           );
-        await client.ensureGuest();
-        const result = await client.command(action);
-        await reload();
-        setStatus(message);
-        return result;
-      } catch (cause) {
-        if (cause instanceof BasketError && cause.code === '40001')
-          await reload();
-        setError(
-          cause instanceof Error
-            ? cause.message
-            : 'Your change was not saved. Please try again.',
-        );
-        return null;
-      } finally {
-        setBusy(false);
-      }
+          return null;
+        } finally {
+          pending.current -= 1;
+          setBusy(pending.current > 0);
+        }
+      });
+      mutations.current = result;
+      return result;
     },
-    [client, busy, reload],
+    [client],
   );
 
   return {

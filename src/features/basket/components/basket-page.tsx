@@ -104,10 +104,11 @@ export function BasketPage() {
   const [newItem, setNewItem] = useState('');
   const [newItemId, setNewItemId] = useState(() => crypto.randomUUID());
   const [showArchived, setShowArchived] = useState(false);
-  const [pendingCheck, setPendingCheck] = useState<{
-    id: string;
-    completed: boolean;
-  } | null>(null);
+  const [pendingChecks, setPendingChecks] = useState<
+    Record<string, { completed: boolean; request: string }>
+  >({});
+  const addingItem = useRef(false);
+  const resetting = useRef(false);
   const previousIdentity = useRef<string | null>(null);
   useEffect(() => {
     const next = state.user?.id ?? null;
@@ -119,7 +120,7 @@ export function BasketPage() {
       setNewItem('');
       setName('');
       setNewItemId(crypto.randomUUID());
-      setPendingCheck(null);
+      setPendingChecks({});
     }
     previousIdentity.current = next;
   }, [state.user?.id, state.unavailable]);
@@ -208,13 +209,23 @@ export function BasketPage() {
   );
 
   async function reset(current: Basket) {
-    if (
-      await state.run(
-        { type: 'reset', basketId: current.id, revision: current.revision },
-        'Basket reset to saved kits.',
+    if (resetting.current) return;
+    resetting.current = true;
+    try {
+      if (
+        await state.run(
+          { type: 'reset', basketId: current.id, revision: current.revision },
+          'Basket reset to saved kits.',
+        )
       )
-    )
-      close();
+        setSheet((openSheet) =>
+          openSheet?.type === 'reset' && openSheet.basket.id === current.id
+            ? null
+            : openSheet,
+        );
+    } finally {
+      resetting.current = false;
+    }
   }
   function requestReset(current: Basket) {
     if (current.members.length > 1 || changedKitItems(current) > 0)
@@ -373,11 +384,7 @@ export function BasketPage() {
                   </div>
                   <Menu position="bottom-end" withinPortal>
                     <Menu.Target>
-                      <ActionIcon
-                        variant="subtle"
-                        aria-label="Basket actions"
-                        disabled={state.busy}
-                      >
+                      <ActionIcon variant="subtle" aria-label="Basket actions">
                         <MoreHorizontal size={24} />
                       </ActionIcon>
                     </Menu.Target>
@@ -482,7 +489,7 @@ export function BasketPage() {
                     mt="sm"
                     variant="light"
                     leftSection={<RotateCcw size={16} />}
-                    disabled={state.busy || !basket.savedKits.length}
+                    disabled={!basket.savedKits.length}
                     onClick={() => requestReset(basket)}
                   >
                     Reset basket
@@ -497,16 +504,15 @@ export function BasketPage() {
                           withBorder={false}
                           aria-label={item.text}
                           checked={
-                            pendingCheck?.id === item.id
-                              ? pendingCheck.completed
-                              : item.completed
+                            pendingChecks[item.id]?.completed ?? item.completed
                           }
-                          disabled={!writable || state.busy}
+                          disabled={!writable}
                           onChange={(desired) => {
-                            setPendingCheck({
-                              id: item.id,
-                              completed: desired,
-                            });
+                            const request = crypto.randomUUID();
+                            setPendingChecks((current) => ({
+                              ...current,
+                              [item.id]: { completed: desired, request },
+                            }));
                             void state
                               .run(
                                 {
@@ -519,12 +525,20 @@ export function BasketPage() {
                                   ? `${item.text} checked.`
                                   : `${item.text} unchecked.`,
                               )
-                              .finally(() => setPendingCheck(null));
+                              .finally(() =>
+                                setPendingChecks((current) => {
+                                  if (current[item.id]?.request !== request)
+                                    return current;
+                                  const next = { ...current };
+                                  delete next[item.id];
+                                  return next;
+                                }),
+                              );
                           }}
                         >
                           <Checkbox.Indicator size="md" aria-hidden="true" />
                           <span
-                            className={`${classes.itemLabel} ${item.completed ? classes.completed : ''}`}
+                            className={`${classes.itemLabel} ${(pendingChecks[item.id]?.completed ?? item.completed) ? classes.completed : ''}`}
                           >
                             {item.text}
                           </span>
@@ -535,7 +549,6 @@ export function BasketPage() {
                               <ActionIcon
                                 variant="subtle"
                                 aria-label={`Actions for ${item.text}`}
-                                disabled={state.busy}
                               >
                                 <MoreHorizontal size={20} />
                               </ActionIcon>
@@ -603,18 +616,27 @@ export function BasketPage() {
                     className={classes.composer}
                     onSubmit={async (event) => {
                       event.preventDefault();
-                      const result = await state.run(
-                        {
-                          type: 'item_add',
-                          basketId: basket.id,
-                          id: newItemId,
-                          text: newItem,
-                        },
-                        'Item added.',
-                      );
-                      if (result) {
-                        setNewItem('');
-                        setNewItemId(crypto.randomUUID());
+                      if (addingItem.current) return;
+                      addingItem.current = true;
+                      const submitted = newItem;
+                      try {
+                        const result = await state.run(
+                          {
+                            type: 'item_add',
+                            basketId: basket.id,
+                            id: newItemId,
+                            text: newItem,
+                          },
+                          'Item added.',
+                        );
+                        if (result) {
+                          setNewItem((current) =>
+                            current === submitted ? '' : current,
+                          );
+                          setNewItemId(crypto.randomUUID());
+                        }
+                      } finally {
+                        addingItem.current = false;
                       }
                     }}
                   >
@@ -636,7 +658,6 @@ export function BasketPage() {
                         variant="filled"
                         size={48}
                         aria-label="Add item"
-                        loading={state.busy}
                       >
                         <Plus size={22} />
                       </ActionIcon>
@@ -1097,7 +1118,7 @@ export function BasketPage() {
                   </Text>
                   <Button
                     variant="light"
-                    disabled={!writable || state.busy}
+                    disabled={!writable}
                     onClick={() => setSheet({ type: 'share' })}
                   >
                     {basket.linkId
@@ -1108,7 +1129,7 @@ export function BasketPage() {
                     <Button
                       variant="subtle"
                       color="red"
-                      disabled={!writable || state.busy}
+                      disabled={!writable}
                       onClick={() => {
                         void state.run(
                           {
