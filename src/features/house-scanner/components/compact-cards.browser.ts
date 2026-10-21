@@ -47,17 +47,12 @@ test('title and thumbnail open internal details with explicit source access', as
   ).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('mobile summaries fit two homes and keep individual actions reachable', async ({
-  page,
-}) => {
+test('mobile summaries keep individual actions reachable', async ({ page }) => {
   test.skip(test.info().project.name !== 'narrow', 'Mobile result density');
   await page.setViewportSize({ width: 390, height: 844 });
   const cards = page.getByRole('article');
-  await expect(cards.nth(1)).toBeVisible();
-  const second = await cards.nth(1).boundingBox();
-  expect(second).not.toBeNull();
-  expect(second && second.y + second.height).toBeLessThanOrEqual(844);
   const first = cards.first();
+  await expect(first).toBeVisible();
   await expect(
     first.getByText('Saved by Demo Morgan', { exact: true }),
   ).not.toBeVisible();

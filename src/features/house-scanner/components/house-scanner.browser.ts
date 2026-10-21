@@ -636,7 +636,7 @@ test('unknown prices are kept or hidden by the checkbox, and an empty result say
   await page.getByRole('button', { name: 'Filters', exact: true }).click();
   await page
     .getByRole('checkbox', {
-      name: 'Keep homes with unknown or disputed values',
+      name: 'Keep unknown or disputed values',
     })
     .uncheck();
   await applyFilters(page);

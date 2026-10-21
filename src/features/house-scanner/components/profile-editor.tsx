@@ -77,6 +77,13 @@ export function ProfileEditor({
   const [enabled, setEnabled] = useState(profile.enabled);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  // A new revision (ours or another member's) resets the fields but keeps the status message.
+  const [seenRevision, setSeenRevision] = useState(profile.revision);
+  if (seenRevision !== profile.revision) {
+    setSeenRevision(profile.revision);
+    setCriteria(profile.criteria);
+    setEnabled(profile.enabled);
+  }
   function numeric(
     key: 'preferredPriceSek' | 'stretchPriceSek' | 'feeReferenceSek',
     label: string,
