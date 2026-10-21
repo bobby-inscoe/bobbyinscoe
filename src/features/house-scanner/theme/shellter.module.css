@@ -19,24 +19,6 @@
   --mantine-primary-color-light-color: var(--scanner-accent);
   color: var(--scanner-ink);
 }
-/* Fingers need 44 px. */
-@media (pointer: coarse) {
-  .scope :global(.mantine-Button-root),
-  .scope :global(.mantine-ActionIcon-root),
-  .scope :global(.mantine-CloseButton-root),
-  .scope :global(.mantine-Input-input) {
-    min-height: 44px;
-    font-size: 16px;
-  }
-  .scope :global(.mantine-ActionIcon-root),
-  .scope :global(.mantine-CloseButton-root) {
-    min-width: 44px;
-  }
-  /* The stepper arrows cannot reach 44 px inside a 44 px field; touch users type the number. */
-  .scope :global(.mantine-NumberInput-controls) {
-    display: none;
-  }
-}
 
 /* Workspace, cards, and sheets */
 .workspace {
@@ -203,7 +185,7 @@
   aspect-ratio: 16 / 9;
 }
 /* On a phone the selected home is a sheet on the map's lower edge instead of a floating card. */
-@media (max-width: 36em) {
+@media (max-width: 35.99375em) {
   :global(body):has(.mobileMapShell) {
     overflow: hidden;
   }
@@ -374,7 +356,7 @@
   display: flex;
   align-items: center;
 }
-@media (max-width: 36em) {
+@media (max-width: 35.99375em) {
   .compactCard {
     position: relative;
     display: grid;
@@ -441,12 +423,12 @@
 .cardAmenities:empty {
   display: none;
 }
-@media (max-width: 36em) {
+@media (max-width: 35.99375em) {
   .compactCard .cardPrice s {
     font-size: var(--mantine-font-size-xs);
   }
 }
-@media (max-width: 36em) {
+@media (max-width: 35.99375em) {
   .workspace {
     gap: var(--mantine-spacing-xs);
   }
@@ -486,7 +468,7 @@
   display: none;
 }
 
-@media (max-width: 36em) {
+@media (max-width: 35.99375em) {
   .compactCard > .selectionRow {
     top: 8px;
     left: 8px;
@@ -560,7 +542,7 @@
   background: var(--mantine-color-moss-2);
 }
 /* The bottom sheet takes about 330 px, so a phone map needs more height to leave the pin in sight. */
-@media (max-width: 36em) {
+@media (max-width: 35.99375em) {
   .controls {
     left: auto;
     right: 12px;
@@ -660,7 +642,7 @@
 .noPositions {
   max-width: 230px;
 }
-@media (max-width: 36em) {
+@media (max-width: 35.99375em) {
   .fillMobile {
     flex: 1;
     min-height: 0;
@@ -710,5 +692,22 @@
 @media (pointer: coarse) {
   .guideButton {
     min-height: 44px;
+  }
+}
+
+/* Fingers need 44 px. The theme puts these on Shellter's buttons, icons, close buttons, and inputs; last in the file so they win ties. */
+@media (pointer: coarse) {
+  .touchTarget {
+    min-height: 44px;
+    font-size: 16px;
+  }
+  .touchSquare {
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 16px;
+  }
+  /* The stepper arrows cannot reach 44 px inside a 44 px field; touch users type the number. */
+  .touchControls {
+    display: none;
   }
 }
