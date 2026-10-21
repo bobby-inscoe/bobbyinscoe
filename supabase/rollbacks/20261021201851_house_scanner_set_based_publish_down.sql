@@ -1,6 +1,8 @@
--- Reverses 20261021201851_house_scanner_set_based_publish.sql. hs.mark_delisted is the definition
--- 20261020142553_house_scanner_delisted.sql installed, hs_ingest the one 20261020111540_house_scanner_catalog.sql
--- installed, and the neighborhood trigger the one 20261019073251_house_scanner_neighborhoods.sql created. Staged rows
+-- Reverses 20261021201851_house_scanner_set_based_publish.sql. The definitions below come from the migrations that
+-- installed them: the neighborhood trigger from 20261019073251_house_scanner_neighborhoods.sql,
+-- hs.neighborhood_for_coordinates from 20261019080101_house_scanner_listing_discovery.sql,
+-- hs.neighborhood_candidate_ids from 20261019083126_house_scanner_neighborhood_candidates.sql, hs.mark_delisted from
+-- 20261020142553_house_scanner_delisted.sql and hs_ingest from 20261020111540_house_scanner_catalog.sql. Staged rows
 -- the migration deleted, and those deleted by publish or by begin since, do not come back; the restored cross-run check
 -- only compares with staged rows of runs published after this rollback.
 begin;
@@ -8,6 +10,35 @@ drop trigger listing_neighborhood_moved on hs.listings;
 drop trigger listing_neighborhood on hs.listings;
 create trigger listing_neighborhood before insert or update of value,neighborhood_id on hs.listings
  for each row execute function hs.assign_neighborhood();
+
+create or replace function hs.neighborhood_for_coordinates(coordinates jsonb) returns text
+language sql stable set search_path=pg_catalog,hs as $$
+ select s.neighborhood_id from hs.neighborhood_shapes s
+ where coordinates->>'precision' in ('address','building','user_supplied')
+ and (coalesce(coordinates->>'estimated','false')='false'
+  or coordinates->>'source'='Estimated from the address (OpenStreetMap)')
+ and s.outline @> point((coordinates->>'longitude')::double precision,(coordinates->>'latitude')::double precision)
+ and not exists(select 1 from unnest(s.holes) as hole
+  where hole @> point((coordinates->>'longitude')::double precision,(coordinates->>'latitude')::double precision))
+ order by s.neighborhood_id limit 1
+$$;
+create or replace function hs.neighborhood_candidate_ids(coordinates jsonb) returns text[]
+language sql stable set search_path=pg_catalog,hs as $$
+ with location as (
+  select hs.neighborhood_search_radius(coordinates) as radius,
+   point((coordinates->>'longitude')::double precision,(coordinates->>'latitude')::double precision) as original,
+   hs.neighborhood_metres_point((coordinates->>'longitude')::double precision,(coordinates->>'latitude')::double precision) as projected
+ )
+ select coalesce(array_agg(distinct s.neighborhood_id order by s.neighborhood_id),'{}'::text[])
+ from hs.neighborhood_shapes s cross join location l
+ where (l.radius=0 and s.outline @> l.original
+  and not exists(select 1 from unnest(s.holes) hole
+   where hole @> l.original and (l.original <-> path(hole))>0))
+ or (l.radius>0 and (l.projected <-> s.outline_metres)<=l.radius
+  and not exists(select 1 from unnest(s.holes_metres) hole
+   where hole @> l.projected and (l.projected <-> path(hole))>l.radius))
+$$;
+alter table hs.neighborhood_shapes drop column outline_box, drop column outline_metres_box;
 
 create or replace function hs.mark_delisted() returns trigger language plpgsql set search_path=pg_catalog,hs as $$
 declare result jsonb;

@@ -25,6 +25,44 @@ create trigger listing_neighborhood_moved before update of value on hs.listings
   is distinct from (case when jsonb_typeof(new.value->'coordinates')='object' then (new.value->'coordinates')-'observedAt' else new.value->'coordinates' end))
  execute function hs.assign_neighborhood();
 
+-- The candidate lookup took about 37 ms a home against 1,766 shapes, almost all of it in the location CTE: inlined
+-- into the shape scan, it called the radius and projection functions (not inlinable, they carry a search path) three
+-- times per shape. It is now materialized, so they run once per home. A shape's bounding box also holds its polygon,
+-- so a point outside the box, or farther than the buffer from it, cannot match; the polygon tests run only on shapes
+-- whose box passes. The extra metre keeps floating-point rounding from dropping a shape at the buffer's edge; the exact
+-- test still decides. Both lookups gave identical results for all 1,036 stored positions on 21 October.
+alter table hs.neighborhood_shapes add column outline_box box generated always as (box(outline)) stored,
+ add column outline_metres_box box generated always as (box(outline_metres)) stored;
+create or replace function hs.neighborhood_for_coordinates(coordinates jsonb) returns text
+language sql stable set search_path=pg_catalog,hs as $$
+ select s.neighborhood_id from hs.neighborhood_shapes s
+ where coordinates->>'precision' in ('address','building','user_supplied')
+ and (coalesce(coordinates->>'estimated','false')='false'
+  or coordinates->>'source'='Estimated from the address (OpenStreetMap)')
+ and s.outline_box @> point((coordinates->>'longitude')::double precision,(coordinates->>'latitude')::double precision)
+ and s.outline @> point((coordinates->>'longitude')::double precision,(coordinates->>'latitude')::double precision)
+ and not exists(select 1 from unnest(s.holes) as hole
+  where hole @> point((coordinates->>'longitude')::double precision,(coordinates->>'latitude')::double precision))
+ order by s.neighborhood_id limit 1
+$$;
+create or replace function hs.neighborhood_candidate_ids(coordinates jsonb) returns text[]
+language sql stable set search_path=pg_catalog,hs as $$
+ with location as materialized (
+  select hs.neighborhood_search_radius(coordinates) as radius,
+   point((coordinates->>'longitude')::double precision,(coordinates->>'latitude')::double precision) as original,
+   hs.neighborhood_metres_point((coordinates->>'longitude')::double precision,(coordinates->>'latitude')::double precision) as projected
+ )
+ select coalesce(array_agg(distinct s.neighborhood_id order by s.neighborhood_id),'{}'::text[])
+ from hs.neighborhood_shapes s cross join location l
+ where case when l.radius=0 then s.outline_box @> l.original when l.radius>0 then (l.projected <-> s.outline_metres_box)<=l.radius+1 else false end
+ and ((l.radius=0 and s.outline @> l.original
+  and not exists(select 1 from unnest(s.holes) hole
+   where hole @> l.original and (l.original <-> path(hole))>0))
+ or (l.radius>0 and (l.projected <-> s.outline_metres)<=l.radius
+  and not exists(select 1 from unnest(s.holes_metres) hole
+   where hole @> l.projected and (l.projected <-> path(hole))>l.radius)))
+$$;
+
 -- Homes a publish result saw on the search pages or staged. Replaces hs.seen_in, which expanded the seen list once per
 -- listing of the source; seen_in stays because the delisting rollback drops it.
 create function hs.seen_listings(p_run uuid,p_result jsonb) returns table(source_listing_id text,episode_id text) language sql stable as $$
