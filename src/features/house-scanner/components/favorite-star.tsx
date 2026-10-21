@@ -1,10 +1,13 @@
 import { ActionIcon } from '@mantine/core';
 
+import { Star } from 'lucide-react';
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
 
 interface FavoriteStarProps {
   // Whether the signed-in member has saved the home.
   mine: boolean;
+  // Whether another household member has saved it; shown pale so it reads apart from unsaved homes.
+  others?: boolean;
   canSave: boolean;
   busy: boolean;
   onToggle: () => void;
@@ -13,13 +16,14 @@ interface FavoriteStarProps {
 /** The star over a home's photo. It saves or removes the member's own favorite only. */
 export function FavoriteStar({
   mine,
+  others,
   canSave,
   busy,
   onToggle,
 }: FavoriteStarProps) {
   return (
     <ActionIcon
-      className={classes.star}
+      className={`${classes.star} ${others && !mine ? classes.savedByOthers : ''}`}
       variant={mine ? 'filled' : 'default'}
       size="lg"
       radius="xl"
@@ -28,7 +32,7 @@ export function FavoriteStar({
       loading={busy}
       onClick={onToggle}
     >
-      {mine ? '★' : '☆'}
+      <Star size={20} fill={mine ? 'currentColor' : 'none'} aria-hidden />
     </ActionIcon>
   );
 }

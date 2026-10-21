@@ -1,18 +1,20 @@
 import {
   Anchor,
+  Box,
   Button,
-  Flex,
   Group,
   MantineThemeProvider,
   Stack,
   Title,
 } from '@mantine/core';
 import { Link, useNavigate } from '@tanstack/react-router';
+import { ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
 import { HouseScannerAccess } from '@/features/house-scanner/components/house-scanner-access';
 import { HouseholdWorkspace } from '@/features/house-scanner/components/household-workspace';
 import { SyntheticWorkspace } from '@/features/house-scanner/components/synthetic-workspace';
 import {
+  classes,
   shellterScope,
   shellterTheme,
 } from '@/features/house-scanner/theme/shellter-theme';
@@ -30,33 +32,46 @@ export function HouseScannerPage() {
   const navigate = useNavigate();
   return (
     <MantineThemeProvider theme={shellterTheme}>
-      <Flex
-        component="main"
-        justify="center"
-        p={{ base: 'xs', md: 'xl' }}
-        mih="100svh"
-      >
-        <Stack className={shellterScope} w="100%" maw="72rem" gap="xs">
-          <Group justify="space-between" align="center" wrap="nowrap">
-            <Anchor component={Link} to="/" size="xs" visibleFrom="sm">
-              ← Back to the workshop
-            </Anchor>
-            <Group gap="xs" ml="auto" wrap="nowrap">
+      <Box component="main" className={`${shellterScope} ${classes.page}`}>
+        <header className={classes.appBar}>
+          <Group
+            className={classes.appBarInner}
+            justify="space-between"
+            align="center"
+            gap="xs"
+          >
+            <Title order={1} className={classes.wordmark}>
+              Shellter
+            </Title>
+            <Group gap="md" wrap="nowrap">
               {/* The demo is a local testing aid, so the deployed site never offers it. */}
               {import.meta.env.DEV && (
                 <Button
-                  size="compact-xs"
-                  variant="subtle"
+                  size="compact-sm"
+                  variant="white"
                   onClick={() => setDemo(!demo)}
                 >
                   {demo ? 'Leave demo' : 'Demo'}
                 </Button>
               )}
-              <Title order={1} size="h2" fz={{ base: 'lg', sm: 'h2' }}>
-                Shellter
-              </Title>
+              <Anchor
+                component={Link}
+                to="/"
+                size="sm"
+                visibleFrom="sm"
+                className={classes.appBarLink}
+              >
+                <ArrowLeft
+                  size={16}
+                  aria-hidden
+                  className={classes.inlineIcon}
+                />
+                Back to the workshop
+              </Anchor>
             </Group>
           </Group>
+        </header>
+        <Stack className={classes.content} gap="xs">
           {demo ? (
             <SyntheticWorkspace />
           ) : (
@@ -82,7 +97,7 @@ export function HouseScannerPage() {
             </HouseScannerAccess>
           )}
         </Stack>
-      </Flex>
+      </Box>
     </MantineThemeProvider>
   );
 }

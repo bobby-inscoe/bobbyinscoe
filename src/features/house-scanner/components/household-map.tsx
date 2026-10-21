@@ -1,6 +1,6 @@
 import { ActionIcon, Button, Group, Popover, Stack, Text } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { Settings2 } from 'lucide-react';
+import { Settings2, Star } from 'lucide-react';
 import {
   Map as MapLibreMap,
   Marker,
@@ -647,7 +647,16 @@ export function HouseholdMap({
                     setMobileOptionsOpen(false);
                   }}
                 >
-                  {point.savedByMe ? '★ ' : point.savedByHousehold ? '☆ ' : ''}
+                  {(point.savedByMe || point.savedByHousehold) && (
+                    <Star
+                      size={14}
+                      fill={point.savedByMe ? 'currentColor' : 'none'}
+                      aria-label={
+                        point.savedByMe ? 'Saved by you' : 'Saved by household'
+                      }
+                      className={classes.inlineIcon}
+                    />
+                  )}
                   {point.label}
                 </Button>
               ))}

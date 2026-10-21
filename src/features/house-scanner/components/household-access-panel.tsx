@@ -310,7 +310,7 @@ export function HouseholdAccessPanel({
 
         <Group>
           <Button
-            variant="subtle"
+            variant="light"
             color="red"
             onClick={() => {
               setNextOwner(null);

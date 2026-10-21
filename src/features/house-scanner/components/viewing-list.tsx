@@ -1,5 +1,6 @@
 import { Button, Group, Stack, Text } from '@mantine/core';
 
+import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type {
   Listing,
   Viewing,
@@ -51,7 +52,7 @@ export function NextViewing({ listing }: { listing: Listing }) {
   const [next, ...more] = upcomingViewings(listing, Date.now());
   if (!next) return null;
   return (
-    <Text size="sm" fw={600}>
+    <Text size="sm" fw={700} className={classes.viewingTag}>
       Viewing {formatViewing(next)}
       {more.length > 0 && ` (+${more.length} more)`}
     </Text>

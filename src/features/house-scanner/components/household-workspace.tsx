@@ -1,4 +1,5 @@
 import { Badge, Button, Group, Menu, Text } from '@mantine/core';
+import { Ellipsis, House, Star } from 'lucide-react';
 import { useDeferredValue, useMemo, useState } from 'react';
 
 import { AddLinkPanel } from '@/features/house-scanner/components/add-link-panel';
@@ -196,12 +197,25 @@ export function HouseholdWorkspace({
           gap="xs"
           wrap="wrap"
           p={4}
+          className={classes.tabBar}
         >
           {(['suggestions', 'favorites'] as const).map((value) => (
             <Button
               key={value}
+              className={classes.navTab}
               variant={tab === value ? 'filled' : 'default'}
               aria-pressed={tab === value}
+              leftSection={
+                value === 'suggestions' ? (
+                  <House size={20} aria-hidden />
+                ) : (
+                  <Star
+                    size={20}
+                    fill={tab === value ? 'currentColor' : 'none'}
+                    aria-hidden
+                  />
+                )
+              }
               onClick={() => navigation.changeTab(value)}
             >
               {value === 'suggestions' ? 'Listings' : 'Favorites'}
@@ -210,6 +224,8 @@ export function HouseholdWorkspace({
           <Menu position="bottom-end">
             <Menu.Target>
               <Button
+                className={classes.navTab}
+                leftSection={<Ellipsis size={20} aria-hidden />}
                 variant={
                   tab !== 'suggestions' && tab !== 'favorites'
                     ? 'filled'

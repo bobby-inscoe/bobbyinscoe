@@ -1,51 +1,65 @@
 ---
 name: Shellter
-description: A household's shared apartment search for Göteborg, in sand, shell, and moss.
+description: A light Göteborg property portal for households deciding together, built to Hemnet and Booli craft.
 colors:
-  shell-moss: "#526044"
-  shell-moss-deep: "#414e37"
-  shell-moss-dark: "#303d2c"
-  moss-pale: "#cdd1b9"
-  moss-wash: "#f4f5ee"
-  sand: "#e9e4d8"
-  shell: "#fcfaf4"
-  shell-shade: "#f3eddf"
-  shell-line: "#dfd0af"
-  ink: "#383a2e"
-  ink-dimmed: "#67695a"
-  rust-focus: "#854a31"
+  teal: "#0f6e6a"
+  teal-strong: "#0b5753"
+  teal-deep: "#08403d"
+  teal-pale: "#a9d8d2"
+  teal-wash: "#dff1ef"
+  mint-ground: "#eef5f3"
+  surface: "#ffffff"
+  hover: "#f2f8f7"
+  sunk: "#d7eae6"
+  line: "#cde2de"
+  ink: "#142624"
+  soft: "#4a5e5b"
+  apricot: "#f29e4c"
+  apricot-ink: "#2a1606"
+  apricot-wash: "#fde6cf"
+  good: "#1d7a4a"
 typography:
-  display:
-    fontFamily: "Libron, Georgia, \"Times New Roman\", serif"
-    fontSize: "1.625rem"
-    fontWeight: 400
-    lineHeight: 1.35
+  price:
+    fontFamily: "Nunito Sans, system-ui, sans-serif"
+    fontSize: "1.5rem"
+    fontWeight: 800
+    letterSpacing: "-0.01em"
+    fontFeature: "\"tnum\""
+  wordmark:
+    fontFamily: "Nunito Sans, system-ui, sans-serif"
+    fontSize: "1.25rem"
+    fontWeight: 800
+    letterSpacing: "-0.01em"
   headline:
-    fontFamily: "Libron, Georgia, \"Times New Roman\", serif"
+    fontFamily: "Nunito Sans, system-ui, sans-serif"
     fontSize: "1.125rem"
-    fontWeight: 400
-    lineHeight: 1.45
+    fontWeight: 700
   title:
-    fontFamily: "Libron, Georgia, \"Times New Roman\", serif"
+    fontFamily: "Nunito Sans, system-ui, sans-serif"
     fontSize: "1rem"
-    fontWeight: 400
-    lineHeight: 1.5
+    fontWeight: 700
   body:
-    fontFamily: "Arial, Helvetica, sans-serif"
+    fontFamily: "Nunito Sans, system-ui, sans-serif"
     fontSize: "1rem"
     fontWeight: 400
-    lineHeight: 1.6
-  label:
-    fontFamily: "Arial, Helvetica, sans-serif"
+    lineHeight: 1.55
+  body-sm:
+    fontFamily: "Nunito Sans, system-ui, sans-serif"
     fontSize: "0.875rem"
-    fontWeight: 500
-    lineHeight: 1.4
+    fontWeight: 400
+  label:
+    fontFamily: "Nunito Sans, system-ui, sans-serif"
+    fontSize: "0.875rem"
+    fontWeight: 700
+  tab-label:
+    fontFamily: "Nunito Sans, system-ui, sans-serif"
+    fontSize: "13px"
+    fontWeight: 700
 rounded:
-  none: "0px"
-  xs: "2px"
-  sm: "4px"
-  md: "8px"
-  xl: "32px"
+  sm: "8px"
+  md: "10px"
+  lg: "14px"
+  pill: "32px"
 spacing:
   xs: "10px"
   sm: "12px"
@@ -53,195 +67,253 @@ spacing:
   lg: "20px"
   xl: "32px"
 components:
+  app-bar:
+    backgroundColor: "{colors.teal}"
+    textColor: "{colors.surface}"
+    height: "56px"
   button-primary:
-    backgroundColor: "{colors.shell-moss}"
-    textColor: "{colors.shell}"
+    backgroundColor: "{colors.teal}"
+    textColor: "{colors.surface}"
     typography: "{typography.label}"
-    rounded: "{rounded.sm}"
-    height: "36px"
+    rounded: "{rounded.md}"
   button-primary-hover:
-    backgroundColor: "{colors.shell-moss-deep}"
+    backgroundColor: "{colors.teal-strong}"
   button-default:
-    backgroundColor: "{colors.shell}"
+    backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
     typography: "{typography.label}"
-    rounded: "{rounded.sm}"
-    height: "36px"
-  badge-light:
-    backgroundColor: "{colors.moss-wash}"
-    textColor: "{colors.shell-moss}"
-    rounded: "{rounded.xl}"
-  input:
-    backgroundColor: "{colors.shell}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.sm}"
-    height: "36px"
+    rounded: "{rounded.md}"
+  button-default-hover:
+    backgroundColor: "{colors.hover}"
+  button-light:
+    backgroundColor: "{colors.teal-wash}"
+    textColor: "{colors.teal-strong}"
+    typography: "{typography.label}"
+    rounded: "{rounded.md}"
   listing-card:
-    backgroundColor: "{colors.shell}"
+    backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
-    rounded: "{rounded.none}"
-    padding: "16px"
+    rounded: "{rounded.lg}"
+    padding: "{spacing.md}"
   photo-placeholder:
-    backgroundColor: "{colors.shell-shade}"
-    textColor: "{colors.ink-dimmed}"
-  map-marker:
-    backgroundColor: "{colors.shell}"
+    backgroundColor: "{colors.sunk}"
+    textColor: "{colors.soft}"
+  badge-new:
+    backgroundColor: "{colors.apricot}"
+    textColor: "{colors.apricot-ink}"
+    rounded: "{rounded.pill}"
+  badge-chip:
+    backgroundColor: "{colors.teal-wash}"
+    textColor: "{colors.teal-strong}"
+    rounded: "{rounded.pill}"
+  viewing-tag:
+    backgroundColor: "{colors.apricot-wash}"
+    textColor: "{colors.apricot-ink}"
+    rounded: "{rounded.sm}"
+    padding: "2px 10px"
+  favorite-star:
+    backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
-    rounded: "{rounded.xl}"
-    size: "36px"
+    rounded: "{rounded.pill}"
+  favorite-star-mine:
+    backgroundColor: "{colors.teal}"
+    textColor: "{colors.surface}"
+    rounded: "{rounded.pill}"
+  favorite-star-others:
+    backgroundColor: "{colors.teal-pale}"
+    textColor: "{colors.teal-deep}"
+    rounded: "{rounded.pill}"
+  input:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.md}"
+  tab-bar-item:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.soft}"
+    typography: "{typography.tab-label}"
+    height: "64px"
+  tab-bar-item-active:
+    backgroundColor: "{colors.teal-wash}"
+    textColor: "{colors.teal-strong}"
+    width: "56px"
+    height: "30px"
+  map-marker:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.pill}"
+    height: "36px"
   map-marker-saved-by-me:
-    backgroundColor: "{colors.shell-moss-dark}"
-    textColor: "{colors.shell}"
+    backgroundColor: "{colors.teal-deep}"
+    textColor: "{colors.surface}"
   map-marker-saved-by-household:
-    backgroundColor: "{colors.moss-pale}"
+    backgroundColor: "{colors.teal-pale}"
+    textColor: "{colors.ink}"
 ---
 
 # Design System: Shellter
 
 ## Overview
 
-**Creative North Star: "The Shell"**
+**Creative North Star: "The Bright Calm Portal"** (proposed; the user has not named this world yet)
 
-Shellter is a quiet shell around noisy listings. Broker sites shout; Shellter gathers the same homes onto warm sand and shell neutrals and lets one green, Shell Moss, mark what matters: the action to take, the view you are in, the homes your household saved. Everything else stays calm enough that a price, a missing fact, or a viewing time reads at a glance on a phone.
+Shellter is a Swedish property portal held to the category standard: photo-led cards, price first, facts on one line, saves and viewings readable at a glance. The world is light and calm. A deep teal app bar sits over a mint-tinted ground, white cards rest on it with soft ambient shadows, and a single warm apricot marks what is new. It carries more colour than a stark white portal, and it is never dark, metallic, or moody.
 
-The system is built on Mantine and nests its own theme under the Bobby Inscoe root theme. It inherits the moss and flax palettes, Libron headings, and Arial body text, then points Mantine's surface, border, and primary variables at Shellter's own tokens so every portal (menus, drawers, selects) carries the same look. Density is moderate: cards breathe at 16 px padding, and every touch control grows to 44 px on a coarse pointer.
+Density follows the portal canon. A member scanning on a phone reads price, size, district, price change, who saved it, and the next viewing in one pass, so every colour carries a meaning rather than a mood. Teal means action, selection, and saved by you; pale teal means saved by another member; apricot means new; green means the price dropped. Nunito Sans throughout keeps the surface soft and relaxed without giving up legibility.
 
-The confirmed direction is warmer and more tactile than what ships today. Cards are currently square and flat with hairline borders; the chosen path is soft layering and friendlier controls. New work moves toward that direction without breaking the palette, the type pairing, or the touch rules.
+Shellter is a standalone brand. It shares nothing visual with the rest of bobbyinscoe.com beyond the link back to the workshop. The previous Libron and Arial, linen and moss world is retired and archived in `.impeccable/archive/`.
 
 **Key Characteristics:**
-- Warm sand page, shell-white surfaces, olive-brown ink. No pure white or black.
-- One accent family, Shell Moss, carrying action, selection, and "saved".
-- Libron serif for names of things (wordmark, home titles, sheet titles); Arial for facts, prices, and controls.
-- Unknown and estimated values look different from known ones and are never dressed up as facts.
-- 44 px minimum touch targets on touch screens, enforced by the theme.
+- Deep teal app bar over a mint-tinted ground, white cards on top.
+- The photo runs to the card's edges at 3:2; the price is the largest text on screen.
+- Every colour is a signal: teal for action and your own saves, pale teal for others' saves, apricot for new and viewings, green for price drops.
+- One soft face, Nunito Sans, with 800-weight tabular figures for prices.
+- Phone first: 44 px touch targets, 16 px input text, a bottom tab bar with icons.
 
 ## Colors
 
-A warm, low-contrast neutral field with a single moss green that does all the signalling.
+A cool teal family on a mint ground, with one warm apricot and one green that each speak about a single fact.
 
 ### Primary
-- **Shell Moss** (shell-moss): Primary filled buttons, the active tab and view toggle, the selected card outline, links, focus outlines inside Shellter, and the marker border on the map.
-- **Shell Moss Deep** (shell-moss-deep): Hover state of filled primary buttons.
-- **Shell Moss Dark** (shell-moss-dark): Pins and stars for homes saved by you, and the batch-selection check badge on map markers.
-- **Moss Pale** (moss-pale): Fill for pins that another household member saved. Pale against dark is how "theirs" and "mine" are told apart.
-- **Moss Wash** (moss-wash): Light badges (Balcony, Lift, NEW) and the light primary variant.
+- **Deep Harbour Teal** (teal): The app bar, filled buttons, the active segment of List, Map, Select, the selected card's outline, focus rings, links, the text caret and form accents, and a star the member saved. Hover deepens to **Strong Teal** (teal-strong), which also colours text on teal washes and the active phone tab.
+- **Deepest Teal** (teal-deep): Map pins the signed-in member saved, the batch-check badge on pins, and the star on a pale teal background.
+- **Pale Sea Teal** (teal-pale): Saved by another member, on the photo star and on map pins. Also the scrollbar thumb.
+- **Teal Wash** (teal-wash): Light buttons, amenity chips, and the pill behind the active phone tab icon.
+
+Inside the Shellter scope the inherited Mantine primary scale, named `moss`, is repainted teal (moss-0 `#e6f3f1` through moss-9 `#08403d`, with moss-7 equal to teal). Every Mantine component that names the primary colour therefore renders teal.
+
+### Secondary
+- **Apricot** (apricot): The NEW flag only, with Apricot Ink (apricot-ink) text.
+- **Apricot Wash** (apricot-wash): The viewing-time tag on cards and in the viewings list, with Apricot Ink text.
+
+### Tertiary
+- **Price-Drop Green** (good): The down arrow beside a reduced price. Nothing else is green.
 
 ### Neutral
-- **Sand** (sand): The page body behind everything.
-- **Shell** (shell): Cards, sheets, drawers, inputs, default buttons, the map pin card, and the face of an unsaved marker.
-- **Shell Shade** (shell-shade): Photo placeholders, so a card without a photo keeps its 3:2 shape and still reads as a picture slot.
-- **Shell Line** (shell-line): Every border and divider: card edges, fact rows, the selection bar's top rule, the map frame.
-- **Ink** (ink): All primary text.
-- **Ink Dimmed** (ink-dimmed): Secondary text: fact labels, counts, property type, "No photo", the demo footer.
-- **Rust Focus** (rust-focus): The site-wide focus ring for links and buttons outside Shellter's own overrides. Shellter's custom controls use Shell Moss instead.
+- **Mint Ground** (mint-ground): The page background behind cards. It is also painted on the body while Shellter is mounted, so portals share it.
+- **White Surface** (surface): Cards, panels, inputs, default buttons, the phone tab bar, the pin card and phone sheet, map controls.
+- **Mint Hover** (hover): Hover fill on default buttons and menu items.
+- **Sunk Mint** (sunk): The photo placeholder box.
+- **Teal Line** (line): Input borders, the tab bar's top edge, fact-row dividers, the selection bar's top edge.
+- **Deep Ink** (ink): Body text and prices.
+- **Soft Ink** (soft): Dimmed labels, the struck-out old price, a price-rise arrow, inactive tab labels.
 
 ### Named Rules
-**The One Green Rule.** Shell Moss is the only hue that signals. Status, saved state, selection, and primary action all speak through moss shades; no second accent color is introduced.
+**The Every Colour Is a Fact Rule.** Apricot, green, teal, and pale teal each mean one thing. Apricot is NEW and viewing times, green is a price drop, teal is your action or your save, pale teal is another member's save. Never use them as decoration.
 
-**The Mine-Versus-Ours Rule.** Saved by you is dark moss; saved by another member is pale moss; unsaved is shell. Any new surface that shows saves uses the same three steps.
+**The Red Means Destructive Rule.** Mantine's light red appears only on destructive actions, such as "Leave this household", and on error alerts. It marks danger and is not a second accent.
 
 ## Typography
 
-**Display Font:** Libron (with Georgia, "Times New Roman", serif)
-**Body Font:** Arial (with Helvetica, sans-serif)
+**Display Font:** Nunito Sans (with system-ui, sans-serif)
+**Body Font:** Nunito Sans (with system-ui, sans-serif)
 
-**Character:** A bookish serif names the homes; a plain grotesque states their facts. The serif is used at regular weight only, so it reads as a label on a shell rather than a headline.
+**Character:** One soft, rounded humanist sans, self-hosted as a variable font (weights 200 to 1000, latin and latin-ext subsets, OFL). Weight does the hierarchy work: 800 for prices, the wordmark, and h1 and h2; 700 for other headings, buttons, and tabs; 400 for reading.
 
 ### Hierarchy
-- **Display** (400, 1.625rem, 1.35): The page title and the Shellter wordmark. On a phone the page title drops to Mantine's `lg` size.
-- **Headline** (400, 1.125rem, 1.45): Section and drawer titles.
-- **Title** (400, 1rem, 1.5): Home titles on cards and pin cards.
-- **Body** (400, 1rem, 1.6): Running text and facts. Prices and fact lines are set bold in body size; the old price in a price drop is struck through and smaller.
-- **Label** (500, 0.875rem, 1.4): Buttons, field labels, badges, and fact-row text.
+- **Price** (800, 1.5rem, -0.01em, tabular numerals): The current asking price on cards and the pin card, and the largest text on the listings screen. The struck-out old price drops to 600 at 0.8em in Soft Ink. On phone compact cards the price steps down to 16 px.
+- **Wordmark** (800, 1.25rem, -0.01em): "Shellter" in the app bar, in white.
+- **Headline** (700, 18 px): Panel and section titles (h4 size) and the detail drawer title.
+- **Title** (700, 16 px): Listing titles on cards and the pin card (h5 size).
+- **Body** (400, 16 px, 1.55): Reading text, fact lines, notes.
+- **Body small** (400, 14 px): Fact rows, the count line, secondary card text. Viewing tags use 14 px at 700 on cards and 16 px at 800 in the viewings list.
+- **Label** (700, 14 px): Button labels; the theme sets every Button to weight 700. Badges keep Mantine's small uppercase badge type.
+- **Tab label** (700, 13 px): The phone bottom tab bar.
 
 ### Named Rules
-**The Serif Names, Sans States Rule.** Libron is for names (the product, a home, a sheet). Numbers, prices, and controls are always Arial.
+**The Unbroken Price Rule.** The current price never wraps mid-number. When a price has dropped on a narrow desktop card, the old price and arrow sit on one line and the new price moves whole to the next.
 
-**The 16 px Touch Rule.** On a coarse pointer, inputs and buttons use 16 px text so mobile browsers do not zoom the page on focus.
+**The Tabular Figures Rule.** Prices and map pin labels use tabular numerals so amounts line up down a list.
 
 ## Layout
 
-A single centered column with a top bar (back link, wordmark), a tab row (Listings, Favorites, More), browse controls (Match, Sort, Search, Filters), a count line with the List / Map / Select toggle, then content.
+A single content column capped at 72rem and centred, with 12 px side padding on phones and 32 px from 62em up. The app bar spans the full width, aligns its content to the same 72rem column, and is at least 56 px tall.
 
-- **Listing list:** a wrapping flex row of cards, each `flex: 1 1 320px` and capped at 480 px, with a 16 px gap. Cards in a row share a height; the action row sits at the bottom.
-- **Viewings:** the same wrapping pattern at 360 px basis, capped at 640 px.
-- **Facts:** a two-column label/value list (labels 7 to 10 rem), divided by Shell Line hairlines.
-- **Map:** a bordered stage `clamp(430px, 70vh, 680px)` tall, with map controls floating top-left and the selected home's pin card floating bottom-left (320 px wide).
-- **Phone (below 36em):** cards become compact, photo-led, full width. Map mode takes over the screen as a fixed shell; the pin card becomes a sheet on the bottom edge with a 72 px square thumbnail; map controls move to the top-right. The batch selection bar sticks to the bottom and respects the safe-area inset.
-- **Spacing rhythm:** Mantine's scale (10 / 12 / 16 / 20 / 32 px). The workspace gap is 20 px on desktop and 10 px on a phone.
+Listing cards flow in an auto-fill grid with a 320 px minimum column and 16 px gaps: one column on a phone, three on a wide desktop. Cards in a row share a height, with the actions row pushed to the bottom. Viewing cards wrap in a flex row (basis 360 px, maximum 640 px), with a 96 px square thumbnail beside the time.
+
+Spacing uses Mantine's default scale (xs 10, sm 12, md 16, lg 20, xl 32 px), which the Shellter theme does not override. The workspace stacks with 20 px gaps, tightening to 10 px on phones.
+
+Phones (below 36em) change three things. Listings, Favorites, and More move into a fixed bottom tab bar, 64 px tall plus the safe area, and the content gains bottom padding so the last card clears it. The browse controls (Match, Sort, Search, Filters) form an even grid with 9rem minimum columns instead of a ragged row. The map goes full screen with the selected home as a bottom sheet, and the sticky selection bar stops just above the tab bar. Wider screens keep Listings, Favorites, and More as a top row of buttons.
+
+The map is `clamp(430px, 70vh, 680px)` tall on desktop and `clamp(430px, 80svh, 680px)` on phones.
 
 ## Elevation & Depth
 
-Today Shellter is almost entirely flat. Surfaces separate by tone (shell on sand) and a Shell Line hairline. Two things lift: the map pin card, which floats over the map with an ambient shadow, and cluster markers, which carry a 3 px shell halo so they stand off the map tiles. The map controls panel uses a translucent shell with a 12 px blur, falling back to solid shell when the user asks for reduced transparency.
-
-The confirmed direction is **softly layered**: light ambient shadows on cards and sheets to give the shell a sense of depth. That direction is not yet built, and no card shadow token exists yet. When it is added, it should stay as soft as the pin card's shadow or softer, and tonal separation remains the primary cue.
+White surfaces lift off the mint ground with soft, cool ambient shadows tinted from Deep Ink. There are two levels plus a few fixed edge shadows. No hard offset shadows.
 
 ### Shadow Vocabulary
-- **Floating card** (`box-shadow: 0 2px 10px rgb(0 0 0 / 18%)`): The map pin card, the one panel that floats over content.
-- **Cluster halo** (`box-shadow: 0 0 0 3px var(--mantine-color-flax-0)`): Separates cluster markers from the map.
+- **Resting** (`box-shadow: 0 1px 2px rgb(20 38 36 / 6%), 0 4px 14px rgb(20 38 36 / 7%)`): Listing cards, panels (every Paper), the map frame.
+- **Raised** (`box-shadow: 0 2px 6px rgb(20 38 36 / 8%), 0 12px 32px rgb(20 38 36 / 16%)`): Anything floating over the map: the pin card, map controls, the zoom group.
+- **Photo chip** (`box-shadow: 0 1px 4px rgb(20 38 36 / 22%)`): The star, hide button, and NEW flag on a photo.
+- **Bottom edge** (`box-shadow: 0 -4px 16px rgb(20 38 36 / 6%)`): The phone tab bar. The selection bar uses the same shape at 8%.
 
 ### Named Rules
-**The Tone Before Shadow Rule.** A surface must read as separate by tone and border alone. Shadows add softness; they never carry the separation by themselves.
+**The Cool Shadow Rule.** Shadows are tinted with Deep Ink, never neutral black, so depth stays in the teal family.
 
 ## Shapes
 
-Mostly gentle 4 px corners (Mantine `sm`) on buttons, inputs, and the map control panel. Listing cards and the map frame are square today. Badges and map markers are full pills (32 px radius). On a phone the pin card sheet rounds its top corners at 8 px. Photos are 3:2 everywhere, 16:9 in the pin card, and a 72 px square in the phone sheet, so cards never jump while images load.
+Gently rounded throughout. Inputs and buttons use 10 px corners (the theme's default radius, md). Cards, panels, the map, the pin card, and the selection bar's top corners use 14 px (lg). Viewing tags, thumbnails, and the selection checkbox's corner use 8 px (sm). Stars, badges, chips, and map pins are full pills. The active phone tab icon sits in a 56 by 30 px pill.
 
-The warm and tactile direction implies softer corners on cards and sheets. Like the shadows, that change is a direction rather than shipped fact.
+Listing photos are 3:2 and bleed to the card's top and side edges. The pin card's photo is 16:9; viewing and phone sheet thumbnails are square. A missing photo keeps the same box in Sunk Mint with a teal house icon and "No photo", so cards never change height.
 
 ## Components
 
 ### Buttons
-Warm and tactile in intent; plain and sturdy in today's build.
-- **Shape:** gently rounded (4 px), small size, 500 weight.
-- **Primary:** Shell Moss fill with shell text. Used for the active tab, the active view (List / Map), and the main action in a pin card ("Open original listing").
-- **Default:** shell fill, ink text, Shell Line border. The workhorse: inactive tabs, Filters, Select, Details, card actions.
-- **Subtle:** no fill or border, for low-priority actions such as More in a compact card.
-- **Hover / Focus:** primary darkens to Shell Moss Deep. Focus shows a 2 px outline.
-- **Touch:** on a coarse pointer, every button, close button, and action icon is at least 44 px.
+Confident and rounded, always at weight 700.
+- **Shape:** Gently rounded (10 px).
+- **Primary:** Filled teal with white text, hover to Strong Teal. Used for the active view segment and the active top-row tab.
+- **Default:** White with a Teal Line border and Deep Ink text, hover to Mint Hover.
+- **Light:** Teal Wash with Strong Teal text.
+- **Destructive:** Mantine light red, only for leaving a household or removing data.
+- **Touch:** On coarse pointers every button, input, icon button, and close button is at least 44 px with 16 px text, applied through the theme.
 
 ### Chips
-- **Style:** light badges, Moss Wash fill, Shell Moss text, pill shape. Outline badges for secondary labels.
-- **Use:** amenities (Balcony, Lift, Glazed), NEW, and similar flags. On a phone, badges wrap instead of truncating.
+- **Amenity chips:** Light badges in Teal Wash with Strong Teal text, full pill.
+- **NEW flag:** Apricot pill with Apricot Ink text on the photo's bottom-left corner. The top-left corner belongs to the selection checkbox, and the top-right to hide and the star.
+- **Viewing tag:** Apricot Wash with Apricot Ink, 8 px corners, 2 by 10 px padding, bold.
 
 ### Cards / Containers
-- **Corner Style:** square today.
-- **Background:** Shell on the Sand page.
-- **Shadow Strategy:** none today; see Elevation & Depth.
-- **Border:** 1 px Shell Line. Selected cards add a Shell Moss border and outline.
-- **Internal Padding:** 16 px; 12 px on a compact phone card, where the photo bleeds to the card edges.
-- **Overlays:** hide and favorite controls sit in round shell buttons on the photo's top-right corner; the selection checkbox sits top-left in selection mode, so entering the mode never reflows the grid.
+- **Corner Style:** 14 px.
+- **Background:** White on the mint ground.
+- **Shadow Strategy:** Resting; cards floating over the map use Raised.
+- **Border:** Transparent at rest. A selected card gets a teal border and a 2 px teal outline inset by 1 px.
+- **Internal Padding:** 16 px (12 px on phone compact cards). The photo cancels the padding to run edge to edge.
+- **Order:** photo, price, title, facts, viewing tag, chips, status, actions.
 
 ### Inputs / Fields
-- **Style:** shell fill, Shell Line border, 4 px corners, label above in label style.
-- **Focus:** Mantine's primary-colored border, which resolves to Shell Moss.
-- **Touch:** 44 px tall with 16 px text on a coarse pointer. Number steppers hide on touch, where people type the number.
+- **Style:** White, 10 px corners, a Teal Line border instead of Mantine's grey.
+- **Focus / Error:** Mantine's focus and error colours stay; focus resolves to teal through the remapped primary.
+- **Touch:** 44 px tall with 16 px text. Number steppers hide on touch, so people type the number.
 
 ### Navigation
-- **Tabs:** a row of buttons (Listings, Favorites, More). The active one is filled Shell Moss; the rest are default.
-- **View toggle:** List / Map / Select on the count line, same filled-versus-default treatment.
-- **Back:** browser Back closes detail and filter views before leaving results.
+- **App bar:** Full-width teal, white wordmark at 800, and a white 600-weight back link with an icon on wider screens.
+- **Wide screens:** Listings, Favorites, and More as a row of buttons with icons. The active one is filled teal; the rest are default.
+- **Phone tab bar:** A white bar fixed to the bottom with a Teal Line top edge. Each tab stacks a 20 px line icon (house, star, ellipsis) over a 13 px label. Inactive tabs are Soft Ink. The active tab is Strong Teal with a Teal Wash pill behind the icon, and the Favorites star fills when active.
 
-### Map Markers
-Shellter's signature component. Pill-shaped markers with a 2 px Shell Moss border on a shell face, at least 36 px (44 px on touch). Fill shows who saved the home (see the Mine-Versus-Ours Rule); a cluster shows a bold count with a shell halo. In selection mode a small dark-moss check badge (or a dash for a partial group) sits on the marker's corner. Hidden homes shown on purpose are greyed and half transparent. Keyboard focus draws a 3 px ink outline with an 8 px offset.
+### Favorite Star
+A round button on the photo's top-right corner, 44 px on touch. Unsaved: white with an outline star in Deep Ink. Saved by you: filled teal with a filled white star. Saved only by another member: pale teal with a Deepest Teal star.
 
-### Pin Card
-The selected home on the map. Desktop: a floating shell card bottom-left, Libron title with a close button, 16:9 photo, price, facts, and actions. Phone: a sheet on the map's bottom edge with a 72 px square thumbnail beside the title and price, facts and 44 px actions below.
+### Map Pins
+White pills with a 2 px teal border and 700-weight tabular labels, at least 36 px (44 px on touch). Pins you saved fill Deepest Teal with white text; pins another member saved fill pale teal. Clusters are 44 px with a 3 px border at weight 800. Hidden homes, when shown, are greyscale at half opacity. Batch-selected pins carry a 22 px Deepest Teal check badge.
+
+### Pin Card and Phone Sheet
+On desktop a white 14 px card with the Raised shadow floats at the map's lower-left, up to 320 px wide, with a 16:9 photo. On phones it becomes a sheet across the map's bottom edge, with a 72 px square thumbnail and 10 px top corners.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** take every color from the Shellter tokens or the root moss and flax palettes; component files contain no hex values.
-- **Do** keep Shell Moss as the only signalling hue, with the dark / pale / shell steps for saved by you / saved by others / unsaved.
-- **Do** keep touch targets at 44 px on a coarse pointer and 16 px text in touch inputs.
-- **Do** set home names in Libron at regular weight and all numbers in Arial.
-- **Do** keep photo slots at a fixed ratio (3:2 on cards) and show a Shell Shade placeholder when a photo is missing.
-- **Do** show unknown, estimated, and approximate values in words ("Price unknown", "Approximate area only", "Missing info: ...") instead of hiding or guessing them.
+- **Do** keep the page light: mint ground (#eef5f3), white cards, a teal app bar.
+- **Do** use teal for action, selection, focus, and the member's own saves, and pale teal only for another member's save.
+- **Do** keep apricot for NEW and viewing times, and green for price drops.
+- **Do** set prices in Nunito Sans 800 with tabular numerals, and keep the current price on one line.
+- **Do** run listing photos edge to edge at 3:2, and keep the same box when a photo is missing.
+- **Do** give every touch control 44 px and every touch input 16 px text.
+- **Do** keep new Mantine components inside the Shellter scope so they pick up the teal remap and Nunito Sans; portals carry the scope through the theme.
 
 ### Don't:
-- **Don't** introduce pure white (#fff) or pure black surfaces; Shell and Ink are the extremes.
-- **Don't** add a second accent color for status or decoration.
-- **Don't** set prices, sizes, or controls in the serif.
-- **Don't** let a shadow be the only thing separating a surface from the page.
-- **Don't** place an invented pin for a home without a precise position; it belongs under "Not located".
-- **Don't** style Shellter from outside its theme folder, or let its rules reach other projects on the site.
+- **Don't** make Shellter dark, metallic, or moody.
+- **Don't** fall back to a stark white portal with one accent.
+- **Don't** bring back the retired Libron and Arial, linen and moss look, or borrow styling from the rest of bobbyinscoe.com.
+- **Don't** use red as an accent; it marks destructive actions and errors only.
+- **Don't** use apricot or green for decoration, buttons, or headings.
+- **Don't** move the NEW flag to the photo's top-left; that corner holds the selection checkbox.
+- **Don't** use neutral black shadows or hard offset shadows.

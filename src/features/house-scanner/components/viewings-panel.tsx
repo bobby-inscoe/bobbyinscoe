@@ -85,13 +85,13 @@ export function ViewingsPanel({
               {day.entries.map(({ listing, viewing }) => (
                 <Box
                   key={`${listing.id}-${viewing.startsAt}`}
-                  className={classes.card}
+                  className={`${classes.card} ${classes.viewingCard}`}
                 >
-                  <Box>
+                  <Box className={classes.viewingThumb}>
                     <ListingPhoto listing={listing} />
                   </Box>
                   <Stack gap={4} className={classes.grow}>
-                    <Text size="lg" fw={700}>
+                    <Text size="md" fw={800} className={classes.viewingTag}>
                       {formatViewing(viewing)}
                     </Text>
                     <Text fw={600}>{listing.title}</Text>

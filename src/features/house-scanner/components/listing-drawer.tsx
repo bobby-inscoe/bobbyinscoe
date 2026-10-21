@@ -29,7 +29,12 @@ interface ListingDrawerProps {
   opened: boolean;
   hidden: boolean;
   // The member's own favorite of this home.
-  favorite: { mine: boolean; canSave: boolean; busy: boolean };
+  favorite: {
+    mine: boolean;
+    others?: boolean;
+    canSave: boolean;
+    busy: boolean;
+  };
   notes: ListingNotesController;
   onToggleHidden: (listingId: string) => void;
   onFavorite: (listingId: string) => void;

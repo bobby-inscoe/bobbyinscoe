@@ -37,7 +37,10 @@ Shellter is the only project with a nested theme:
 module. The theme's `Portal` defaults carry Shellter's scope class onto every
 dropdown, menu, modal, and drawer, so call sites do not set `withinPortal`.
 Shellter components take layout classes from the theme file as `classes` and
-do not import CSS. The workshop and Duck Feed keep their own stylesheets, scoped
+do not import CSS. Shellter is a standalone brand: its module defines its own
+palette and its font (Nunito Sans, in `src/assets/fonts/nunito-sans/`) inside
+its scope, and `src/features/house-scanner/DESIGN.md` records its visual
+system. The workshop and Duck Feed keep their own stylesheets, scoped
 to their root class.
 
 ## Routing
