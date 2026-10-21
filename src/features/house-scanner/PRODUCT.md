@@ -45,6 +45,8 @@ Shellter gathers apartments for sale from several Göteborg broker sites into on
 ## Brand Commitments
 
 - Name: Shellter, chosen because a turtle carries its home on its back. "ShellScout" is the fallback name.
+- Shellter is a standalone brand. Apart from the link back to the workshop, it shares no look with the rest of bobbyinscoe.com.
+- Visual stance (chosen 2026-10-21): the category standard for a property portal, built to the craft level of Hemnet and Booli. It stays light, with more color presence than a stark white portal with one accent, and is never dark, metallic, or moody. The previous look is archived in `.impeccable/archive/`.
 - Timmy the turtle is a mascot idea, not a commitment. Design work should not depend on it. "Timmy's Picks" is an undecided slogan idea.
 
 ## Evidence on Hand
