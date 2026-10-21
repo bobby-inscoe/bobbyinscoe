@@ -33,7 +33,7 @@ test('the complete catalog retains zero-match selections and Back restores the u
     (listing) => !listing.neighborhood,
   ).length;
   const dialog = page.getByRole('dialog');
-  await page.getByRole('button', { name: 'Filters', exact: true }).click();
+  await page.getByRole('button', { name: /^Filters(?: \(\d+\))?$/ }).click();
   const input = dialog.getByRole('combobox', {
     name: 'Neighborhoods',
     exact: true,
@@ -50,7 +50,7 @@ test('the complete catalog retains zero-match selections and Back restores the u
   await expect(page.getByRole('article')).toHaveCount(0);
   const selectedUrl = page.url();
 
-  await page.getByRole('button', { name: 'Filters', exact: true }).click();
+  await page.getByRole('button', { name: /^Filters(?: \(\d+\))?$/ }).click();
   await expect(dialog.locator('.mantine-Pill-label')).toHaveText([unused.name]);
   await input.click();
   await expect(page.getByRole('option')).toHaveCount(96);
@@ -75,7 +75,7 @@ test('the complete catalog retains zero-match selections and Back restores the u
   await page.goForward();
   await expect(page).toHaveURL(unassignedUrl);
   await expect(page.getByRole('article')).toHaveCount(unassignedCount);
-  await page.getByRole('button', { name: 'Filters', exact: true }).click();
+  await page.getByRole('button', { name: /^Filters(?: \(\d+\))?$/ }).click();
   await expect(
     dialog.getByRole('checkbox', {
       name: 'Include homes with no neighborhood assigned',
@@ -114,7 +114,7 @@ test('multiple neighborhoods show their official names and survive a reload', as
     throw new Error(
       'The demo needs homes in two distinct official neighborhoods.',
     );
-  await page.getByRole('button', { name: 'Filters', exact: true }).click();
+  await page.getByRole('button', { name: /^Filters(?: \(\d+\))?$/ }).click();
   const dialog = page.getByRole('dialog');
   const input = dialog.getByRole('combobox', {
     name: 'Neighborhoods',
@@ -158,7 +158,7 @@ test('multiple neighborhoods show their official names and survive a reload', as
     .click();
   await expect(page).toHaveURL(selectedUrl);
   await expect(page.getByRole('article')).toHaveCount(expectedCount);
-  await page.getByRole('button', { name: 'Filters', exact: true }).click();
+  await page.getByRole('button', { name: /^Filters(?: \(\d+\))?$/ }).click();
   await expect(dialog.locator('.mantine-Pill-label')).toHaveText([
     first.name,
     second.name,

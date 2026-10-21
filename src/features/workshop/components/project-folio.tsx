@@ -17,6 +17,9 @@ import { WorkArt } from '@/features/workshop/components/work-art';
 import type { Work } from '@/features/workshop/data/works';
 
 function getProjectHome(work: Work) {
+  if (work.id === 'common-basket') {
+    return { to: '/basket', action: 'Open Basket' };
+  }
   if (work.id === 'duck-feed') {
     return { to: '/duck-feed', action: 'Play Duck Feed' };
   }

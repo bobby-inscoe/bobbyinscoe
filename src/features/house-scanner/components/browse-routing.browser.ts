@@ -121,11 +121,11 @@ async function demoListings(page: import('@playwright/test').Page) {
 }
 
 async function applyPrice(page: import('@playwright/test').Page) {
-  await page.getByRole('button', { name: 'Filters', exact: true }).click();
+  await page.getByRole('button', { name: /^Filters(?: \(\d+\))?$/ }).click();
   await page.getByRole('textbox', { name: 'Max price (SEK)' }).fill('3000000');
   await page.getByRole('button', { name: /^Show \d+ homes$/ }).click();
   await expect(
-    page.getByRole('dialog', { name: 'Filters', exact: true }),
+    page.getByRole('dialog', { name: /^Filters(?: \(\d+\))?$/ }),
   ).toHaveCount(0);
 }
 
@@ -136,7 +136,7 @@ test('applying filters then reopening and cancelling keeps the committed filters
   await applyPrice(page);
   const committedUrl = page.url();
   const count = await page.getByRole('article').count();
-  await page.getByRole('button', { name: 'Filters', exact: true }).click();
+  await page.getByRole('button', { name: /^Filters(?: \(\d+\))?$/ }).click();
   await page.getByRole('textbox', { name: 'Max price (SEK)' }).fill('1');
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page).toHaveURL(committedUrl);
