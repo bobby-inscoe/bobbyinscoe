@@ -351,6 +351,7 @@ export function useHouseholdSession() {
     if (!client) throw new Error('Private access is not configured.');
     const address = z.email().max(254).safeParse(email.trim());
     if (!address.success) throw new Error('Enter your email.');
+    // Auth only returns to allow-listed URLs, still on the old path; the app redirects it to /shellter.
     await client.auth.resetPasswordForEmail(address.data, {
       redirectTo: `${window.location.origin}/projects/house-scanner/listings`,
     });

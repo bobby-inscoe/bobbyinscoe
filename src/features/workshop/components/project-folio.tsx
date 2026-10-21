@@ -21,7 +21,7 @@ function getProjectHome(work: Work) {
     return { to: '/duck-feed', action: 'Play Duck Feed' };
   }
   if (work.id === 'house-scanner') {
-    return { to: '/projects/house-scanner', action: 'Open House Scanner' };
+    return { to: '/shellter', action: 'Open Shellter' };
   }
   return null;
 }

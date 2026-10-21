@@ -83,7 +83,7 @@ export function InvitePanel({
       </Stack>
     );
   const create = preview.purpose === 'create';
-  const from = preview.issuerName ?? 'A House Scanner member';
+  const from = preview.issuerName ?? 'A Shellter member';
   return (
     <Stack gap="lg">
       <Stack gap="xs">
@@ -94,7 +94,7 @@ export function InvitePanel({
         </Title>
         <Text>
           {create
-            ? `${from} invited you to start your own House Scanner household. It shares nothing with theirs.`
+            ? `${from} invited you to start your own Shellter household. It shares nothing with theirs.`
             : `${from} invited you to join their household and share its shortlist.`}{' '}
           The link works until {formatDate(preview.expiresAt)}.
         </Text>
@@ -156,7 +156,7 @@ export function InvitePanel({
             }}
           >
             <Stack align="flex-start" gap="md">
-              <Title order={3}>New to House Scanner?</Title>
+              <Title order={3}>New to Shellter?</Title>
               <Text size="sm">
                 Create your account with the email this link was sent to.
               </Text>

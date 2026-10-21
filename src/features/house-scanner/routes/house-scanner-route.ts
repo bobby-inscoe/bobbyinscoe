@@ -4,15 +4,19 @@ import {
   lazyRouteComponent,
 } from '@tanstack/react-router';
 
-import { validateBrowseSearch } from '@/features/house-scanner/utils/browse-search';
+import {
+  toUrlSearch,
+  validateBrowseSearch,
+} from '@/features/house-scanner/utils/browse-search';
 
 export function createHouseScannerRoute<TParent extends AnyRoute>(
   parentRoute: TParent,
 ) {
   return createRoute({
     getParentRoute: () => parentRoute,
-    path: 'projects/house-scanner',
-    validateSearch: validateBrowseSearch,
+    path: 'shellter',
+    validateSearch: (search: Record<string, unknown>) =>
+      toUrlSearch(validateBrowseSearch(search)),
     component: lazyRouteComponent(
       () => import('@/features/house-scanner/components/house-scanner-page'),
       'HouseScannerPage',

@@ -7,9 +7,9 @@ test.beforeEach(async ({ context, page }) => {
       await route.continue();
     else await route.abort('blockedbyclient');
   });
-  await page.goto('/projects/house-scanner');
+  await page.goto('/shellter');
   await expect(
-    page.getByRole('heading', { name: 'House Scanner', exact: true }),
+    page.getByRole('heading', { name: 'Shellter', exact: true }),
   ).toBeVisible();
 });
 
@@ -1466,7 +1466,7 @@ test('Settings uses dropdowns, names the places and the search circle, and expla
   }
   const help = page.getByRole('button', { name: 'How does this work?' });
   await help.click();
-  const dialog = page.getByRole('dialog', { name: 'About House Scanner' });
+  const dialog = page.getByRole('dialog', { name: 'About Shellter' });
   await expect(dialog).toBeVisible();
   await expect(
     dialog.getByText(/apartments for sale in Göteborg/),

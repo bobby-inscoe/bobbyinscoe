@@ -24,7 +24,7 @@ const TOKEN = 'b'.repeat(64);
 
 beforeEach(() => {
   resetSdk();
-  window.history.replaceState(null, '', '/projects/house-scanner/listings');
+  window.history.replaceState(null, '', '/shellter/listings');
 });
 afterEach(cleanup);
 
@@ -42,7 +42,7 @@ describe('email links', () => {
     window.history.replaceState(
       null,
       '',
-      `/projects/house-scanner/invite?token=${TOKEN}#access_token=access-1&refresh_token=refresh-1&type=invite`,
+      `/shellter/invite?token=${TOKEN}#access_token=access-1&refresh_token=refresh-1&type=invite`,
     );
     const hook = renderHook(useHouseholdSession);
     await waitFor(() =>
@@ -69,7 +69,7 @@ describe('email links', () => {
     window.history.replaceState(
       null,
       '',
-      '/projects/house-scanner/listings#error=access_denied&error_code=otp_expired',
+      '/shellter/listings#error=access_denied&error_code=otp_expired',
     );
     const hook = renderHook(useHouseholdSession);
     await waitFor(() => expect(hook.result.current.linkError).toBe(true));
@@ -81,7 +81,7 @@ describe('email links', () => {
     window.history.replaceState(
       null,
       '',
-      '/projects/house-scanner/listings#access_token=a&refresh_token=r&type=recovery',
+      '/shellter/listings#access_token=a&refresh_token=r&type=recovery',
     );
     const recovery = renderHook(useHouseholdSession);
     await waitFor(() =>
@@ -205,9 +205,7 @@ describe('household settings actions', () => {
     const access = hook.result.current.access;
     if (!access) throw new Error('Signed-in session lacks settings actions.');
     const url = await access.createLink('join', 'friend@example.com');
-    expect(url).toBe(
-      `http://localhost:3000/projects/house-scanner/invite?token=${TOKEN}`,
-    );
+    expect(url).toBe(`http://localhost:3000/shellter/invite?token=${TOKEN}`);
     expect(sdk.rpc).toHaveBeenCalledWith('hs_invitation_create', {
       p_purpose: 'join',
       p_household_id: HOUSEHOLD_ID,

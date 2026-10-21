@@ -21,7 +21,7 @@ test.beforeEach(async ({ context, page }) => {
       },
     }),
   );
-  await page.goto('/projects/house-scanner/listings');
+  await page.goto('/shellter/listings');
   await page
     .getByRole('button', { name: 'Explore the synthetic demo' })
     .click();

@@ -221,7 +221,7 @@ export function useDemoHousehold() {
   const access: HouseholdAccessActions = {
     load: async () => household,
     createLink: async (purpose) =>
-      `${window.location.origin}/projects/house-scanner/invite?token=${purpose}`,
+      `${window.location.origin}/shellter/invite?token=${purpose}`,
     sendLink: async (purpose, email) => {
       const now = Date.now();
       setHousehold((current) => ({
@@ -236,7 +236,7 @@ export function useDemoHousehold() {
           },
         ],
       }));
-      return `${window.location.origin}/projects/house-scanner/invite?token=${purpose}`;
+      return `${window.location.origin}/shellter/invite?token=${purpose}`;
     },
     revoke: async (id) =>
       setHousehold((current) => ({

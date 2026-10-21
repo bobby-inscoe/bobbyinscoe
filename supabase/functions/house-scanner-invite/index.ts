@@ -53,11 +53,11 @@ async function emailLink(
       auth: { persistSession: false, autoRefreshToken: false },
     }).rpc('hs_invitation_preview', { p_token: token });
     const preview = previewSchema.parse(data);
-    const from = preview.issuerName ?? 'A House Scanner member';
+    const from = preview.issuerName ?? 'A Shellter member';
     const what =
       preview.purpose === 'join'
-        ? `join ${preview.householdName ?? 'their household'} on House Scanner`
-        : 'start your own household on House Scanner';
+        ? `join ${preview.householdName ?? 'their household'} on Shellter`
+        : 'start your own household on Shellter';
     const sent = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -65,9 +65,9 @@ async function emailLink(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'House Scanner <no-reply@auth.bobbyinscoe.com>',
+        from: 'Shellter <no-reply@auth.bobbyinscoe.com>',
         to: [email],
-        subject: `${from} invited you to House Scanner`,
+        subject: `${from} invited you to Shellter`,
         text: `${from} invited you to ${what}.\n\nOpen this link, then create your account or sign in with this email address:\n${link}\n\nThe link works once and expires in 7 days.`,
       }),
     });
@@ -112,6 +112,7 @@ Deno.serve(async (request: Request) => {
   const reservation = reservationSchema.safeParse(data);
   if (error || !reservation.success || !reservation.data.ok)
     return response(400, { error: 'This invitation cannot be used' }, origin);
+  // Auth only returns to allow-listed URLs, still on the old path; the app redirects it to /shellter.
   const link = `${origin}/projects/house-scanner/invite?token=${input.token}`;
   if (input.password === undefined) {
     const sent = await emailLink(url, email, link, input.token);
