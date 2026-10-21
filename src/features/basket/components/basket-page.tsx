@@ -417,24 +417,17 @@ export function BasketPage() {
                   <ul className={classes.list} aria-label="Checklist items">
                     {basket.items.map((item) => (
                       <li className={classes.row} key={item.id}>
-                        <Checkbox
+                        <Checkbox.Card
                           className={classes.check}
-                          size="md"
-                          label={
-                            <span
-                              className={`${classes.itemLabel} ${item.completed ? classes.completed : ''}`}
-                            >
-                              {item.text}
-                            </span>
-                          }
+                          withBorder={false}
+                          aria-label={item.text}
                           checked={
                             pendingCheck?.id === item.id
                               ? pendingCheck.completed
                               : item.completed
                           }
                           disabled={!writable || state.busy}
-                          onChange={(event) => {
-                            const desired = event.currentTarget.checked;
+                          onChange={(desired) => {
                             setPendingCheck({
                               id: item.id,
                               completed: desired,
@@ -453,7 +446,14 @@ export function BasketPage() {
                               )
                               .finally(() => setPendingCheck(null));
                           }}
-                        />
+                        >
+                          <Checkbox.Indicator size="md" aria-hidden="true" />
+                          <span
+                            className={`${classes.itemLabel} ${item.completed ? classes.completed : ''}`}
+                          >
+                            {item.text}
+                          </span>
+                        </Checkbox.Card>
                         {writable && (
                           <Menu position="bottom-end" withinPortal>
                             <Menu.Target>

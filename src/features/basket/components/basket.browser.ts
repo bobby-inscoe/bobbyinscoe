@@ -71,15 +71,20 @@ test('phone-first kits, reset confirmation, archive, and keyboard controls', asy
   await page
     .getByRole('textbox', { name: 'Kit name', exact: true })
     .fill('Packing essentials');
-  await page
-    .getByRole('textbox', { name: 'Item 1', exact: true })
-    .fill('Toothbrush');
-  await page
-    .getByRole('button', { name: 'Add another item', exact: true })
-    .click();
-  await page
-    .getByRole('textbox', { name: 'Item 2', exact: true })
-    .fill('Socks');
+  await page.getByRole('button', { name: 'Save kit', exact: true }).click();
+  await expect(page.getByRole('alert')).toHaveText(
+    'Add at least one item to this kit.',
+  );
+  const first = page.getByRole('textbox', { name: 'Item 1', exact: true });
+  await first.fill('Toothbrush');
+  await first.press('Enter');
+  const second = page.getByRole('textbox', { name: 'Item 2', exact: true });
+  await expect(second).toBeFocused();
+  await second.fill('Socks');
+  await second.press('Enter');
+  const blank = page.getByRole('textbox', { name: 'Item 3', exact: true });
+  await expect(blank).toBeFocused();
+  await blank.fill('   ');
   await page.getByRole('button', { name: 'Save kit', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page
@@ -98,9 +103,25 @@ test('phone-first kits, reset confirmation, archive, and keyboard controls', asy
   await expect(
     page.getByRole('checkbox', { name: 'Socks', exact: true }),
   ).toBeChecked();
+  const toothbrush = page.getByRole('checkbox', {
+    name: 'Toothbrush',
+    exact: true,
+  });
+  const bounds = await toothbrush.boundingBox();
+  if (!bounds) throw new Error('Checklist row is not visible.');
+  expect(bounds.width).toBeGreaterThan(150);
+  expect(bounds.height).toBeGreaterThanOrEqual(72);
+  await toothbrush.click({ position: { x: bounds.width - 4, y: 4 } });
+  await expect(toothbrush).toBeChecked();
+  await expect(toothbrush).toBeEnabled();
+  await toothbrush.click({
+    position: { x: bounds.width - 4, y: bounds.height - 4 },
+  });
+  await expect(toothbrush).not.toBeChecked();
   await page
     .getByRole('button', { name: 'Actions for Toothbrush', exact: true })
     .click();
+  await expect(toothbrush).not.toBeChecked();
   await page
     .getByRole('menuitem', { name: 'Rename item', exact: true })
     .click();
@@ -162,6 +183,28 @@ test('two guest browsers share a basket and receive periodic updates without rel
   const link = await page
     .getByRole('textbox', { name: 'Join link', exact: true })
     .inputValue();
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (value: string) =>
+          sessionStorage.setItem('basket.test.copied', value),
+      },
+    });
+    Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      value: async () => {
+        throw new Error('Copy must not open the share sheet.');
+      },
+    });
+  });
+  await page.getByRole('button', { name: 'Copy link', exact: true }).click();
+  await expect(
+    page.getByText('Join link copied.', { exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() => sessionStorage.getItem('basket.test.copied')),
+  ).toBe(link);
   await closePanel(page);
   const friendContext = await browser.newContext({
     baseURL: 'http://localhost:5191',

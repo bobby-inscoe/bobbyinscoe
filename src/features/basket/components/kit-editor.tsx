@@ -7,7 +7,7 @@ import {
   TextInput,
 } from '@mantine/core';
 import { Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { classes } from '@/features/basket/theme/basket-theme';
 import type {
   DefinitionItem,
@@ -30,14 +30,32 @@ export function KitEditor({
   const [items, setItems] = useState<DefinitionItem[]>(
     kit?.items ?? [{ id: crypto.randomUUID(), text: '' }],
   );
+  const focusItem = useRef<string | null>(null);
+  const [error, setError] = useState('');
+  function addItem(after = items.length - 1) {
+    if (busy || items.length >= 100) return;
+    const item = { id: crypto.randomUUID(), text: '' };
+    focusItem.current = item.id;
+    setItems((current) => [
+      ...current.slice(0, after + 1),
+      item,
+      ...current.slice(after + 1),
+    ]);
+  }
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault();
-        void onSave(
-          title.trim(),
-          items.map((item) => ({ ...item, text: item.text.trim() })),
-        );
+        if (busy) return;
+        const filled = items
+          .map((item) => ({ ...item, text: item.text.trim() }))
+          .filter((item) => item.text);
+        if (!filled.length) {
+          setError('Add at least one item to this kit.');
+          return;
+        }
+        setError('');
+        void onSave(title.trim(), filled);
       }}
     >
       <Stack gap="lg">
@@ -61,7 +79,18 @@ export function KitEditor({
                 className={classes.grow}
                 label={`Item ${index + 1}`}
                 value={item.text}
-                required
+                ref={(input) => {
+                  if (input && focusItem.current === item.id) {
+                    input.focus();
+                    focusItem.current = null;
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
+                    event.preventDefault();
+                    addItem(index);
+                  }
+                }}
                 maxLength={240}
                 onChange={(event) => {
                   const text = event.currentTarget.value;
@@ -92,15 +121,15 @@ export function KitEditor({
           variant="light"
           leftSection={<Plus size={18} />}
           disabled={busy || items.length >= 100}
-          onClick={() =>
-            setItems((current) => [
-              ...current,
-              { id: crypto.randomUUID(), text: '' },
-            ])
-          }
+          onClick={() => addItem()}
         >
           Add another item
         </Button>
+        {error && (
+          <Text role="alert" c="red">
+            {error}
+          </Text>
+        )}
         <Group justify="space-between">
           {onDelete && (
             <Button

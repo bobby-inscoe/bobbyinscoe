@@ -13,6 +13,7 @@ import {
   Copy,
   MoreHorizontal,
   Plus,
+  Share2,
   Shield,
   UserMinus,
 } from 'lucide-react';
@@ -195,26 +196,40 @@ export function ShareBasket({
             leftSection={<Copy size={18} />}
             onClick={async () => {
               try {
-                if (navigator.share)
-                  await navigator.share({ title: basket.title, url });
-                else {
-                  await navigator.clipboard.writeText(url);
-                  onStatus('Join link copied.');
-                }
-              } catch (cause) {
-                if (
-                  !(
-                    cause instanceof DOMException && cause.name === 'AbortError'
-                  )
-                )
-                  onError(
-                    'Could not share the link. Select and copy it from the field above.',
-                  );
+                await navigator.clipboard.writeText(url);
+                onStatus('Join link copied.');
+              } catch {
+                onError(
+                  'Could not copy the link. Select and copy it from the field above.',
+                );
               }
             }}
           >
-            Share link
+            Copy link
           </Button>
+          {typeof navigator.share === 'function' && (
+            <Button
+              variant="light"
+              leftSection={<Share2 size={18} />}
+              onClick={async () => {
+                try {
+                  await navigator.share({ title: basket.title, url });
+                } catch (cause) {
+                  if (
+                    !(
+                      cause instanceof DOMException &&
+                      cause.name === 'AbortError'
+                    )
+                  )
+                    onError(
+                      'Could not share the link. Select and copy it from the field above.',
+                    );
+                }
+              }}
+            >
+              Share link
+            </Button>
+          )}
           <Text size="sm" c="dimmed">
             Disable or replace this link in Basket settings.
           </Text>

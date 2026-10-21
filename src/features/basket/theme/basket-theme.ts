@@ -1,7 +1,6 @@
 import {
   ActionIcon,
   Button,
-  Checkbox,
   CloseButton,
   createTheme,
   Drawer,
@@ -34,9 +33,6 @@ export const basketTheme = createTheme({
       classNames: { root: classes.square },
     }),
     Menu: Menu.extend({ classNames: { item: classes.touch } }),
-    Checkbox: Checkbox.extend({
-      classNames: { body: classes.checkBody, label: classes.checkLabel },
-    }),
     Drawer: Drawer.extend({
       defaultProps: {
         position: 'bottom',

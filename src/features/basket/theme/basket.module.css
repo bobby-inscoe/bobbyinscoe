@@ -126,18 +126,14 @@
   border-bottom: 0;
 }
 .check {
-  flex: 1;
-  min-width: 0;
-  padding-block: 16px;
-}
-.checkBody {
-  align-items: center;
-}
-.checkLabel {
   display: flex;
   align-items: center;
-  min-height: 44px;
-  width: 100%;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  min-height: 76px;
+  padding-block: 16px;
+  text-align: left;
 }
 .itemLabel {
   font-size: 17px;
