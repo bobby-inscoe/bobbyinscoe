@@ -1,0 +1,16 @@
+{
+  "projectRoots": ["src/features/house-scanner"],
+  "detector": {
+    "ignoreFiles": [
+      "src/app/**",
+      "src/features/workshop/**",
+      "src/features/duck-feed/**",
+      "src/index.tsx",
+      "index.html",
+      "public/**",
+      "tools/**",
+      "supabase/**",
+      "verification/**"
+    ]
+  }
+}
