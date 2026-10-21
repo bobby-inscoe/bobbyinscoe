@@ -6,7 +6,6 @@ import styles from '@/features/house-scanner/components/household-workspace.modu
 import { ListingsPanel } from '@/features/house-scanner/components/listings-panel';
 import { PriceEstimateProvider } from '@/features/house-scanner/components/price-estimate';
 import { SettingsPanel } from '@/features/house-scanner/components/settings-panel';
-import { SourcesPanel } from '@/features/house-scanner/components/sources-panel';
 import {
   favoriteViewings,
   ViewingsPanel,
@@ -147,10 +146,7 @@ export function HouseholdWorkspace({
   const notesListingId =
     tab === 'manual' ? (duplicate?.id ?? null) : (selected?.id ?? null);
   const notes = useListingNotes({
-    listingId:
-      tab === 'settings' || tab === 'sources' || tab === 'viewings'
-        ? null
-        : notesListingId,
+    listingId: tab === 'settings' || tab === 'viewings' ? null : notesListingId,
     userId,
     onLoad: onLoadNotes,
     onSave: onSaveNote,
@@ -225,9 +221,6 @@ export function HouseholdWorkspace({
             <Menu.Item onClick={() => navigation.changeTab('manual')}>
               Add link
             </Menu.Item>
-            <Menu.Item onClick={() => navigation.changeTab('sources')}>
-              Sources
-            </Menu.Item>
             <Menu.Item onClick={() => navigation.changeTab('settings')}>
               Settings
             </Menu.Item>
@@ -263,8 +256,6 @@ export function HouseholdWorkspace({
         />
       ) : tab === 'viewings' ? (
         <ViewingsPanel snapshot={snapshot} userId={userId} />
-      ) : tab === 'sources' ? (
-        <SourcesPanel snapshot={snapshot} />
       ) : tab === 'settings' ? (
         <SettingsPanel
           snapshot={snapshot}

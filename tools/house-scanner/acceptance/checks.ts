@@ -51,6 +51,8 @@ export const PUBLIC_RPC_PROBES: Record<string, Record<string, unknown>> = {
     p_title: 'FICTIONAL probe',
     p_note: '',
     p_tags: [],
+    p_image_urls: [],
+    p_facts: {},
   },
   hs_notes: { p_household_id: NIL_UUID, p_listing_id: NIL_UUID },
   hs_save_note: {

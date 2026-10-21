@@ -6,7 +6,6 @@ import { createInviteRoute } from '@/features/house-scanner/routes/invite-route'
 import { createListingDetailRoute } from '@/features/house-scanner/routes/listing-detail-route';
 import { createListingsRoute } from '@/features/house-scanner/routes/listings-route';
 import { createSettingsRoute } from '@/features/house-scanner/routes/settings-route';
-import { createSourcesRoute } from '@/features/house-scanner/routes/sources-route';
 import { createViewingsRoute } from '@/features/house-scanner/routes/viewings-route';
 
 export function createHouseScannerRouteTree<TParent extends AnyRoute>(
@@ -19,7 +18,6 @@ export function createHouseScannerRouteTree<TParent extends AnyRoute>(
     createFavoritesRoute(route),
     createViewingsRoute(route),
     createAddLinkRoute(route),
-    createSourcesRoute(route),
     createSettingsRoute(route),
     createInviteRoute(route),
   ]);

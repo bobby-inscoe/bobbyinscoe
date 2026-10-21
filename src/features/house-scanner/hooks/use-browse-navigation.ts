@@ -25,7 +25,6 @@ const destinations = {
   favorites: '/projects/house-scanner/favorites',
   viewings: '/projects/house-scanner/viewings',
   manual: '/projects/house-scanner/add-link',
-  sources: '/projects/house-scanner/sources',
   settings: '/projects/house-scanner/settings',
 } as const;
 

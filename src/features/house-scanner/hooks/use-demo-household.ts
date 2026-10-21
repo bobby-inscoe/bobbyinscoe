@@ -131,6 +131,15 @@ export function useDemoHousehold() {
     )
       return;
     const listingId = crypto.randomUUID();
+    const photos = submission.imageUrls.map((photoUrl) => ({
+      url: photoUrl,
+      attribution: 'Added by a household member',
+      rightsBasis: 'Linked by a household member, not stored.',
+      expiresAt: new Date(Date.now() + 365 * 86400000).toISOString(),
+      observedAt: now,
+      displayAllowed: true as const,
+      hotlinkAllowed: true as const,
+    }));
     // Like hs_add_manual, a non-blank initial note becomes the adder's shared note.
     const note = submission.note.trim();
     if (note) notes.save(DEMO_USER_ID, listingId, note, 0);
@@ -146,32 +155,29 @@ export function useDemoHousehold() {
             title: submission.title || new URL(url).hostname,
             sourceUrls: [url],
             facts: {
-              propertyType: null,
               tenure: 'unknown',
               purchase: null,
-              livingAreaM2: null,
               secondaryAreaM2: null,
-              rooms: null,
-              askingPriceSek: null,
               groundFloor: null,
               lift: null,
               liftServesHome: null,
               stepFree: null,
-              outdoor: null,
               glazed: null,
               largePrivateTerrace: null,
               municipality: null,
               baseFeeSek: null,
               mandatoryMonthlySek: null,
               status: 'unknown',
+              ...submission.facts,
             },
             conflicts: [],
             coordinates: null,
-            photo: null,
+            photo: photos[0] ?? null,
+            photos,
             previousAskingPriceSek: null,
             observedAt: now,
             addedBy: DEMO_USER_ID,
-            userTags: submission.tags,
+            userTags: [],
             evidence: [],
           },
         ],

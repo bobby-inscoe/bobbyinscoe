@@ -27,7 +27,10 @@ import {
   sdkStorageKey,
   USER_ID,
 } from '@/features/house-scanner/api/session-test-helpers';
-import type { Snapshot } from '@/features/house-scanner/types/contracts';
+import {
+  NO_MANUAL_FACTS,
+  type Snapshot,
+} from '@/features/house-scanner/types/contracts';
 import { NoteConflictError } from '@/features/house-scanner/types/notes';
 
 vi.mock('@supabase/supabase-js', async () => {
@@ -440,16 +443,43 @@ describe('House Scanner RPC boundaries', () => {
       url: 'https://example.invalid/home?utm_source=test&keep=yes&fbclid=tracking#photos',
       title: ' Fictional home ',
       note: ' Note ',
-      tags: [' sample '],
+      imageUrls: [],
+      facts: NO_MANUAL_FACTS,
     });
     expect(sdk.rpc).toHaveBeenCalledWith('hs_add_manual', {
       p_household_id: HOUSEHOLD_ID,
       p_url: 'https://example.invalid/home?keep=yes#photos',
       p_title: 'Fictional home',
       p_note: 'Note',
-      p_tags: ['sample'],
+      p_tags: [],
     });
     expect(fetch).not.toHaveBeenCalled();
+  });
+  it('sends photo links and the facts the member filled in, and refuses a plain http photo', async () => {
+    sdk.rpc.mockResolvedValue(
+      reply({ listingId: fixtureSnapshot().listings[0].id, existing: false }),
+    );
+    const submission = {
+      url: 'https://example.invalid/home',
+      title: '',
+      note: '',
+      imageUrls: ['https://example.invalid/a.jpg'],
+      facts: { ...NO_MANUAL_FACTS, rooms: 3, outdoor: 'balcony' as const },
+    };
+    await addManual(client(), HOUSEHOLD_ID, submission);
+    expect(sdk.rpc).toHaveBeenCalledWith(
+      'hs_add_manual',
+      expect.objectContaining({
+        p_image_urls: ['https://example.invalid/a.jpg'],
+        p_facts: { rooms: 3, outdoor: 'balcony' },
+      }),
+    );
+    expect(() =>
+      addManual(client(), HOUSEHOLD_ID, {
+        ...submission,
+        imageUrls: ['http://example.invalid/a.jpg'],
+      }),
+    ).toThrow();
   });
   it('rejects a profile owned by another household before calling the server', () => {
     const profile = fixtureSnapshot().profiles[0];
