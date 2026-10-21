@@ -10,7 +10,7 @@ the current repository; update it when a boundary changes.
 | `src/app/` | App shell, theme, and composition of top-level route trees |
 | `src/features/workshop/` | Portfolio at `/` and its visual interaction |
 | `src/features/duck-feed/` | Game at `/duck-feed` |
-| `src/features/house-scanner/` | House Scanner browsing and household UI |
+| `src/features/house-scanner/` | Shellter (House Scanner) browsing, household UI, and its nested theme |
 | `src/assets/` | Assets shared by the application |
 | `tools/house-scanner/` | Collector and its acceptance harness |
 | `supabase/` | Database migrations, functions, and data notes |
@@ -22,6 +22,23 @@ import feature route trees. A feature may import shared code, but not another
 feature's internal files. If two features need the same stable concept, move
 that concept to an appropriate shared location; do not move feature behavior
 just to avoid an import. Shared code must not import a feature or the app.
+
+## Styling
+
+Every project inherits the root Mantine theme. `src/app/theme.ts` holds it,
+`src/app/colors.ts` holds its palettes and CSS variables, and
+`src/app/theme.css` holds the rules that must be global (fonts, reset, link and
+focus styling). `src/index.tsx` imports that file first so project stylesheets
+cascade after it.
+
+Shellter is the only project with a nested theme:
+`src/features/house-scanner/theme/shellter-theme.ts` wraps the page in
+`MantineThemeProvider`, and `shellter.module.css` beside it is its one CSS
+module. The theme's `Portal` defaults carry Shellter's scope class onto every
+dropdown, menu, modal, and drawer, so call sites do not set `withinPortal`.
+Shellter components take layout classes from the theme file as `classes` and
+do not import CSS. The workshop and Duck Feed keep their own stylesheets, scoped
+to their root class.
 
 ## Routing
 

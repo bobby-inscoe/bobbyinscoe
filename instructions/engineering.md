@@ -32,8 +32,12 @@ subdirectory only when it contains code, not for symmetry. Avoid barrel files.
 
 Feature components use feature hooks or API modules for remote data. Shared
 code must not depend on a feature or the app. Keep state close to its owner.
-Use Mantine and `src/app/theme.ts` for ordinary controls and layout; custom CSS
-serves the workshop scene, game motion, and cases Mantine does not cover.
+Style through the theme, in this order: Mantine component and style props;
+theme `defaultProps`, variants, and `styles`; theme `classNames` pointing into
+the theme's CSS module for selectors a theme object cannot express; and a class
+from that module used directly only for markup that is not a Mantine component.
+Do not add per-project exceptions or selectors that reach another project.
+`instructions/architecture.md` says where each theme lives.
 
 Use semantic HTML, keyboard access, visible focus, labels, and meaningful alt
 text. Handle loading, empty, error, and not-found states where they are possible.
