@@ -61,6 +61,9 @@ jobs:
       - name: Build site
         # Public values only: the project URL and publishable key are visible in any built site.
         env:
+          VITE_BASKET_SUPABASE_URL: ${{ vars.VITE_BASKET_SUPABASE_URL }}
+          VITE_BASKET_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_BASKET_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_BASKET_EMAIL_ENABLED: ${{ vars.VITE_BASKET_EMAIL_ENABLED }}
           VITE_HOUSE_SCANNER_ENABLED: ${{ vars.VITE_HOUSE_SCANNER_ENABLED }}
           VITE_HOUSE_SCANNER_SUPABASE_URL: ${{ vars.VITE_HOUSE_SCANNER_SUPABASE_URL }}
           VITE_HOUSE_SCANNER_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_HOUSE_SCANNER_SUPABASE_PUBLISHABLE_KEY }}
