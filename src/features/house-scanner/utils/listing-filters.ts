@@ -1,4 +1,5 @@
 import type { Listing } from '@/features/house-scanner/types/contracts';
+import { fuzzyMatches } from '@/features/house-scanner/utils/fuzzy-match';
 import { listingNeighborhoods } from '@/features/house-scanner/utils/listing-neighborhoods';
 import { hasPin } from '@/features/house-scanner/utils/listing-position';
 import { hasViewingWithin } from '@/features/house-scanner/utils/viewings';
@@ -104,7 +105,7 @@ export function applyListingFilters(
   const minArea = clean(filters.minAreaM2);
   const maxArea = clean(filters.maxAreaM2);
   const minRooms = clean(filters.minRooms);
-  const titleQuery = filters.titleQuery.trim().toLocaleLowerCase('sv-SE');
+  const titleQuery = filters.titleQuery.trim();
   const freshnessDays = {
     all: null,
     'latest-scan': null,
@@ -128,8 +129,7 @@ export function applyListingFilters(
     const neighborhoods = listingNeighborhoods(listing);
     const firstSeen = Date.parse(listing.firstSeenAt ?? '');
     return (
-      (titleQuery === '' ||
-        listing.title.toLocaleLowerCase('sv-SE').includes(titleQuery)) &&
+      (titleQuery === '' || fuzzyMatches(listing.title, titleQuery)) &&
       (filters.freshness === 'latest-scan'
         ? listing.isNew === true
         : freshnessDays === null ||
