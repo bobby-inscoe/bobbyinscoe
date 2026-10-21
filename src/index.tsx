@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import '@/index.css';
+// The root theme's global CSS loads before the app so project stylesheets cascade after it.
+import '@/app/theme.css';
 import { App } from '@/app/app';
 
 const root = document.getElementById('root');

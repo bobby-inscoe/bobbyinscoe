@@ -1,3 +1,12 @@
+@media (prefers-reduced-motion: reduce) {
+  :root .workshop *,
+  :root .workshop *::before,
+  :root .workshop *::after,
+  :root .project-folio * {
+    animation: none;
+    transition: none;
+  }
+}
 .workshop {
   --ink: #383a2e;
   --muted: #67695a;

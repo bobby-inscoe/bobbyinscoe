@@ -2,14 +2,14 @@
 @import "@mantine/core/styles.layer.css";
 @font-face {
   font-family: "Libron";
-  src: url("./assets/fonts/libron/Libron-Regular.woff2") format("woff2");
+  src: url("../assets/fonts/libron/Libron-Regular.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: "Libron";
-  src: url("./assets/fonts/libron/Libron-Italic.woff2") format("woff2");
+  src: url("../assets/fonts/libron/Libron-Italic.woff2") format("woff2");
   font-weight: 400;
   font-style: italic;
   font-display: swap;
@@ -33,9 +33,6 @@
   }
 }
 :root {
-  font-family: var(--mantine-font-family);
-  color: var(--mantine-color-text);
-  background: var(--mantine-color-body);
   font-synthesis: none;
   -webkit-font-smoothing: antialiased;
 }
@@ -52,51 +49,20 @@ a {
 }
 button {
   cursor: pointer;
+  touch-action: manipulation;
 }
 button:focus-visible,
 a:focus-visible {
   outline: 2px solid var(--site-focus-ring);
   outline-offset: 6px;
 }
-button {
-  touch-action: manipulation;
-}
 ::selection {
   color: var(--site-selection-color);
   background: var(--site-selection-bg);
-}
-.game-room {
-  --primary: #eee9db;
-  --secondary: #c0c5b0;
-  --primary-dark: #313d36;
-  --secondary-dark: #202e29;
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-  padding: 32px max(20px, calc((100% - 760px) / 2));
-  min-height: 100svh;
-  color: var(--primary);
-  background: #27362e;
-}
-.game-return {
-  align-self: flex-start;
-  min-height: 44px;
 }
 
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
-  :root .workshop *,
-  :root .workshop *::before,
-  :root .workshop *::after,
-  :root .game-room *,
-  :root .project-folio * {
-    animation: none;
-    transition: none;
-  }
-}
-
-.game-room a:focus-visible {
-  outline-color: var(--primary);
 }
