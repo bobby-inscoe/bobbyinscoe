@@ -55,3 +55,4 @@ house-scanner.cache*.json
 /.codex/hooks.json
 .impeccable/
 /src/features/house-scanner/DESIGN.md
+/src/features/house-scanner/PRODUCT.md
