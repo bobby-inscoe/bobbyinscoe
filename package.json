@@ -48,8 +48,6 @@
     "house-scanner:accept:typecheck": "tsc --noEmit -p tools/house-scanner/acceptance/tsconfig.json",
     "test": "vitest run",
     "test:browser": "playwright test",
-    "test:basket": "vitest run tools/basket-backend/foundation.test.ts",
-    "test:basket:browser": "playwright test --config playwright.basket.config.ts",
     "test:typecheck": "tsc --noEmit -p tsconfig.verification.json"
   }
 }
