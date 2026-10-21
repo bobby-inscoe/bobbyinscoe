@@ -9,7 +9,10 @@ import {
   AlsoOn,
   KeyFacts,
 } from '@/features/house-scanner/components/listing-summary';
-import { EstimateLine } from '@/features/house-scanner/components/price-estimate';
+import {
+  EstimateLine,
+  useHasEstimate,
+} from '@/features/house-scanner/components/price-estimate';
 import { NextViewing } from '@/features/house-scanner/components/viewing-list';
 import type { Listing } from '@/features/house-scanner/types/contracts';
 import { formatPrice } from '@/features/house-scanner/utils/format';
@@ -38,6 +41,7 @@ export function PinCard({
   selection?: { checked: boolean; disabled: boolean; onToggle: () => void };
 }) {
   const mobile = useMediaQuery('(max-width: 36em)');
+  const estimated = useHasEstimate(listing);
   const personalActions = (
     <>
       <HideButton
@@ -82,11 +86,16 @@ export function PinCard({
         <ListingPhoto listing={listing} onOpen={onDetails} />
         {!mobile && !selection && personalActions}
       </div>
-      <Text fw={600} className={styles.pinPrice}>
-        {formatPrice(listing.facts.askingPriceSek)}
-        {listing.conflicts.includes('askingPriceSek') && ' (disputed)'}
-      </Text>
-      {!mobile && <EstimateLine listing={listing} />}
+      {estimated ? (
+        <div className={styles.pinPrice}>
+          <EstimateLine listing={listing} />
+        </div>
+      ) : (
+        <Text fw={600} className={styles.pinPrice}>
+          {formatPrice(listing.facts.askingPriceSek)}
+          {listing.conflicts.includes('askingPriceSek') && ' (disputed)'}
+        </Text>
+      )}
       <div className={styles.pinFacts}>
         <KeyFacts listing={listing} />
       </div>
