@@ -47,10 +47,11 @@ house-scanner.cache*.json
 # Claude Code worktrees nest a full checkout, with its own Biome config
 /.claude/worktrees/
 
-# Impeccable engine binaries; the launcher downloads a verified copy when missing
-/.claude/skills/impeccable/scripts/bin/
-/.agents/skills/impeccable/scripts/bin/
-
-# Impeccable decision sketches and review captures are working files.
-**/.impeccable/mocks/
-**/.impeccable/review/
+# Impeccable design tool: skill, agents, hooks, and design records stay local
+/.claude/skills/impeccable/
+/.agents/skills/impeccable/
+/.claude/agents/impeccable-*
+/.claude/settings.json
+/.codex/hooks.json
+.impeccable/
+/src/features/house-scanner/DESIGN.md

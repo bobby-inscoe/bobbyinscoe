@@ -6,12 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": [
-      "**",
-      "!!**/dist",
-      "!!.claude/skills/impeccable",
-      "!!.agents/skills/impeccable"
-    ]
+    "includes": ["**", "!!**/dist"]
   },
   "formatter": {
     "enabled": true,
