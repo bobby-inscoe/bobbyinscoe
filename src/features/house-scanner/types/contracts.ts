@@ -357,6 +357,12 @@ export const manualSubmissionSchema = z.strictObject({
     outdoor: true,
   }),
 });
+// What a member can change on a manual listing; the link stays as it was added.
+export const manualEditSchema = manualSubmissionSchema.pick({
+  title: true,
+  imageUrls: true,
+  facts: true,
+});
 export const ingestRequestSchema = z.discriminatedUnion('action', [
   z.strictObject({
     action: z.literal('begin'),
@@ -440,6 +446,7 @@ export type Snapshot = z.infer<typeof snapshotSchema>;
 export type SourcePolicy = z.infer<typeof sourcePolicySchema>;
 export type IngestRequest = z.infer<typeof ingestRequestSchema>;
 export type ManualSubmission = z.infer<typeof manualSubmissionSchema>;
+export type ManualEdit = z.infer<typeof manualEditSchema>;
 export const NO_MANUAL_FACTS: ManualSubmission['facts'] = {
   propertyType: null,
   askingPriceSek: null,

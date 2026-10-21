@@ -4,6 +4,7 @@ import { useDeferredValue, useMemo, useState } from 'react';
 import { AddLinkPanel } from '@/features/house-scanner/components/add-link-panel';
 import styles from '@/features/house-scanner/components/household-workspace.module.css';
 import { ListingsPanel } from '@/features/house-scanner/components/listings-panel';
+import { ManualActionsProvider } from '@/features/house-scanner/components/manual-listing-actions';
 import { PriceEstimateProvider } from '@/features/house-scanner/components/price-estimate';
 import { SettingsPanel } from '@/features/house-scanner/components/settings-panel';
 import {
@@ -47,6 +48,8 @@ export function HouseholdWorkspace({
   onSaveFavorites,
   onRemoveFavorite,
   onAddManual,
+  onUpdateManual,
+  onDeleteManual,
   onSaveProfile,
   onSetHidden,
   onLoadNotes,
@@ -155,207 +158,221 @@ export function HouseholdWorkspace({
     ? Date.now() - Date.parse(snapshot.edition.publishedAt)
     : null;
   const stale = editionAge !== null && editionAge > 36 * 60 * 60 * 1000;
+  const manualActions =
+    onUpdateManual && onDeleteManual
+      ? {
+          onUpdate: onUpdateManual,
+          onDelete: async (id: string) => {
+            await onDeleteManual(id);
+            if (listingId === id) navigation.closeListing();
+          },
+        }
+      : null;
   return (
-    <section className={styles.scope} aria-label="Household shortlist">
-      {/* A new household starts with one profile at revision 1, set to the collector bounds. */}
-      {!synthetic &&
-        tab !== 'settings' &&
-        snapshot.profiles.length === 1 &&
-        snapshot.profiles[0].revision === 1 && (
-          <Group gap={4} role="note">
-            <Text size="sm">
-              This household uses starter criteria: apartments in Göteborg from
-              60 m², up to 6M SEK.
-            </Text>
+    <ManualActionsProvider value={manualActions}>
+      <section className={styles.scope} aria-label="Household shortlist">
+        {/* A new household starts with one profile at revision 1, set to the collector bounds. */}
+        {!synthetic &&
+          tab !== 'settings' &&
+          snapshot.profiles.length === 1 &&
+          snapshot.profiles[0].revision === 1 && (
+            <Group gap={4} role="note">
+              <Text size="sm">
+                This household uses starter criteria: apartments in Göteborg
+                from 60 m², up to 6M SEK.
+              </Text>
+              <Button
+                size="compact-sm"
+                variant="subtle"
+                onClick={() => navigation.changeTab('settings')}
+              >
+                Adjust them in Settings
+              </Button>
+            </Group>
+          )}
+        <Group
+          component="nav"
+          aria-label="Shortlist sections"
+          gap="xs"
+          wrap="wrap"
+          p={4}
+        >
+          {(['suggestions', 'favorites'] as const).map((value) => (
             <Button
-              size="compact-sm"
-              variant="subtle"
-              onClick={() => navigation.changeTab('settings')}
+              key={value}
+              variant={tab === value ? 'filled' : 'default'}
+              aria-pressed={tab === value}
+              onClick={() => navigation.changeTab(value)}
             >
-              Adjust them in Settings
+              {value === 'suggestions' ? 'Listings' : 'Favorites'}
+            </Button>
+          ))}
+          <Menu position="bottom-end">
+            <Menu.Target>
+              <Button
+                variant={
+                  tab !== 'suggestions' && tab !== 'favorites'
+                    ? 'filled'
+                    : 'default'
+                }
+              >
+                More
+              </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item onClick={() => navigation.changeTab('viewings')}>
+                Viewings
+                {viewingsSoon > 0 && (
+                  <Badge
+                    size="sm"
+                    variant="light"
+                    aria-label={`${viewingsSoon} saved viewings in the next 48 hours`}
+                  >
+                    {viewingsSoon}
+                  </Badge>
+                )}
+              </Menu.Item>
+              <Menu.Item onClick={() => navigation.changeTab('manual')}>
+                Add link
+              </Menu.Item>
+              <Menu.Item onClick={() => navigation.changeTab('settings')}>
+                Settings
+              </Menu.Item>
+              {onSignOut && <Menu.Item onClick={onSignOut}>Sign out</Menu.Item>}
+            </Menu.Dropdown>
+          </Menu>
+        </Group>
+        {listingId && !selected && (
+          <Group role="status">
+            <Text>This home is unavailable in this household.</Text>
+            <Button variant="default" onClick={navigation.closeListing}>
+              Back to {tab === 'favorites' ? 'Favorites' : 'Listings'}
             </Button>
           </Group>
         )}
-      <Group
-        component="nav"
-        aria-label="Shortlist sections"
-        gap="xs"
-        wrap="wrap"
-        p={4}
-      >
-        {(['suggestions', 'favorites'] as const).map((value) => (
-          <Button
-            key={value}
-            variant={tab === value ? 'filled' : 'default'}
-            aria-pressed={tab === value}
-            onClick={() => navigation.changeTab(value)}
-          >
-            {value === 'suggestions' ? 'Listings' : 'Favorites'}
-          </Button>
-        ))}
-        <Menu position="bottom-end">
-          <Menu.Target>
-            <Button
-              variant={
-                tab !== 'suggestions' && tab !== 'favorites'
-                  ? 'filled'
-                  : 'default'
-              }
-            >
-              More
-            </Button>
-          </Menu.Target>
-          <Menu.Dropdown>
-            <Menu.Item onClick={() => navigation.changeTab('viewings')}>
-              Viewings
-              {viewingsSoon > 0 && (
-                <Badge
-                  size="sm"
-                  variant="light"
-                  aria-label={`${viewingsSoon} saved viewings in the next 48 hours`}
-                >
-                  {viewingsSoon}
-                </Badge>
-              )}
-            </Menu.Item>
-            <Menu.Item onClick={() => navigation.changeTab('manual')}>
-              Add link
-            </Menu.Item>
-            <Menu.Item onClick={() => navigation.changeTab('settings')}>
-              Settings
-            </Menu.Item>
-            {onSignOut && <Menu.Item onClick={onSignOut}>Sign out</Menu.Item>}
-          </Menu.Dropdown>
-        </Menu>
-      </Group>
-      {listingId && !selected && (
-        <Group role="status">
-          <Text>This home is unavailable in this household.</Text>
-          <Button variant="default" onClick={navigation.closeListing}>
-            Back to {tab === 'favorites' ? 'Favorites' : 'Listings'}
-          </Button>
-        </Group>
-      )}
-      {message && (
-        <Text role="status" aria-live="polite">
-          {message}
-        </Text>
-      )}
-      {tab === 'manual' ? (
-        <AddLinkPanel
-          snapshot={snapshot}
-          userId={userId}
-          duplicate={duplicate}
-          pending={pending}
-          canSave={canSave}
-          notes={notes}
-          onAddManual={onAddManual}
-          onExisting={setDuplicateId}
-          onCloseDuplicate={() => setDuplicateId(null)}
-          onFavorite={favorite}
-        />
-      ) : tab === 'viewings' ? (
-        <ViewingsPanel snapshot={snapshot} userId={userId} />
-      ) : tab === 'settings' ? (
-        <SettingsPanel
-          snapshot={snapshot}
-          userId={userId}
-          synthetic={synthetic}
-          onSaveProfile={onSaveProfile}
-          access={access}
-        />
-      ) : (
-        <PriceEstimateProvider listings={snapshot.listings}>
-          <ListingsPanel
-            tab={tab}
+        {message && (
+          <Text role="status" aria-live="polite">
+            {message}
+          </Text>
+        )}
+        {tab === 'manual' ? (
+          <AddLinkPanel
             snapshot={snapshot}
             userId={userId}
-            mapStyleUrl={mapStyleUrl}
-            person={person}
-            onPersonChange={(value) =>
-              navigation.updateSearch({ person: value })
-            }
-            section={section}
-            onSectionChange={(value) =>
-              navigation.updateSearch({
-                section: validateBrowseSearch({ section: value }).section,
-              })
-            }
-            filters={filters}
-            hiddenIds={hidden}
-            hiddenCount={hiddenCount}
-            duplicateCount={duplicateCount}
-            alsoOn={alsoOn}
-            onHide={hide}
-            onHideMany={hiddenActions.hideMany}
-            onUndoHide={hiddenActions.undo}
-            hideBusy={hiddenActions.busy}
-            hideError={hiddenActions.error}
-            hideMessage={hiddenActions.message}
-            undoHideCount={hiddenActions.undoCount}
-            canHide={hiddenActions.canHide}
-            selecting={search.select}
-            onSelectingChange={(value) => navigation.setLayer('select', value)}
-            filtersOpen={search.filterOpen}
-            onFiltersOpenChange={(value) =>
-              navigation.setLayer('filterOpen', value)
-            }
-            onUnhide={unhide}
-            onFiltersChange={(value) =>
-              navigation.updateSearch({ filters: value })
-            }
-            filterHosts={filterHosts}
-            total={scoped.length}
-            scoped={scoped}
-            duplicateIds={duplicateIds}
-            visible={visible}
-            selected={selected}
-            selectedId={listingId ?? selectedId}
-            onSelectedIdChange={setSelectedId}
-            detailsOpen={detailsOpen}
-            onOpenListing={(id) => {
-              setSelectedId(id);
-              navigation.openListing(id);
-            }}
-            onCloseListing={navigation.closeListing}
-            onSeeSelectedOnMap={() => {
-              setSelectedId(listingId);
-              navigation.seeSelectedOnMap();
-            }}
-            sort={search.sort}
-            onSortChange={(value) => navigation.updateSearch({ sort: value })}
-            view={view}
-            onViewChange={(value) => navigation.updateSearch({ view: value })}
-            satellite={satellite}
-            onSatelliteChange={setSatellite}
+            duplicate={duplicate}
             pending={pending}
-            favoriteMessage={message}
-            mapWarning={
-              stale && !synthetic
-                ? 'Over 36 hours old, so facts may be stale.'
-                : undefined
-            }
             canSave={canSave}
             notes={notes}
+            onAddManual={onAddManual}
+            onExisting={setDuplicateId}
+            onCloseDuplicate={() => setDuplicateId(null)}
             onFavorite={favorite}
-            onSaveMany={onSaveFavorites ? saveMany : undefined}
-            saveBusy={batchBusy}
           />
-        </PriceEstimateProvider>
-      )}
-      {/* The demo's fixed edition date is always old, so only real editions warn. */}
-      <Text
-        size="sm"
-        mt="md"
-        c={stale && !synthetic ? 'red.8' : 'dimmed'}
-        role="status"
-      >
-        {synthetic
-          ? 'Fictional demo · Changes stay in memory.'
-          : snapshot.edition
-            ? `Updated ${formatDate(snapshot.edition.publishedAt)}${stale ? '. Over 36 hours old, so facts may be stale.' : ''}`
-            : 'No data has been published yet.'}
-      </Text>
-    </section>
+        ) : tab === 'viewings' ? (
+          <ViewingsPanel snapshot={snapshot} userId={userId} />
+        ) : tab === 'settings' ? (
+          <SettingsPanel
+            snapshot={snapshot}
+            userId={userId}
+            synthetic={synthetic}
+            onSaveProfile={onSaveProfile}
+            access={access}
+          />
+        ) : (
+          <PriceEstimateProvider listings={snapshot.listings}>
+            <ListingsPanel
+              tab={tab}
+              snapshot={snapshot}
+              userId={userId}
+              mapStyleUrl={mapStyleUrl}
+              person={person}
+              onPersonChange={(value) =>
+                navigation.updateSearch({ person: value })
+              }
+              section={section}
+              onSectionChange={(value) =>
+                navigation.updateSearch({
+                  section: validateBrowseSearch({ section: value }).section,
+                })
+              }
+              filters={filters}
+              hiddenIds={hidden}
+              hiddenCount={hiddenCount}
+              duplicateCount={duplicateCount}
+              alsoOn={alsoOn}
+              onHide={hide}
+              onHideMany={hiddenActions.hideMany}
+              onUndoHide={hiddenActions.undo}
+              hideBusy={hiddenActions.busy}
+              hideError={hiddenActions.error}
+              hideMessage={hiddenActions.message}
+              undoHideCount={hiddenActions.undoCount}
+              canHide={hiddenActions.canHide}
+              selecting={search.select}
+              onSelectingChange={(value) =>
+                navigation.setLayer('select', value)
+              }
+              filtersOpen={search.filterOpen}
+              onFiltersOpenChange={(value) =>
+                navigation.setLayer('filterOpen', value)
+              }
+              onUnhide={unhide}
+              onFiltersChange={(value) =>
+                navigation.updateSearch({ filters: value })
+              }
+              filterHosts={filterHosts}
+              total={scoped.length}
+              scoped={scoped}
+              duplicateIds={duplicateIds}
+              visible={visible}
+              selected={selected}
+              selectedId={listingId ?? selectedId}
+              onSelectedIdChange={setSelectedId}
+              detailsOpen={detailsOpen}
+              onOpenListing={(id) => {
+                setSelectedId(id);
+                navigation.openListing(id);
+              }}
+              onCloseListing={navigation.closeListing}
+              onSeeSelectedOnMap={() => {
+                setSelectedId(listingId);
+                navigation.seeSelectedOnMap();
+              }}
+              sort={search.sort}
+              onSortChange={(value) => navigation.updateSearch({ sort: value })}
+              view={view}
+              onViewChange={(value) => navigation.updateSearch({ view: value })}
+              satellite={satellite}
+              onSatelliteChange={setSatellite}
+              pending={pending}
+              favoriteMessage={message}
+              mapWarning={
+                stale && !synthetic
+                  ? 'Over 36 hours old, so facts may be stale.'
+                  : undefined
+              }
+              canSave={canSave}
+              notes={notes}
+              onFavorite={favorite}
+              onSaveMany={onSaveFavorites ? saveMany : undefined}
+              saveBusy={batchBusy}
+            />
+          </PriceEstimateProvider>
+        )}
+        {/* The demo's fixed edition date is always old, so only real editions warn. */}
+        <Text
+          size="sm"
+          mt="md"
+          c={stale && !synthetic ? 'red.8' : 'dimmed'}
+          role="status"
+        >
+          {synthetic
+            ? 'Fictional demo · Changes stay in memory.'
+            : snapshot.edition
+              ? `Updated ${formatDate(snapshot.edition.publishedAt)}${stale ? '. Over 36 hours old, so facts may be stale.' : ''}`
+              : 'No data has been published yet.'}
+        </Text>
+      </section>
+    </ManualActionsProvider>
   );
 }

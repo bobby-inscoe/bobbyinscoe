@@ -5,6 +5,7 @@ import {
   addManual,
   clearOwnedSessionStorage,
   createHouseholdClient,
+  deleteManual,
   householdSnapshot,
   memberships,
   privateBackendSettings,
@@ -13,6 +14,7 @@ import {
   setFavorite,
   setHidden,
   setRememberDevice,
+  updateManual,
 } from '@/features/house-scanner/api/household-client';
 import {
   AUTH_KEY,
@@ -452,6 +454,8 @@ describe('House Scanner RPC boundaries', () => {
       p_title: 'Fictional home',
       p_note: 'Note',
       p_tags: [],
+      p_image_urls: [],
+      p_facts: {},
     });
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -480,6 +484,27 @@ describe('House Scanner RPC boundaries', () => {
         imageUrls: ['http://example.invalid/a.jpg'],
       }),
     ).toThrow();
+  });
+  it('sends an edit with only the facts that are set, and a delete by id', async () => {
+    sdk.rpc.mockResolvedValue(reply({ ok: true }));
+    const listingId = fixtureSnapshot().listings[0].id;
+    await updateManual(client(), HOUSEHOLD_ID, listingId, {
+      title: ' New ',
+      imageUrls: [],
+      facts: { ...NO_MANUAL_FACTS, rooms: 2 },
+    });
+    expect(sdk.rpc).toHaveBeenCalledWith('hs_update_manual', {
+      p_household_id: HOUSEHOLD_ID,
+      p_listing_id: listingId,
+      p_title: 'New',
+      p_image_urls: [],
+      p_facts: { rooms: 2 },
+    });
+    await deleteManual(client(), HOUSEHOLD_ID, listingId);
+    expect(sdk.rpc).toHaveBeenCalledWith('hs_delete_manual', {
+      p_household_id: HOUSEHOLD_ID,
+      p_listing_id: listingId,
+    });
   });
   it('rejects a profile owned by another household before calling the server', () => {
     const profile = fixtureSnapshot().profiles[0];

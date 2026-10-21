@@ -4,6 +4,7 @@ import type {
   SaveNote,
 } from '@/features/house-scanner/hooks/use-listing-notes';
 import type {
+  ManualEdit,
   ManualSubmission,
   SearchProfile,
   Snapshot,
@@ -15,6 +16,9 @@ export interface HouseholdActions {
   onSaveFavorites: (listingIds: string[]) => Promise<void>;
   onRemoveFavorite: (listingId: string) => Promise<void>;
   onAddManual: (submission: ManualSubmission) => Promise<void>;
+  // Any member can change or remove a manual listing; the link itself stays fixed.
+  onUpdateManual: (listingId: string, edit: ManualEdit) => Promise<void>;
+  onDeleteManual: (listingId: string) => Promise<void>;
   onSaveProfile: (profile: SearchProfile) => Promise<void>;
   // Hides or unhides homes for the whole household.
   onSetHidden: (listingIds: string[], hidden: boolean) => Promise<void>;
