@@ -1098,6 +1098,31 @@ describe('candidates filtered by household criteria', () => {
     expect(await titles()).not.toContain('too-small-for-b');
     expect((await snapshot(HOUSE_A, OWNER_A)).hides).toHaveLength(2);
   });
+
+  it('serves the same snapshots with the set-based snapshot and after rolling it back', async () => {
+    const speed = '20261021194535_house_scanner_snapshot_speed';
+    const both = async () => [
+      await snapshot(HOUSE_A, OWNER_A),
+      await snapshot(HOUSE_B, OWNER_B),
+    ];
+    await db.exec(await migration(`${speed}.sql`));
+    const fast = await both();
+    expect(fast[0].listings.length).toBeGreaterThan(0);
+    // Without a search path the planner can inline the rule into the snapshot query.
+    const configs = await db.query<{ proconfig: string[] | null }>(
+      "select proconfig from pg_proc where proname='fails_hard_rule'",
+    );
+    expect(configs.rows.map((row) => row.proconfig)).toEqual([null, null]);
+    await db.exec(
+      await readFile(
+        new URL(`../rollbacks/${speed}_down.sql`, import.meta.url),
+        'utf8',
+      ),
+    );
+    expect(await both()).toEqual(fast);
+    await db.exec(await migration(`${speed}.sql`));
+    expect(await both()).toEqual(fast);
+  });
 });
 
 describe('listings that leave their source', () => {
