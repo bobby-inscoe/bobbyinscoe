@@ -1,4 +1,4 @@
--- Reverses 20261022120000_house_scanner_manual_edit.sql: edits and deletes stop; listings already deleted stay deleted.
+-- Reverses 20261021085741_house_scanner_manual_edit.sql: edits and deletes stop; listings already deleted stay deleted.
 begin;
 drop function if exists public.hs_update_manual(uuid,uuid,text,jsonb,jsonb);
 drop function if exists public.hs_delete_manual(uuid,uuid);

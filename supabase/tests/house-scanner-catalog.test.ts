@@ -21,7 +21,7 @@ import {
 } from '@/features/house-scanner/utils/hard-rule-cases';
 
 // The shared catalog migration (S1): one household's data before it, many households after it.
-const CATALOG = '20261020150000_house_scanner_catalog.sql';
+const CATALOG = '20261020111540_house_scanner_catalog.sql';
 const HOUSE_A = '10000000-0000-4000-8000-000000000001';
 const HOUSE_B = '10000000-0000-4000-8000-000000000002';
 const OWNER_A = '20000000-0000-4000-8000-000000000001';
@@ -565,7 +565,7 @@ describe('catalog rollback', () => {
       await restored.exec(
         await readFile(
           new URL(
-            '../rollbacks/20261020150000_house_scanner_catalog_down.sql',
+            '../rollbacks/20261020111540_house_scanner_catalog_down.sql',
             import.meta.url,
           ),
           'utf8',
@@ -620,7 +620,7 @@ describe('catalog rollback', () => {
         shared.exec(
           await readFile(
             new URL(
-              '../rollbacks/20261020150000_house_scanner_catalog_down.sql',
+              '../rollbacks/20261020111540_house_scanner_catalog_down.sql',
               import.meta.url,
             ),
             'utf8',
@@ -1049,9 +1049,9 @@ describe('candidates filtered by household criteria', () => {
   });
 
   it('rolls back delisting, shared hides and the criteria filter, and applies them again', async () => {
-    const delisted = '20261021090000_house_scanner_delisted';
-    const shared = '20261020210000_house_scanner_shared_hides';
-    const filter = '20261020180000_house_scanner_criteria_filter';
+    const delisted = '20261020142553_house_scanner_delisted';
+    const shared = '20261020133201_house_scanner_shared_hides';
+    const filter = '20261020121634_house_scanner_criteria_filter';
     const down = async (name: string) =>
       db.exec(
         await readFile(
@@ -1097,6 +1097,31 @@ describe('candidates filtered by household criteria', () => {
     await db.exec(await migration(`${delisted}.sql`));
     expect(await titles()).not.toContain('too-small-for-b');
     expect((await snapshot(HOUSE_A, OWNER_A)).hides).toHaveLength(2);
+  });
+
+  it('serves the same snapshots with the set-based snapshot and after rolling it back', async () => {
+    const speed = '20261021194535_house_scanner_snapshot_speed';
+    const both = async () => [
+      await snapshot(HOUSE_A, OWNER_A),
+      await snapshot(HOUSE_B, OWNER_B),
+    ];
+    await db.exec(await migration(`${speed}.sql`));
+    const fast = await both();
+    expect(fast[0].listings.length).toBeGreaterThan(0);
+    // Without a search path the planner can inline the rule into the snapshot query.
+    const configs = await db.query<{ proconfig: string[] | null }>(
+      "select proconfig from pg_proc where proname='fails_hard_rule'",
+    );
+    expect(configs.rows.map((row) => row.proconfig)).toEqual([null, null]);
+    await db.exec(
+      await readFile(
+        new URL(`../rollbacks/${speed}_down.sql`, import.meta.url),
+        'utf8',
+      ),
+    );
+    expect(await both()).toEqual(fast);
+    await db.exec(await migration(`${speed}.sql`));
+    expect(await both()).toEqual(fast);
   });
 });
 

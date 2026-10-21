@@ -47,30 +47,52 @@ async function settle() {
 }
 
 describe('requests made by a signed-in session', () => {
-  it('confirms a hide after a failed snapshot refresh succeeds on retry', async () => {
+  it('shows a hide without re-reading the snapshot', async () => {
     const hook = await authenticated();
     const id = fixtureSnapshot().listings[0].id;
-    sdk.rpc
-      .mockImplementationOnce(async () => reply({ ok: true }))
-      .mockImplementationOnce(async () => ({
-        data: null,
-        error: { message: 'Network failure' },
-      }))
-      .mockImplementationOnce(async () =>
-        reply({ ...fixtureSnapshot(), hiddenListingIds: [id] }),
-      );
-    await act(async () => {
-      await expect(
-        hook.result.current.onSetHidden([id], true),
-      ).resolves.toBeUndefined();
-    });
+    const before = names().length;
+    sdk.rpc.mockImplementationOnce(async () => reply({ ok: true }));
+    await act(() => hook.result.current.onSetHidden([id], true));
+    expect(names().slice(before)).toEqual(['hs_set_hidden']);
     const state = hook.result.current.state;
-    expect(state.status).toBe('authenticated');
-    if (state.status === 'authenticated')
-      expect(state.snapshot.hiddenListingIds).toEqual([id]);
-    expect(names().slice(-3)).toEqual([
-      'hs_set_hidden',
+    expect(
+      state.status === 'authenticated' &&
+        state.snapshot.hides?.map(({ listingId, userId }) => ({
+          listingId,
+          userId,
+        })),
+    ).toEqual([{ listingId: id, userId: USER_ID }]);
+    sdk.rpc.mockImplementationOnce(async () => reply({ ok: true }));
+    await act(() => hook.result.current.onSetHidden([id], false));
+    const after = hook.result.current.state;
+    expect(after.status === 'authenticated' && after.snapshot.hides).toBe(
+      undefined,
+    );
+  });
+
+  it('re-reads the snapshot after a hide when a read is already in flight', async () => {
+    const hook = await authenticated();
+    const id = fixtureSnapshot().listings[0].id;
+    const pending = deferred<ReturnType<typeof reply>>();
+    sdk.rpc
+      .mockImplementationOnce(async () => reply([fixtureSnapshot().members[0]]))
+      .mockReturnValueOnce(pending.promise)
+      .mockImplementationOnce(async () => reply({ ok: true }));
+    const before = names().length;
+    let refresh!: Promise<void>;
+    act(() => {
+      refresh = hook.result.current.refresh();
+    });
+    await waitFor(() => expect(names().length).toBe(before + 2));
+    await act(() => hook.result.current.onSetHidden([id], true));
+    await act(async () => {
+      pending.resolve(reply(fixtureSnapshot()));
+      await refresh;
+    });
+    expect(names().slice(before)).toEqual([
+      'hs_memberships',
       'hs_snapshot_neighborhoods',
+      'hs_set_hidden',
       'hs_snapshot_neighborhoods',
     ]);
   });
@@ -306,11 +328,41 @@ describe('requests made by a signed-in session', () => {
     const hook = await authenticated();
     const [listing] = fixtureSnapshot().listings;
     const before = requests();
-    await act(() => hook.result.current.onSaveFavorite(listing.id));
+    await act(() => hook.result.current.onDeleteManual(listing.id));
     expect(sdk.auth.getUser.mock.calls.length).toBe(before.users);
     expect(names().slice(before.rpc.length)).toEqual([
-      'hs_set_favorite',
+      'hs_delete_manual',
       'hs_snapshot_neighborhoods',
+    ]);
+  });
+
+  it('shows a favorite toggle without re-reading the snapshot', async () => {
+    const hook = await authenticated();
+    const listing = fixtureSnapshot().listings.find(
+      (home) =>
+        !fixtureSnapshot().favorites.some(
+          (favorite) =>
+            favorite.listingId === home.id && favorite.userId === USER_ID,
+        ),
+    );
+    if (!listing) throw new Error('fixture needs an unsaved listing');
+    const before = names().length;
+    const mine = () => {
+      const { state } = hook.result.current;
+      return state.status === 'authenticated'
+        ? state.snapshot.favorites.filter(
+            (favorite) =>
+              favorite.listingId === listing.id && favorite.userId === USER_ID,
+          ).length
+        : -1;
+    };
+    await act(() => hook.result.current.onSaveFavorite(listing.id));
+    expect(mine()).toBe(1);
+    await act(() => hook.result.current.onRemoveFavorite(listing.id));
+    expect(mine()).toBe(0);
+    expect(names().slice(before)).toEqual([
+      'hs_set_favorite',
+      'hs_set_favorite',
     ]);
   });
 });

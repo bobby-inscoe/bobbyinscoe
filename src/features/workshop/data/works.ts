@@ -17,7 +17,7 @@ export const WORKS = [
   },
   {
     id: 'common-basket',
-    title: 'Common Basket',
+    title: 'Basket',
     label: 'Shared checklists',
     description:
       'Shared lists for groceries, packing, and plans with friends. Join with a link and save kits for next time.',
@@ -26,7 +26,7 @@ export const WORKS = [
   },
   {
     id: 'across-the-ledger',
-    title: 'Across the Ledger',
+    title: 'Tax Bridge',
     label: 'Tax reporting',
     description:
       'Converts US investment gains and losses into a format for reporting to Skatteverket.',
@@ -51,15 +51,13 @@ export const WORKS = [
   {
     id: 'house-scanner',
     title: 'Shellter',
-    label: 'Private shortlist',
+    label: 'Timmy’s Picks',
     description:
-      'A shared home shortlist with source details, attributed favorites and a map.',
-    paragraphs: [
-      'Explore fictional homes in the synthetic demo. Live sources are not connected.',
-    ],
+      'A shared home shortlist powered by live listings from connected sources. Save favorites, track viewings, and compare homes on a map.',
+    paragraphs: [],
     facts: [
       ['Format', 'Private household workspace'],
-      ['Public demo', 'Fictional homes and people'],
+      ['Listings', 'Live connected sources'],
     ],
   },
 ] as const;

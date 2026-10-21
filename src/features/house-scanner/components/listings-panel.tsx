@@ -632,7 +632,7 @@ export function ListingsPanel({
                     size="sm"
                     onClick={() => onFiltersChange(emptyFilters)}
                   >
-                    Clear filters
+                    Clear all filters
                   </Anchor>
                 </>
               )}

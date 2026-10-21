@@ -219,7 +219,7 @@ describe('the rollback', () => {
     await pg.exec(
       await readFile(
         new URL(
-          '../rollbacks/20261022120000_house_scanner_manual_edit_down.sql',
+          '../rollbacks/20261021085741_house_scanner_manual_edit_down.sql',
           import.meta.url,
         ),
         'utf8',

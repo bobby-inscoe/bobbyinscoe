@@ -9,7 +9,7 @@ import {
   Title,
   UnstyledButton,
 } from '@mantine/core';
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { FavoriteStar } from '@/features/house-scanner/components/favorite-star';
 import { HideButton } from '@/features/house-scanner/components/hide-button';
 import { ListingDetails } from '@/features/house-scanner/components/listing-details';
@@ -186,6 +186,23 @@ export const ListingCard = memo(function ListingCard({
     [listing.id, listing.title, checked, selectionDisabled, onToggleSelection],
   );
   const estimated = useHasEstimate(listing);
+  const [copied, setCopied] = useState(false);
+  const shareUrl = listing.sourceUrls[0];
+  // The phone's own share sheet where the browser has one; otherwise copy the link.
+  const canShare = typeof navigator.share === 'function';
+  const share = async () => {
+    try {
+      if (canShare) {
+        await navigator.share({ title: listing.title, url: shareUrl });
+        return;
+      }
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Dismissing the share sheet rejects; a blocked clipboard has no fallback.
+    }
+  };
   const selectionLabel = `${checked ? 'Deselect' : 'Select'} ${listing.title}`;
   const openPrimary = () => {
     if (selectionMode) {
@@ -237,15 +254,13 @@ export const ListingCard = memo(function ListingCard({
           pressed={selectionMode ? checked === true : undefined}
           disabled={selectionMode && selectionDisabled}
         />
-        <Box {...desktopOnly(details)}>
-          {onToggleHidden && (
-            <HideButton
-              listingId={listing.id}
-              hidden={hidden === true}
-              onToggle={onToggleHidden}
-            />
-          )}
-        </Box>
+        {onToggleHidden && (
+          <HideButton
+            listingId={listing.id}
+            hidden={hidden === true}
+            onToggle={onToggleHidden}
+          />
+        )}
         <FavoriteStar
           mine={mine}
           others={saved.length > 0}
@@ -311,7 +326,7 @@ export const ListingCard = memo(function ListingCard({
             </Button>
           </Box>
         )}
-        {(onToggleHidden || (onSeeOnMap && hasPin(listing.coordinates))) && (
+        {(shareUrl || (onSeeOnMap && hasPin(listing.coordinates))) && (
           <Box {...phoneOnly(details)}>
             <Menu
               position="bottom-end"
@@ -327,9 +342,9 @@ export const ListingCard = memo(function ListingCard({
                 </Button>
               </Menu.Target>
               <Menu.Dropdown>
-                {onToggleHidden && (
-                  <Menu.Item onClick={() => onToggleHidden(listing.id)}>
-                    {hidden ? 'Unhide this home' : 'Hide this home'}
+                {shareUrl && (
+                  <Menu.Item onClick={share} closeMenuOnClick={canShare}>
+                    {copied ? 'Link copied' : 'Share this listing'}
                   </Menu.Item>
                 )}
                 {onSeeOnMap && hasPin(listing.coordinates) && (

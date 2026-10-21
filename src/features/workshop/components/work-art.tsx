@@ -5,34 +5,17 @@ export function WorkArt({ kind }: { kind: string }) {
   if (kind === 'house-scanner') {
     return (
       <div className="scanner-art" aria-hidden="true">
-        <span className="art-corner">HOUSE SCANNER</span>
-        <svg viewBox="0 0 600 320" fill="none" aria-hidden="true">
-          <path
-            d="M60 260H540M80 100H520M150 50V280M450 50V280"
-            stroke="currentColor"
-            opacity=".15"
-          />
-          <path
-            d="m210 165 90-75 90 75v95H210Z"
-            stroke="currentColor"
-            strokeWidth="3"
-          />
-          <path
-            d="M280 260v-65h40v65M235 175h25v30h-25Z"
-            stroke="currentColor"
-            strokeWidth="3"
-          />
-          <circle cx="455" cy="185" r="24" fill="currentColor" opacity=".13" />
-          <path d="m444 185 8 8 15-17" stroke="currentColor" strokeWidth="3" />
-        </svg>
-        <span className="scanner-art-caption">A shared home shortlist</span>
+        <span className="art-corner">SHELLTER</span>
+        <span className="scanner-art-caption">Timmy’s Picks</span>
+        <img className="scanner-art-timmy" src="/icon-512.png" alt="" />
+        <span className="scanner-art-note">Homes worth sharing</span>
       </div>
     );
   }
   if (kind === 'common-basket') {
     return (
       <div className="basket-art" aria-hidden="true">
-        <span className="art-corner">COMMON BASKET / CONCEPT</span>
+        <span className="art-corner">BASKET</span>
         <div className="list-sheet">
           <span className="list-handwriting">Groceries</span>
           <div>
@@ -59,7 +42,7 @@ export function WorkArt({ kind }: { kind: string }) {
   if (kind === 'across-the-ledger') {
     return (
       <div className="ledger-art" aria-hidden="true">
-        <span className="art-corner">ACROSS THE LEDGER / CONCEPT</span>
+        <span className="art-corner">TAX BRIDGE</span>
         <div className="ledger-columns">
           <div>
             <span className="ledger-country">US</span>
@@ -86,7 +69,7 @@ export function WorkArt({ kind }: { kind: string }) {
   if (kind === 'position-notes') {
     return (
       <div className="research-art" aria-hidden="true">
-        <span className="art-corner">POSITION NOTES / CONCEPT</span>
+        <span className="art-corner">POSITION NOTES</span>
         <span className="research-heading">Options</span>
         <svg
           aria-hidden="true"

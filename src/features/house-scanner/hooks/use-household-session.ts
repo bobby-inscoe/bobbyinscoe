@@ -47,6 +47,50 @@ export type HouseholdSessionState =
   | { status: 'choose-household'; memberships: Member[] }
   | { status: 'authenticated'; snapshot: Snapshot; userId: string };
 
+// The member's own favorite, as hs_set_favorite stores it: saving twice keeps the first time.
+function withFavorite(
+  snapshot: Snapshot,
+  userId: string,
+  listingId: string,
+  saved: boolean,
+): Snapshot {
+  const mine = (favorite: Snapshot['favorites'][number]) =>
+    favorite.listingId === listingId && favorite.userId === userId;
+  if (saved === snapshot.favorites.some(mine)) return snapshot;
+  return {
+    ...snapshot,
+    favorites: saved
+      ? [
+          ...snapshot.favorites,
+          {
+            householdId: snapshot.householdId,
+            listingId,
+            userId,
+            savedAt: new Date().toISOString(),
+          },
+        ]
+      : snapshot.favorites.filter((favorite) => !mine(favorite)),
+  };
+}
+// Hides as hs_set_hidden stores them: a hide makes this member the latest hider, an unhide clears it
+// for everyone.
+function withHides(
+  snapshot: Snapshot,
+  userId: string,
+  listingIds: string[],
+  hidden: boolean,
+): Snapshot {
+  const ids = new Set(listingIds);
+  const hiddenAt = new Date().toISOString();
+  const hides = [
+    ...(snapshot.hides ?? []).filter((hide) => !ids.has(hide.listingId)),
+    ...(hidden
+      ? [...ids].map((listingId) => ({ listingId, userId, hiddenAt }))
+      : []),
+  ];
+  return { ...snapshot, hides: hides.length ? hides : undefined };
+}
+
 export function useHouseholdSession() {
   const [connection] = useState<{
     client: SupabaseClient | null;
@@ -83,6 +127,9 @@ export function useHouseholdSession() {
   // Whose session the load now running was announced for, so an announcement for someone else is not ignored.
   const announced = useRef<string | null>(null);
   const queued = useRef(false);
+  // Snapshot reads in flight. A write may patch the snapshot on screen only when none is, so an
+  // older read cannot land on top of the patch.
+  const reading = useRef(0);
   const forget = useCallback(() => {
     known.current = null;
     latest.current = null;
@@ -156,12 +203,15 @@ export function useHouseholdSession() {
       }
       const selected = householdId.current ?? own[0].householdId;
       householdId.current = selected;
+      reading.current += 1;
       const snapshot = await householdSnapshot(
         client,
         selected,
         data.user.id,
         own,
-      );
+      ).finally(() => {
+        reading.current -= 1;
+      });
       if (mounted.current && ticket === generation.current) {
         known.current = own;
         latest.current = snapshot;
@@ -200,13 +250,16 @@ export function useHouseholdSession() {
       if (!client || signedOut.current) return;
       if (!members || !household || !owner) return;
       const ticket = ++generation.current;
+      reading.current += 1;
       try {
         const snapshot = await householdSnapshot(
           client,
           household,
           owner,
           members,
-        );
+        ).finally(() => {
+          reading.current -= 1;
+        });
         if (!mounted.current || ticket !== generation.current) return;
         latest.current = snapshot;
         setState((previous) =>
@@ -449,16 +502,30 @@ export function useHouseholdSession() {
         householdId.current === household,
     };
   }
+  // A write the snapshot on screen can show by itself skips the full re-read (~1 s for every member's
+  // listings). Server timestamps and other members' changes arrive with the next load.
+  function patched(
+    owner: string,
+    change?: (snapshot: Snapshot, owner: string) => Snapshot,
+  ) {
+    const snapshot = latest.current;
+    if (!change || !snapshot || reading.current > 0) return false;
+    const next = change(snapshot, owner);
+    latest.current = next;
+    setState({ status: 'authenticated', snapshot: next, userId: owner });
+    return true;
+  }
   async function mutate(
     action: (
       activeClient: SupabaseClient,
       activeHouseholdId: string,
     ) => Promise<object>,
+    change?: (snapshot: Snapshot, owner: string) => Snapshot,
   ) {
     const scope = beginActive();
     try {
       await action(scope.client, scope.householdId);
-      if (scope.active()) await reload();
+      if (scope.active() && !patched(scope.userId, change)) await reload();
     } catch (error) {
       if (scope.active())
         fail('The change could not be saved. Reload before trying again.');
@@ -545,7 +612,12 @@ export function useHouseholdSession() {
       if (scope.active()) await reload(true).catch(() => {});
       throw error;
     }
-    if (scope.active()) {
+    if (
+      scope.active() &&
+      !patched(scope.userId, (snapshot, owner) =>
+        withHides(snapshot, owner, listingIds, hidden),
+      )
+    ) {
       try {
         await reload(true);
       } catch {
@@ -608,10 +680,16 @@ export function useHouseholdSession() {
       await refresh();
     },
     onSaveFavorite: (id: string) =>
-      mutate((active, household) => setFavorite(active, household, id, true)),
+      mutate(
+        (active, household) => setFavorite(active, household, id, true),
+        (snapshot, owner) => withFavorite(snapshot, owner, id, true),
+      ),
     onSaveFavorites: saveFavorites,
     onRemoveFavorite: (id: string) =>
-      mutate((active, household) => setFavorite(active, household, id, false)),
+      mutate(
+        (active, household) => setFavorite(active, household, id, false),
+        (snapshot, owner) => withFavorite(snapshot, owner, id, false),
+      ),
     onSetHidden: setPersonalHidden,
     onAddManual: (value: ManualSubmission) =>
       mutate((active, household) => addManual(active, household, value)),

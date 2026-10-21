@@ -39,7 +39,7 @@ The experimental portfolio opens at `/`; Duck Feed remains playable at
 
 ## Shellter browsing
 
-Shellter (code name House Scanner, in `src/features/house-scanner/`) opens at
+Shellter (in `src/features/house-scanner/`) opens at
 `/shellter/listings`. Favorites, viewings, adding links and settings have their
 own routes. Listing titles and photos open `/shellter/listings/:listingId`;
 private details still require household access. Filters, sort order and
