@@ -84,6 +84,9 @@ export interface LiveEvent {
   status?: number;
   count?: number;
   reason?: string;
+  // Set on an oversize stop: the Content-Length the server sent, and the characters received when the body was read.
+  declaredLength?: number;
+  bodyChars?: number;
 }
 
 export interface LiveDeps {
@@ -215,7 +218,13 @@ export async function runCollection(
 
   type Fetched =
     | { ok: true; status: number; body: string }
-    | { ok: false; stop: StopReason; status?: number };
+    | {
+        ok: false;
+        stop: StopReason;
+        status?: number;
+        declaredLength?: number;
+        bodyChars?: number;
+      };
 
   async function request(url: string): Promise<Fetched> {
     if (requestCount >= MAX_REQUESTS_PER_RUN)
@@ -229,6 +238,7 @@ export async function runCollection(
     requestCount += 1;
     let response: Response;
     let body: string;
+    let declaredLength: number | undefined;
     try {
       response = await deps.fetch(url, {
         method: 'GET',
@@ -238,10 +248,16 @@ export async function runCollection(
         cache: 'no-store',
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
-      const declared = Number(response.headers.get('content-length'));
-      if (declared > MAX_BODY_CHARS) {
+      const header = response.headers.get('content-length');
+      declaredLength = header === null ? undefined : Number(header);
+      if (declaredLength !== undefined && declaredLength > MAX_BODY_CHARS) {
         lastFinishedAt = deps.now();
-        return { ok: false, stop: 'oversize', status: response.status };
+        return {
+          ok: false,
+          stop: 'oversize',
+          status: response.status,
+          declaredLength,
+        };
       }
       body = await response.text();
     } catch (error) {
@@ -257,7 +273,13 @@ export async function runCollection(
     if (response.status !== 200)
       return { ok: false, stop: 'http-non-200', status: response.status };
     if (body.length > MAX_BODY_CHARS)
-      return { ok: false, stop: 'oversize', status: 200 };
+      return {
+        ok: false,
+        stop: 'oversize',
+        status: 200,
+        declaredLength,
+        bodyChars: body.length,
+      };
     return { ok: true, status: 200, body };
   }
 
@@ -318,6 +340,8 @@ export async function runCollection(
           partition: partition.id,
           status: fetched.status,
           reason: fetched.stop,
+          declaredLength: fetched.declaredLength,
+          bodyChars: fetched.bodyChars,
         });
         return finish(fetched.stop);
       }
@@ -415,6 +439,8 @@ export async function runCollection(
         event: 'detail-failed',
         status: fetched.status,
         reason: fetched.stop,
+        declaredLength: fetched.declaredLength,
+        bodyChars: fetched.bodyChars,
       });
       if (STOPS_RUN.includes(fetched.stop)) return finish(fetched.stop);
       detailFailed += 1;

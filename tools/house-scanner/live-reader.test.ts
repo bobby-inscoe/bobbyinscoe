@@ -244,6 +244,37 @@ describe('guarded run', () => {
     }
   });
 
+  it('records the declared length and the characters received when a page is oversize', async () => {
+    const robots = boneoFixture('robots.txt');
+    // A declared length over the cap stops before the body is read; otherwise the body itself is measured.
+    const cases: [Response, Partial<LiveEvent>][] = [
+      [
+        new Response('<html></html>', {
+          headers: { 'content-length': '5000000' },
+        }),
+        { declaredLength: 5_000_000 },
+      ],
+      [new Response(' '.repeat(3_000_001)), { bodyChars: 3_000_001 }],
+    ];
+    for (const [page, sizes] of cases) {
+      const events: LiveEvent[] = [];
+      const impl = vi.fn<typeof fetch>(async (input) =>
+        String(input).endsWith('/robots.txt')
+          ? new Response(robots, { headers: { 'content-type': 'text/plain' } })
+          : page,
+      );
+      const result = await runBoneoCollection(goteborg, deps(impl, events));
+      expect(result.stopped).toBe('oversize');
+      expect(events.find((e) => e.event === 'request-stopped')).toEqual({
+        event: 'request-stopped',
+        partition: 'municipality-1',
+        status: 200,
+        reason: 'oversize',
+        ...sizes,
+      });
+    }
+  });
+
   it('treats a page without embedded data as failed coverage, not empty', async () => {
     const { impl } = fakeFetch(
       boneoRobotsOr(() => ({ body: boneoFixture('blocked-page.html') })),
