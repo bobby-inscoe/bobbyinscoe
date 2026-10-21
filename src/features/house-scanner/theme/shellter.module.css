@@ -371,6 +371,10 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+/* The photo runs to the card's edge, so its credit line needs the card's own padding. */
+.cardPhoto .photoAttribution {
+  padding-inline: var(--mantine-spacing-md);
+}
 .photoFrame {
   position: relative;
 }
@@ -448,6 +452,7 @@
   }
   .viewingThumb .photo,
   .viewingThumb .placeholder {
+    width: 100%;
     aspect-ratio: 3 / 2;
     border-radius: 0;
   }
@@ -575,7 +580,7 @@
     width: auto;
     max-height: min(70%, 22rem);
     display: grid;
-    grid-template-columns: 72px minmax(0, 1fr);
+    grid-template-columns: 136px minmax(0, 1fr);
     gap: 4px 8px;
     padding: 8px;
     border-bottom: 0;
@@ -588,10 +593,10 @@
   }
   .pinPhoto .photo,
   .pinPhoto .placeholder {
-    width: 72px;
-    height: 72px;
-    min-height: 72px;
-    aspect-ratio: 1;
+    width: 136px;
+    height: 102px;
+    min-height: 102px;
+    aspect-ratio: 4 / 3;
     padding: 0;
   }
   .pinPhoto .photoAttribution {
@@ -749,11 +754,16 @@
     font-size: 0.625rem;
     overflow-wrap: anywhere;
   }
-  .compactCard .star {
+  .compactCard .star,
+  .compactCard .hide {
     top: 8px;
     right: 8px;
     min-width: 44px;
     min-height: 44px;
+  }
+  /* Left of the 44 px star. */
+  .compactCard .hide {
+    right: 60px;
   }
   .compactCard .cardTitle {
     font-size: var(--mantine-font-size-md);

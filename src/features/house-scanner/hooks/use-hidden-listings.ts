@@ -41,16 +41,21 @@ export function useHiddenListings({
   persist,
   onSetHidden,
 }: UseHiddenListingsOptions) {
+  // Hides the member just asked for, shown at once while the write and the snapshot reload (~1 s) finish.
+  const [optimistic, setOptimistic] = useState<Map<string, boolean>>(new Map());
   // The household's hides; an older database sends only this member's ids.
-  const hidden = useMemo(
-    () =>
-      new Set(
-        snapshot.hides?.map((hide) => hide.listingId) ??
-          snapshot.hiddenListingIds ??
-          [],
-      ),
-    [snapshot.hides, snapshot.hiddenListingIds],
-  );
+  const hidden = useMemo(() => {
+    const ids = new Set(
+      snapshot.hides?.map((hide) => hide.listingId) ??
+        snapshot.hiddenListingIds ??
+        [],
+    );
+    for (const [id, hide] of optimistic) {
+      if (hide) ids.add(id);
+      else ids.delete(id);
+    }
+    return ids;
+  }, [snapshot.hides, snapshot.hiddenListingIds, optimistic]);
   // The session hands out a new action on every render; callers keep stable functions.
   const action = useRef(onSetHidden);
   action.current = onSetHidden;
@@ -86,6 +91,7 @@ export function useHiddenListings({
     setBusy(true);
     setError('');
     setMessage('');
+    setOptimistic(new Map(ids.map((id) => [id, hide])));
     try {
       await action.current(ids, hide);
       if (
@@ -111,7 +117,11 @@ export function useHiddenListings({
       return false;
     } finally {
       writing.current = false;
-      if (mounted.current) setBusy(false);
+      // Success: the reloaded snapshot now says the same. Failure: this reverts the guess.
+      if (mounted.current) {
+        setBusy(false);
+        setOptimistic(new Map());
+      }
     }
   }, []);
   const hide = useCallback(
