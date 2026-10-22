@@ -225,17 +225,25 @@ export function HouseholdWorkspace({
             className={classes.navTab}
             variant={tab === 'viewings' ? 'filled' : 'default'}
             aria-pressed={tab === 'viewings'}
-            leftSection={<CalendarDays size={20} aria-hidden />}
-            rightSection={
-              viewingsSoon > 0 && (
-                <Badge
-                  size="sm"
-                  variant="light"
-                  aria-label={`${viewingsSoon} saved viewings in the next 48 hours`}
-                >
-                  {viewingsSoon}
-                </Badge>
-              )
+            aria-label={
+              viewingsSoon > 0
+                ? `Viewings, ${viewingsSoon} saved viewings in the next 48 hours`
+                : undefined
+            }
+            leftSection={
+              <span className={classes.navIcon}>
+                <CalendarDays size={20} aria-hidden />
+                {viewingsSoon > 0 && (
+                  <Badge
+                    className={classes.navBadge}
+                    size="sm"
+                    variant="light"
+                    aria-hidden
+                  >
+                    {viewingsSoon}
+                  </Badge>
+                )}
+              </span>
             }
             onClick={() => navigation.changeTab('viewings')}
           >

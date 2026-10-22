@@ -209,16 +209,29 @@
   }
   .navTab :global(.mantine-Button-inner) {
     flex-direction: column;
-    gap: 4px;
+    align-items: center;
+    justify-content: center;
+    gap: var(--mantine-spacing-xs);
   }
   .navTab :global(.mantine-Button-section) {
     margin: 0;
-    width: 56px;
-    height: 30px;
+    width: 64px;
+    height: 34px;
     border-radius: var(--mantine-radius-xl);
     display: grid;
     place-items: center;
     transition: background-color 150ms ease-out;
+  }
+  .navIcon {
+    position: relative;
+    display: grid;
+    place-items: center;
+  }
+  .navBadge {
+    position: absolute;
+    top: -7px;
+    right: -13px;
+    pointer-events: none;
   }
   .navTab[data-variant="filled"] {
     color: var(--shellter-teal-strong);
@@ -668,12 +681,21 @@
 /* Keep browse controls together, with the count and view buttons below. */
 .toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: "controls" "filters" "view";
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "controls search" "view view";
+  align-items: end;
   min-width: 0;
 }
 .toolbarControls {
   grid-area: controls;
+}
+.toolbarSortControls {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--mantine-spacing-sm);
+}
+.toolbarSearch {
+  grid-area: search;
 }
 .matchHelp:hover {
   background: transparent;
@@ -684,17 +706,27 @@
 }
 /* On a phone the browse controls form an even grid instead of a ragged row; at large text sizes it falls to one column. */
 @media (max-width: 35.99375em) {
+  .toolbar {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "controls" "search" "view";
+  }
   .toolbarControls {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
-    align-items: end;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
   }
   .toolbar .toolbarControls > * {
-    width: auto;
+    width: 100%;
     min-width: 0;
   }
-  .toolbar .toolbarControls :global(.mantine-Button-root) {
-    width: 100%;
+  .toolbarSortControls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
+  .toolbar .toolbarSortControls > * {
+    width: auto;
+    min-width: 0;
   }
 }
 .toolbarView {
