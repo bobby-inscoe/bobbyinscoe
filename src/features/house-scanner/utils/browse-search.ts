@@ -35,7 +35,7 @@ const urlSchema = z.object({
   filterOpen: flag,
   person: z.string().min(1).max(128).catch('everyone'),
   section: z.enum(sections).catch('all'),
-  from: z.enum(['listings', 'favorites']).catch('listings'),
+  from: z.enum(['listings', 'favorites', 'viewings']).catch('listings'),
   q: z
     .union([z.string(), z.number()])
     .transform(String)
@@ -76,7 +76,7 @@ export interface BrowseSearch {
   person: string;
   section: (typeof sections)[number];
   filters: ListingFilters;
-  from: 'listings' | 'favorites';
+  from: 'listings' | 'favorites' | 'viewings';
 }
 export type BrowseUrlSearch = Partial<
   Record<keyof z.infer<typeof urlSchema>, string | number | boolean | null>
