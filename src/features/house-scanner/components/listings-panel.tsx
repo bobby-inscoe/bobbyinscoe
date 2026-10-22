@@ -509,7 +509,7 @@ export function ListingsPanel({
             wrap="wrap"
             className={classes.toolbarControls}
           >
-            {tab === 'favorites' ? (
+            {tab === 'favorites' && (
               <Select
                 label="Saved by"
                 w={{ base: 140, sm: 200 }}
@@ -524,50 +524,6 @@ export function ListingsPanel({
                   })),
                 ]}
               />
-            ) : (
-              <Stack gap={4} w={{ base: 140, sm: 180 }}>
-                <Group gap={4} wrap="nowrap">
-                  <Text size="sm" fw={500}>
-                    Match
-                  </Text>
-                  <Tooltip
-                    multiline
-                    w={300}
-                    events={{ hover: true, focus: true, touch: true }}
-                    label={
-                      <Stack gap={4}>
-                        {MATCH_CHOICES.map(({ value, label, description }) => (
-                          <Text key={value} size="xs">
-                            {label}: {description}
-                          </Text>
-                        ))}
-                      </Stack>
-                    }
-                  >
-                    <ActionIcon
-                      variant="transparent"
-                      color="gray"
-                      size="sm"
-                      className={classes.matchHelp}
-                      aria-label="What the match options mean"
-                    >
-                      <Info size={16} aria-hidden />
-                    </ActionIcon>
-                  </Tooltip>
-                </Group>
-                <Select
-                  aria-label="Match"
-                  value={section}
-                  onChange={(value) => onSectionChange(value ?? 'all')}
-                  data={[
-                    { value: 'all', label: 'All' },
-                    ...MATCH_CHOICES.map(({ value, label }) => ({
-                      value,
-                      label,
-                    })),
-                  ]}
-                />
-              </Stack>
             )}
             <Select
               label="Sort"
@@ -685,6 +641,55 @@ export function ListingsPanel({
             hosts={filterHosts}
             shown={draftCount}
             total={total}
+            match={
+              tab === 'favorites' ? null : (
+                <Stack gap={4} flex="1 1 15rem">
+                  <Group gap={4} wrap="nowrap">
+                    <Text size="sm" fw={500}>
+                      Match
+                    </Text>
+                    <Tooltip
+                      multiline
+                      w={300}
+                      events={{ hover: true, focus: true, touch: true }}
+                      label={
+                        <Stack gap={4}>
+                          {MATCH_CHOICES.map(
+                            ({ value, label, description }) => (
+                              <Text key={value} size="xs">
+                                {label}: {description}
+                              </Text>
+                            ),
+                          )}
+                        </Stack>
+                      }
+                    >
+                      <ActionIcon
+                        variant="transparent"
+                        color="gray"
+                        size="sm"
+                        className={classes.matchHelp}
+                        aria-label="What the match options mean"
+                      >
+                        <Info size={16} aria-hidden />
+                      </ActionIcon>
+                    </Tooltip>
+                  </Group>
+                  <Select
+                    aria-label="Match"
+                    value={section}
+                    onChange={(value) => onSectionChange(value ?? 'all')}
+                    data={[
+                      { value: 'all', label: 'All' },
+                      ...MATCH_CHOICES.map(({ value, label }) => ({
+                        value,
+                        label,
+                      })),
+                    ]}
+                  />
+                </Stack>
+              )
+            }
             unassignedNeighborhoodCount={
               scoped.filter(
                 (listing) => listingNeighborhoods(listing).length === 0,

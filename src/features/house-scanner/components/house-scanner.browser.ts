@@ -1565,7 +1565,7 @@ test('the Viewings tab lists saved homes with their times and hands over a calen
   });
   await expect(card.getByText(/^Viewing /)).toBeVisible();
 
-  await openSection(page, 'Viewings');
+  await page.getByRole('button', { name: 'Viewings', exact: true }).click();
   await expect(
     page.getByRole('heading', { name: 'Viewings', level: 2 }),
   ).toBeVisible();

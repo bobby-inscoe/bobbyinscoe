@@ -52,6 +52,8 @@ interface ListingFilterPanelProps {
   shown: number;
   total: number;
   unassignedNeighborhoodCount: number;
+  // The Match picker, which the listings tab sets; favorites has none.
+  match?: React.ReactNode;
 }
 
 export function ListingFilterPanel({
@@ -62,6 +64,7 @@ export function ListingFilterPanel({
   shown,
   total,
   unassignedNeighborhoodCount,
+  match,
 }: ListingFilterPanelProps) {
   function price(label: string, key: 'minPriceSek' | 'maxPriceSek') {
     return (
@@ -121,7 +124,16 @@ export function ListingFilterPanel({
   return (
     <Collapse expanded={open} id="listing-filters">
       <Stack gap="sm">
+        <Flex gap="sm" align="center" wrap="wrap">
+          <Text size="sm" role="status">
+            Showing {shown} of {total} homes
+          </Text>
+          <Button variant="default" onClick={() => onChange(emptyFilters)}>
+            Clear filters
+          </Button>
+        </Flex>
         <Flex gap="sm" wrap="wrap">
+          {match}
           {pair(
             'Price (SEK)',
             <>
@@ -271,14 +283,6 @@ export function ListingFilterPanel({
             ))}
           </Flex>
         </Radio.Group>
-        <Flex gap="sm" align="center" wrap="wrap">
-          <Button variant="default" onClick={() => onChange(emptyFilters)}>
-            Clear filters
-          </Button>
-          <Text size="sm" role="status">
-            Showing {shown} of {total} homes
-          </Text>
-        </Flex>
       </Stack>
     </Collapse>
   );
