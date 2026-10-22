@@ -87,8 +87,8 @@ function listingUrl(slug: unknown, origin: string): string | null {
   }
 }
 
-const PHOTO_BASE = `${BONEO_IMAGE_ORIGIN}/target_styles/properties/sizex2/550x366/`;
-const PHOTO_NAME = /^[A-Za-z0-9_-]{1,120}\.(?:webp|jpe?g|png)$/;
+export const BONEO_PHOTO_BASE = `${BONEO_IMAGE_ORIGIN}/target_styles/properties/sizex2/550x366/`;
+export const BONEO_PHOTO_NAME = /^[A-Za-z0-9_-]{1,120}\.(?:webp|jpe?g|png)$/;
 // The daily run refreshes the photo, so a week is ample before the app stops showing it.
 const PHOTO_VALID_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -97,9 +97,9 @@ const PHOTO_VALID_MS = 7 * 24 * 60 * 60 * 1000;
 function photo(item: Rec, observedAt: string) {
   const names = item.property_image_name;
   const name = Array.isArray(names) ? names[0] : null;
-  if (typeof name !== 'string' || !PHOTO_NAME.test(name)) return null;
+  if (typeof name !== 'string' || !BONEO_PHOTO_NAME.test(name)) return null;
   return {
-    url: `${PHOTO_BASE}${name}`,
+    url: `${BONEO_PHOTO_BASE}${name}`,
     attribution: 'Boneo',
     rightsBasis:
       'Shown to the household owner for personal use, loaded from the broker image host and never copied or stored.',
@@ -357,6 +357,8 @@ export type BoneoDetailRead =
       outdoor: Facts['outdoor'];
       glazed: boolean | null;
       groundFloor: boolean | null;
+      photoKeys?: string[];
+      planKey?: string;
     }
   | { kind: 'failed'; reason: PageFailure };
 
@@ -368,8 +370,32 @@ const NEGATION = /\b(?:ej|inte|icke)\s+(?:[^\s.,;!?]+\s+)?$/i;
 const isFlag = (value: unknown) =>
   typeof value === 'boolean' || value === null || value === undefined;
 
+/** File names of up to four photos in page order and the first floor plan. Unsafe names are skipped. */
+function imageKeysOf(images: unknown): {
+  photoKeys?: string[];
+  planKey?: string;
+} {
+  const named = (Array.isArray(images) ? images : []).filter(
+    (image): image is Rec =>
+      isRecord(image) &&
+      typeof image.resize_image === 'string' &&
+      BONEO_PHOTO_NAME.test(image.resize_image),
+  );
+  const photoKeys = named
+    .filter((image) => image.field_image_category === 'Other')
+    .slice(0, 4)
+    .map((image) => String(image.resize_image));
+  const plan = named.find(
+    (image) => image.field_image_category === 'Planlösning',
+  );
+  return {
+    ...(photoKeys.length > 0 ? { photoKeys } : {}),
+    ...(plan ? { planKey: String(plan.resize_image) } : {}),
+  };
+}
+
 /**
- * Reads only balcony, terrace, glazing and the floor number from a listing page. A false or
+ * Reads only balcony, terrace, glazing, the floor number and image file names from a listing page. A false or
  * missing flag is unknown, never "none", because the broker may leave it
  * unticked. The description is matched and dropped, never returned.
  */
@@ -409,6 +435,7 @@ export function parseBoneoDetail(data: unknown): BoneoDetailRead {
             : null,
     glazed: glazed ? true : null,
     groundFloor: groundFloorOf(detail.field_floor),
+    ...imageKeysOf(detail.property_images),
   };
 }
 

@@ -258,11 +258,21 @@ describe('Boneo listing page parser', () => {
     ['a negated glazed balcony', 'detail-not-glazed.html', 'balcony', null],
   ])('reads %s', (_name, file, outdoor, glazed) => {
     // Every fixture page says floor 3.
-    expect(readBoneoDetailPage(fixture(file))).toEqual({
+    expect(readBoneoDetailPage(fixture(file))).toMatchObject({
       kind: 'detail',
       outdoor,
       glazed,
       groundFloor: false,
+    });
+  });
+
+  it('names up to four photos in page order and the first floor plan, skipping an unsafe name', () => {
+    const read = readBoneoDetailPage(fixture('detail-both.html'));
+    expect(read).toMatchObject({
+      photoKeys: ['A', 'B', 'C', 'D'].map(
+        (n) => `9000001-img-FIXTURE${n}.webp`,
+      ),
+      planKey: '9000001-img-FIXTUREPLAN1.webp',
     });
   });
 
