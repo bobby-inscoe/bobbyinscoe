@@ -326,6 +326,52 @@ function viewingsFrom(html: string, now: Date) {
   );
 }
 
+/** An image's place under the site's resizer, as the adapter rebuilds its address. */
+export const BJURFORS_IMAGE_KEY =
+  /^\/contentassets\/[0-9a-f]{32}\/[A-Za-z0-9_-]{1,80}\.jpg(?:\?v=\d{1,20})?$/;
+const RESIZED = /^\/cdn-cgi\/image\/[a-z0-9=,-]{1,120}(\/contentassets\/.*)$/;
+
+/**
+ * Up to four home photos and the first floor plan from the gallery JSON. The home's photos, its plan, the agent
+ * portrait and the area pictures all sit in one /contentassets/ folder, so the folder does not tell them apart.
+ * The home's photos come first and carry no caption; the portrait and most area pictures that follow do, so the
+ * photos are the run before the first captioned image.
+ */
+function imageKeysOf(html: string): Pick<DetailFacts, 'photoKeys' | 'planKey'> {
+  const match = /\bdata-modaldata=(?:'([^']*)'|"([^"]*)")/.exec(html);
+  let data: unknown;
+  try {
+    data = match ? JSON.parse(decode(match[1] ?? match[2])) : undefined;
+  } catch {
+    return {};
+  }
+  if (!isRecord(data)) return {};
+  const images = Array.isArray(data.allImages) ? data.allImages : [];
+  const end = images.findIndex(
+    (image) => !isRecord(image) || (image.caption ?? '') !== '',
+  );
+  const photoKeys = images
+    .slice(0, end < 0 ? images.length : end)
+    .map((image) => {
+      const full = isRecord(image.urls) ? image.urls.Full : undefined;
+      return typeof full === 'string' ? RESIZED.exec(full)?.[1] : undefined;
+    })
+    .filter(
+      (key): key is string => key !== undefined && BJURFORS_IMAGE_KEY.test(key),
+    )
+    .slice(0, 4);
+  const plan = (Array.isArray(data.floorPlans) ? data.floorPlans : [])
+    .map((entry) => (isRecord(entry) ? entry.originalUrl : undefined))
+    .find(
+      (key): key is string =>
+        typeof key === 'string' && BJURFORS_IMAGE_KEY.test(key),
+    );
+  return {
+    ...(photoKeys.length > 0 ? { photoKeys } : {}),
+    ...(plan ? { planKey: plan } : {}),
+  };
+}
+
 /**
  * Listing page: facts from the RealEstateListing JSON and the definition
  * lists. A missing or non-numeric value is unknown, never zero, and an absent
@@ -395,6 +441,7 @@ export function readBjurforsDetailPage(
       100,
     ),
     ...(hasPoint ? { latitude, longitude } : {}),
+    ...imageKeysOf(html),
   };
   const viewings = viewingsFrom(html, now);
   if (viewings) facts.viewings = viewings;
