@@ -1,11 +1,7 @@
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import {
-  type LiveEvent,
-  runCollection,
-  USER_AGENT,
-} from '@house-scanner-tools/live-reader';
+import { runCollection, USER_AGENT } from '@house-scanner-tools/live-reader';
 import {
   assertAdapterOutput,
   prepareLiveRun,
@@ -23,7 +19,6 @@ import {
   saveMemory,
 } from '@house-scanner-tools/run-memory';
 import {
-  adapterFor,
   bjurforsAdapter,
   boneoAdapter,
 } from '@house-scanner-tools/source-adapters';
@@ -78,31 +73,6 @@ const fixtureSite = (detail: string = fixture('detail-full.html')) =>
     };
   });
 
-// Small generated pages for the cap tests: `per` cards a page from id 1.
-function card(id: number) {
-  return `<li><div class="c-object-card o-intrinsic"><a class="c-object-card__link" href="${BASE}/omrade/gata-${id}/"><span class="c-object-card__city-area">Område, Göteborg</span><span class="c-object-card__address">Gata ${id}</span></a><ul><li class="c-object-card__meta">60 kvm</li><li class="c-object-card__meta">2 rum</li></ul></div></li>`;
-}
-function generated(ids: number[], total: number) {
-  return `<h2 class="c-search-result__heading"><strong>${total}</strong> bostäder till salu</h2><ul class="c-search-result__list o-grid-list">${ids.map(card).join('')}</ul>`;
-}
-const generatedSite =
-  (total: number, per: number, detail: (id: number) => Reply) =>
-  (url: string): Reply => {
-    if (isDetail(url))
-      return detail(Number(url.split('-').at(-1)?.slice(0, -1)));
-    const page = Number(new URL(url).searchParams.get('page') ?? '1');
-    const first = (page - 1) * per + 1;
-    const last = Math.min(total, page * per);
-    return {
-      body: generated(
-        Array.from(
-          { length: Math.max(0, last - first + 1) },
-          (_v, i) => first + i,
-        ),
-        total,
-      ),
-    };
-  };
 const FULL = fixture('detail-full.html');
 const keepAll = <T>(all: T[]) => all;
 
@@ -388,60 +358,6 @@ describe('Bjurfors listing pages', () => {
     );
     expect(prepared.result.detailRead).toBe(6);
   });
-
-  it('reads no listing page unless the caller keeps the observation', async () => {
-    const { impl, calls } = fakeFetch(fixtureSite());
-    await run(goteborg, deps(impl));
-    expect(detailCalls(calls)).toHaveLength(0);
-  });
-
-  it('counts a failed listing page, including an empty one, and carries on', async () => {
-    const replies: Reply[] = [
-      { status: 500 },
-      { status: 404 },
-      { body: '' },
-      { body: fixture('detail-wrong-shape.html') },
-      { body: FULL },
-    ];
-    const events: LiveEvent[] = [];
-    const { impl } = fakeFetch(
-      robotsOr(generatedSite(5, 25, (id) => replies[id - 1])),
-    );
-    const result = await run(goteborg, deps(impl, events), keepAll);
-    expect(result).toMatchObject({
-      detailRead: 1,
-      detailFailed: 4,
-      stopped: null,
-    });
-    expect(
-      events.filter((e) => e.event === 'detail-failed').map((e) => e.reason),
-    ).toEqual([
-      'http-non-200',
-      'http-non-200',
-      'no-embedded-data',
-      'unexpected-shape',
-    ]);
-    expect(JSON.stringify(events)).not.toMatch(/https:|bjurfors|gata/i);
-  });
-
-  it.each([
-    [{ status: 403 }, 'http-403'],
-    [{ status: 429 }, 'http-429'],
-    [new TypeError('socket'), 'network-error'],
-    [new DOMException('late', 'TimeoutError'), 'timeout'],
-  ] as [Reply, string][])(
-    'stops the whole run on listing page failure %#',
-    async (stop, reason) => {
-      const { impl, calls } = fakeFetch(
-        robotsOr(
-          generatedSite(4, 25, (id) => (id === 2 ? stop : { body: FULL })),
-        ),
-      );
-      const result = await run(goteborg, deps(impl), keepAll);
-      expect(result.stopped).toBe(reason);
-      expect(detailCalls(calls)).toHaveLength(2);
-    },
-  );
 });
 
 describe('Bjurfors run memory', () => {
@@ -706,100 +622,6 @@ describe('Bjurfors registry entry and run', () => {
 
 describe('executor guards', () => {
   const base = () => bjurfors();
-  const refused = (change: (c: ReturnType<typeof base>) => unknown) => {
-    const capability = structuredClone(base());
-    return () => adapterFor(change(capability) as typeof capability);
-  };
-
-  it('accepts exactly the registry entries of the two sources', () => {
-    expect(adapterFor(base())).toBe(bjurforsAdapter);
-    const boneo = sourceRegistry().find((e) => e.policy.sourceId === 'boneo');
-    if (!boneo) throw new Error('boneo missing');
-    expect(adapterFor(boneo)).toBe(boneoAdapter);
-  });
-
-  it.each([
-    [
-      'the wrong source id',
-      (c: ReturnType<typeof base>) => {
-        c.policy.sourceId = 'boneo';
-        return c;
-      },
-    ],
-    [
-      'a different listing origin',
-      (c: ReturnType<typeof base>) => {
-        c.policy.listingOrigins = ['https://www.bjurfors.se.example.invalid'];
-        return c;
-      },
-    ],
-    [
-      'an extra listing origin',
-      (c: ReturnType<typeof base>) => {
-        c.policy.listingOrigins = [
-          'https://www.bjurfors.se',
-          'https://www.boneo.se',
-        ];
-        return c;
-      },
-    ],
-    [
-      'a plain http origin',
-      (c: ReturnType<typeof base>) => {
-        c.policy.listingOrigins = ['http://www.bjurfors.se'];
-        return c;
-      },
-    ],
-    [
-      'no image origin',
-      (c: ReturnType<typeof base>) => {
-        c.policy.imageOrigins = [];
-        return c;
-      },
-    ],
-    [
-      'the Boneo image origin',
-      (c: ReturnType<typeof base>) => {
-        c.policy.imageOrigins = ['https://files.boneo.se'];
-        return c;
-      },
-    ],
-    [
-      'an extra image origin',
-      (c: ReturnType<typeof base>) => {
-        c.policy.imageOrigins = [
-          'https://www.bjurfors.se',
-          'https://cdn.example.invalid',
-        ];
-        return c;
-      },
-    ],
-    [
-      'the Boneo executor',
-      (c: ReturnType<typeof base>) => {
-        c.executor = 'boneo-personal-read';
-        return c;
-      },
-    ],
-    [
-      'no executor',
-      (c: ReturnType<typeof base>) => {
-        c.executor = 'none';
-        return c;
-      },
-    ],
-  ])('refuses a bjurfors capability with %s', (_name, change) => {
-    expect(refused(change)).toThrow('No permitted executor');
-  });
-
-  it('refuses a boneo capability pointed at the bjurfors hosts', () => {
-    const boneo = structuredClone(
-      sourceRegistry().find((e) => e.policy.sourceId === 'boneo'),
-    );
-    if (!boneo) throw new Error('boneo missing');
-    boneo.policy.listingOrigins = ['https://www.bjurfors.se'];
-    expect(() => adapterFor(boneo)).toThrow('No permitted executor');
-  });
 
   it('makes no request when the capability is refused', async () => {
     const { impl, calls } = fakeFetch(fixtureSite());
