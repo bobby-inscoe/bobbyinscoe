@@ -35,7 +35,7 @@ async function create(paths: string[]) {
     })();
     prefixes.set(key, master);
   }
-  return (await master).clone();
+  return (await (await master).clone()) as PGlite;
 }
 
 // Everything about the objects the migration touches, as text.

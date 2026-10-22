@@ -181,7 +181,7 @@ async function clonedPrefix(key: string, include: (name: string) => boolean) {
     })();
     prefixes.set(key, master);
   }
-  return (await master).clone();
+  return (await (await master).clone()) as PGlite;
 }
 
 afterAll(async () => {
