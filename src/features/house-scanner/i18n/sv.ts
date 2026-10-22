@@ -186,6 +186,7 @@ export const sv = {
       conflictingFields: 'Motstridiga uppgifter: {value0}',
       viewings: 'Visningar',
       photos: 'Bilder',
+      floorPlan: 'Planritning',
       buildingAndOutdoor: 'Byggnad och uteplats',
       floor: 'Våning',
       lift: 'Hiss',

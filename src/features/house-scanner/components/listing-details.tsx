@@ -282,6 +282,28 @@ export function ListingDetails({
             </Group>
           </Section>
         )}
+        {listing.floorPlan && (
+          <Section
+            title={intl.formatMessage({ id: 'listings.details.floorPlan' })}
+            order={sectionOrder}
+          >
+            <a
+              href={listing.sourceUrls[0]}
+              target="_blank"
+              rel="noopener noreferrer"
+              referrerPolicy="no-referrer"
+            >
+              <img
+                src={listing.floorPlan.url}
+                alt={intl.formatMessage({ id: 'listings.details.floorPlan' })}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                width={480}
+                style={{ maxWidth: '100%', height: 'auto' }}
+              />
+            </a>
+          </Section>
+        )}
         <Section
           title={intl.formatMessage({
             id: 'listings.details.buildingAndOutdoor',
