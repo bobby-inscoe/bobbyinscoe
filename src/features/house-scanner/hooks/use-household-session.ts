@@ -24,6 +24,7 @@ import {
   saveProfile,
   sendInvitation,
   setFavorite,
+  setFavorites,
   setHidden,
   setRememberDevice,
   updateManual,
@@ -89,6 +90,34 @@ function withHides(
       : []),
   ];
   return { ...snapshot, hides: hides.length ? hides : undefined };
+}
+
+// The member's note as hs_save_note stores it: one per member and listing, at the revision the server returned.
+function withNote(
+  snapshot: Snapshot,
+  userId: string,
+  listingId: string,
+  body: string,
+  revision: number,
+): Snapshot {
+  const note = {
+    listingId,
+    userId,
+    body,
+    revision,
+    editedAt: new Date().toISOString(),
+  };
+  const notes = snapshot.notes ?? [];
+  const mine = notes.findIndex(
+    (entry) => entry.listingId === listingId && entry.userId === userId,
+  );
+  return {
+    ...snapshot,
+    notes:
+      mine < 0
+        ? [...notes, note]
+        : notes.map((entry, index) => (index === mine ? note : entry)),
+  };
 }
 
 export function useHouseholdSession() {
@@ -552,8 +581,19 @@ export function useHouseholdSession() {
         body,
         revision,
       );
-      // The snapshot carries the saved note, so the editor reads it from there.
-      if (scope.active()) await reload(true);
+      // The snapshot carries the saved note, so the editor reads it from there. A note with text can only
+      // keep its home on screen, so it is written into the snapshot; clearing one may take the home away,
+      // so that re-reads.
+      if (
+        scope.active() &&
+        !(
+          /\S/.test(body) &&
+          patched(scope.userId, (snapshot, owner) =>
+            withNote(snapshot, owner, listingId, body, saved.revision),
+          )
+        )
+      )
+        await reload(true);
       return scope.active() ? saved.revision : null;
     } catch (error) {
       // A conflict means someone else's version is newer; bring it in before the editor offers a choice.
@@ -577,20 +617,18 @@ export function useHouseholdSession() {
         .map((favorite) => favorite.listingId),
     );
     const pending = ids.filter((id) => !existing.has(id));
-    let saved = 0;
-    try {
-      for (const listingId of pending) {
-        if (!scope.active()) throw new Error('Your session changed.');
-        await setFavorite(scope.client, scope.householdId, listingId, true);
-        saved += 1;
-        if (!scope.active()) throw new Error('Your session changed.');
+    // One request saves the batch or none of it.
+    if (pending.length)
+      try {
+        await setFavorites(scope.client, scope.householdId, pending, true);
+      } catch {
+        if (scope.active()) await reload(true).catch(() => {});
+        throw new Error(
+          scope.active()
+            ? `The ${pending.length} new favorites could not be saved. Retry to save them.`
+            : 'Your session changed; saving stopped.',
+        );
       }
-    } catch {
-      if (scope.active()) await reload(true).catch(() => {});
-      throw new Error(
-        `Saved ${saved} of ${pending.length} new favorites. ${scope.active() ? 'The next save could not be confirmed. Retry to finish saving.' : 'Your session changed; saving stopped.'}`,
-      );
-    }
     if (!scope.active())
       throw new Error('Your session changed; saving stopped.');
     // One snapshot refresh for the batch keeps server timestamps and concurrent changes authoritative.
@@ -598,7 +636,7 @@ export function useHouseholdSession() {
       await reload(true);
     } catch {
       throw new Error(
-        `Saved ${saved} new favorites, but the updated list could not load. Reload before retrying.`,
+        `Saved ${pending.length} new favorites, but the updated list could not load. Reload before retrying.`,
       );
     }
     if (!scope.active()) throw new Error('Your session changed.');

@@ -2,6 +2,10 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 
 import {
+  expandSnapshot,
+  snapshotV2Schema,
+} from '@/features/house-scanner/api/snapshot-v2';
+import {
   type ManualEdit,
   type ManualSubmission,
   type Member,
@@ -145,6 +149,31 @@ async function rpc<T>(
 export function memberships(client: SupabaseClient) {
   return rpc(client, 'hs_memberships', {}, z.array(memberSchema).max(10));
 }
+// The household snapshot from the read model (hs_household_snapshot), expanded to the shape the app uses.
+// shortcut: a database without it, or a response the adapter cannot read, falls back to the previous snapshot;
+// remove the fallback with the old snapshot functions (spec house-scanner-data-foundation, S7).
+async function readSnapshot(client: SupabaseClient, householdId: string) {
+  const { data, error } = await client.rpc('hs_household_snapshot', {
+    p_household_id: householdId,
+  });
+  if (!error) {
+    const parsed = snapshotV2Schema.safeParse(data);
+    if (parsed.success)
+      try {
+        return expandSnapshot(parsed.data);
+      } catch {
+        // Read the previous snapshot instead.
+      }
+  } else if (!['PGRST202', '42883'].includes(error.code))
+    throw new Error('The household request failed. Reload and try again.');
+  return rpc(
+    client,
+    'hs_snapshot_neighborhoods',
+    { p_household_id: householdId },
+    snapshotSchema,
+    'hs_snapshot',
+  );
+}
 export async function householdSnapshot(
   client: SupabaseClient,
   householdId: string,
@@ -157,13 +186,7 @@ export async function householdSnapshot(
     !current.some((m) => m.householdId === householdId && m.userId === userId)
   )
     throw new Error('Your household access is no longer active.');
-  const snapshot = await rpc(
-    client,
-    'hs_snapshot_neighborhoods',
-    { p_household_id: householdId },
-    snapshotSchema,
-    'hs_snapshot',
-  );
+  const snapshot = await readSnapshot(client, householdId);
   const memberIds = new Set(snapshot.members.map((member) => member.userId));
   const listingIds = new Set(snapshot.listings.map((listing) => listing.id));
   if (
@@ -208,6 +231,24 @@ export function setFavorite(
     {
       p_household_id: z.uuid().parse(householdId),
       p_listing_id: z.uuid().parse(listingId),
+      p_saved: saved,
+    },
+    okSchema,
+  );
+}
+// Saves or removes up to 500 of the member's favorites in one request; one unavailable listing refuses all of them.
+export function setFavorites(
+  client: SupabaseClient,
+  householdId: string,
+  listingIds: string[],
+  saved: boolean,
+) {
+  return rpc(
+    client,
+    'hs_set_favorites',
+    {
+      p_household_id: z.uuid().parse(householdId),
+      p_listing_ids: z.array(z.uuid()).min(1).max(500).parse(listingIds),
       p_saved: saved,
     },
     okSchema,

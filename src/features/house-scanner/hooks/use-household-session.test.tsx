@@ -438,7 +438,7 @@ describe('House Scanner session privacy', () => {
       oldSelection = hook.result.current.selectHousehold(first.householdId);
     });
     await waitFor(() =>
-      expect(sdk.rpc).toHaveBeenCalledWith('hs_snapshot_neighborhoods', {
+      expect(sdk.rpc).toHaveBeenCalledWith('hs_household_snapshot', {
         p_household_id: first.householdId,
       }),
     );

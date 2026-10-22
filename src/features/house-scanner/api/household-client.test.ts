@@ -12,6 +12,7 @@ import {
   saveNote,
   saveProfile,
   setFavorite,
+  setFavorites,
   setHidden,
   setRememberDevice,
   updateManual,
@@ -20,6 +21,7 @@ import {
   AUTH_KEY,
   fixtureSnapshot,
   HOUSEHOLD_ID,
+  missing,
   OTHER_HOUSEHOLD_ID,
   OTHER_USER_ID,
   reply,
@@ -148,6 +150,7 @@ describe('House Scanner RPC boundaries', () => {
   });
   it('falls back only when the neighborhood endpoint is not installed', async () => {
     sdk.rpc.mockResolvedValueOnce(reply(fixtureSnapshot().members));
+    sdk.rpc.mockResolvedValueOnce(missing());
     sdk.rpc.mockResolvedValueOnce({
       data: null,
       error: { code: 'PGRST202', message: 'Function missing' },
@@ -159,6 +162,82 @@ describe('House Scanner RPC boundaries', () => {
     expect(sdk.rpc).toHaveBeenLastCalledWith('hs_snapshot', {
       p_household_id: HOUSEHOLD_ID,
     });
+  });
+  // A v2 snapshot with one source home, as hs_household_snapshot sends it.
+  const v2Snapshot = () => {
+    const member = fixtureSnapshot().members.find(
+      (entry) => entry.userId === USER_ID,
+    );
+    return {
+      contractVersion: 2,
+      householdId: HOUSEHOLD_ID,
+      edition: null,
+      members: [
+        { userId: USER_ID, displayName: member?.displayName, role: 'owner' },
+      ],
+      profiles: [],
+      sources: {},
+      neighborhoods: {},
+      listings: [
+        {
+          id: '30000000-0000-4000-8000-000000000001',
+          sourceId: 'alpha',
+          title: 'Read model home',
+          url: 'https://example.invalid/home',
+          facts: { rooms: 2 },
+          observedAt: '2026-10-22T10:00:00+00:00',
+          lastCheckedAt: '2026-10-22T10:00:00+00:00',
+        },
+      ],
+      favorites: [],
+      hides: [],
+      notes: [],
+    };
+  };
+  it('reads the household snapshot from the read model when it is installed', async () => {
+    sdk.rpc
+      .mockResolvedValueOnce(reply([fixtureSnapshot().members[0]]))
+      .mockResolvedValueOnce(reply(v2Snapshot()));
+    const snapshot = await householdSnapshot(client(), HOUSEHOLD_ID, USER_ID);
+    expect(snapshot.listings).toEqual([
+      expect.objectContaining({
+        householdId: HOUSEHOLD_ID,
+        origin: 'source',
+        title: 'Read model home',
+        sourceUrls: ['https://example.invalid/home'],
+      }),
+    ]);
+    expect(sdk.rpc.mock.calls.map(([name]) => name)).toEqual([
+      'hs_memberships',
+      'hs_household_snapshot',
+    ]);
+  });
+  it('reads the previous snapshot when the read model sends a response the client cannot read', async () => {
+    sdk.rpc
+      .mockResolvedValueOnce(reply([fixtureSnapshot().members[0]]))
+      .mockResolvedValueOnce(reply({ ...v2Snapshot(), contractVersion: 3 }))
+      .mockResolvedValueOnce(reply(fixtureSnapshot()));
+    await expect(
+      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
+    ).resolves.toEqual(fixtureSnapshot());
+    expect(sdk.rpc.mock.calls.map(([name]) => name)).toEqual([
+      'hs_memberships',
+      'hs_household_snapshot',
+      'hs_snapshot_neighborhoods',
+    ]);
+  });
+  it('saves favorites in one request of at most 500 listings', async () => {
+    const [first, second] = fixtureSnapshot().listings;
+    await setFavorites(client(), HOUSEHOLD_ID, [first.id, second.id], true);
+    expect(sdk.rpc).toHaveBeenLastCalledWith('hs_set_favorites', {
+      p_household_id: HOUSEHOLD_ID,
+      p_listing_ids: [first.id, second.id],
+      p_saved: true,
+    });
+    expect(() =>
+      setFavorites(client(), HOUSEHOLD_ID, Array(501).fill(first.id), true),
+    ).toThrow();
+    expect(() => setFavorites(client(), HOUSEHOLD_ID, [], true)).toThrow();
   });
   it('does not mask authorization failures with a fallback request', async () => {
     sdk.rpc.mockResolvedValueOnce(reply(fixtureSnapshot().members));
@@ -304,6 +383,7 @@ describe('House Scanner RPC boundaries', () => {
       change(snapshot);
       sdk.rpc
         .mockResolvedValueOnce(reply([fixtureSnapshot().members[0]]))
+        .mockResolvedValueOnce(missing())
         .mockResolvedValueOnce(reply(snapshot));
       await expect(
         householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
@@ -318,6 +398,7 @@ describe('House Scanner RPC boundaries', () => {
   ])('rejects unsupported snapshot responses %#', async (data) => {
     sdk.rpc
       .mockResolvedValueOnce(reply([fixtureSnapshot().members[0]]))
+      .mockResolvedValueOnce(missing())
       .mockResolvedValueOnce(reply(data));
     await expect(
       householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
@@ -394,6 +475,7 @@ describe('House Scanner RPC boundaries', () => {
     ];
     sdk.rpc
       .mockResolvedValueOnce(reply([snapshot.members[0]]))
+      .mockResolvedValueOnce(missing())
       .mockResolvedValueOnce(reply(snapshot));
     await expect(
       householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
@@ -404,6 +486,7 @@ describe('House Scanner RPC boundaries', () => {
     snapshot.hiddenListingIds = [snapshot.listings[0].id];
     sdk.rpc
       .mockResolvedValueOnce(reply([snapshot.members[0]]))
+      .mockResolvedValueOnce(missing())
       .mockResolvedValueOnce(reply(snapshot));
     await expect(
       householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
