@@ -1124,21 +1124,103 @@ describe('candidates filtered by household criteria', () => {
     expect(await both()).toEqual(fast);
   });
 
-  // The delisting rollback above re-applied the row-by-row trigger; applying the set-based publish again puts the
-  // current one back for the delisting tests below.
-  it('rolls back the set-based publish, publishes with the old function, and applies it again', async () => {
+  // The delisting rollback above re-applied the row-by-row trigger; applying the set-based publish and the listing
+  // history again puts the current ones back for the delisting tests below.
+  it('rolls back the listing history and set-based publish, publishes with the old functions, and applies them again', async () => {
     const setBased = '20261021201851_house_scanner_set_based_publish';
-    await db.exec(
-      await readFile(
-        new URL(`../rollbacks/${setBased}_down.sql`, import.meta.url),
-        'utf8',
-      ),
-    );
+    const history = '20261022065048_house_scanner_listing_history';
+    const down = async (name: string) =>
+      db.exec(
+        await readFile(
+          new URL(`../rollbacks/${name}_down.sql`, import.meta.url),
+          'utf8',
+        ),
+      );
+    await down(history);
+    await down(setBased);
     await publish(
       [home('after-rollback', { observedAt: new Date().toISOString() })],
       { source: 'beta' },
     );
     await db.exec(await migration(`${setBased}.sql`));
+    // Full copies for the backfill: a price drop and a sale, each followed by a cosmetic edit.
+    const now = () => new Date().toISOString();
+    const facts = home('x').facts;
+    await publish(
+      [
+        home('history-price', { observedAt: now() }),
+        home('history-sold', { observedAt: now() }),
+      ],
+      { source: 'beta' },
+    );
+    for (const renamed of [false, true])
+      await publish(
+        [
+          home('history-price', {
+            observedAt: now(),
+            facts: { ...facts, askingPriceSek: 2_400_000 },
+            ...(renamed ? { title: 'price renamed' } : {}),
+          }),
+          home('history-sold', {
+            observedAt: now(),
+            facts: { ...facts, status: 'sold' },
+            ...(renamed ? { title: 'sold renamed' } : {}),
+          }),
+        ],
+        { source: 'beta' },
+      );
+    const snapshots = async () => [
+      await snapshot(HOUSE_A, OWNER_A),
+      await snapshot(HOUSE_B, OWNER_B),
+    ];
+    const before = await snapshots();
+    await db.exec(await migration(`${history}.sql`));
+    const after = await snapshots();
+    const withoutChangeDates = (state: z.infer<typeof snapshotSchema>) => ({
+      ...state,
+      listings: state.listings.map(
+        ({ lastChangedAt: _lastChangedAt, ...rest }) => rest,
+      ),
+    });
+    expect(after.map(withoutChangeDates)).toEqual(
+      before.map(withoutChangeDates),
+    );
+    const changeDate = (states: typeof before, title: string) =>
+      states[1].listings.find((item) => item.title === title)?.lastChangedAt;
+    expect(changeDate(before, 'price renamed')).toEqual(expect.any(String));
+    expect(changeDate(after, 'price renamed')).not.toEqual(
+      changeDate(before, 'price renamed'),
+    );
+    expect(changeDate(after, 'brand-new')).toEqual(
+      changeDate(before, 'brand-new'),
+    );
+    // The backfill matches the tracked differences between consecutive copies, worked out here from the copies.
+    const copies = await db.query<{
+      listing_id: string;
+      run_id: string;
+      value: Observation;
+    }>(
+      'select listing_id,run_id,value from hs.observations order by listing_id,received_at,id',
+    );
+    const expected = copies.rows.flatMap((row, index) => {
+      const prior = copies.rows[index - 1];
+      if (prior?.listing_id !== row.listing_id) return [];
+      return (['askingPriceSek', 'status'] as const)
+        .filter((field) => prior.value.facts[field] !== row.value.facts[field])
+        .map((field) => ({
+          listing_id: row.listing_id,
+          run_id: row.run_id,
+          observed_at: new Date(row.value.observedAt),
+          field,
+          old_value: prior.value.facts[field],
+          new_value: row.value.facts[field],
+        }));
+    });
+    const backfilled = await db.query(
+      'select listing_id,run_id,observed_at,field,old_value,new_value from hs.listing_changes order by id',
+    );
+    expect(expected.length).toBeGreaterThanOrEqual(2);
+    expect(backfilled.rows).toEqual(expected);
     const rows = await db.query<{ closed: number; unhashed: number }>(
       `select (select count(*)::int from hs.staged_observations o join hs.runs r on r.id=o.run_id where r.state<>'staging') closed,
         (select count(*)::int from hs.listings where content_hash is null) unhashed`,
@@ -1242,6 +1324,10 @@ describe('set-based publish', () => {
     '../rollbacks/20261021201851_house_scanner_set_based_publish_down.sql',
     import.meta.url,
   );
+  const HISTORY_DOWN = new URL(
+    '../rollbacks/20261022065048_house_scanner_listing_history_down.sql',
+    import.meta.url,
+  );
   const at = (hours: number) => new Date(baseTime + hours * HOUR).toISOString();
   const place = (longitude: number, observedAt: string) => ({
     longitude,
@@ -1253,10 +1339,13 @@ describe('set-based publish', () => {
   const priced = (id: string, askingPriceSek: number, observedAt: string) =>
     home(id, { observedAt, facts: { ...home(id).facts, askingPriceSek } });
 
-  // One source and credential on the current schema, or with the set-based publish rolled back.
-  async function catalog(rowByRow: boolean) {
+  // One source and credential on the current schema, or with the listing history and set-based publish rolled back.
+  async function catalog(publish: 'rowByRow' | 'setBased' | 'current') {
     const database = await freshDatabase('all');
-    if (rowByRow) await database.exec(await readFile(SET_BASED_DOWN, 'utf8'));
+    if (publish !== 'current')
+      await database.exec(await readFile(HISTORY_DOWN, 'utf8'));
+    if (publish === 'rowByRow')
+      await database.exec(await readFile(SET_BASED_DOWN, 'utf8'));
     await database.query(
       'insert into hs.source_policies(source_id,policy) values($1,$2::jsonb)',
       ['alpha', JSON.stringify(policy('alpha'))],
@@ -1329,8 +1418,8 @@ describe('set-based publish', () => {
         }),
     ];
     const results = [];
-    for (const rowByRow of [true, false]) {
-      const database = await catalog(rowByRow);
+    for (const mode of ['rowByRow', 'setBased'] as const) {
+      const database = await catalog(mode);
       try {
         const states = [];
         for (const step of steps) {
@@ -1358,8 +1447,8 @@ describe('set-based publish', () => {
     expect(row(last, 'never')).toBeUndefined();
   });
 
-  it('refreshes an unchanged home without history and looks up the neighborhood only when it moves', async () => {
-    const database = await catalog(false);
+  it('refreshes an unchanged home without a change row and looks up the neighborhood only when it moves', async () => {
+    const database = await catalog('current');
     try {
       await database.exec(`create table hs.lookups(listing text);
         create or replace function hs.assign_neighborhood() returns trigger language plpgsql set search_path=pg_catalog,hs as $$
@@ -1381,11 +1470,11 @@ describe('set-based publish', () => {
         (
           await database.query<{
             revision: number;
-            history: number;
+            changes: number;
             observed: string;
             viewing: string;
           }>(
-            `select revision,(select count(*)::int from hs.observations o where o.listing_id=l.id) history,
+            `select revision,(select count(*)::int from hs.listing_changes c where c.listing_id=l.id) changes,
               value->>'observedAt' observed,value->'viewings'->0->>'startsAt' viewing
              from hs.listings l where source_listing_id='steady'`,
           )
@@ -1414,7 +1503,7 @@ describe('set-based publish', () => {
       expect(await lookups()).toEqual([]);
       expect(await stored()).toEqual({
         revision: 1,
-        history: 1,
+        changes: 0,
         observed: at(1),
         viewing: at(72),
       });
@@ -1423,14 +1512,15 @@ describe('set-based publish', () => {
         { database },
       );
       expect(await lookups()).toEqual(['steady']);
-      expect(await stored()).toMatchObject({ revision: 2, history: 2 });
+      // A move is not a tracked change.
+      expect(await stored()).toMatchObject({ revision: 1, changes: 0 });
     } finally {
       await database.close();
     }
   });
 
   it('keeps staged rows only until their run closes, and closes runs abandoned for a day', async () => {
-    const database = await catalog(false);
+    const database = await catalog('current');
     try {
       const staged = async () =>
         (
@@ -1481,22 +1571,24 @@ describe('set-based publish', () => {
     }
   });
 
-  it('refuses a different observation for a time already published, and a home staged twice', async () => {
-    const database = await catalog(false);
+  it('refuses a different observation for the listing time, ignores an older one, and refuses a home staged twice', async () => {
+    const database = await catalog('current');
     try {
       await publish([home('fixed', { observedAt: at(0) })], { database });
-      // An unchanged refresh moves the listing to a time that has no history row.
       await publish([home('fixed', { observedAt: at(1) })], { database });
       await expect(
         publish([home('fixed', { observedAt: at(1), title: 'changed' })], {
           database,
         }),
       ).rejects.toThrow('Conflicting same-time observation across runs');
-      await expect(
-        publish([home('fixed', { observedAt: at(0), title: 'other' })], {
-          database,
-        }),
-      ).rejects.toThrow('Conflicting historical same-time observation');
+      // Without full copies there is no history to compare an older time with; publish skips it as before.
+      await publish([home('fixed', { observedAt: at(0), title: 'other' })], {
+        database,
+      });
+      const kept = await database.query<{ title: string }>(
+        "select value->>'title' title from hs.listings where source_listing_id='fixed'",
+      );
+      expect(kept.rows).toEqual([{ title: 'fixed' }]);
       await expect(
         publish(
           [
@@ -1509,6 +1601,170 @@ describe('set-based publish', () => {
     } finally {
       await database.close();
     }
+  });
+
+  it('records asking price, status and delisting changes, and otherwise publishes as the set-based publish did', async () => {
+    const seen = ['steady', 'cheaper', 'selling', 'touched'];
+    const sold = home('selling', {
+      observedAt: at(1),
+      facts: { ...home('selling').facts, status: 'sold' },
+    });
+    const photo = {
+      url: `${ORIGIN}/photo`,
+      attribution: 'Synthetic image',
+      rightsBasis: 'Synthetic permission',
+      observedAt: at(2),
+      expiresAt: at(26),
+      displayAllowed: true,
+      hotlinkAllowed: true,
+    } as const;
+    // Discovery, a price drop, a sale, a renamed and moved home, a new photo, two full reads that delist one home,
+    // and a partial read that brings it back.
+    const steps = [
+      (database: PGlite) =>
+        publish(
+          [
+            home('steady', { observedAt: at(0) }),
+            priced('cheaper', 2_500_000, at(0)),
+            home('selling', { observedAt: at(0) }),
+            home('touched', { observedAt: at(0) }),
+            home('gone', { observedAt: at(0) }),
+          ],
+          { database },
+        ),
+      (database: PGlite) =>
+        publish(
+          [
+            home('steady', { observedAt: at(1) }),
+            priced('cheaper', 2_300_000, at(1)),
+            sold,
+            home('touched', {
+              observedAt: at(1),
+              title: 'touched renamed',
+              coordinates: place(1, at(1)),
+            }),
+          ],
+          { database, seen, fullRead: true },
+        ),
+      (database: PGlite) =>
+        publish(
+          [
+            home('touched', {
+              observedAt: at(2),
+              title: 'touched renamed',
+              coordinates: place(1, at(1)),
+              photo,
+            }),
+          ],
+          { database, seen, fullRead: true },
+        ),
+      (database: PGlite) =>
+        publish([priced('cheaper', 2_300_000, at(3))], {
+          database,
+          status: 'partial',
+          seen: ['gone'],
+        }),
+    ];
+    const results: Record<string, Awaited<ReturnType<typeof catalogState>>[]> =
+      {};
+    let changes: Record<string, unknown>[] = [];
+    let listings: Record<string, unknown>[] = [];
+    for (const mode of ['setBased', 'current'] as const) {
+      const database = await catalog(mode);
+      try {
+        results[mode] = [];
+        for (const step of steps) {
+          await step(database);
+          results[mode].push(await catalogState(database));
+        }
+        if (mode === 'current') {
+          changes = (
+            await database.query<Record<string, unknown>>(
+              `select l.source_listing_id,c.field,c.old_value,c.new_value from hs.listing_changes c
+               join hs.listings l on l.id=c.listing_id order by c.observed_at,l.source_listing_id`,
+            )
+          ).rows;
+          listings = (
+            await database.query<Record<string, unknown>>(
+              `select source_listing_id,first_seen_run_id=(select id from hs.runs order by created_at limit 1) first_run,
+                last_changed_at>first_seen_at changed,(select count(*)::int from hs.observations o where o.listing_id=l.id) copies
+               from hs.listings l order by source_listing_id`,
+            )
+          ).rows;
+        }
+      } finally {
+        await database.close();
+      }
+    }
+    // Only the revision and history differ; the change rows replace the history.
+    const strip = (state: Awaited<ReturnType<typeof catalogState>>) => ({
+      ...state,
+      listings: state.listings.map(
+        ({ revision: _revision, history: _history, ...rest }) => rest,
+      ),
+    });
+    expect(results.current.map(strip)).toEqual(results.setBased.map(strip));
+    const revisions = (mode: string) =>
+      Object.fromEntries(
+        results[mode][3].listings.map((row) => [
+          row.source_listing_id,
+          row.revision,
+        ]),
+      );
+    expect(revisions('setBased')).toEqual({
+      cheaper: 2,
+      gone: 1,
+      selling: 2,
+      steady: 1,
+      touched: 3,
+    });
+    expect(revisions('current')).toEqual({
+      cheaper: 2,
+      gone: 1,
+      selling: 2,
+      steady: 1,
+      touched: 1,
+    });
+    expect(
+      results.current[3].listings.find(
+        (row) => row.source_listing_id === 'touched',
+      )?.value,
+    ).toMatchObject({ title: 'touched renamed', photo: { url: photo.url } });
+    expect(changes).toEqual([
+      {
+        source_listing_id: 'cheaper',
+        field: 'askingPriceSek',
+        old_value: 2_500_000,
+        new_value: 2_300_000,
+      },
+      {
+        source_listing_id: 'selling',
+        field: 'status',
+        old_value: 'available',
+        new_value: 'sold',
+      },
+      {
+        source_listing_id: 'gone',
+        field: 'delisted',
+        old_value: null,
+        new_value: null,
+      },
+      {
+        source_listing_id: 'gone',
+        field: 'relisted',
+        old_value: null,
+        new_value: null,
+      },
+    ]);
+    // Every home is discovered by the first run without a full copy; only tracked changes move the change date.
+    expect(listings).toEqual(
+      ['cheaper', 'gone', 'selling', 'steady', 'touched'].map((id) => ({
+        source_listing_id: id,
+        first_run: true,
+        changed: id === 'cheaper' || id === 'selling',
+        copies: 0,
+      })),
+    );
   });
 });
 
