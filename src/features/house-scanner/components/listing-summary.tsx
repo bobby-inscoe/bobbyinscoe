@@ -1,6 +1,8 @@
 import { Badge, Button, Group, Stack, Text } from '@mantine/core';
-
 import { ArrowDown, ArrowUp } from 'lucide-react';
+import { FormattedMessage, useIntl } from 'react-intl';
+import { messageValue } from '@/features/house-scanner/i18n/catalogs';
+import { displayLabel } from '@/features/house-scanner/i18n/display-labels';
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type {
   Listing,
@@ -17,6 +19,8 @@ import {
 
 // The lines the list card and the details sheet share.
 export function PriceLine({ listing }: { listing: Listing }) {
+  const intl = useIntl();
+
   const current = listing.facts.askingPriceSek;
   const previous = listing.previousAskingPriceSek;
   const changed =
@@ -28,12 +32,14 @@ export function PriceLine({ listing }: { listing: Listing }) {
     <Text fz="1.5rem" className={classes.priceText}>
       {changed && (
         <>
-          <s>{formatPrice(previous)}</s>{' '}
+          <s>{formatPrice(previous, intl)}</s>{' '}
           <span
             className={current < previous ? classes.priceDown : classes.priceUp}
             role="img"
             aria-label={
-              current < previous ? 'Price decreased' : 'Price increased'
+              current < previous
+                ? intl.formatMessage({ id: 'listings.details.priceDecreased' })
+                : intl.formatMessage({ id: 'listings.details.priceIncreased' })
             }
           >
             {current < previous ? (
@@ -44,32 +50,54 @@ export function PriceLine({ listing }: { listing: Listing }) {
           </span>{' '}
         </>
       )}
-      <span className={classes.priceNow}>{formatPrice(current)}</span>
-      {listing.conflicts.includes('askingPriceSek') && ' (disputed)'}
+      <span className={classes.priceNow}>{formatPrice(current, intl)}</span>
+      {listing.conflicts.includes('askingPriceSek') &&
+        intl.formatMessage({ id: 'listings.details.disputed' })}
     </Text>
   );
 }
 
 /** Compact facts shared by list cards, details and map previews. */
 export function KeyFacts({ listing }: { listing: Listing }) {
+  const intl = useIntl();
+
   const { facts, conflicts } = listing;
   const neighborhood = listingNeighborhoodLabel(listing);
   const disputed = (key: 'livingAreaM2' | 'rooms' | 'baseFeeSek') =>
-    conflicts.includes(key) && ' (disputed)';
+    conflicts.includes(key) &&
+    intl.formatMessage({ id: 'listings.details.disputed' });
   // A house has no monthly fee, so only a flat with none on record says so.
   const fee =
     facts.baseFeeSek !== null
-      ? formatFee(facts.baseFeeSek)
+      ? formatFee(facts.baseFeeSek, intl)
       : facts.propertyType === 'house'
         ? null
-        : 'Fee unknown';
+        : intl.formatMessage({ id: 'listings.details.feeUnknown' });
   return (
     <Text size="sm" fw={600}>
-      {facts.livingAreaM2 ?? 'Unknown'} m²{disputed('livingAreaM2')} ·{' '}
-      {facts.rooms ?? 'Unknown'} rooms{disputed('rooms')}
-      {fee !== null && ` · ${fee}`}
-      {facts.baseFeeSek !== null && disputed('baseFeeSek')}
-      {neighborhood && ` · ${neighborhood}`}
+      <FormattedMessage
+        id="listings.details.roomFacts"
+        values={{
+          area:
+            facts.livingAreaM2 === null
+              ? intl.formatMessage({ id: 'common.unknown' })
+              : intl.formatNumber(facts.livingAreaM2),
+          areaDisputed: messageValue(disputed('livingAreaM2')),
+          rooms:
+            facts.rooms === null
+              ? intl.formatMessage({ id: 'common.unknown' })
+              : intl.formatMessage(
+                  { id: 'listings.details.roomCount' },
+                  { count: facts.rooms },
+                ),
+          roomsDisputed: messageValue(disputed('rooms')),
+          fee: fee === null ? '' : ` · ${fee}`,
+          feeDisputed: messageValue(
+            facts.baseFeeSek !== null && disputed('baseFeeSek'),
+          ),
+          neighborhood: neighborhood ? ` · ${neighborhood}` : '',
+        }}
+      />
     </Text>
   );
 }
@@ -79,19 +107,27 @@ export function AlsoOn({ sites }: { sites?: string[] }) {
   if (!sites?.length) return null;
   return (
     <Text size="sm" c="dimmed">
-      Also on {sites.join(', ')}
+      <FormattedMessage
+        id="listings.details.alsoOn"
+        values={{ value0: messageValue(sites.join(', ')) }}
+      />
     </Text>
   );
 }
 
 export function FactsLine({ listing }: { listing: Listing }) {
-  const estimated = estimatedPositionLabel(listing.coordinates);
+  const intl = useIntl();
+
+  const estimated = estimatedPositionLabel(listing.coordinates, intl);
   return (
     <>
       <KeyFacts listing={listing} />
       <Text size="sm" c="dimmed">
-        {listing.facts.propertyType ?? 'Type unknown'}
-        {listing.conflicts.includes('propertyType') && ' (disputed)'}
+        {listing.facts.propertyType
+          ? displayLabel(intl, listing.facts.propertyType)
+          : intl.formatMessage({ id: 'listings.details.typeUnknown' })}
+        {listing.conflicts.includes('propertyType') &&
+          intl.formatMessage({ id: 'listings.details.disputed' })}
         {estimated && ` · ${estimated}`}
       </Text>
     </>
@@ -100,7 +136,9 @@ export function FactsLine({ listing }: { listing: Listing }) {
 
 // Plain facts about the home. No score; they only say what is known.
 export function ReasonChips({ listing }: { listing: Listing }) {
-  const facts = reasonChips(listing);
+  const intl = useIntl();
+
+  const facts = reasonChips(listing, intl);
   if (!facts.length) return null;
   return (
     <Group gap={4}>
@@ -121,14 +159,16 @@ interface MatchLinesProps {
 }
 
 export function MatchLines({ listing, snapshot, details }: MatchLinesProps) {
-  const matches = listingMatches(listing, snapshot);
+  const intl = useIntl();
+
+  const matches = listingMatches(listing, snapshot, intl);
   return (
     <>
       {matches.map(({ profile, result }) => (
         <Stack key={profile.id} gap={4}>
           <Text size="sm" fw={600}>
             {matches.length > 1 && `${profile.name}: `}
-            {SECTION_LABELS[result.section]}
+            {SECTION_LABELS(intl)[result.section]}
             {result.missing.length > 0 && `: ${result.missing.join(', ')}`}
           </Text>
           {details && (
@@ -143,7 +183,7 @@ export function MatchLines({ listing, snapshot, details }: MatchLinesProps) {
       ))}
       {matches.length === 0 && (
         <Text size="sm">
-          No enabled search profiles. This home has not been matched.
+          <FormattedMessage id="listings.details.noEnabledSearchProfilesThisHomeHasNotBeen" />
         </Text>
       )}
     </>
@@ -164,7 +204,7 @@ export function OriginalListingButton({ listing }: { listing: Listing }) {
       c="var(--button-color)"
       td="none"
     >
-      Open original listing
+      <FormattedMessage id="listings.details.openOriginalListing" />
     </Button>
   );
 }

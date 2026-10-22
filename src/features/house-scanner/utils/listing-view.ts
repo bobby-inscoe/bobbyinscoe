@@ -1,3 +1,6 @@
+import type { IntlShape } from 'react-intl';
+import { englishIntl } from '@/features/house-scanner/i18n/catalogs';
+import { displayLabel } from '@/features/house-scanner/i18n/display-labels';
 import type {
   Favorite,
   Listing,
@@ -68,6 +71,7 @@ export function mapPoints(
   hiddenIds: ReadonlySet<string> = new Set(),
   favorites: Favorite[] = [],
   userId?: string,
+  intl: IntlShape = englishIntl,
 ): MapPoint[] {
   const favoriteUsers = new Map<string, Set<string>>();
   for (const favorite of favorites) {
@@ -81,17 +85,19 @@ export function mapPoints(
     const savedByMe = userId !== undefined && savedUsers?.has(userId);
     const savedByHousehold = Boolean(savedUsers?.size);
     const saveLabel = savedByMe
-      ? ' · saved by you'
+      ? intl.formatMessage({ id: 'listings.map.savedByYou2' })
       : savedByHousehold
-        ? ' · saved by household member'
+        ? intl.formatMessage({ id: 'listings.map.savedByHouseholdMember' })
         : '';
-    const hiddenNote = dimmed ? ' · hidden' : '';
+    const hiddenNote = dimmed
+      ? intl.formatMessage({ id: 'listings.map.hidden' })
+      : '';
     const price = listing.conflicts.includes('askingPriceSek')
-      ? 'Price disputed'
-      : formatPrice(listing.facts.askingPriceSek);
+      ? intl.formatMessage({ id: 'listings.map.priceDisputed' })
+      : formatPrice(listing.facts.askingPriceSek, intl);
     const status = listing.conflicts.includes('status')
-      ? 'Status disputed'
-      : listing.facts.status;
+      ? intl.formatMessage({ id: 'listings.map.statusDisputed' })
+      : displayLabel(intl, listing.facts.status);
     return hasPin(listing.coordinates)
       ? {
           id: listing.id,
@@ -101,7 +107,7 @@ export function mapPoints(
             listing.facts.askingPriceSek === null ||
             listing.conflicts.includes('askingPriceSek')
               ? '?'
-              : compactPrice(listing.facts.askingPriceSek),
+              : compactPrice(listing.facts.askingPriceSek, intl),
           label: `${listing.title}: ${price} · ${status}${saveLabel}${hiddenNote}`,
           dimmed,
           savedByMe: savedByMe || undefined,
@@ -110,7 +116,7 @@ export function mapPoints(
       : {
           id: listing.id,
           markerText: '?',
-          label: `${listing.title}: ${price} · ${status} · no known position${saveLabel}${hiddenNote}`,
+          label: `${listing.title}: ${price} · ${status}${intl.formatMessage({ id: 'listings.map.noKnownPosition' })}${saveLabel}${hiddenNote}`,
           unlocated: true,
           dimmed,
           savedByMe: savedByMe || undefined,

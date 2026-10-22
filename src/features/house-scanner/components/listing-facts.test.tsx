@@ -1,13 +1,14 @@
 // @vitest-environment jsdom
 import { MantineProvider } from '@mantine/core';
 import { cleanup, render, screen, within } from '@testing-library/react';
+import { IntlProvider } from 'react-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { ListingDetails } from '@/features/house-scanner/components/listing-details';
 import {
   KeyFacts,
   MatchLines,
 } from '@/features/house-scanner/components/listing-summary';
+import { catalogs } from '@/features/house-scanner/i18n/catalogs';
 import {
   DEMO_USER_ID,
   SYNTHETIC_SNAPSHOT,
@@ -39,7 +40,18 @@ function home(
   return { ...base, facts: { ...base.facts, ...facts }, conflicts };
 }
 const view = (node: React.ReactNode) =>
-  render(<MantineProvider>{node}</MantineProvider>);
+  render(
+    <MantineProvider>
+      <IntlProvider
+        locale="en-GB"
+        defaultLocale="en-GB"
+        timeZone="Europe/Stockholm"
+        messages={catalogs.en}
+      >
+        {node}
+      </IntlProvider>
+    </MantineProvider>,
+  );
 
 describe('the key facts line', () => {
   it('puts the monthly fee beside area and rooms, says when a flat has none on record, and says nothing for a house', () => {
@@ -54,7 +66,7 @@ describe('the key facts line', () => {
       />,
     );
     expect(
-      screen.getByText(/70.5 m² · 3 rooms · 4\s250 SEK\/month/),
+      screen.getByText(/70.5 m² · 3 rooms · 4,250 SEK\/month/),
     ).toBeTruthy();
     cleanup();
     view(
@@ -131,7 +143,7 @@ describe('the details sheet', () => {
 
   it('shows known facts, Unknown for missing ones, and no fee for a house', () => {
     details(home({ baseFeeSek: 4250, propertyType: 'apartment', lift: true }));
-    expect(row('Monthly fee').getByText(/4\s250 SEK\/month/)).toBeTruthy();
+    expect(row('Monthly fee').getByText(/4,250 SEK\/month/)).toBeTruthy();
     expect(row('Lift').getByText('Yes')).toBeTruthy();
     cleanup();
     details(home({ baseFeeSek: null, lift: null, propertyType: 'house' }));
@@ -146,7 +158,7 @@ describe('the details sheet', () => {
       ...home({}, ['askingPriceSek']),
       delistedAt: '2026-10-21T09:00:00Z',
     });
-    expect(screen.getByText('Conflicting fields: askingPriceSek')).toBeTruthy();
+    expect(screen.getByText('Conflicting fields: Asking price')).toBeTruthy();
     expect(screen.getByRole('note', { name: 'No longer listed' })).toBeTruthy();
   });
 });

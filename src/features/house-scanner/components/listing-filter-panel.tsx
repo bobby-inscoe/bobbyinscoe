@@ -11,9 +11,11 @@ import {
   Stack,
   Text,
 } from '@mantine/core';
-
+import { FormattedMessage, type IntlShape, useIntl } from 'react-intl';
 import neighborhoods from '@/features/house-scanner/assets/neighborhoods.json';
 import { NumberSelect } from '@/features/house-scanner/components/number-select';
+import { messageValue } from '@/features/house-scanner/i18n/catalogs';
+import { displayLabel } from '@/features/house-scanner/i18n/display-labels';
 import {
   AREA_OPTIONS,
   formatArea,
@@ -26,21 +28,54 @@ import {
   type ListingFilters,
 } from '@/features/house-scanner/utils/listing-filters';
 
-const HIDDEN_VIEWS: { value: HiddenView; label: string }[] = [
-  { value: 'not-hidden', label: 'Not hidden' },
-  { value: 'hidden-only', label: 'Hidden only' },
-  { value: 'both', label: 'Both' },
+const HIDDEN_VIEWS = (
+  intl: IntlShape,
+): { value: HiddenView; label: string }[] => [
+  {
+    value: 'not-hidden',
+    label: intl.formatMessage({ id: 'listings.filters.notHidden' }),
+  },
+  {
+    value: 'hidden-only',
+    label: intl.formatMessage({ id: 'listings.filters.hiddenOnly' }),
+  },
+  { value: 'both', label: intl.formatMessage({ id: 'listings.filters.both' }) },
 ];
 
-const FRESHNESS_OPTIONS: {
+const FRESHNESS_OPTIONS = (
+  intl: IntlShape,
+): {
   value: ListingFilters['freshness'];
   label: string;
-}[] = [
-  { value: 'all', label: 'All homes' },
-  { value: 'latest-scan', label: 'New in latest scan per source' },
-  { value: '1-day', label: 'First found in the last day' },
-  { value: '3-days', label: 'First found in the last 3 days' },
-  { value: '7-days', label: 'First found in the last 7 days' },
+}[] => [
+  {
+    value: 'all',
+    label: intl.formatMessage({ id: 'listings.filters.allHomes' }),
+  },
+  {
+    value: 'latest-scan',
+    label: intl.formatMessage({
+      id: 'listings.filters.newInLatestScanPerSource',
+    }),
+  },
+  {
+    value: '1-day',
+    label: intl.formatMessage({
+      id: 'listings.filters.firstFoundInTheLastDay',
+    }),
+  },
+  {
+    value: '3-days',
+    label: intl.formatMessage({
+      id: 'listings.filters.firstFoundInTheLast3Days',
+    }),
+  },
+  {
+    value: '7-days',
+    label: intl.formatMessage({
+      id: 'listings.filters.firstFoundInTheLast7Days',
+    }),
+  },
 ];
 
 interface ListingFilterPanelProps {
@@ -66,11 +101,20 @@ export function ListingFilterPanel({
   unassignedNeighborhoodCount,
   match,
 }: ListingFilterPanelProps) {
+  const intl = useIntl();
+
   function price(label: string, key: 'minPriceSek' | 'maxPriceSek') {
     return (
       <NumberInput
-        aria-label={`${label} price (SEK)`}
-        placeholder={label === 'Min' ? 'No min' : 'No max'}
+        aria-label={intl.formatMessage(
+          { id: 'listings.filters.priceSEK' },
+          { value0: messageValue(label) },
+        )}
+        placeholder={
+          key === 'minPriceSek'
+            ? intl.formatMessage({ id: 'listings.filters.noMin' })
+            : intl.formatMessage({ id: 'listings.filters.noMax' })
+        }
         value={filters[key] ?? ''}
         onChange={(value) =>
           onChange({
@@ -79,11 +123,12 @@ export function ListingFilterPanel({
           })
         }
         // Typing 4500000 shows 4 500 000, as prices are written everywhere else in the app.
-        thousandSeparator=" "
+        thousandSeparator={intl.locale.startsWith('sv') ? ' ' : ','}
         allowDecimal={false}
         allowNegative={false}
         min={0}
         hideControls
+        decimalSeparator={intl.locale.startsWith('sv') ? ',' : '.'}
       />
     );
   }
@@ -126,65 +171,85 @@ export function ListingFilterPanel({
       <Stack gap="sm">
         <Flex gap="sm" align="center" wrap="wrap">
           <Text size="sm" role="status">
-            Showing {shown} of {total} homes
+            <FormattedMessage
+              id="listings.filters.showingOfHomes"
+              values={{
+                value0: messageValue(shown),
+                value1: messageValue(total),
+              }}
+            />
           </Text>
           <Button variant="default" onClick={() => onChange(emptyFilters)}>
-            Clear filters
+            <FormattedMessage id="listings.filters.clearFilters" />
           </Button>
         </Flex>
         <Flex gap="sm" wrap="wrap">
           {match}
           {pair(
-            'Price (SEK)',
+            intl.formatMessage({ id: 'listings.filters.priceSEK2' }),
             <>
-              {price('Min', 'minPriceSek')}
-              {price('Max', 'maxPriceSek')}
+              {price(
+                intl.formatMessage({ id: 'listings.filters.min' }),
+                'minPriceSek',
+              )}
+              {price(
+                intl.formatMessage({ id: 'listings.filters.max' }),
+                'maxPriceSek',
+              )}
             </>,
           )}
           {pair(
-            'Living area',
+            intl.formatMessage({ id: 'listings.filters.livingArea' }),
             <>
               <NumberSelect
-                ariaLabel="Min living area (m²)"
+                ariaLabel={intl.formatMessage({
+                  id: 'listings.filters.minLivingAreaM',
+                })}
                 value={filters.minAreaM2}
                 onChange={(minAreaM2) => onChange({ ...filters, minAreaM2 })}
                 options={AREA_OPTIONS}
-                format={formatArea}
-                anyLabel="No min"
+                format={(value) => formatArea(value, intl)}
+                anyLabel={intl.formatMessage({ id: 'listings.filters.noMin' })}
               />
               <NumberSelect
-                ariaLabel="Max living area (m²)"
+                ariaLabel={intl.formatMessage({
+                  id: 'listings.filters.maxLivingAreaM',
+                })}
                 value={filters.maxAreaM2}
                 onChange={(maxAreaM2) => onChange({ ...filters, maxAreaM2 })}
                 options={AREA_OPTIONS}
-                format={formatArea}
-                anyLabel="No max"
+                format={(value) => formatArea(value, intl)}
+                anyLabel={intl.formatMessage({ id: 'listings.filters.noMax' })}
               />
             </>,
           )}
           {pair(
-            'Rooms',
+            intl.formatMessage({ id: 'settings.criteria.roomsHeading' }),
             <>
               <NumberSelect
-                ariaLabel="Minimum rooms"
+                ariaLabel={intl.formatMessage({
+                  id: 'settings.criteria.minimumRooms',
+                })}
                 value={filters.minRooms}
                 onChange={(minRooms) => onChange({ ...filters, minRooms })}
                 options={ROOM_OPTIONS}
-                format={formatRooms}
-                anyLabel="No min"
+                format={(value) => formatRooms(value, intl)}
+                anyLabel={intl.formatMessage({ id: 'listings.filters.noMin' })}
               />
               <NumberSelect
-                ariaLabel="Maximum rooms"
+                ariaLabel={intl.formatMessage({
+                  id: 'settings.criteria.maximumRooms',
+                })}
                 value={filters.maxRooms}
                 onChange={(maxRooms) => onChange({ ...filters, maxRooms })}
                 options={ROOM_OPTIONS}
-                format={formatRooms}
-                anyLabel="No max"
+                format={(value) => formatRooms(value, intl)}
+                anyLabel={intl.formatMessage({ id: 'listings.filters.noMax' })}
               />
             </>,
           )}
           <Select
-            label="Viewing within"
+            label={intl.formatMessage({ id: 'listings.filters.viewingWithin' })}
             value={
               filters.viewingWithinDays === null
                 ? 'any'
@@ -198,40 +263,66 @@ export function ListingFilterPanel({
               })
             }
             data={[
-              { value: 'any', label: 'Any time' },
-              { value: '3', label: 'Next 3 days' },
-              { value: '7', label: 'Next 7 days' },
-              { value: '14', label: 'Next 14 days' },
+              {
+                value: 'any',
+                label: intl.formatMessage({ id: 'listings.filters.anyTime' }),
+              },
+              {
+                value: '3',
+                label: intl.formatMessage({ id: 'listings.filters.next3Days' }),
+              },
+              {
+                value: '7',
+                label: intl.formatMessage({ id: 'listings.filters.next7Days' }),
+              },
+              {
+                value: '14',
+                label: intl.formatMessage({
+                  id: 'listings.filters.next14Days',
+                }),
+              },
             ]}
             flex="1 1 15rem"
           />
           <MultiSelect
-            label="Sources"
-            placeholder={filters.hosts.length === 0 ? 'All sources' : undefined}
+            label={intl.formatMessage({ id: 'listings.filters.sources' })}
+            placeholder={
+              filters.hosts.length === 0
+                ? intl.formatMessage({ id: 'listings.filters.allSources' })
+                : undefined
+            }
             clearable
             value={filters.hosts}
             onChange={(selected) => onChange({ ...filters, hosts: selected })}
-            data={hosts}
+            data={hosts.map((value) => ({
+              value,
+              label: displayLabel(intl, value),
+            }))}
             flex="1 1 15rem"
           />
           <Select
-            label="Latest"
+            label={intl.formatMessage({ id: 'listings.filters.latest' })}
             value={filters.freshness}
             onChange={(value) =>
               onChange({
                 ...filters,
                 freshness:
-                  FRESHNESS_OPTIONS.find((option) => option.value === value)
-                    ?.value ?? 'all',
+                  FRESHNESS_OPTIONS(intl).find(
+                    (option) => option.value === value,
+                  )?.value ?? 'all',
               })
             }
-            data={FRESHNESS_OPTIONS}
+            data={FRESHNESS_OPTIONS(intl)}
             flex="1 1 15rem"
           />
           <MultiSelect
-            label="Neighborhoods"
-            description="Includes homes near a selected neighborhood when their position is approximate."
-            placeholder="All neighborhoods"
+            label={intl.formatMessage({ id: 'listings.filters.neighborhoods' })}
+            description={intl.formatMessage({
+              id: 'listings.filters.includesHomesNearASelectedNeighborhoodWhenTheirPosition',
+            })}
+            placeholder={intl.formatMessage({
+              id: 'listings.filters.allNeighborhoods',
+            })}
             searchable
             clearable
             value={filters.neighborhoodIds}
@@ -242,13 +333,22 @@ export function ListingFilterPanel({
               value: id,
               label: name,
             }))}
-            nothingFoundMessage="No matching neighborhoods"
+            nothingFoundMessage={intl.formatMessage({
+              id: 'listings.filters.noMatchingNeighborhoods',
+            })}
             flex="1 1 15rem"
           />
         </Flex>
         <Checkbox
-          label="Include homes with no neighborhood assigned"
-          description={`${unassignedNeighborhoodCount} homes have no neighborhood assigned. Applies when neighborhoods are selected.`}
+          label={intl.formatMessage({
+            id: 'listings.filters.includeHomesWithNoNeighborhoodAssigned',
+          })}
+          description={intl.formatMessage(
+            {
+              id: 'listings.filters.homesHaveNoNeighborhoodAssignedAppliesWhenNeighborhoodsAre',
+            },
+            { value0: messageValue(unassignedNeighborhoodCount) },
+          )}
           checked={filters.includeUnassignedNeighborhoods}
           onChange={(event) =>
             onChange({
@@ -260,36 +360,61 @@ export function ListingFilterPanel({
         <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="md">
           <Stack gap="xs">
             <Text size="sm" fw={700}>
-              Only homes with
+              <FormattedMessage id="listings.filters.onlyHomesWith" />
             </Text>
-            {flag('Balcony or terrace', 'outdoorOnly')}
-            {flag('Above ground floor', 'aboveGroundOnly')}
-            {flag('Lift', 'liftOnly')}
-            {flag('Glazed', 'glazedOnly')}
+            {flag(
+              intl.formatMessage({ id: 'listings.filters.balconyOrTerrace' }),
+              'outdoorOnly',
+            )}
+            {flag(
+              intl.formatMessage({ id: 'listings.filters.aboveGroundFloor' }),
+              'aboveGroundOnly',
+            )}
+            {flag(
+              intl.formatMessage({ id: 'listings.filters.lift' }),
+              'liftOnly',
+            )}
+            {flag(
+              intl.formatMessage({ id: 'listings.filters.glazed' }),
+              'glazedOnly',
+            )}
           </Stack>
           <Stack gap="xs">
             <Text size="sm" fw={700}>
-              Also
+              <FormattedMessage id="listings.filters.also" />
             </Text>
-            {flag('Not on the map only', 'notOnMapOnly')}
-            {flag('Show duplicate listings', 'showDuplicates')}
-            {flag('Keep unknown or disputed values', 'includeUnknown')}
+            {flag(
+              intl.formatMessage({ id: 'listings.filters.notOnTheMapOnly' }),
+              'notOnMapOnly',
+            )}
+            {flag(
+              intl.formatMessage({
+                id: 'listings.filters.showDuplicateListings',
+              }),
+              'showDuplicates',
+            )}
+            {flag(
+              intl.formatMessage({
+                id: 'listings.filters.keepUnknownOrDisputedValues',
+              }),
+              'includeUnknown',
+            )}
           </Stack>
         </SimpleGrid>
         <Radio.Group
-          label="Hidden homes"
+          label={intl.formatMessage({ id: 'listings.filters.hiddenHomes' })}
           value={filters.hidden}
           onChange={(value) =>
             onChange({
               ...filters,
               hidden:
-                HIDDEN_VIEWS.find((view) => view.value === value)?.value ??
-                emptyFilters.hidden,
+                HIDDEN_VIEWS(intl).find((view) => view.value === value)
+                  ?.value ?? emptyFilters.hidden,
             })
           }
         >
           <Flex gap="md" wrap="wrap">
-            {HIDDEN_VIEWS.map(({ value, label }) => (
+            {HIDDEN_VIEWS(intl).map(({ value, label }) => (
               <Radio key={value} value={value} label={label} />
             ))}
           </Flex>

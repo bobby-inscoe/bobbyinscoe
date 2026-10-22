@@ -1,10 +1,17 @@
-import { Button, Stack, Text, Textarea, TextInput, Title } from '@mantine/core';
+import { Button, Stack, Text, Textarea, TextInput } from '@mantine/core';
 import { useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import {
   EMPTY_FIELDS,
   ManualFields,
   submissionOf,
 } from '@/features/house-scanner/components/manual-listing-fields';
+import {
+  errorFeedback,
+  type Feedback,
+  formatFeedback,
+  validationFeedback,
+} from '@/features/house-scanner/i18n/catalogs';
 import {
   type ManualSubmission,
   manualSubmissionSchema,
@@ -21,11 +28,13 @@ export function ManualListingForm({
   onAdd?: (submission: ManualSubmission) => Promise<void>;
   onExisting: (id: string) => void;
 }) {
+  const intl = useIntl();
+
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
   const [note, setNote] = useState('');
   const [fields, setFields] = useState(EMPTY_FIELDS);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState<Feedback>('');
   const [busy, setBusy] = useState(false);
   async function submit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -36,7 +45,7 @@ export function ManualListingForm({
       ...submissionOf(fields),
     });
     if (!result.success) {
-      setMessage(result.error.issues.map((issue) => issue.message).join(' '));
+      setMessage(validationFeedback(result.error.issues));
       return;
     }
     if (!onAdd) return;
@@ -47,7 +56,7 @@ export function ManualListingForm({
       ),
     );
     if (existing) {
-      setMessage('This link already exists. Its details are selected.');
+      setMessage('listings.addLink.thisLinkAlreadyExistsItsDetailsAreSelected');
       onExisting(existing.id);
       return;
     }
@@ -58,27 +67,21 @@ export function ManualListingForm({
       setTitle('');
       setNote('');
       setFields(EMPTY_FIELDS);
-      setMessage('Link added. Save it separately if you want it in Favorites.');
+      setMessage('listings.addLink.linkAddedSaveItSeparatelyIfYouWantIt');
     } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : 'Could not add the link. Try again.',
-      );
+      setMessage(errorFeedback(error));
     } finally {
       setBusy(false);
     }
   }
   return (
-    <form onSubmit={submit}>
+    <form onSubmit={submit} noValidate>
       <Stack maw="36rem">
-        <Title order={2}>Add a listing link</Title>
         <Text size="sm" c="dimmed">
-          Saves the link without opening the page. The title and note are shared
-          with the household.
+          <FormattedMessage id="listings.addLink.savesTheLinkWithoutOpeningThePageTheTitle" />
         </Text>
         <TextInput
-          label="Listing link"
+          label={intl.formatMessage({ id: 'listings.addLink.listingLink' })}
           type="url"
           required
           value={url}
@@ -86,25 +89,29 @@ export function ManualListingForm({
           maxLength={2048}
         />
         <TextInput
-          label="Title (optional)"
+          label={intl.formatMessage({ id: 'listings.addLink.titleOptional' })}
           value={title}
           onChange={(event) => setTitle(event.currentTarget.value)}
           maxLength={200}
         />
         <Textarea
-          label="Shared note (optional)"
+          label={intl.formatMessage({
+            id: 'listings.addLink.sharedNoteOptional',
+          })}
           value={note}
           onChange={(event) => setNote(event.currentTarget.value)}
           maxLength={2000}
         />
         <ManualFields fields={fields} onChange={setFields} />
         <Button type="submit" loading={busy} disabled={!onAdd}>
-          Add link
+          <FormattedMessage id="listings.addLink.addLink" />
         </Button>
         {!onAdd && (
-          <Text size="sm">Manual additions are unavailable in this view.</Text>
+          <Text size="sm">
+            <FormattedMessage id="listings.addLink.manualAdditionsAreUnavailableInThisView" />
+          </Text>
         )}
-        <Text role="status">{message}</Text>
+        <Text role="status">{formatFeedback(intl, message)}</Text>
       </Stack>
     </form>
   );

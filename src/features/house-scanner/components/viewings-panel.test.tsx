@@ -8,9 +8,10 @@ import {
   screen,
   within,
 } from '@testing-library/react';
+import { IntlProvider } from 'react-intl';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-
 import { ViewingsPanel } from '@/features/house-scanner/components/viewings-panel';
+import { catalogs } from '@/features/house-scanner/i18n/catalogs';
 import {
   DEMO_OTHER_USER_ID,
   DEMO_USER_ID,
@@ -108,14 +109,16 @@ const onSeeOnMap = vi.fn();
 const show = (state: Snapshot = snapshot) =>
   render(
     <MantineProvider env="test">
-      <ViewingsPanel
-        snapshot={state}
-        userId={DEMO_USER_ID}
-        person="everyone"
-        onPersonChange={vi.fn()}
-        onOpenListing={onOpenListing}
-        onSeeOnMap={onSeeOnMap}
-      />
+      <IntlProvider locale="en-GB" messages={catalogs.en}>
+        <ViewingsPanel
+          snapshot={state}
+          userId={DEMO_USER_ID}
+          person="everyone"
+          onPersonChange={vi.fn()}
+          onOpenListing={onOpenListing}
+          onSeeOnMap={onSeeOnMap}
+        />
+      </IntlProvider>
     </MantineProvider>,
   );
 

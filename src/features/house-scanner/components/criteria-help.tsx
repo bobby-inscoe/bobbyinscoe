@@ -1,16 +1,25 @@
 import { Button, Modal, Stack, Text } from '@mantine/core';
 import { useState } from 'react';
+import { FormattedMessage, type IntlShape, useIntl } from 'react-intl';
 
-const ABOUT = [
-  'Shellter follows apartments for sale in Göteborg.',
-  'The settings below are your default filter for the Listings tab. Adjust budget, size, rooms, features and areas to fit what you are looking for.',
-  'Preferred budget groups matches; maximum budget excludes homes with a higher known asking price. Unknown or disputed details stay under Missing info.',
-  'Choose whole municipalities or a radius around a hub. This filters stored listings; it does not expand broker coverage.',
-  'Filters on the Listings tab are yours alone and stay in the page URL, including after a reload. Clearing them keeps the shared defaults. Only owners can change these defaults.',
+const ABOUT = (intl: IntlShape) => [
+  intl.formatMessage({
+    id: 'settings.criteria.shellterFollowsApartmentsForSaleInGoteborg',
+  }),
+  intl.formatMessage({
+    id: 'settings.criteria.theSettingsBelowAreYourDefaultFilterForThe',
+  }),
+  intl.formatMessage({ id: 'settings.criteria.budgetHelp' }),
+  intl.formatMessage({ id: 'settings.criteria.locationHelp' }),
+  intl.formatMessage({
+    id: 'settings.criteria.filtersOnTheListingsTabAreYoursAloneAnd',
+  }),
 ];
 
 /** A button that opens a short explanation of what Shellter is and how the settings are used. */
 export function CriteriaHelp() {
+  const intl = useIntl();
+
   const [opened, setOpened] = useState(false);
   return (
     <>
@@ -20,16 +29,19 @@ export function CriteriaHelp() {
         aria-haspopup="dialog"
         onClick={() => setOpened(true)}
       >
-        How does this work?
+        <FormattedMessage id="settings.criteria.howDoesThisWork" />
       </Button>
       <Modal
         opened={opened}
         onClose={() => setOpened(false)}
-        title="About Shellter"
+        title={intl.formatMessage({ id: 'settings.criteria.aboutShellter' })}
         size="md"
+        closeButtonProps={{
+          'aria-label': intl.formatMessage({ id: 'common.close' }),
+        }}
       >
         <Stack gap="xs">
-          {ABOUT.map((line) => (
+          {ABOUT(intl).map((line) => (
             <Text key={line} size="sm">
               {line}
             </Text>

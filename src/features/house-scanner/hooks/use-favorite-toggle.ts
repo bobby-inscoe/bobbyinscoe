@@ -1,4 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import {
+  errorFeedback,
+  type Feedback,
+} from '@/features/house-scanner/i18n/catalogs';
 
 import type { Snapshot } from '@/features/house-scanner/types/contracts';
 import type { HouseholdActions } from '@/features/house-scanner/types/household';
@@ -22,7 +26,7 @@ export function useFavoriteToggle({
   onSaveFavorites,
 }: UseFavoriteToggleOptions) {
   const [pending, setPending] = useState<string[]>([]);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState<Feedback>('');
   const [batchBusy, setBatchBusy] = useState(false);
   const mounted = useRef(true);
   const owner = useRef({
@@ -75,11 +79,7 @@ export function useFavoriteToggle({
       await action(listingId);
     } catch (error) {
       if (active() && scope.feedbackVersion === feedbackVersion)
-        setMessage(
-          error instanceof Error
-            ? error.message
-            : 'Could not change your favorite. Try again.',
-        );
+        setMessage(errorFeedback(error));
     } finally {
       scope.pending.delete(listingId);
       if (active()) setPending([...scope.pending]);
@@ -113,11 +113,7 @@ export function useFavoriteToggle({
       return true;
     } catch (error) {
       if (active() && scope.feedbackVersion === feedbackVersion)
-        setMessage(
-          error instanceof Error
-            ? error.message
-            : 'Could not save the selection. Try again.',
-        );
+        setMessage(errorFeedback(error));
       return false;
     } finally {
       scope.saving = false;

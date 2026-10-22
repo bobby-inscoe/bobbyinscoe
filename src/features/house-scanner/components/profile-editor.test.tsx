@@ -8,8 +8,10 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
+import { IntlProvider } from 'react-intl';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { ProfileEditor } from '@/features/house-scanner/components/profile-editor';
+import { catalogs } from '@/features/house-scanner/i18n/catalogs';
 import { SYNTHETIC_SNAPSHOT } from '@/features/house-scanner/mock/synthetic-household';
 import type { SearchProfile } from '@/features/house-scanner/types/contracts';
 import { SEARCH_HUBS } from '@/features/house-scanner/utils/criteria-options';
@@ -50,7 +52,9 @@ function show(profile: SearchProfile, canEdit = true) {
   const onSave = vi.fn(async (_saved: SearchProfile) => {});
   render(
     <MantineProvider>
-      <ProfileEditor profile={profile} canEdit={canEdit} onSave={onSave} />
+      <IntlProvider locale="en-GB" messages={catalogs.en}>
+        <ProfileEditor profile={profile} canEdit={canEdit} onSave={onSave} />
+      </IntlProvider>
     </MantineProvider>,
   );
   return onSave;
@@ -105,7 +109,7 @@ it('saves a hub, small radius, size, rooms and source, retaining the radius when
   const onSave = show(profileWith({ sourceIds: ['boneo'] }));
   await choose('Minimum living area (m²)', '80 m²');
   await choose('Maximum living area (m²)', 'No maximum');
-  await choose('Minimum rooms', '2,5 rooms');
+  await choose('Minimum rooms', '2.5 rooms');
   await choose('Search location', 'Centralstationen');
   await choose('Radius', '2 km');
   await choose('Search location', 'Göteborg (whole city)');

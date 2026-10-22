@@ -6,9 +6,11 @@ import {
   render,
   screen,
 } from '@testing-library/react';
+import { IntlProvider } from 'react-intl';
 import { afterEach, expect, it, vi } from 'vitest';
 import { ListingCard } from '@/features/house-scanner/components/listing-card';
 import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
+import { catalogs } from '@/features/house-scanner/i18n/catalogs';
 import {
   DEMO_OTHER_USER_ID,
   DEMO_USER_ID,
@@ -39,20 +41,27 @@ it('removes a permitted photo as soon as its display permission expires', async 
   const { MantineProvider } = await import('@mantine/core');
   render(
     <MantineProvider>
-      <ListingPhoto
-        listing={{
-          ...SYNTHETIC_SNAPSHOT.listings[0],
-          photo: {
-            url: 'https://images.example.invalid/synthetic.jpg',
-            attribution: 'Synthetic author',
-            rightsBasis: 'Authored fixture',
-            observedAt: '2026-10-12T12:00:00Z',
-            expiresAt: '2026-10-12T12:00:01Z',
-            displayAllowed: true,
-            hotlinkAllowed: true,
-          },
-        }}
-      />
+      <IntlProvider
+        locale="en-GB"
+        defaultLocale="en-GB"
+        timeZone="Europe/Stockholm"
+        messages={catalogs.en}
+      >
+        <ListingPhoto
+          listing={{
+            ...SYNTHETIC_SNAPSHOT.listings[0],
+            photo: {
+              url: 'https://images.example.invalid/synthetic.jpg',
+              attribution: 'Synthetic author',
+              rightsBasis: 'Authored fixture',
+              observedAt: '2026-10-12T12:00:00Z',
+              expiresAt: '2026-10-12T12:00:01Z',
+              displayAllowed: true,
+              hotlinkAllowed: true,
+            },
+          }}
+        />
+      </IntlProvider>
     </MantineProvider>,
   );
   expect(
@@ -99,16 +108,23 @@ async function renderCard(
   };
   render(
     <MantineProvider>
-      <ListingCard
-        listing={listing}
-        snapshot={SYNTHETIC_SNAPSHOT}
-        userId={DEMO_USER_ID}
-        details={details}
-        busy={false}
-        canSave
-        onSelect={() => {}}
-        onFavorite={() => {}}
-      />
+      <IntlProvider
+        locale="en-GB"
+        defaultLocale="en-GB"
+        timeZone="Europe/Stockholm"
+        messages={catalogs.en}
+      >
+        <ListingCard
+          listing={listing}
+          snapshot={SYNTHETIC_SNAPSHOT}
+          userId={DEMO_USER_ID}
+          details={details}
+          busy={false}
+          canSave
+          onSelect={() => {}}
+          onFavorite={() => {}}
+        />
+      </IntlProvider>
     </MantineProvider>,
   );
 }
@@ -132,7 +148,7 @@ it('marks a listing no longer listed with a badge, and a notice with both dates 
 
 it('lets a sold status speak for a listing no longer listed', async () => {
   await renderCard(true, false, 'sold');
-  expect(screen.getByText('sold')).toBeTruthy();
+  expect(screen.getByText('Sold')).toBeTruthy();
   expect(screen.queryByText('No longer listed')).toBeNull();
 });
 
@@ -142,26 +158,33 @@ it('names the member who hid the home', async () => {
   const listing = SYNTHETIC_SNAPSHOT.listings[0];
   render(
     <MantineProvider>
-      <ListingCard
-        listing={listing}
-        snapshot={{
-          ...SYNTHETIC_SNAPSHOT,
-          hides: [
-            {
-              listingId: listing.id,
-              userId: DEMO_OTHER_USER_ID,
-              hiddenAt: '2026-10-20T12:00:00Z',
-            },
-          ],
-        }}
-        userId={DEMO_USER_ID}
-        details={false}
-        busy={false}
-        canSave
-        hidden
-        onSelect={() => {}}
-        onFavorite={() => {}}
-      />
+      <IntlProvider
+        locale="en-GB"
+        defaultLocale="en-GB"
+        timeZone="Europe/Stockholm"
+        messages={catalogs.en}
+      >
+        <ListingCard
+          listing={listing}
+          snapshot={{
+            ...SYNTHETIC_SNAPSHOT,
+            hides: [
+              {
+                listingId: listing.id,
+                userId: DEMO_OTHER_USER_ID,
+                hiddenAt: '2026-10-20T12:00:00Z',
+              },
+            ],
+          }}
+          userId={DEMO_USER_ID}
+          details={false}
+          busy={false}
+          canSave
+          hidden
+          onSelect={() => {}}
+          onFavorite={() => {}}
+        />
+      </IntlProvider>
     </MantineProvider>,
   );
   expect(screen.getByText('Hidden by Demo Morgan')).toBeTruthy();
@@ -209,22 +232,29 @@ async function renderOverridden({
   const base = SYNTHETIC_SNAPSHOT.listings[0];
   render(
     <MantineProvider>
-      <ListingCard
-        listing={{ ...base, ...listing }}
-        snapshot={{
-          ...SYNTHETIC_SNAPSHOT,
-          profiles: profiles ?? SYNTHETIC_SNAPSHOT.profiles,
-        }}
-        userId={DEMO_USER_ID}
-        busy={false}
-        canSave
-        selectionMode={selectionMode}
-        selectionDisabled={selectionDisabled}
-        checked={checked}
-        onToggleSelection={onToggleSelection}
-        onSelect={onSelect ?? (() => {})}
-        onFavorite={onFavorite ?? (() => {})}
-      />
+      <IntlProvider
+        locale="en-GB"
+        defaultLocale="en-GB"
+        timeZone="Europe/Stockholm"
+        messages={catalogs.en}
+      >
+        <ListingCard
+          listing={{ ...base, ...listing }}
+          snapshot={{
+            ...SYNTHETIC_SNAPSHOT,
+            profiles: profiles ?? SYNTHETIC_SNAPSHOT.profiles,
+          }}
+          userId={DEMO_USER_ID}
+          busy={false}
+          canSave
+          selectionMode={selectionMode}
+          selectionDisabled={selectionDisabled}
+          checked={checked}
+          onToggleSelection={onToggleSelection}
+          onSelect={onSelect ?? (() => {})}
+          onFavorite={onFavorite ?? (() => {})}
+        />
+      </IntlProvider>
     </MantineProvider>,
   );
   return base;
@@ -244,7 +274,7 @@ it('shows a status badge only when a home is not available or its status is disp
   await renderOverridden({
     listing: { facts: { ...base.facts, status: 'sold' } },
   });
-  expect(screen.getByText('sold')).toBeTruthy();
+  expect(screen.getByText('Sold')).toBeTruthy();
   cleanup();
   await renderOverridden({ listing: { conflicts: ['status'] } });
   expect(screen.getByText('Status disputed')).toBeTruthy();

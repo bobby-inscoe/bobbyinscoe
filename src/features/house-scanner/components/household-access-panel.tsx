@@ -2,6 +2,7 @@ import {
   Alert,
   Badge,
   Button,
+  Divider,
   Group,
   Modal,
   Paper,
@@ -12,9 +13,15 @@ import {
   Title,
 } from '@mantine/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { z } from 'zod';
-
 import type { HouseholdAccess } from '@/features/house-scanner/api/household-client';
+import {
+  errorFeedback,
+  type Feedback,
+  formatFeedback,
+  messageValue,
+} from '@/features/house-scanner/i18n/catalogs';
 import type { HouseholdAccessActions } from '@/features/house-scanner/types/household';
 import { formatDate } from '@/features/house-scanner/utils/format';
 
@@ -36,11 +43,13 @@ export function HouseholdAccessPanel({
   access: HouseholdAccessActions;
   userId: string;
 }) {
+  const intl = useIntl();
+
   // The session hands out new functions on every render; the panel reads the latest ones.
   const actions = useRef(access);
   actions.current = access;
   const [data, setData] = useState<HouseholdAccess | null>(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<Feedback>('');
   // The action in flight, so only its own button shows a spinner.
   const [pending, setPending] = useState('');
   const [name, setName] = useState('');
@@ -54,7 +63,7 @@ export function HouseholdAccessPanel({
     purpose: Purpose;
     email: string;
   } | null>(null);
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState<Feedback>('');
   const [leaving, setLeaving] = useState(false);
   const [nextOwner, setNextOwner] = useState<string | null>(null);
   const load = useCallback(async () => {
@@ -64,7 +73,7 @@ export function HouseholdAccessPanel({
   }, []);
   useEffect(() => {
     load().catch(() =>
-      setError('Could not load the household members. Reload to try again.'),
+      setError('settings.household.couldNotLoadTheHouseholdMembersReloadToTry'),
     );
   }, [load]);
   async function perform(key: string, action: () => Promise<void>) {
@@ -74,20 +83,18 @@ export function HouseholdAccessPanel({
     try {
       await action();
     } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : 'Request failed. Try again.',
-      );
+      setError(errorFeedback(failure));
     } finally {
       setPending((current) => (current === key ? '' : current));
     }
   }
   if (!data)
     return error ? (
-      <Text role="alert">{error}</Text>
+      <Text role="alert">{formatFeedback(intl, error)}</Text>
     ) : (
-      <Text role="status">Loading household…</Text>
+      <Text role="status">
+        <FormattedMessage id="settings.household.loadingHousehold" />
+      </Text>
     );
   const me = data.members.find((member) => member.userId === userId);
   const owner = me?.role === 'owner';
@@ -120,7 +127,12 @@ export function HouseholdAccessPanel({
           autoComplete="off"
           required
           value={emails[purpose]}
-          error={emailError === purpose && 'Enter a valid email address.'}
+          error={
+            emailError === purpose &&
+            intl.formatMessage({
+              id: 'settings.household.enterAValidEmailAddress',
+            })
+          }
           onChange={(event) => {
             const value = event.currentTarget.value;
             setEmails((current) => ({ ...current, [purpose]: value }));
@@ -133,11 +145,15 @@ export function HouseholdAccessPanel({
           w="5rem"
           aria-label={
             purpose === 'create'
-              ? 'Send new household invitation'
-              : 'Send join invitation'
+              ? intl.formatMessage({
+                  id: 'settings.household.sendNewHouseholdInvitation',
+                })
+              : intl.formatMessage({
+                  id: 'settings.household.sendJoinInvitation',
+                })
           }
         >
-          Send
+          <FormattedMessage id="settings.household.send" />
         </Button>
       </Group>
     </form>
@@ -145,170 +161,237 @@ export function HouseholdAccessPanel({
   return (
     <Paper>
       <Stack>
-        <Title order={2}>Household</Title>
-        {error && <Alert role="alert">{error}</Alert>}
-        {owner ? (
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              void perform('rename', async () => {
-                await actions.current.rename(name);
-                await load();
-              });
-            }}
+        <Title order={2}>
+          <FormattedMessage id="settings.household.household" />
+        </Title>
+        {error && <Alert role="alert">{formatFeedback(intl, error)}</Alert>}
+        <Stack gap="xs">
+          {owner ? (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void perform('rename', async () => {
+                  await actions.current.rename(name);
+                  await load();
+                });
+              }}
+              noValidate
+            >
+              <Group align="flex-end" wrap="nowrap" maw="30rem">
+                <TextInput
+                  flex={1}
+                  miw={0}
+                  label={intl.formatMessage({
+                    id: 'settings.household.householdName',
+                  })}
+                  required
+                  maxLength={80}
+                  value={name}
+                  disabled={pending === 'rename'}
+                  onChange={(event) => setName(event.currentTarget.value)}
+                />
+                <Button
+                  type="submit"
+                  variant="default"
+                  loading={pending === 'rename'}
+                  disabled={name.trim() === data.name}
+                >
+                  <FormattedMessage id="settings.household.rename" />
+                </Button>
+              </Group>
+            </form>
+          ) : (
+            <Text>{data.name}</Text>
+          )}
+        </Stack>
+        <Stack gap="xs" mt="sm">
+          <Title order={3}>
+            <FormattedMessage id="settings.household.members" />
+          </Title>
+          <Text size="sm" c="dimmed">
+            <FormattedMessage
+              id="settings.household.of10MemberPlacesUsed"
+              values={{
+                value0: messageValue(
+                  data.members.filter((member) => member.active).length,
+                ),
+              }}
+            />
+          </Text>
+          <Stack
+            gap="xs"
+            component="ul"
+            p={0}
+            m={0}
+            style={{ listStyle: 'none' }}
           >
-            <Group align="flex-end">
-              <TextInput
-                label="Household name"
-                required
-                maxLength={80}
-                value={name}
-                disabled={pending === 'rename'}
-                onChange={(event) => setName(event.currentTarget.value)}
-              />
-              <Button
-                type="submit"
-                variant="default"
-                loading={pending === 'rename'}
-                disabled={name.trim() === data.name}
-              >
-                Rename
-              </Button>
-            </Group>
-          </form>
-        ) : (
-          <Text>{data.name}</Text>
-        )}
-
-        <Title order={3}>Members</Title>
-        <Text size="sm" c="dimmed">
-          {data.members.filter((member) => member.active).length} of 10 member
-          places used.
-        </Text>
-        <Stack
-          gap="xs"
-          component="ul"
-          p={0}
-          m={0}
-          style={{ listStyle: 'none' }}
-        >
-          {data.members
-            .filter((member) => member.active)
-            .map((member) => (
-              <Group component="li" key={member.userId} gap="xs" wrap="wrap">
-                <Text>
-                  {member.displayName}
-                  {member.userId === userId ? ' (you)' : ''}
-                </Text>
-                {member.role === 'owner' && (
-                  <Badge variant="light">Owner</Badge>
-                )}
-                {owner && member.userId !== userId && (
-                  <>
-                    {member.role === 'member' && (
+            {data.members
+              .filter((member) => member.active)
+              .map((member) => (
+                <Group
+                  component="li"
+                  key={member.userId}
+                  gap="sm"
+                  justify="space-between"
+                  wrap="wrap"
+                  py="xs"
+                >
+                  <Group gap="xs" style={{ flex: '1 1 12rem', minWidth: 0 }}>
+                    <Text style={{ overflowWrap: 'anywhere' }}>
+                      {member.displayName}
+                      {member.userId === userId
+                        ? intl.formatMessage({ id: 'common.youSuffix' })
+                        : ''}
+                    </Text>
+                    {member.role === 'owner' && (
+                      <Badge
+                        variant="light"
+                        styles={{ label: { lineHeight: 1 } }}
+                      >
+                        <FormattedMessage id="settings.household.owner" />
+                      </Badge>
+                    )}
+                  </Group>
+                  {owner && member.userId !== userId && (
+                    <Group gap="xs" ml="auto">
+                      {member.role === 'member' && (
+                        <Button
+                          size="xs"
+                          variant="default"
+                          loading={pending === `owner:${member.userId}`}
+                          onClick={() =>
+                            void perform(`owner:${member.userId}`, async () => {
+                              await actions.current.makeOwner(member.userId);
+                              await load();
+                            })
+                          }
+                        >
+                          <FormattedMessage id="settings.household.makeOwner" />
+                        </Button>
+                      )}
                       <Button
                         size="xs"
-                        variant="default"
-                        loading={pending === `owner:${member.userId}`}
-                        onClick={() =>
-                          void perform(`owner:${member.userId}`, async () => {
-                            await actions.current.makeOwner(member.userId);
-                            await load();
-                          })
-                        }
-                      >
-                        Make owner
-                      </Button>
-                    )}
-                    <Button
-                      size="xs"
-                      variant="subtle"
-                      color="red"
-                      loading={pending === `remove:${member.userId}`}
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            `Remove ${member.displayName} from this household? Their saves and notes stay, and an owner can invite them back.`,
+                        variant="subtle"
+                        color="red"
+                        loading={pending === `remove:${member.userId}`}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              intl.formatMessage(
+                                {
+                                  id: 'settings.household.removeFromThisHouseholdTheirSavesAndNotesStay',
+                                },
+                                { value0: messageValue(member.displayName) },
+                              ),
+                            )
                           )
-                        )
-                          void perform(`remove:${member.userId}`, async () => {
-                            await actions.current.deactivate(member.userId);
-                            await load();
-                          });
-                      }}
-                    >
-                      Remove
-                    </Button>
-                  </>
-                )}
-              </Group>
-            ))}
-        </Stack>
-
-        <Title order={3}>Invite people</Title>
-        {inviteForm(
-          'create',
-          'Invite someone to start their own household',
-          'Their household shares nothing with yours.',
-        )}
-        {owner &&
-          inviteForm(
-            'join',
-            'Invite someone to join this household',
-            'Only someone who signs in with this email can use the link.',
-          )}
-        {notice && <Alert role="status">{notice}</Alert>}
-        {owner && data.invitations.length > 0 && (
-          <Stack gap="xs">
-            <Text size="sm">Pending join links</Text>
-            <Text size="sm" c="dimmed">
-              Lost an invitation? Copy new link makes a fresh link and cancels
-              the old one. It sends no email.
-            </Text>
-            {data.invitations.map((invitation) => (
-              <Group key={invitation.id} gap="xs">
-                <Text size="sm">
-                  {invitation.email} · until {formatDate(invitation.expiresAt)}
-                </Text>
-                <Button
-                  size="xs"
-                  variant="default"
-                  loading={pending === `renew:${invitation.id}`}
-                  onClick={() =>
-                    void perform(`renew:${invitation.id}`, async () => {
-                      const url = await actions.current.createLink(
-                        'join',
-                        invitation.email,
-                      );
-                      setNotice(
-                        (await copy(url))
-                          ? `Copied a new link for ${invitation.email}. The earlier one no longer works.`
-                          : 'The new link could not be copied. Press Copy new link again.',
-                      );
-                      await load();
-                    })
-                  }
-                >
-                  Copy new link
-                </Button>
-                <Button
-                  size="xs"
-                  variant="subtle"
-                  loading={pending === `revoke:${invitation.id}`}
-                  onClick={() =>
-                    void perform(`revoke:${invitation.id}`, async () => {
-                      await actions.current.revoke(invitation.id);
-                      await load();
-                    })
-                  }
-                >
-                  Revoke
-                </Button>
-              </Group>
-            ))}
+                            void perform(
+                              `remove:${member.userId}`,
+                              async () => {
+                                await actions.current.deactivate(member.userId);
+                                await load();
+                              },
+                            );
+                        }}
+                      >
+                        <FormattedMessage id="common.remove" />
+                      </Button>
+                    </Group>
+                  )}
+                </Group>
+              ))}
           </Stack>
-        )}
-
+        </Stack>
+        <Stack gap="md" mt="sm">
+          <Title order={3}>
+            <FormattedMessage id="settings.household.invitePeople" />
+          </Title>
+          {inviteForm(
+            'create',
+            intl.formatMessage({
+              id: 'settings.household.inviteSomeoneToStartTheirOwnHousehold',
+            }),
+            intl.formatMessage({
+              id: 'settings.household.theirHouseholdSharesNothingWithYours',
+            }),
+          )}
+          {owner &&
+            inviteForm(
+              'join',
+              intl.formatMessage({
+                id: 'settings.household.inviteSomeoneToJoinThisHousehold',
+              }),
+              intl.formatMessage({
+                id: 'settings.household.onlySomeoneWhoSignsInWithThisEmailCan',
+              }),
+            )}
+          {notice && (
+            <Alert role="status">{formatFeedback(intl, notice)}</Alert>
+          )}
+          {owner && data.invitations.length > 0 && (
+            <Stack gap="xs">
+              <Text size="sm">
+                <FormattedMessage id="settings.household.pendingJoinLinks" />
+              </Text>
+              <Text size="sm" c="dimmed">
+                <FormattedMessage id="settings.household.lostAnInvitationCopyNewLinkMakesAFresh" />
+              </Text>
+              {data.invitations.map((invitation) => (
+                <Group key={invitation.id} gap="xs">
+                  <Text size="sm">
+                    <FormattedMessage
+                      id="settings.household.until"
+                      values={{
+                        value0: messageValue(invitation.email),
+                        value1: messageValue(
+                          formatDate(invitation.expiresAt, intl),
+                        ),
+                      }}
+                    />
+                  </Text>
+                  <Button
+                    size="xs"
+                    variant="default"
+                    loading={pending === `renew:${invitation.id}`}
+                    onClick={() =>
+                      void perform(`renew:${invitation.id}`, async () => {
+                        const url = await actions.current.createLink(
+                          'join',
+                          invitation.email,
+                        );
+                        setNotice(
+                          (await copy(url))
+                            ? {
+                                id: 'settings.household.copiedANewLinkForTheEarlierOneNo',
+                                values: { value0: invitation.email },
+                              }
+                            : 'settings.household.theNewLinkCouldNotBeCopiedPressCopy',
+                        );
+                        await load();
+                      })
+                    }
+                  >
+                    <FormattedMessage id="settings.household.copyNewLink" />
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="subtle"
+                    loading={pending === `revoke:${invitation.id}`}
+                    onClick={() =>
+                      void perform(`revoke:${invitation.id}`, async () => {
+                        await actions.current.revoke(invitation.id);
+                        await load();
+                      })
+                    }
+                  >
+                    <FormattedMessage id="settings.household.revoke" />
+                  </Button>
+                </Group>
+              ))}
+            </Stack>
+          )}
+        </Stack>
+        <Divider mt="sm" />
         <Group>
           <Button
             variant="light"
@@ -318,24 +401,30 @@ export function HouseholdAccessPanel({
               setLeaving(true);
             }}
           >
-            Leave this household
+            <FormattedMessage id="settings.household.leaveThisHousehold" />
           </Button>
         </Group>
       </Stack>
       <Modal
         opened={confirming !== null}
         onClose={() => setConfirming(null)}
-        title="Send this invitation?"
+        title={intl.formatMessage({
+          id: 'settings.household.sendThisInvitation',
+        })}
+        closeButtonProps={{
+          'aria-label': intl.formatMessage({ id: 'common.close' }),
+        }}
       >
         <Stack>
           <Text>
-            We will email an invitation to {confirming?.email} and copy its link
-            to your clipboard, so you can send it yourself too. It works once,
-            for 7 days.
+            <FormattedMessage
+              id="settings.household.weWillEmailAnInvitationToAndCopyIts"
+              values={{ value0: messageValue(confirming?.email) }}
+            />
           </Text>
           <Group justify="flex-end">
             <Button variant="default" onClick={() => setConfirming(null)}>
-              Cancel
+              <FormattedMessage id="common.cancel" />
             </Button>
             <Button
               loading={pending === 'send'}
@@ -346,14 +435,15 @@ export function HouseholdAccessPanel({
                   const url = await actions.current.sendLink(purpose, email);
                   const copied = await copy(url);
                   setEmails((current) => ({ ...current, [purpose]: '' }));
-                  setNotice(
-                    `Invitation sent to ${email}. ${copied ? 'The link is copied to your clipboard.' : 'The link could not be copied.'}`,
-                  );
+                  setNotice({
+                    id: 'settings.household.invitationSent',
+                    values: { email, copied: copied ? 'yes' : 'no' },
+                  });
                   await load();
                 }).then(() => setConfirming(null));
               }}
             >
-              Send invitation
+              <FormattedMessage id="settings.household.sendInvitation" />
             </Button>
           </Group>
         </Stack>
@@ -361,17 +451,23 @@ export function HouseholdAccessPanel({
       <Modal
         opened={leaving}
         onClose={() => setLeaving(false)}
-        title="Leave this household?"
+        title={intl.formatMessage({
+          id: 'settings.household.leaveThisHousehold2',
+        })}
+        closeButtonProps={{
+          'aria-label': intl.formatMessage({ id: 'common.close' }),
+        }}
       >
         <Stack>
           {mustHandOver ? (
             <>
               <Text>
-                You are the only owner. Choose a member to make an owner before
-                you leave.
+                <FormattedMessage id="settings.household.youAreTheOnlyOwnerChooseAMemberTo" />
               </Text>
               <Select
-                label="New owner"
+                label={intl.formatMessage({
+                  id: 'settings.household.newOwner',
+                })}
                 data={others.map((member) => ({
                   value: member.userId,
                   label: member.displayName,
@@ -382,17 +478,16 @@ export function HouseholdAccessPanel({
             </>
           ) : others.length === 0 ? (
             <Text>
-              You are the last member, so leaving closes this household. Nothing
-              is deleted, and it can be restored on request.
+              <FormattedMessage id="settings.household.youAreTheLastMemberSoLeavingClosesThis" />
             </Text>
           ) : (
             <Text>
-              Your saves and notes stay. An owner can invite you back.
+              <FormattedMessage id="settings.household.yourSavesAndNotesStayAnOwnerCanInvite" />
             </Text>
           )}
           <Group justify="flex-end">
             <Button variant="default" onClick={() => setLeaving(false)}>
-              Stay
+              <FormattedMessage id="settings.household.stay" />
             </Button>
             <Button
               color="red"
@@ -406,7 +501,13 @@ export function HouseholdAccessPanel({
                 })
               }
             >
-              {mustHandOver ? 'Make owner and leave' : 'Leave household'}
+              {mustHandOver
+                ? intl.formatMessage({
+                    id: 'settings.household.makeOwnerAndLeave',
+                  })
+                : intl.formatMessage({
+                    id: 'settings.household.leaveHousehold',
+                  })}
             </Button>
           </Group>
         </Stack>

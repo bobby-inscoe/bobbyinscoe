@@ -9,9 +9,15 @@ import {
   Stack,
   Text,
 } from '@mantine/core';
-import { useState } from 'react';
-
+import { type ReactNode, useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { NumberSelect } from '@/features/house-scanner/components/number-select';
+import {
+  errorFeedback,
+  type Feedback,
+  formatFeedback,
+  validationFeedback,
+} from '@/features/house-scanner/i18n/catalogs';
 import {
   criteriaSchema,
   type SearchProfile,
@@ -33,14 +39,18 @@ export function ProfileEditor({
   profile,
   canEdit,
   onSave,
+  header,
 }: {
+  header?: ReactNode;
   profile: SearchProfile;
   canEdit: boolean;
   onSave?: (profile: SearchProfile) => Promise<void>;
 }) {
+  const intl = useIntl();
+
   const [criteria, setCriteria] = useState(profile.criteria);
   const [enabled, setEnabled] = useState(profile.enabled);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState<Feedback>('');
   const [busy, setBusy] = useState(false);
   const hub = SEARCH_HUBS.find(({ center }) =>
     isNear(criteria.geography.center, center),
@@ -72,7 +82,7 @@ export function ProfileEditor({
         key={key}
         label={label}
         description={description}
-        thousandSeparator=" "
+        thousandSeparator={intl.locale.startsWith('sv') ? ' ' : ','}
         value={criteria[key]}
         min={0}
         allowDecimal={false}
@@ -83,6 +93,7 @@ export function ProfileEditor({
             [key]: typeof value === 'number' ? value : 0,
           }))
         }
+        decimalSeparator={intl.locale.startsWith('sv') ? ',' : '.'}
       />
     );
   }
@@ -106,7 +117,7 @@ export function ProfileEditor({
   async function save() {
     const result = criteriaSchema.safeParse(criteria);
     if (!result.success) {
-      setMessage(result.error.issues.map((issue) => issue.message).join(' '));
+      setMessage(validationFeedback(result.error.issues));
       return;
     }
     if (!canEdit || !onSave) return;
@@ -119,14 +130,10 @@ export function ProfileEditor({
         criteria: { ...result.data, propertyTypes: ['apartment'] },
       });
       setMessage(
-        'Profile saved. Stored homes are re-evaluated against the saved criteria. Collection coverage is unchanged.',
+        'settings.criteria.profileSavedStoredHomesAreReEvaluatedAgainstThe',
       );
     } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : 'Could not save criteria. Try again.',
-      );
+      setMessage(errorFeedback(error));
     } finally {
       setBusy(false);
     }
@@ -134,8 +141,11 @@ export function ProfileEditor({
   return (
     <Paper>
       <Stack>
+        {header}
         <Checkbox
-          label="Enabled search profile"
+          label={intl.formatMessage({
+            id: 'settings.criteria.enabledSearchProfile',
+          })}
           checked={enabled}
           disabled={!canEdit || !onSave}
           onChange={(event) => setEnabled(event.currentTarget.checked)}
@@ -143,68 +153,96 @@ export function ProfileEditor({
         <SimpleGrid cols={{ base: 1, sm: 2 }}>
           {numeric(
             'preferredPriceSek',
-            'Preferred budget (SEK)',
-            'Homes at or below this price are grouped as Within budget.',
+            intl.formatMessage({ id: 'settings.criteria.preferredBudgetSEK' }),
+            intl.formatMessage({
+              id: 'settings.criteria.preferredBudgetDescription',
+            }),
           )}
           {numeric(
             'stretchPriceSek',
-            'Maximum budget (SEK)',
-            'Homes with a known asking price above this amount are excluded.',
+            intl.formatMessage({ id: 'settings.criteria.stretchBudgetSEK' }),
+            intl.formatMessage({
+              id: 'settings.criteria.maximumBudgetDescription',
+            }),
           )}
         </SimpleGrid>
         <SimpleGrid cols={{ base: 1, sm: 3 }}>
           <NumberSelect
-            label="Minimum living area"
-            ariaLabel="Minimum living area (m²)"
+            label={intl.formatMessage({
+              id: 'settings.criteria.minimumLivingArea',
+            })}
+            ariaLabel={intl.formatMessage({
+              id: 'settings.criteria.minimumLivingAreaM',
+            })}
             value={criteria.minAreaM2}
             onChange={(value) =>
               value !== null &&
               setCriteria((current) => ({ ...current, minAreaM2: value }))
             }
             options={AREA_OPTIONS}
-            format={formatArea}
+            format={(value) => formatArea(value, intl)}
             disabled={!canEdit || !onSave}
           />
           <NumberSelect
-            label="Maximum living area"
-            ariaLabel="Maximum living area (m²)"
+            label={intl.formatMessage({
+              id: 'settings.criteria.maximumLivingArea',
+            })}
+            ariaLabel={intl.formatMessage({
+              id: 'settings.criteria.maximumLivingAreaM',
+            })}
             value={criteria.maxAreaM2}
             onChange={(value) =>
               setCriteria((current) => ({ ...current, maxAreaM2: value }))
             }
             options={AREA_OPTIONS}
-            format={formatArea}
-            anyLabel="No maximum"
+            format={(value) => formatArea(value, intl)}
+            anyLabel={intl.formatMessage({ id: 'settings.criteria.noMaximum' })}
             disabled={!canEdit || !onSave}
           />
           <NumberSelect
-            label="Minimum rooms"
+            label={intl.formatMessage({ id: 'settings.criteria.minimumRooms' })}
             value={criteria.minRooms}
             onChange={(value) =>
               value !== null &&
               setCriteria((current) => ({ ...current, minRooms: value }))
             }
             options={ROOM_OPTIONS}
-            format={formatRooms}
+            format={(value) => formatRooms(value, intl)}
             disabled={!canEdit || !onSave}
           />
         </SimpleGrid>
-        <Text size="sm">Apartment rules</Text>
-        <Text size="sm" c="dimmed">
-          Known mismatches are excluded. Unknown or disputed facts stay under
-          Missing info.
+        <Text size="sm">
+          <FormattedMessage id="settings.criteria.apartmentRules" />
         </Text>
-        {toggle('excludeGroundFloor', 'Exclude ground floor apartments')}
-        {toggle('requireLift', 'Require a lift')}
-        {toggle('requireOutdoor', 'Require a balcony or terrace')}
+        <Text size="sm" c="dimmed">
+          <FormattedMessage id="settings.criteria.apartmentRulesDescription" />
+        </Text>
+        {toggle(
+          'excludeGroundFloor',
+          intl.formatMessage({
+            id: 'settings.criteria.excludeConfirmedGroundFloorApartments',
+          }),
+        )}
+        {toggle(
+          'requireLift',
+          intl.formatMessage({ id: 'settings.criteria.requireALift' }),
+        )}
+        {toggle(
+          'requireOutdoor',
+          intl.formatMessage({
+            id: 'settings.criteria.requireABalconyOrTerrace',
+          }),
+        )}
         {numeric(
           'feeReferenceSek',
-          'Monthly fee reference (SEK)',
-          'Adds a cost warning above this amount. It does not exclude homes.',
+          intl.formatMessage({ id: 'settings.criteria.monthlyFeeLabel' }),
+          intl.formatMessage({ id: 'settings.criteria.monthlyFeeDescription' }),
         )}
         <Select
-          label="Search location"
-          description="Choose a whole city or a hub within it. Hubs use the radius below; whole cities use the municipality boundary. Coverage is currently limited to Göteborg."
+          label={intl.formatMessage({ id: 'settings.criteria.searchLocation' })}
+          description={intl.formatMessage({
+            id: 'settings.criteria.searchLocationDescription',
+          })}
           value={location}
           data={[
             ...(location === 'current'
@@ -213,8 +251,17 @@ export function ProfileEditor({
                     value: 'current',
                     label:
                       criteria.geography.mode === 'radius'
-                        ? `Saved point (${criteria.geography.center[1].toFixed(3)}, ${criteria.geography.center[0].toFixed(3)})`
-                        : 'Current saved search',
+                        ? intl.formatMessage(
+                            { id: 'settings.criteria.savedPoint' },
+                            {
+                              latitude: criteria.geography.center[1].toFixed(3),
+                              longitude:
+                                criteria.geography.center[0].toFixed(3),
+                            },
+                          )
+                        : intl.formatMessage({
+                            id: 'settings.criteria.currentSavedSearch',
+                          }),
                     disabled: true,
                   },
                 ]
@@ -224,13 +271,28 @@ export function ProfileEditor({
               items: [
                 {
                   value: `city:${value}`,
-                  label:
-                    value + (supported ? ' (whole city)' : ' (coming soon)'),
+                  label: supported
+                    ? intl.formatMessage(
+                        { id: 'settings.criteria.wholeCity' },
+                        { city: value },
+                      )
+                    : intl.formatMessage(
+                        { id: 'settings.criteria.comingSoon' },
+                        { value0: value },
+                      ),
                   disabled: !supported,
                 },
                 ...SEARCH_HUBS.filter(
                   (entry) => entry.municipality === value && supported,
-                ).map(({ value, label }) => ({ value: `hub:${value}`, label })),
+                ).map(({ value, label }) => ({
+                  value: `hub:${value}`,
+                  label:
+                    value === 'brunnsparken'
+                      ? intl.formatMessage({
+                          id: 'settings.criteria.brunnsparkenCentralGoteborg',
+                        })
+                      : label,
+                })),
               ],
             })),
           ]}
@@ -267,15 +329,18 @@ export function ProfileEditor({
         />
         {!criteria.geography.mode && (
           <Text size="sm" c="dimmed">
-            Your saved search includes{' '}
-            {criteria.geography.municipalities.join(', ')} or homes within{' '}
-            {formatKm(criteria.geography.radiusKm)} of its saved point. It stays
-            unchanged until you choose a location.
+            <FormattedMessage
+              id="settings.criteria.legacySearchDescription"
+              values={{
+                cities: criteria.geography.municipalities.join(', '),
+                radius: formatKm(criteria.geography.radiusKm, intl),
+              }}
+            />
           </Text>
         )}
         {criteria.geography.mode === 'radius' && (
           <NumberSelect
-            label="Radius"
+            label={intl.formatMessage({ id: 'settings.criteria.radius' })}
             value={criteria.geography.radiusKm}
             onChange={(radiusKm) =>
               radiusKm !== null &&
@@ -285,14 +350,20 @@ export function ProfileEditor({
               }))
             }
             options={RADIUS_OPTIONS_KM}
-            format={formatKm}
+            format={(value) => formatKm(value, intl)}
             disabled={!canEdit || !onSave}
           />
         )}
         <MultiSelect
-          label="Sources"
-          description="Show homes from these brokers only. Leave empty for every source."
-          placeholder={criteria.sourceIds ? undefined : 'Every source'}
+          label={intl.formatMessage({ id: 'settings.criteria.sources' })}
+          description={intl.formatMessage({
+            id: 'settings.criteria.showHomesFromTheseBrokersOnlyLeaveEmptyFor',
+          })}
+          placeholder={
+            criteria.sourceIds
+              ? undefined
+              : intl.formatMessage({ id: 'settings.criteria.everySource' })
+          }
           value={criteria.sourceIds ?? []}
           onChange={(sourceIds) =>
             setCriteria((current) => ({
@@ -306,24 +377,29 @@ export function ProfileEditor({
               .filter((id) => !SOURCES.some(({ value }) => value === id))
               .map((value) => ({
                 value,
-                label: `${value} (not collected)`,
+                label: intl.formatMessage(
+                  { id: 'settings.criteria.notCollected' },
+                  { value0: value },
+                ),
                 disabled: true,
               })),
           ]}
           disabled={!canEdit || !onSave}
         />
         <Button disabled={!canEdit || !onSave} loading={busy} onClick={save}>
-          Save criteria
+          <FormattedMessage id="settings.criteria.saveCriteria" />
         </Button>
         {!canEdit && (
           <Text size="sm">
-            Only household owners can change shared criteria.
+            <FormattedMessage id="settings.criteria.onlyHouseholdOwnersCanChangeSharedCriteria" />
           </Text>
         )}
         {canEdit && !onSave && (
-          <Text size="sm">Profile changes are unavailable in this view.</Text>
+          <Text size="sm">
+            <FormattedMessage id="settings.criteria.profileChangesAreUnavailableInThisView" />
+          </Text>
         )}
-        <Text role="status">{message}</Text>
+        <Text role="status">{formatFeedback(intl, message)}</Text>
       </Stack>
     </Paper>
   );

@@ -1,5 +1,11 @@
 import { Button, Stack, Text, TextInput, Title } from '@mantine/core';
 import { useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
+import {
+  errorFeedback,
+  type Feedback,
+  formatFeedback,
+} from '@/features/house-scanner/i18n/catalogs';
 
 // Shown after an invitation or reset email signs the person in, before anything else.
 export function SetPasswordForm({
@@ -9,40 +15,39 @@ export function SetPasswordForm({
   kind: 'invite' | 'recovery';
   onSave: (password: string) => Promise<void>;
 }) {
+  const intl = useIntl();
+
   const [password, setPassword] = useState('');
   const [repeat, setRepeat] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<Feedback>('');
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault();
         if (password !== repeat) {
-          setError('The two passwords differ.');
+          setError('access.theTwoPasswordsDiffer');
           return;
         }
         setBusy(true);
         setError('');
         onSave(password)
-          .catch((failure: unknown) =>
-            setError(
-              failure instanceof Error
-                ? failure.message
-                : 'The password could not be saved.',
-            ),
-          )
+          .catch((failure: unknown) => setError(errorFeedback(failure)))
           .finally(() => setBusy(false));
       }}
+      noValidate
     >
       <Stack align="flex-start" gap="md">
         <Title order={2}>
-          {kind === 'invite' ? 'Choose your password' : 'Choose a new password'}
+          {kind === 'invite'
+            ? intl.formatMessage({ id: 'access.chooseYourPassword' })
+            : intl.formatMessage({ id: 'access.chooseANewPassword' })}
         </Title>
         <Text size="sm">
-          Use 8 to 72 characters. You sign in with your email and this password.
+          <FormattedMessage id="access.use8To72CharactersYouSignInWith" />
         </Text>
         <TextInput
-          label="New password"
+          label={intl.formatMessage({ id: 'access.newPassword' })}
           type="password"
           autoComplete="new-password"
           w="100%"
@@ -53,7 +58,7 @@ export function SetPasswordForm({
           onChange={(event) => setPassword(event.currentTarget.value)}
         />
         <TextInput
-          label="Repeat the password"
+          label={intl.formatMessage({ id: 'access.repeatThePassword' })}
           type="password"
           autoComplete="new-password"
           w="100%"
@@ -65,11 +70,11 @@ export function SetPasswordForm({
         />
         {error && (
           <Text size="sm" role="alert">
-            {error}
+            {formatFeedback(intl, error)}
           </Text>
         )}
         <Button type="submit" loading={busy}>
-          Save password
+          <FormattedMessage id="access.savePassword" />
         </Button>
       </Stack>
     </form>

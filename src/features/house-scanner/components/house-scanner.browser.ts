@@ -58,7 +58,7 @@ async function choose(
 }
 
 async function applyFilters(page: import('@playwright/test').Page) {
-  await page.getByRole('button', { name: /^Show \d+ homes$/ }).click();
+  await page.getByRole('button', { name: /^Show \d+ homes?$/ }).click();
 }
 
 async function cardAction(
@@ -66,7 +66,7 @@ async function cardAction(
   card: import('@playwright/test').Locator,
   name: 'Hide this home' | 'Unhide this home' | 'See on map',
 ) {
-  if (test.info().project.name === 'narrow') {
+  if (test.info().project.name === 'narrow' && name === 'See on map') {
     await card.getByRole('button', { name: /^More actions for / }).click();
     await page.getByRole('menuitem', { name, exact: true }).click();
   } else {
@@ -464,7 +464,7 @@ test('personal filters change the list and the map together, and Clear restores 
   );
   await choose(page, 'Min living area (m²)', '90 m²');
   await expect(page.getByRole('article')).toHaveCount(5);
-  await expect(page.getByText('1 homes', { exact: false })).toBeVisible();
+  await expect(page.getByText('1 home', { exact: false })).toBeVisible();
   await expect(page.getByText('Showing 1 of 5 homes')).toBeVisible();
   await applyFilters(page);
   await expect(
@@ -597,7 +597,7 @@ test('a home hidden from the details sheet stays in Favorites, marked, and keeps
   await expect(
     details.getByRole('button', { name: 'Unhide this home' }),
   ).toBeVisible();
-  await details.getByRole('button', { name: 'Back to listings' }).click();
+  await details.getByRole('button', { name: 'Close listing details' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(home).toHaveCount(0);
   await page.getByRole('button', { name: 'Favorites', exact: true }).click();
@@ -1146,7 +1146,7 @@ test('a click or tap on the bare map closes the selected home; markers, drags, t
     .locator('button[aria-pressed="true"]')
     .click();
   await expect(card).toBeVisible();
-  await card.getByText(/^2\s800\s000 SEK$/).click();
+  await card.getByText(/^2,800,000 SEK$/).click();
   await expect(card).toBeVisible();
   await page.mouse.move(point.x, point.y);
   await page.mouse.down();
@@ -1270,8 +1270,8 @@ test('the tab buttons stay on one row and the view heading is only for screen re
     .evaluateAll((buttons) =>
       buttons.map((button) => Math.round(button.getBoundingClientRect().top)),
     );
-  // Listings, Favorites and More.
-  expect(tops).toHaveLength(3);
+  // Listings, Favorites, Viewings and More.
+  expect(tops).toHaveLength(4);
   expect(new Set(tops).size).toBe(1);
   const heading = page.getByRole('heading', { name: 'Listings', level: 2 });
   await expect(heading).toHaveCount(1);
@@ -1383,7 +1383,7 @@ test('living area and rooms are dropdowns, and price fields group their digits a
   await page.getByRole('button', { name: /^Filters(?: \(\d+\))?$/ }).click();
   const price = page.getByRole('textbox', { name: 'Max price (SEK)' });
   await price.fill('4500000');
-  await expect(price).toHaveValue('4 500 000');
+  await expect(price).toHaveValue('4,500,000');
   for (const name of [
     'Min living area (m²)',
     'Max living area (m²)',
@@ -1392,7 +1392,7 @@ test('living area and rooms are dropdowns, and price fields group their digits a
     await expect(page.getByRole('combobox', { name })).toBeVisible();
   await page.getByRole('combobox', { name: 'Minimum rooms' }).click();
   await expect(
-    page.getByRole('option', { name: '2,5 rooms', exact: true }),
+    page.getByRole('option', { name: '2.5 rooms', exact: true }),
   ).toBeVisible();
   await page.getByRole('option', { name: '3 rooms', exact: true }).click();
   await expect(page.getByText('Showing', { exact: false })).toBeVisible();
@@ -1417,7 +1417,7 @@ test('the filter drawer fits the viewport, exposes its controls, and returns foc
   await expect(
     drawer.getByRole('checkbox', { name: 'Lift', exact: true }),
   ).toBeVisible();
-  const apply = drawer.getByRole('button', { name: /^Show \d+ homes$/ });
+  const apply = drawer.getByRole('button', { name: /^Show \d+ homes?$/ });
   await expect(apply).toBeVisible();
   await choose(page, 'Min living area (m²)', '90 m²');
   const viewport = page.viewportSize();
@@ -1532,7 +1532,7 @@ test('the details sheet and the map card carry a favorite star, and the map card
   if (test.info().project.name === 'narrow') {
     await page.getByRole('button', { name: /^Filters(?: \(\d+\))?$/ }).click();
     await page.getByRole('radio', { name: 'Both', exact: true }).check();
-    await page.getByRole('button', { name: /^Show \d+ homes$/ }).click();
+    await page.getByRole('button', { name: /^Show \d+ homes?$/ }).click();
   } else {
     await page.getByRole('switch', { name: 'Show hidden homes' }).check();
   }
@@ -1548,7 +1548,7 @@ test('the details sheet and the map card carry a favorite star, and the map card
   if (test.info().project.name === 'narrow') {
     await page.getByRole('button', { name: /^Filters(?: \(\d+\))?$/ }).click();
     await page.getByRole('radio', { name: 'Not hidden', exact: true }).check();
-    await page.getByRole('button', { name: /^Show \d+ homes$/ }).click();
+    await page.getByRole('button', { name: /^Show \d+ homes?$/ }).click();
   } else {
     await page.getByRole('switch', { name: 'Show hidden homes' }).uncheck();
   }
@@ -1567,7 +1567,9 @@ test('the Viewings tab lists saved homes with their times and hands over a calen
   });
   await expect(card.getByText(/^Viewing /)).toBeVisible();
 
-  await page.getByRole('button', { name: 'Viewings', exact: true }).click();
+  await page
+    .getByRole('button', { name: /^Viewings(?:,|$)/, exact: true })
+    .click();
   await expect(
     page.getByRole('heading', { name: 'Viewings', level: 2 }),
   ).toHaveCount(0);

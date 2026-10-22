@@ -158,8 +158,8 @@ describe('mapPoints', () => {
       {
         id: balcony.id,
         coordinates: balcony.coordinates,
-        markerText: '2,8M',
-        label: `Example balcony home: ${formatPrice(2800000)} · available`,
+        markerText: '2.8M',
+        label: `Example balcony home: ${formatPrice(2800000)} · Available`,
       },
     ]);
   });
@@ -174,7 +174,7 @@ describe('mapPoints', () => {
         {
           id: home.id,
           markerText: '?',
-          label: `${title}: ${formatPrice(price)} · available · no known position`,
+          label: `${title}: ${formatPrice(price)} · Available · no known position`,
           unlocated: true,
         },
       ]);
@@ -185,7 +185,7 @@ describe('mapPoints', () => {
     const [point] = mapPoints([needsDetails]);
     expect(point.markerText).toBe('?');
     expect(point.label).toBe(
-      'Example home needing details: Price unknown · available · no known position',
+      'Example home needing details: Price unknown · Available · no known position',
     );
   });
 
@@ -199,11 +199,11 @@ describe('mapPoints', () => {
     ]);
     expect(pinned.markerText).toBe('?');
     expect(pinned.label).toBe(
-      'Example balcony home: Price disputed · available',
+      'Example balcony home: Price disputed · Available',
     );
     expect(unlocated.markerText).toBe('?');
     expect(unlocated.label).toBe(
-      'Example older listing: Price disputed · available · no known position',
+      'Example older listing: Price disputed · Available · no known position',
     );
   });
 
@@ -214,7 +214,7 @@ describe('mapPoints', () => {
       SYNTHETIC_SNAPSHOT.favorites,
       DEMO_OTHER_USER_ID,
     );
-    expect(point.markerText).toBe('2,8M');
+    expect(point.markerText).toBe('2.8M');
     expect(point.label).toContain('saved by you');
     expect(point.savedByMe).toBe(true);
     expect(point.savedByHousehold).toBe(true);
@@ -227,7 +227,7 @@ describe('mapPoints', () => {
       SYNTHETIC_SNAPSHOT.favorites,
       DEMO_USER_ID,
     );
-    expect(point.markerText).toBe('2,8M');
+    expect(point.markerText).toBe('2.8M');
     expect(point.label).toContain('saved by household member');
     expect(point.savedByMe).toBeUndefined();
     expect(point.savedByHousehold).toBe(true);
