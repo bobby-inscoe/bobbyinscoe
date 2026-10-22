@@ -6,6 +6,7 @@ import {
   toUrlSearch,
   validateBrowseSearch,
 } from '@/features/house-scanner/utils/browse-search';
+import { emptyFilters } from '@/features/house-scanner/utils/listing-filters';
 
 type Layer = 'filterOpen' | 'select';
 interface BrowseOrigin {
@@ -206,7 +207,15 @@ export function useBrowseNavigation() {
       to: destinations[
         tab === 'favorites' || tab === 'viewings' ? 'favorites' : 'suggestions'
       ],
-      search: toUrlSearch({ ...search, view: 'map' }),
+      search: toUrlSearch({
+        ...search,
+        view: 'map',
+        // Viewings ignores browse filters and duplicate folding, so its map must include the same homes.
+        filters:
+          tab === 'viewings'
+            ? { ...emptyFilters, showDuplicates: true }
+            : search.filters,
+      }),
       state: { houseScannerLayers: layers },
       resetScroll: false,
     });

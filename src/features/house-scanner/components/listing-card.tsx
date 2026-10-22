@@ -4,14 +4,14 @@ import {
   Button,
   Checkbox,
   Group,
-  Menu,
   Text,
   Title,
   UnstyledButton,
 } from '@mantine/core';
-import { memo, useMemo, useState } from 'react';
+import { memo, useMemo } from 'react';
 import { FavoriteStar } from '@/features/house-scanner/components/favorite-star';
 import { HideButton } from '@/features/house-scanner/components/hide-button';
+import { ListingCardMenu } from '@/features/house-scanner/components/listing-card-menu';
 import { ListingDetails } from '@/features/house-scanner/components/listing-details';
 import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
 import {
@@ -186,23 +186,6 @@ export const ListingCard = memo(function ListingCard({
     [listing.id, listing.title, checked, selectionDisabled, onToggleSelection],
   );
   const estimated = useHasEstimate(listing);
-  const [copied, setCopied] = useState(false);
-  const shareUrl = listing.sourceUrls[0];
-  // The phone's own share sheet where the browser has one; otherwise copy the link.
-  const canShare = typeof navigator.share === 'function';
-  const share = async () => {
-    try {
-      if (canShare) {
-        await navigator.share({ title: listing.title, url: shareUrl });
-        return;
-      }
-      await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Dismissing the share sheet rejects; a blocked clipboard has no fallback.
-    }
-  };
   const selectionLabel = `${checked ? 'Deselect' : 'Select'} ${listing.title}`;
   const openPrimary = () => {
     if (selectionMode) {
@@ -326,36 +309,9 @@ export const ListingCard = memo(function ListingCard({
             </Button>
           </Box>
         )}
-        {(shareUrl || (onSeeOnMap && hasPin(listing.coordinates))) && (
-          <Box {...phoneOnly(details)}>
-            <Menu
-              position="bottom-end"
-              classNames={{ item: classes.cardMenuItem }}
-            >
-              <Menu.Target>
-                <Button
-                  size="xs"
-                  variant="subtle"
-                  aria-label={`More actions for ${listing.title}`}
-                >
-                  More
-                </Button>
-              </Menu.Target>
-              <Menu.Dropdown>
-                {shareUrl && (
-                  <Menu.Item onClick={share} closeMenuOnClick={canShare}>
-                    {copied ? 'Link copied' : 'Share this listing'}
-                  </Menu.Item>
-                )}
-                {onSeeOnMap && hasPin(listing.coordinates) && (
-                  <Menu.Item onClick={() => onSeeOnMap(listing.id)}>
-                    See on map
-                  </Menu.Item>
-                )}
-              </Menu.Dropdown>
-            </Menu>
-          </Box>
-        )}
+        <Box {...phoneOnly(details)}>
+          <ListingCardMenu listing={listing} onSeeOnMap={onSeeOnMap} />
+        </Box>
         {saved.length > 0 && (
           <Text size="xs" {...phoneOnly(details)}>
             Saved by {saved.length} {saved.length === 1 ? 'member' : 'members'}

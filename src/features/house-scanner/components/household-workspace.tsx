@@ -297,6 +297,9 @@ export function HouseholdWorkspace({
           />
         ) : tab === 'viewings' ? (
           <>
+            {!detailsOpen && hiddenActions.error && (
+              <Text role="alert">{hiddenActions.error}</Text>
+            )}
             <ViewingsPanel
               snapshot={snapshot}
               userId={userId}
@@ -333,6 +336,7 @@ export function HouseholdWorkspace({
                   busy: selected ? pending.includes(selected.id) : false,
                 }}
                 notes={notes}
+                hideError={hiddenActions.error}
                 onToggleHidden={(id) => {
                   if (hidden.has(id)) unhide(id);
                   else hide(id);

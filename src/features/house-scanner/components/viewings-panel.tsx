@@ -2,14 +2,14 @@ import {
   Box,
   Button,
   Group,
-  Menu,
   Select,
   Stack,
   Text,
   Title,
   UnstyledButton,
 } from '@mantine/core';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { ListingCardMenu } from '@/features/house-scanner/components/listing-card-menu';
 import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
 import { KeyFacts } from '@/features/house-scanner/components/listing-summary';
 import { CalendarButton } from '@/features/house-scanner/components/viewing-list';
@@ -20,7 +20,6 @@ import type {
   Viewing,
 } from '@/features/house-scanner/types/contracts';
 import { formatDate } from '@/features/house-scanner/utils/format';
-import { hasPin } from '@/features/house-scanner/utils/listing-position';
 import {
   formatViewing,
   groupByDay,
@@ -142,23 +141,6 @@ function ViewingCard({
   onOpen: () => void;
   onSeeOnMap: () => void;
 }) {
-  const [copied, setCopied] = useState(false);
-  const shareUrl = listing.sourceUrls[0];
-  const canShare = typeof navigator.share === 'function';
-  const share = async () => {
-    try {
-      if (canShare) {
-        await navigator.share({ title: listing.title, url: shareUrl });
-        return;
-      }
-      await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // A dismissed share sheet or blocked clipboard leaves the card unchanged.
-    }
-  };
-  const located = hasPin(listing.coordinates);
   return (
     <Box
       component="article"
@@ -197,32 +179,7 @@ function ViewingCard({
         >
           Details
         </Button>
-        {(shareUrl || located) && (
-          <Menu
-            position="bottom-end"
-            classNames={{ item: classes.cardMenuItem }}
-          >
-            <Menu.Target>
-              <Button
-                size="xs"
-                variant="subtle"
-                aria-label={`More actions for ${listing.title}`}
-              >
-                More
-              </Button>
-            </Menu.Target>
-            <Menu.Dropdown>
-              {shareUrl && (
-                <Menu.Item onClick={share} closeMenuOnClick={canShare}>
-                  {copied ? 'Link copied' : 'Share this listing'}
-                </Menu.Item>
-              )}
-              {located && (
-                <Menu.Item onClick={onSeeOnMap}>See on map</Menu.Item>
-              )}
-            </Menu.Dropdown>
-          </Menu>
-        )}
+        <ListingCardMenu listing={listing} onSeeOnMap={onSeeOnMap} />
       </Group>
     </Box>
   );
