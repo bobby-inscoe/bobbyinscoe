@@ -1068,6 +1068,8 @@ describe('candidates filtered by household criteria', () => {
     await db.query(
       "update hs.listings set delisted_at=now(),missed_full_reads=2 where value->>'title'='fits-both'",
     );
+    // Rollbacks go newest first: the household rows call the hard rules these migrations replace.
+    await db.exec(await rollback(HOUSEHOLDS));
     await down(delisted);
     expect(
       (await snapshot(HOUSE_A, OWNER_A)).listings.some(
@@ -1095,6 +1097,7 @@ describe('candidates filtered by household criteria', () => {
     await db.exec(await migration(`${filter}.sql`));
     await db.exec(await migration(`${shared}.sql`));
     await db.exec(await migration(`${delisted}.sql`));
+    await db.exec(await migration(`${HOUSEHOLDS}.sql`));
     expect(await titles()).not.toContain('too-small-for-b');
     expect((await snapshot(HOUSE_A, OWNER_A)).hides).toHaveLength(2);
   });
@@ -1771,6 +1774,7 @@ describe('set-based publish', () => {
 // Data foundation migrations (spec: house-scanner-data-foundation).
 const WRITE_PATH = '20261022102043_house_scanner_write_path';
 const CARDS = '20261022103309_house_scanner_listing_cards';
+const HOUSEHOLDS = '20261022105133_house_scanner_household_listings';
 const rollback = (name: string) =>
   readFile(new URL(`../rollbacks/${name}_down.sql`, import.meta.url), 'utf8');
 
@@ -2235,6 +2239,239 @@ describe('listing cards', () => {
       const after = await stamps();
       expect(after.quiet).toBe(before.quiet);
       expect(BigInt(after.busy)).toBeGreaterThan(BigInt(before.busy));
+    } finally {
+      await database.close();
+    }
+  });
+});
+
+describe('household rows', () => {
+  const now = () => new Date().toISOString();
+
+  // The read model's homes for the household equal the snapshot's source homes, and the rows equal a fresh computation.
+  // Returns the titles the household sees, sorted.
+  async function sees(database: PGlite, household: string, user: string) {
+    const homes = (await snapshot(household, user, database)).listings.filter(
+      (item) => item.origin === 'source',
+    );
+    const visible = await database.query<{ listing_id: string }>(
+      'select listing_id from hs.visible_listings($1)',
+      [household],
+    );
+    expect(visible.rows.map((row) => row.listing_id).sort()).toEqual(
+      homes.map((item) => item.id).sort(),
+    );
+    const drift = await database.query('select * from hs.household_drift()');
+    expect(drift.rows).toEqual([]);
+    return homes.map((item) => item.title).sort();
+  }
+
+  it('rolls back to exactly the earlier schema and applies again', async () => {
+    const database = await migratedThrough(HOUSEHOLDS);
+    try {
+      const migrated = await fingerprint(database);
+      await database.exec(await rollback(HOUSEHOLDS));
+      const earlier = await migratedThrough(CARDS);
+      try {
+        expect(await fingerprint(database)).toEqual(await fingerprint(earlier));
+      } finally {
+        await earlier.close();
+      }
+      await database.exec(await migration(`${HOUSEHOLDS}.sql`));
+      expect(await fingerprint(database)).toEqual(migrated);
+      expect(migrated).toContain('relation r household_listings rls=true');
+      expect(
+        migrated.filter((line) =>
+          /^fn hs\.(refresh_household|visible_listings|household_|card_households|profile_households|expire_household)/.test(
+            line,
+          ),
+        ),
+      ).toEqual(
+        Array(8).fill(
+          expect.stringMatching(/anon=false auth=false svc=false$/),
+        ),
+      );
+    } finally {
+      await database.close();
+    }
+  });
+
+  it('sees what the snapshot shows for both households on the shared database', async () => {
+    expect((await sees(db, HOUSE_A, OWNER_A)).length).toBeGreaterThan(0);
+    expect((await sees(db, HOUSE_B, OWNER_B)).length).toBeGreaterThan(0);
+  });
+
+  it('follows profiles, favorites, notes, hides, publishes, delisting, the clock and policy changes', async () => {
+    const database = await sources('alpha');
+    try {
+      for (const [house, owner, profile, rules] of [
+        [HOUSE_A, OWNER_A, PROFILE_A, criteria],
+        [HOUSE_B, OWNER_B, PROFILE_B, { ...criteria, minRooms: 3 }],
+      ] as const) {
+        await database.query('insert into auth.users values($1)', [owner]);
+        await database.query(
+          "insert into hs.households(id,name) values($1,'Synthetic household')",
+          [house],
+        );
+        await database.query(
+          "insert into hs.members(household_id,user_id,display_name,role) values($1,$2,'Synthetic owner','owner')",
+          [house, owner],
+        );
+        await database.query(
+          "insert into hs.profiles(id,household_id,name,enabled,criteria,edited_by) values($1,$2,'Synthetic profile',true,$3::jsonb,$4)",
+          [profile, house, JSON.stringify(rules), owner],
+        );
+      }
+      const a = () => sees(database, HOUSE_A, OWNER_A);
+      const b = () => sees(database, HOUSE_B, OWNER_B);
+      const act = (sql: string, params: (string | boolean | number)[]) =>
+        as(
+          'authenticated',
+          OWNER_A,
+          () => rpc(sql, params, database),
+          database,
+        );
+      const facts = home('x').facts;
+      const idOf = async (title: string) =>
+        (
+          await database.query<{ id: string }>(
+            'select id from hs.listings where source_listing_id=$1',
+            [title],
+          )
+        ).rows[0].id;
+      const all = ['fits', 'roomy', 'small', 'pricey'];
+      await publish(
+        [
+          home('fits', { observedAt: now() }),
+          home('roomy', { observedAt: now(), facts: { ...facts, rooms: 3 } }),
+          home('small', {
+            observedAt: now(),
+            facts: { ...facts, livingAreaM2: 30 },
+          }),
+          home('pricey', {
+            observedAt: now(),
+            facts: { ...facts, askingPriceSek: 3_500_000 },
+          }),
+        ],
+        { database },
+      );
+      expect(await a()).toEqual(['fits', 'roomy']);
+      expect(await b()).toEqual(['roomy']);
+      // A save, a note with text, a blank note and a hide.
+      await act('select public.hs_set_favorite($1,$2,true) as value', [
+        HOUSE_A,
+        await idOf('pricey'),
+      ]);
+      await act('select public.hs_save_note($1,$2,$3,0) as value', [
+        HOUSE_A,
+        await idOf('small'),
+        '   ',
+      ]);
+      expect(await a()).toEqual(['fits', 'pricey', 'roomy']);
+      await act('select public.hs_save_note($1,$2,$3,1) as value', [
+        HOUSE_A,
+        await idOf('small'),
+        'Worth a look',
+      ]);
+      await act(
+        'select public.hs_set_hidden($1,array[$2]::uuid[],true) as value',
+        [HOUSE_A, await idOf('fits')],
+      );
+      expect(await a()).toEqual(['fits', 'pricey', 'roomy', 'small']);
+      expect(await b()).toEqual(['roomy']);
+      await act('select public.hs_set_favorite($1,$2,false) as value', [
+        HOUSE_A,
+        await idOf('pricey'),
+      ]);
+      await act(
+        'select public.hs_set_hidden($1,array[$2]::uuid[],false) as value',
+        [HOUSE_A, await idOf('fits')],
+      );
+      expect(await a()).toEqual(['fits', 'roomy', 'small']);
+      // Profile saves: wider rules, then switched off, then on again.
+      const saveProfile = async (enabled: boolean, rules: Criteria) => {
+        const revision = (
+          await database.query<{ revision: number }>(
+            'select revision from hs.profiles where id=$1',
+            [PROFILE_A],
+          )
+        ).rows[0].revision;
+        await act(
+          'select public.hs_save_profile($1,$2,$3,$4,$5,$6::jsonb) as value',
+          [
+            HOUSE_A,
+            PROFILE_A,
+            revision,
+            'Synthetic profile',
+            enabled,
+            JSON.stringify(rules),
+          ],
+        );
+      };
+      await saveProfile(true, {
+        ...criteria,
+        minAreaM2: 20,
+        stretchPriceSek: 4_000_000,
+      });
+      expect(await a()).toEqual(['fits', 'pricey', 'roomy', 'small']);
+      await saveProfile(false, criteria);
+      expect(await a()).toEqual(['small']);
+      await saveProfile(true, criteria);
+      expect(await a()).toEqual(['fits', 'roomy', 'small']);
+      // A price rise drops a home from both households; two full reads delist another.
+      await publish(
+        [
+          home('fits', {
+            observedAt: now(),
+            facts: { ...facts, askingPriceSek: 3_200_000 },
+          }),
+        ],
+        { database, seen: all, fullRead: true },
+      );
+      expect(await a()).toEqual(['roomy', 'small']);
+      for (let read = 0; read < 2; read += 1)
+        await publish(
+          [home('fits', { observedAt: now(), facts: { ...facts } })],
+          {
+            database,
+            seen: ['fits', 'small', 'pricey'],
+            fullRead: true,
+          },
+        );
+      expect(await a()).toEqual(['fits', 'small']);
+      expect(await b()).toEqual([]);
+      // Time passes for a matching home: it leaves the household, and its source's next publish removes the row,
+      // which nobody saved, noted or hid.
+      await database.query(
+        "update hs.listings set observed_at=now()-interval '40 days' where source_listing_id='fits'",
+      );
+      expect(await a()).toEqual(['small']);
+      const fits = await idOf('fits');
+      const rows = async () =>
+        (
+          await database.query<{ count: number }>(
+            'select count(*)::int count from hs.household_listings where listing_id=$1',
+            [fits],
+          )
+        ).rows[0].count;
+      expect(await rows()).toBe(1);
+      await publish(
+        [
+          home('small', {
+            observedAt: now(),
+            facts: { ...facts, livingAreaM2: 30 },
+          }),
+        ],
+        { database },
+      );
+      expect(await rows()).toBe(0);
+      expect(await a()).toEqual(['small']);
+      // A policy that no longer lists the origin leaves only the noted home.
+      await database.query(
+        `update hs.source_policies set policy=jsonb_set(policy,'{listingOrigins}','["https://elsewhere.invalid"]')`,
+      );
+      expect(await a()).toEqual(['small']);
+      expect(await b()).toEqual([]);
     } finally {
       await database.close();
     }
