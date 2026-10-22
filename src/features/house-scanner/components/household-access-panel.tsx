@@ -215,7 +215,12 @@ export function HouseholdAccessPanel({
                       {member.userId === userId ? ' (you)' : ''}
                     </Text>
                     {member.role === 'owner' && (
-                      <Badge variant="light">Owner</Badge>
+                      <Badge
+                        variant="light"
+                        styles={{ label: { lineHeight: 1 } }}
+                      >
+                        Owner
+                      </Badge>
                     )}
                   </Group>
                   {owner && member.userId !== userId && (
