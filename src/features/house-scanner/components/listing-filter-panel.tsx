@@ -162,16 +162,27 @@ export function ListingFilterPanel({
               />
             </>,
           )}
-          <Stack gap={4} flex="1 1 15rem">
-            <NumberSelect
-              label="Minimum rooms"
-              value={filters.minRooms}
-              onChange={(minRooms) => onChange({ ...filters, minRooms })}
-              options={ROOM_OPTIONS}
-              format={formatRooms}
-              anyLabel="Any"
-            />
-          </Stack>
+          {pair(
+            'Rooms',
+            <>
+              <NumberSelect
+                ariaLabel="Minimum rooms"
+                value={filters.minRooms}
+                onChange={(minRooms) => onChange({ ...filters, minRooms })}
+                options={ROOM_OPTIONS}
+                format={formatRooms}
+                anyLabel="No min"
+              />
+              <NumberSelect
+                ariaLabel="Maximum rooms"
+                value={filters.maxRooms}
+                onChange={(maxRooms) => onChange({ ...filters, maxRooms })}
+                options={ROOM_OPTIONS}
+                format={formatRooms}
+                anyLabel="No max"
+              />
+            </>,
+          )}
           <Select
             label="Viewing within"
             value={

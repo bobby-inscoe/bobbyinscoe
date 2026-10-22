@@ -1,7 +1,6 @@
 import {
   Button,
   Checkbox,
-  Group,
   MultiSelect,
   NumberInput,
   Paper,
@@ -9,9 +8,7 @@ import {
   SimpleGrid,
   Stack,
   Text,
-  Tooltip,
 } from '@mantine/core';
-import { Info } from 'lucide-react';
 import { useState } from 'react';
 
 import { NumberSelect } from '@/features/house-scanner/components/number-select';
@@ -21,7 +18,6 @@ import {
 } from '@/features/house-scanner/types/contracts';
 import {
   AREA_OPTIONS,
-  BRUNNSPARKEN,
   formatArea,
   formatKm,
   formatRooms,
@@ -29,40 +25,9 @@ import {
   MUNICIPALITIES,
   RADIUS_OPTIONS_KM,
   ROOM_OPTIONS,
+  SEARCH_HUBS,
   SOURCES,
 } from '@/features/house-scanner/utils/criteria-options';
-
-// Supported places can be picked; the rest show why they cannot. A saved name that is in neither
-// stays visible, so opening the editor never drops it silently.
-function places(saved: string[]) {
-  const known = new Set(MUNICIPALITIES.map(({ value }) => value));
-  return [
-    ...MUNICIPALITIES.map(({ value, supported }) => ({
-      value,
-      label: supported ? value : `${value} (coming soon)`,
-      disabled: !supported,
-    })),
-    ...saved
-      .filter((value) => !known.has(value))
-      .map((value) => ({
-        value,
-        label: `${value} (not supported)`,
-        disabled: true,
-      })),
-  ];
-}
-
-// A field label with the field's explanation in a hover tooltip.
-function LabelWithInfo({ info, children }: { info: string; children: string }) {
-  return (
-    <Group gap={4} wrap="nowrap">
-      {children}
-      <Tooltip multiline w={240} label={info}>
-        <Info size={14} aria-hidden />
-      </Tooltip>
-    </Group>
-  );
-}
 
 export function ProfileEditor({
   profile,
@@ -77,6 +42,19 @@ export function ProfileEditor({
   const [enabled, setEnabled] = useState(profile.enabled);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const hub = SEARCH_HUBS.find(({ center }) =>
+    isNear(criteria.geography.center, center),
+  );
+  const location =
+    criteria.geography.mode === 'municipalities' &&
+    criteria.geography.municipalities.length === 1 &&
+    MUNICIPALITIES.some(
+      ({ value }) => value === criteria.geography.municipalities[0],
+    )
+      ? `city:${criteria.geography.municipalities[0]}`
+      : criteria.geography.mode === 'radius' && hub
+        ? `hub:${hub.value}`
+        : 'current';
   // A new revision (ours or another member's) resets the fields but keeps the status message.
   const [seenRevision, setSeenRevision] = useState(profile.revision);
   if (seenRevision !== profile.revision) {
@@ -87,11 +65,13 @@ export function ProfileEditor({
   function numeric(
     key: 'preferredPriceSek' | 'stretchPriceSek' | 'feeReferenceSek',
     label: string,
+    description: string,
   ) {
     return (
       <NumberInput
         key={key}
         label={label}
+        description={description}
         thousandSeparator=" "
         value={criteria[key]}
         min={0}
@@ -107,11 +87,7 @@ export function ProfileEditor({
     );
   }
   function toggle(
-    key:
-      | 'excludeGroundFloor'
-      | 'requireLift'
-      | 'requireOutdoor'
-      | 'preferGlazing',
+    key: 'excludeGroundFloor' | 'requireLift' | 'requireOutdoor',
     label: string,
   ) {
     return (
@@ -165,8 +141,16 @@ export function ProfileEditor({
           onChange={(event) => setEnabled(event.currentTarget.checked)}
         />
         <SimpleGrid cols={{ base: 1, sm: 2 }}>
-          {numeric('preferredPriceSek', 'Preferred budget (SEK)')}
-          {numeric('stretchPriceSek', 'Stretch budget (SEK)')}
+          {numeric(
+            'preferredPriceSek',
+            'Preferred budget (SEK)',
+            'Homes at or below this price are grouped as Within budget.',
+          )}
+          {numeric(
+            'stretchPriceSek',
+            'Maximum budget (SEK)',
+            'Homes with a known asking price above this amount are excluded.',
+          )}
         </SimpleGrid>
         <SimpleGrid cols={{ base: 1, sm: 3 }}>
           <NumberSelect
@@ -206,99 +190,90 @@ export function ProfileEditor({
           />
         </SimpleGrid>
         <Text size="sm">Apartment rules</Text>
-        {toggle(
-          'excludeGroundFloor',
-          'Exclude confirmed ground-floor apartments',
-        )}
+        <Text size="sm" c="dimmed">
+          Known mismatches are excluded. Unknown or disputed facts stay under
+          Missing info.
+        </Text>
+        {toggle('excludeGroundFloor', 'Exclude ground floor apartments')}
         {toggle('requireLift', 'Require a lift')}
         {toggle('requireOutdoor', 'Require a balcony or terrace')}
-        {toggle(
-          'preferGlazing',
-          'Prefer glazed outdoor space (exceptions stay visible)',
+        {numeric(
+          'feeReferenceSek',
+          'Monthly fee reference (SEK)',
+          'Adds a cost warning above this amount. It does not exclude homes.',
         )}
-        {numeric('feeReferenceSek', 'Monthly fee reference (SEK, a cost flag)')}
-        <MultiSelect
-          label={
-            <LabelWithInfo info="The areas the collector reads, and the areas a home can be in to count as inside your search.">
-              Places to search
-            </LabelWithInfo>
-          }
-          value={criteria.geography.municipalities}
-          onChange={(municipalities) =>
-            setCriteria((current) => ({
-              ...current,
-              geography: { ...current.geography, municipalities },
-            }))
-          }
-          data={places(criteria.geography.municipalities)}
-          disabled={!canEdit || !onSave}
-        />
-        <MultiSelect
-          label={
-            <LabelWithInfo info="Show homes from these brokers only. Leave empty for every source.">
-              Sources
-            </LabelWithInfo>
-          }
-          placeholder={criteria.sourceIds ? undefined : 'Every source'}
-          value={criteria.sourceIds ?? []}
-          onChange={(sourceIds) =>
-            setCriteria((current) => ({
-              ...current,
-              sourceIds: sourceIds.length ? sourceIds : undefined,
-            }))
-          }
+        <Select
+          label="Search location"
+          description="Choose a whole city or a hub within it. Hubs use the radius below; whole cities use the municipality boundary. Coverage is currently limited to Göteborg."
+          value={location}
           data={[
-            ...SOURCES,
-            // A saved source the collector no longer reads stays visible, as places do.
-            ...(criteria.sourceIds ?? [])
-              .filter((id) => !SOURCES.some(({ value }) => value === id))
-              .map((value) => ({
-                value,
-                label: `${value} (not collected)`,
-                disabled: true,
-              })),
-          ]}
-          disabled={!canEdit || !onSave}
-        />
-        <SimpleGrid cols={{ base: 1, sm: 2 }}>
-          <Select
-            label={
-              <LabelWithInfo info="Homes within the radius of this point count as inside your search, even when their area is not on the list.">
-                Search from
-              </LabelWithInfo>
-            }
-            value={
-              isNear(criteria.geography.center, BRUNNSPARKEN)
-                ? 'brunnsparken'
-                : 'current'
-            }
-            onChange={(next) => {
-              if (next === 'brunnsparken')
-                setCriteria((current) => ({
-                  ...current,
-                  geography: {
-                    ...current.geography,
-                    center: [...BRUNNSPARKEN],
+            ...(location === 'current'
+              ? [
+                  {
+                    value: 'current',
+                    label:
+                      criteria.geography.mode === 'radius'
+                        ? `Saved point (${criteria.geography.center[1].toFixed(3)}, ${criteria.geography.center[0].toFixed(3)})`
+                        : 'Current saved search',
+                    disabled: true,
                   },
-                }));
-            }}
-            data={[
-              {
-                value: 'brunnsparken',
-                label: 'Brunnsparken, central Göteborg',
-              },
-              ...(isNear(criteria.geography.center, BRUNNSPARKEN)
-                ? []
-                : [
-                    {
-                      value: 'current',
-                      label: `Current point (${criteria.geography.center[1].toFixed(3)}, ${criteria.geography.center[0].toFixed(3)})`,
-                    },
-                  ]),
-            ]}
-            allowDeselect={false}
-            disabled={!canEdit || !onSave}
-          />
+                ]
+              : []),
+            ...MUNICIPALITIES.map(({ value, supported }) => ({
+              group: value,
+              items: [
+                {
+                  value: `city:${value}`,
+                  label:
+                    value + (supported ? ' (whole city)' : ' (coming soon)'),
+                  disabled: !supported,
+                },
+                ...SEARCH_HUBS.filter(
+                  (entry) => entry.municipality === value && supported,
+                ).map(({ value, label }) => ({ value: `hub:${value}`, label })),
+              ],
+            })),
+          ]}
+          allowDeselect={false}
+          searchable
+          disabled={!canEdit || !onSave}
+          onChange={(next) => {
+            const selected = SEARCH_HUBS.find(
+              ({ value }) => `hub:${value}` === next,
+            );
+            const city = MUNICIPALITIES.find(
+              ({ value, supported }) => supported && `city:${value}` === next,
+            );
+            if (selected)
+              setCriteria((current) => ({
+                ...current,
+                geography: {
+                  ...current.geography,
+                  mode: 'radius',
+                  center: [...selected.center],
+                  municipalities: [selected.municipality],
+                },
+              }));
+            else if (city)
+              setCriteria((current) => ({
+                ...current,
+                geography: {
+                  ...current.geography,
+                  mode: 'municipalities',
+                  municipalities: [city.value],
+                },
+              }));
+          }}
+        />
+        {!criteria.geography.mode && (
+          <Text size="sm" c="dimmed">
+            Your saved search includes{' '}
+            {criteria.geography.municipalities.join(', ')} or homes within{' '}
+            {formatKm(criteria.geography.radiusKm)} of its saved point. It stays
+            unchanged until you choose a location.
+          </Text>
+        )}
+        {criteria.geography.mode === 'radius' && (
           <NumberSelect
             label="Radius"
             value={criteria.geography.radiusKm}
@@ -313,7 +288,30 @@ export function ProfileEditor({
             format={formatKm}
             disabled={!canEdit || !onSave}
           />
-        </SimpleGrid>
+        )}
+        <MultiSelect
+          label="Sources"
+          description="Show homes from these brokers only. Leave empty for every source."
+          placeholder={criteria.sourceIds ? undefined : 'Every source'}
+          value={criteria.sourceIds ?? []}
+          onChange={(sourceIds) =>
+            setCriteria((current) => ({
+              ...current,
+              sourceIds: sourceIds.length ? sourceIds : undefined,
+            }))
+          }
+          data={[
+            ...SOURCES,
+            ...(criteria.sourceIds ?? [])
+              .filter((id) => !SOURCES.some(({ value }) => value === id))
+              .map((value) => ({
+                value,
+                label: `${value} (not collected)`,
+                disabled: true,
+              })),
+          ]}
+          disabled={!canEdit || !onSave}
+        />
         <Button disabled={!canEdit || !onSave} loading={busy} onClick={save}>
           Save criteria
         </Button>

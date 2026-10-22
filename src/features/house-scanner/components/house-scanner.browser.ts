@@ -268,11 +268,19 @@ test('criteria revisions re-evaluate suggestions and keep favorites', async ({
 }) => {
   await openDemo(page);
   await openSection(page, 'Settings');
+  await page.getByRole('combobox', { name: 'Search location' }).click();
+  await page
+    .getByRole('option', { name: 'Brunnsparken, central Göteborg' })
+    .click();
+  await page.getByRole('combobox', { name: 'Radius', exact: true }).click();
+  await page.getByRole('option', { name: '1 km', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Radius', exact: true }).click();
+  await page.getByRole('option', { name: '2 km', exact: true }).click();
   await page
     .getByRole('textbox', { name: 'Preferred budget (SEK)' })
     .fill('1000000');
   await page
-    .getByRole('textbox', { name: 'Stretch budget (SEK)' })
+    .getByRole('textbox', { name: 'Maximum budget (SEK)' })
     .fill('1500000');
   await page.getByRole('button', { name: 'Save criteria' }).click();
   await expect(page.getByText(/Profile saved/)).toBeVisible();

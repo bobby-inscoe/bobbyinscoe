@@ -93,7 +93,7 @@ it('names the unknown facts in plain words, and shows no Missing info label for 
     />,
   );
   const label = screen.getByText(/^Missing info: /).textContent ?? '';
-  expect(label).toContain('glazing');
+  expect(label).not.toContain('glazing');
   expect(label).toContain('price');
   expect(label).not.toContain('glazed');
   cleanup();

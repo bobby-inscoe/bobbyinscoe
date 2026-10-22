@@ -23,7 +23,6 @@ const MISSING_LABELS: Record<string, string> = {
   groundFloor: 'floor',
   lift: 'lift',
   outdoor: 'balcony or terrace',
-  glazed: 'glazing',
   askingPriceSek: 'price',
   tenure: 'tenure',
   status: 'status',
@@ -32,7 +31,7 @@ const MISSING_LABELS: Record<string, string> = {
 
 export const SECTION_LABELS: Record<Section, string> = {
   preferred: 'Within budget',
-  stretch: 'Stretch budget',
+  stretch: 'Above preferred budget',
   exceptions: 'Close to your criteria',
   'needs-details': 'Missing info',
   outside: 'Outside current criteria',
@@ -52,12 +51,7 @@ export const MATCH_CHOICES: {
   {
     value: 'stretch',
     label: SECTION_LABELS.stretch,
-    description: 'over it, within your stretch limit.',
-  },
-  {
-    value: 'exceptions',
-    label: SECTION_LABELS.exceptions,
-    description: 'misses one rule that can bend.',
+    description: 'over your preferred price, at or below your maximum budget.',
   },
   {
     value: 'needs-details',
@@ -102,16 +96,18 @@ export function listingMatches(listing: Listing, snapshot: Snapshot) {
 }
 
 function geographicScope(listing: Listing, criteria: Criteria): boolean | null {
+  const mode = criteria.geography.mode;
   const municipality = listing.conflicts.includes('municipality')
     ? null
     : listing.facts.municipality;
-  if (
+  const municipalityMatches =
     municipality !== null &&
     criteria.geography.municipalities.some(
       (value) => value.toLocaleLowerCase() === municipality.toLocaleLowerCase(),
-    )
-  )
-    return true;
+    );
+  if (mode === 'municipalities')
+    return municipality === null ? null : municipalityMatches;
+  if (mode !== 'radius' && municipalityMatches) return true;
   const point = listing.coordinates;
   if (!hasPin(point)) return null;
   const radians = (degrees: number) => (degrees * Math.PI) / 180;
@@ -124,7 +120,7 @@ function geographicScope(listing: Listing, criteria: Criteria): boolean | null {
   const distanceKm =
     6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
   if (distanceKm <= criteria.geography.radiusKm) return true;
-  return municipality === null ? null : false;
+  return mode === 'radius' ? false : municipality === null ? null : false;
 }
 
 export function matchListing(
@@ -176,8 +172,7 @@ export function matchListing(
     f.askingPriceSek !== null &&
     f.askingPriceSek > criteria.stretchPriceSek
   )
-    excluded.push('Above profile stretch budget');
-  let exception = false;
+    excluded.push('Above maximum budget');
   if (
     f.propertyType === 'apartment' &&
     !listing.conflicts.includes('propertyType')
@@ -191,17 +186,6 @@ export function matchListing(
     if (f.stepFree === false) caveats.push('Access is not fully step-free');
     if (criteria.requireOutdoor && required('outdoor') && f.outdoor === 'none')
       excluded.push('No balcony or terrace');
-    if (criteria.preferGlazing && f.outdoor !== 'none') {
-      if (required('glazed') && !f.glazed) {
-        exception = true;
-        caveats.push(
-          !listing.conflicts.includes('largePrivateTerrace') &&
-            f.largePrivateTerrace === true
-            ? 'Large private unglazed terrace'
-            : 'Outdoor space is unglazed',
-        );
-      }
-    }
   }
   if (f.propertyType === 'apartment' && f.baseFeeSek !== null) {
     if (f.baseFeeSek > criteria.feeReferenceSek)
@@ -241,13 +225,12 @@ export function matchListing(
   reasons.push(
     price !== null && price <= criteria.preferredPriceSek
       ? 'Within preferred budget'
-      : 'Within stretch budget',
+      : 'Above preferred budget, within maximum budget',
   );
   reasons.push('Living area and rooms meet profile');
   return {
-    section: exception
-      ? 'exceptions'
-      : price !== null && price > criteria.preferredPriceSek
+    section:
+      price !== null && price > criteria.preferredPriceSek
         ? 'stretch'
         : 'preferred',
     reasons: reasons.slice(0, 3),

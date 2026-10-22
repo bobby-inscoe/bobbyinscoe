@@ -13,7 +13,7 @@ export const AREA_OPTIONS = [...range(30, 150, 5), 175, 200] as const;
 /** Room counts in halves, as brokers list them (2.5 rooms is common). */
 export const ROOM_OPTIONS = [...range(1, 6, 0.5)] as const;
 
-export const RADIUS_OPTIONS_KM = [5, 10, 15, 20, 30, 40, 50] as const;
+export const RADIUS_OPTIONS_KM = [1, 2, 5, 10, 15, 20, 30, 40, 50] as const;
 
 const number = new Intl.NumberFormat('sv-SE');
 
@@ -50,7 +50,41 @@ export const SOURCES: readonly { value: string; label: string }[] = [
 /** Brunnsparken, the anchor the search circle was designed around: [longitude, latitude]. */
 export const BRUNNSPARKEN: readonly [number, number] = [11.9694, 57.7067];
 
-const COORDINATE_TOLERANCE = 0.005;
+// Public square/station coordinates, verified against their Wikipedia coordinate records.
+export const SEARCH_HUBS = [
+  {
+    value: 'brunnsparken',
+    municipality: 'Göteborg',
+    label: 'Brunnsparken, central Göteborg',
+    center: BRUNNSPARKEN,
+  },
+  {
+    value: 'centralstationen',
+    municipality: 'Göteborg',
+    label: 'Centralstationen',
+    center: [11.97333, 57.70889],
+  },
+  {
+    value: 'jarntorget',
+    municipality: 'Göteborg',
+    label: 'Järntorget',
+    center: [11.95278, 57.69972],
+  },
+  {
+    value: 'korsvagen',
+    municipality: 'Göteborg',
+    label: 'Korsvägen',
+    center: [11.98694, 57.69722],
+  },
+  {
+    value: 'hjalmar',
+    municipality: 'Göteborg',
+    label: 'Hjalmar Brantingsplatsen',
+    center: [11.95694, 57.72278],
+  },
+] as const;
+
+const COORDINATE_TOLERANCE = 0.0001;
 export const isNear = (
   [longitude, latitude]: readonly [number, number],
   [otherLongitude, otherLatitude]: readonly [number, number],

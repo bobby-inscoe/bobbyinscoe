@@ -20,6 +20,12 @@ const roundTrip = (search: BrowseSearch) =>
 const code = (index: number) => neighborhoods[index].id.split('-')[1];
 
 describe('browse URL search', () => {
+  it('opens legacy glazing-exception links as all matches', () => {
+    const search = validateBrowseSearch({ section: 'exceptions' });
+    expect(search.section).toBe('all');
+    expect(roundTrip(search).section).toBe('all');
+  });
+
   it('defaults invalid or missing values without trusting URL input', () => {
     const search = validateBrowseSearch({
       view: 'other',
@@ -79,6 +85,7 @@ describe('browse URL search', () => {
         minAreaM2: 40,
         maxAreaM2: 90,
         minRooms: 3,
+        maxRooms: 4.5,
         hosts: ['example.invalid', 'Added by household'],
         freshness: 'latest-scan',
         neighborhoodIds: [neighborhoods[0].id, neighborhoods[1].id],
