@@ -31,22 +31,25 @@ async function assignment(value: object | null) {
   );
   return result.rows[0].id;
 }
-async function snapshot(enriched: boolean, user = USER, household = HOUSE) {
+// The member's v2 snapshot as the database sends it.
+async function reply(user = USER, household = HOUSE) {
   await db.exec('begin; set local role authenticated;');
   try {
     await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
       user,
     ]);
-    const result = await db.query<{ value: object }>(
-      enriched
-        ? 'select public.hs_snapshot_neighborhoods($1) as value'
-        : 'select public.hs_snapshot($1) as value',
+    const result = await db.query<{ value: unknown }>(
+      'select public.hs_household_snapshot($1) as value',
       [household],
     );
-    return result.rows[0].value;
+    return snapshotV2Schema.parse(result.rows[0].value);
   } finally {
     await db.exec('rollback;');
   }
+}
+// The same snapshot as the app builds it.
+async function snapshot(user = USER, household = HOUSE) {
+  return expandSnapshot(await reply(user, household));
 }
 
 beforeAll(async () => {
@@ -184,10 +187,8 @@ describe('official polygon assignments and compatibility', () => {
       'goteborg-107',
     );
   });
-  it('keeps old snapshots unchanged and adds official names only on the new endpoint', async () => {
-    const old = snapshotSchema.parse(await snapshot(false));
-    expect(old.listings[0].neighborhood).toBeUndefined();
-    const enriched = snapshotSchema.parse(await snapshot(true));
+  it('sends official names and the discovery dates with each home', async () => {
+    const enriched = await snapshot();
     expect(enriched.listings[0].firstSeenAt).toBeTruthy();
     expect(enriched.listings[0].lastChangedAt).toBeTruthy();
     expect(enriched.listings[0].lastCheckedAt).toBeTruthy();
@@ -202,38 +203,10 @@ describe('official polygon assignments and compatibility', () => {
       method: 'polygon',
       datasetVersion: 'goteborg-primary-areas-2025',
     });
-    expect(
-      enriched.listings.map(
-        ({
-          neighborhood: _area,
-          neighborhoodCandidates: _candidates,
-          neighborhoodRadiusM: _radius,
-          firstSeenAt: _first,
-          lastChangedAt: _changed,
-          lastCheckedAt: _checked,
-          isNew: _new,
-          ...home
-        }) => home,
-      ),
-    ).toEqual(old.listings);
+    expect(snapshotSchema.parse(enriched)).toEqual(enriched);
   });
-  it('sends the same areas in the v2 snapshot once expanded', async () => {
-    await db.exec('begin; set local role authenticated;');
-    let v2: unknown;
-    try {
-      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
-        USER,
-      ]);
-      v2 = (
-        await db.query<{ value: unknown }>(
-          'select public.hs_household_snapshot($1) as value',
-          [HOUSE],
-        )
-      ).rows[0].value;
-    } finally {
-      await db.exec('rollback;');
-    }
-    const parsed = snapshotV2Schema.parse(v2);
+  it('sends each area once in the v2 snapshot', async () => {
+    const parsed = await reply();
     expect(parsed.listings[0]).toMatchObject({
       neighborhoodId: 'goteborg-107',
       neighborhoodIds: ['goteborg-107'],
@@ -245,9 +218,6 @@ describe('official polygon assignments and compatibility', () => {
         datasetVersion: 'goteborg-primary-areas-2025',
       },
     });
-    expect(expandSnapshot(parsed)).toEqual(
-      snapshotSchema.parse(await snapshot(true)),
-    );
   });
   it('updates and clears assignments when future ingestion changes the coordinates', async () => {
     await db.query(
@@ -320,7 +290,7 @@ describe('official polygon assignments and compatibility', () => {
       "update hs.listings set value=jsonb_set(value,'{coordinates}',$1::jsonb) where id=$2",
       [JSON.stringify(expired), HOME],
     );
-    const result = snapshotSchema.parse(await snapshot(true));
+    const result = await snapshot();
     expect(result.listings[0].coordinates).toBeNull();
     expect(result.listings[0].neighborhood).toBeUndefined();
     expect(result.listings[0].neighborhoodCandidates).toBeUndefined();
@@ -328,14 +298,14 @@ describe('official polygon assignments and compatibility', () => {
   });
   it('denies foreign households, revoked members and anonymous execution', async () => {
     await expect(
-      snapshot(true, USER, '10000000-0000-4000-8000-000000000002'),
+      snapshot(USER, '10000000-0000-4000-8000-000000000002'),
     ).rejects.toThrow('Household access denied');
     await db.query('update hs.members set active=false where user_id=$1', [
       USER,
     ]);
-    await expect(snapshot(true)).rejects.toThrow('Household access denied');
+    await expect(snapshot()).rejects.toThrow('Household access denied');
     const grants = await db.query<{ anon: boolean; authenticated: boolean }>(
-      "select has_function_privilege('anon','public.hs_snapshot_neighborhoods(uuid)','execute') as anon, has_function_privilege('authenticated','public.hs_snapshot_neighborhoods(uuid)','execute') as authenticated",
+      "select has_function_privilege('anon','public.hs_household_snapshot(uuid)','execute') as anon, has_function_privilege('authenticated','public.hs_household_snapshot(uuid)','execute') as authenticated",
     );
     expect(grants.rows[0]).toEqual({ anon: false, authenticated: true });
   });

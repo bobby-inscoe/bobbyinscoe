@@ -109,28 +109,13 @@ describe('optional fields added without a version bump', () => {
     favorites: [],
   };
 
-  it('accepts a snapshot without hidden ids and with a list of them', () => {
+  it('accepts a snapshot without hides and refuses the old per-member hidden ids', () => {
     expect(snapshotSchema.safeParse(snapshot).success).toBe(true);
     expect(
       snapshotSchema.safeParse({
         ...snapshot,
         hiddenListingIds: ['10000000-0000-4000-8000-000000000002'],
       }).success,
-    ).toBe(true);
-  });
-
-  it('rejects hidden ids that are not ids or exceed the listing ceiling', () => {
-    expect(
-      snapshotSchema.safeParse({ ...snapshot, hiddenListingIds: ['nope'] })
-        .success,
-    ).toBe(false);
-    const many = Array.from(
-      { length: 1501 },
-      (_, index) =>
-        `10000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
-    );
-    expect(
-      snapshotSchema.safeParse({ ...snapshot, hiddenListingIds: many }).success,
     ).toBe(false);
   });
 });

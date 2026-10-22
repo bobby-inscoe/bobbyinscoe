@@ -6,7 +6,7 @@ import type { ApiResult, Caller, Gateway, SignInResult } from './gateway';
 // specific ways the checks exist to catch.
 
 export interface Flaws {
-  /** hs_snapshot answers non-members instead of raising. */
+  /** hs_household_snapshot answers non-members instead of raising. */
   leakSnapshotToOutsiders?: boolean;
   /** Anonymous callers are allowed to run the household functions. */
   anonAllowed?: boolean;
@@ -37,26 +37,6 @@ const USER_IDS: Record<UserLabel, string> = {
   A: FAKE_IDS.userA,
   A2: FAKE_IDS.userA2,
   B: FAKE_IDS.userB,
-};
-const EMPTY_FACTS = {
-  propertyType: null,
-  tenure: 'unknown',
-  purchase: null,
-  livingAreaM2: null,
-  secondaryAreaM2: null,
-  rooms: null,
-  askingPriceSek: null,
-  groundFloor: null,
-  lift: null,
-  liftServesHome: null,
-  stepFree: null,
-  outdoor: null,
-  glazed: null,
-  largePrivateTerrace: null,
-  municipality: null,
-  baseFeeSek: null,
-  mandatoryMonthlySek: null,
-  status: 'unknown',
 };
 const CRITERIA = {
   minAreaM2: 50,
@@ -188,20 +168,19 @@ export function createFakeGateway(
         listings.push(created);
         return ok({ listingId: created.id, existing: false });
       }
-      case 'hs_snapshot': {
+      case 'hs_household_snapshot': {
         if (!active(household, userId) && !flaws.leakSnapshotToOutsiders)
           return noAccess();
         const owner =
           members.find((m) => m.householdId === household)?.userId ??
           FAKE_IDS.userA;
         return ok({
-          contractVersion: 1,
+          contractVersion: 2,
           householdId: household,
           edition: null,
           members: members
             .filter((m) => m.householdId === household)
             .map((m) => ({
-              householdId: m.householdId,
               userId: m.userId,
               displayName: 'FICTIONAL member',
               role: m.role,
@@ -209,7 +188,6 @@ export function createFakeGateway(
           profiles: [
             {
               id: uuid(900),
-              householdId: household,
               revision: 1,
               name: 'FICTIONAL profile',
               enabled: true,
@@ -218,27 +196,36 @@ export function createFakeGateway(
               editedAt: '2026-10-13T00:00:00Z',
             },
           ],
+          sources: {},
+          neighborhoods: {},
           listings: listings
             .filter((l) => l.householdId === household)
             .map((l) => ({
               id: l.id,
-              householdId: l.householdId,
               origin: 'manual',
               title: l.title,
               sourceUrls: [l.url],
-              facts: EMPTY_FACTS,
-              conflicts: [],
-              coordinates: null,
-              evidence: [],
-              photo: null,
-              previousAskingPriceSek: null,
+              facts: {},
               observedAt: '2026-10-13T00:00:00Z',
               addedBy: owner,
-              userTags: [],
             })),
           favorites: favorites
             .filter((f) => f.householdId === household)
-            .map((f) => ({ ...f, savedAt: '2026-10-13T00:00:00Z' })),
+            .map(({ listingId, userId }) => ({
+              listingId,
+              userId,
+              savedAt: '2026-10-13T00:00:00Z',
+            })),
+          hides: [],
+          notes: notes
+            .filter((n) => n.householdId === household)
+            .map(({ listingId, userId, body, revision }) => ({
+              listingId,
+              userId,
+              body,
+              revision,
+              editedAt: '2026-10-13T00:00:00Z',
+            })),
         });
       }
       case 'hs_set_favorite': {
@@ -259,20 +246,6 @@ export function createFakeGateway(
         if (!args.p_saved && index >= 0) favorites.splice(index, 1);
         return ok({ ok: true });
       }
-      case 'hs_notes':
-        if (!active(household, userId)) return noAccess();
-        return ok(
-          notes
-            .filter(
-              (n) => n.householdId === household && n.listingId === listing,
-            )
-            .map((n) => ({
-              userId: n.userId,
-              body: n.body,
-              revision: n.revision,
-              editedAt: '2026-10-13T00:00:00Z',
-            })),
-        );
       case 'hs_save_note': {
         if (!active(household, userId)) return noAccess();
         const target = listings.find(

@@ -26,6 +26,8 @@ import {
 
 // The shared catalog migration (S1): one household's data before it, many households after it.
 const CATALOG = '20261020111540_house_scanner_catalog.sql';
+// Drops the old snapshot functions (spec: house-scanner-v2-client, S2).
+const DROP_OLD = '20261022143306_house_scanner_drop_old_snapshot';
 const HOUSE_A = '10000000-0000-4000-8000-000000000001';
 const HOUSE_B = '10000000-0000-4000-8000-000000000002';
 const OWNER_A = '20000000-0000-4000-8000-000000000001';
@@ -219,19 +221,48 @@ async function rpc(
   return result.rows[0]?.value;
 }
 
-function snapshot(
+// The snapshot as earlier databases sent it, before shared hides replaced the member's own hidden ids.
+const pastSnapshotSchema = snapshotSchema.extend({
+  hiddenListingIds: z.array(z.uuid()).max(1500).optional(),
+});
+type PastSnapshot = z.infer<typeof pastSnapshotSchema>;
+
+// The member's snapshot as the app builds it: from the v2 snapshot where the database has it, otherwise from the
+// named old function.
+async function snapshot(
   household = HOUSE_A,
   user = OWNER_A,
   database = db,
-  call = 'hs_snapshot_neighborhoods',
-) {
+  call?: 'hs_snapshot' | 'hs_snapshot_neighborhoods',
+): Promise<PastSnapshot> {
+  const v2 =
+    !call &&
+    (
+      await database.query<{ found: boolean }>(
+        "select to_regprocedure('public.hs_household_snapshot(uuid)') is not null as found",
+      )
+    ).rows[0].found;
   return as(
     'authenticated',
     user,
     async () =>
-      snapshotSchema.parse(
-        await rpc(`select public.${call}($1) as value`, [household], database),
-      ),
+      v2
+        ? expandSnapshot(
+            snapshotV2Schema.parse(
+              await rpc(
+                'select public.hs_household_snapshot($1) as value',
+                [household],
+                database,
+              ),
+            ),
+          )
+        : pastSnapshotSchema.parse(
+            await rpc(
+              `select public.${call ?? 'hs_snapshot_neighborhoods'}($1) as value`,
+              [household],
+              database,
+            ),
+          ),
     database,
   );
 }
@@ -468,7 +499,7 @@ let afterMove: Record<string, unknown>;
 async function memberSnapshots() {
   const result: Record<string, unknown> = {};
   for (const user of [OWNER_A, MEMBER_A])
-    for (const call of ['hs_snapshot', 'hs_snapshot_neighborhoods'])
+    for (const call of ['hs_snapshot', 'hs_snapshot_neighborhoods'] as const)
       result[`${user}:${call}`] = await snapshot(HOUSE_A, user, db, call);
   return result;
 }
@@ -490,9 +521,9 @@ afterAll(async () => {
 describe('catalog data move', () => {
   it('leaves every member snapshot of the existing household unchanged', async () => {
     expect(afterMove).toEqual(before);
-    const state = before[`${OWNER_A}:hs_snapshot_neighborhoods`] as z.infer<
-      typeof snapshotSchema
-    >;
+    const state = before[
+      `${OWNER_A}:hs_snapshot_neighborhoods`
+    ] as PastSnapshot;
     // The seed exercises what the move must carry: manual, saved and noted expired homes, hides, notes, viewings.
     expect(state.listings.map((item) => item.title).sort()).toEqual([
       'Bookmark',
@@ -694,12 +725,9 @@ describe('a second household on the shared catalog', () => {
     expect(a.notes?.some((item) => item.body === 'Second household note')).toBe(
       false,
     );
-    expect(
-      await asUser(OWNER_B, 'select public.hs_notes($1,$2) as value', [
-        HOUSE_B,
-        seeded.fresh,
-      ]),
-    ).toEqual([expect.objectContaining({ userId: OWNER_B })]);
+    expect(b.notes?.filter((item) => item.listingId === seeded.fresh)).toEqual([
+      expect.objectContaining({ userId: OWNER_B }),
+    ]);
   });
 
   it('cannot reach another household manual listing or an expired catalog listing', async () => {
@@ -1073,6 +1101,7 @@ describe('candidates filtered by household criteria', () => {
       "update hs.listings set delisted_at=now(),missed_full_reads=2 where value->>'title'='fits-both'",
     );
     // Rollbacks go newest first: the household rows call the hard rules these migrations replace.
+    await db.exec(await rollback(DROP_OLD));
     await db.exec(await rollback(SNAPSHOT_V2));
     await db.exec(await rollback(HOUSEHOLDS));
     await down(delisted);
@@ -1104,6 +1133,7 @@ describe('candidates filtered by household criteria', () => {
     await db.exec(await migration(`${delisted}.sql`));
     await db.exec(await migration(`${HOUSEHOLDS}.sql`));
     await db.exec(await migration(`${SNAPSHOT_V2}.sql`));
+    await db.exec(await migration(`${DROP_OLD}.sql`));
     expect(await titles()).not.toContain('too-small-for-b');
     expect((await snapshot(HOUSE_A, OWNER_A)).hides).toHaveLength(2);
   });
@@ -1111,9 +1141,10 @@ describe('candidates filtered by household criteria', () => {
   it('serves the same snapshots with the set-based snapshot and after rolling it back', async () => {
     const speed = '20261021194535_house_scanner_snapshot_speed';
     const both = async () => [
-      await snapshot(HOUSE_A, OWNER_A),
-      await snapshot(HOUSE_B, OWNER_B),
+      await snapshot(HOUSE_A, OWNER_A, db, 'hs_snapshot_neighborhoods'),
+      await snapshot(HOUSE_B, OWNER_B, db, 'hs_snapshot_neighborhoods'),
     ];
+    await db.exec(await rollback(DROP_OLD));
     await db.exec(await migration(`${speed}.sql`));
     const fast = await both();
     expect(fast[0].listings.length).toBeGreaterThan(0);
@@ -1131,6 +1162,7 @@ describe('candidates filtered by household criteria', () => {
     expect(await both()).toEqual(fast);
     await db.exec(await migration(`${speed}.sql`));
     expect(await both()).toEqual(fast);
+    await db.exec(await migration(`${DROP_OLD}.sql`));
   });
 
   // The delisting rollback above re-applied the row-by-row trigger; applying the set-based publish and the listing
@@ -1782,11 +1814,30 @@ const WRITE_PATH = '20261022102043_house_scanner_write_path';
 const CARDS = '20261022103309_house_scanner_listing_cards';
 const HOUSEHOLDS = '20261022105133_house_scanner_household_listings';
 const SNAPSHOT_V2 = '20261022113745_house_scanner_household_snapshot';
+const HOUSEHOLD_START = '20261022124605_house_scanner_household_start';
 const rollback = (name: string) =>
   readFile(new URL(`../rollbacks/${name}_down.sql`, import.meta.url), 'utf8');
 
-// The member's v2 snapshot, expanded by the client adapter, equals today's snapshot. Returns the v2 response.
+// The member's v2 snapshot, expanded by the client adapter, equals the old snapshot. Returns the v2 response. On a
+// database that has dropped the old snapshot, its rollback restores it for the comparison and the drop runs again after.
 async function sameAsV2(database: PGlite, household: string, user: string) {
+  const dropped = (
+    await database.query<{ gone: boolean }>(
+      "select to_regprocedure('public.hs_snapshot_neighborhoods(uuid)') is null as gone",
+    )
+  ).rows[0].gone;
+  if (dropped) await database.exec(await rollback(DROP_OLD));
+  try {
+    return await compareWithOld(database, household, user);
+  } finally {
+    if (dropped) await database.exec(await migration(`${DROP_OLD}.sql`));
+  }
+}
+async function compareWithOld(
+  database: PGlite,
+  household: string,
+  user: string,
+) {
   const [today, v2] = await as(
     'authenticated',
     user,
@@ -1845,7 +1896,9 @@ async function fingerprint(database: PGlite) {
 
 // A fresh database on every migration with the given sources and a credential for them.
 async function sources(...ids: string[]) {
-  const database = await freshDatabase('all');
+  return sourcesOn(await freshDatabase('all'), ids);
+}
+async function sourcesOn(database: PGlite, ids: string[]) {
   for (const id of ids)
     await database.query(
       'insert into hs.source_policies(source_id,policy) values($1,$2::jsonb)',
@@ -1896,14 +1949,17 @@ describe('write-path fixes', () => {
   });
 
   it('serves the same snapshots with each source’s latest run as with the scan of every run', async () => {
+    // The old snapshot, which reads each source's latest run on both sides of the rollback.
     const both = async () => [
-      await snapshot(HOUSE_A, OWNER_A),
-      await snapshot(HOUSE_B, OWNER_B),
+      await snapshot(HOUSE_A, OWNER_A, db, 'hs_snapshot_neighborhoods'),
+      await snapshot(HOUSE_B, OWNER_B, db, 'hs_snapshot_neighborhoods'),
     ];
+    await db.exec(await rollback(DROP_OLD));
     await db.exec(await readFile(WRITE_PATH_DOWN, 'utf8'));
     const scanned = await both();
     await db.exec(await migration(`${WRITE_PATH}.sql`));
     expect(await both()).toEqual(scanned);
+    await db.exec(await migration(`${DROP_OLD}.sql`));
     expect(
       scanned.flatMap((state) => state.listings).some((item) => item.isNew),
     ).toBe(true);
@@ -2515,8 +2571,11 @@ describe('household snapshot v2', () => {
   const now = () => new Date().toISOString();
 
   // A fresh database with one source, household A and its owner, and the owner's profile.
+  // Before the old snapshot was dropped, so the v2 snapshot can be compared with it.
   async function household() {
-    const database = await sources('alpha');
+    const database = await sourcesOn(await migratedThrough(HOUSEHOLD_START), [
+      'alpha',
+    ]);
     await database.query('insert into auth.users values($1)', [OWNER_A]);
     await database.query(
       "insert into hs.households(id,name) values($1,'Synthetic household')",
@@ -2564,16 +2623,28 @@ describe('household snapshot v2', () => {
   });
 
   it('expands to today’s snapshot for every member of both households on the shared database', async () => {
-    for (const [house, user] of [
+    const members = [
       [HOUSE_A, OWNER_A],
       [HOUSE_A, MEMBER_A],
       [HOUSE_B, OWNER_B],
-    ]) {
+    ];
+    const parsed = [];
+    for (const [house, user] of members) {
       const v2 = await sameAsV2(db, house, user);
       expect(v2.listings.length).toBeGreaterThan(0);
+      parsed.push(v2);
     }
+    // Dropping the old snapshot again left the v2 snapshot as it was.
+    for (const [index, [house, user]] of members.entries())
+      expect(
+        snapshotV2Schema.parse(
+          await as('authenticated', user, () =>
+            rpc('select public.hs_household_snapshot($1) as value', [house]),
+          ),
+        ),
+      ).toEqual(parsed[index]);
     // The shared household reaches manual homes, hides and notes.
-    const a = await sameAsV2(db, HOUSE_A, OWNER_A);
+    const a = parsed[0];
     expect(a.listings.some((home) => home.origin === 'manual')).toBe(true);
     expect(a.hides.length).toBeGreaterThan(0);
     expect(a.notes.length).toBeGreaterThan(0);
@@ -2792,6 +2863,53 @@ describe('household start', () => {
   });
 });
 
+describe('old snapshot removal', () => {
+  const OLD = [
+    'fn hs.snapshot_base(',
+    'fn hs.with_viewings(',
+    'fn public.hs_notes(',
+    'fn public.hs_snapshot(',
+    'fn public.hs_snapshot_neighborhoods(',
+  ];
+  const old = (lines: string[]) =>
+    lines.filter((line) => OLD.some((name) => line.startsWith(name)));
+
+  it('rolls back to exactly the earlier schema and applies again', async () => {
+    const database = await migratedThrough(DROP_OLD);
+    try {
+      const migrated = await fingerprint(database);
+      expect(old(migrated)).toEqual([]);
+      await database.exec(await rollback(DROP_OLD));
+      const earlier = await migratedThrough(HOUSEHOLD_START);
+      try {
+        const restored = await fingerprint(database);
+        expect(restored).toEqual(await fingerprint(earlier));
+        expect(old(restored)).toHaveLength(OLD.length);
+      } finally {
+        await earlier.close();
+      }
+      await database.exec(await migration(`${DROP_OLD}.sql`));
+      expect(await fingerprint(database)).toEqual(migrated);
+    } finally {
+      await database.close();
+    }
+  });
+
+  it('answers a load with the household start alone', async () => {
+    const reply = (await as('authenticated', OWNER_A, () =>
+      rpc('select public.hs_household_start() as value'),
+    )) as { snapshot: unknown };
+    expect(snapshotV2Schema.parse(reply.snapshot).householdId).toBe(HOUSE_A);
+    for (const call of [
+      'select public.hs_snapshot($1) as value',
+      'select public.hs_snapshot_neighborhoods($1) as value',
+    ])
+      await expect(
+        as('authenticated', OWNER_A, () => rpc(call, [HOUSE_A])),
+      ).rejects.toThrow('does not exist');
+  });
+});
+
 describe('catalog administration and grants', () => {
   it('sets source policies and issues and revokes credentials without a household', async () => {
     const created = await rpc(
@@ -2836,9 +2954,7 @@ describe('catalog administration and grants', () => {
       ),
     ).rejects.toThrow('permission denied');
     await expect(
-      as('anon', null, () =>
-        rpc('select public.hs_snapshot($1) as value', [HOUSE_A]),
-      ),
+      as('anon', null, () => rpc('select public.hs_memberships() as value')),
     ).rejects.toThrow('permission denied');
   });
 });

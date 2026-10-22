@@ -16,7 +16,6 @@ import {
   invokeInvite,
   leaveHousehold,
   makeOwner,
-  memberships,
   previewInvitation,
   redeemInvitation,
   renameHousehold,
@@ -222,7 +221,7 @@ export function useHouseholdSession() {
           reading.current -= 1;
         },
       );
-      const own = start?.memberships ?? (await memberships(client));
+      const own = start.memberships;
       if (!mounted.current || ticket !== generation.current) return;
       if (own.some((member) => member.userId !== user.id))
         throw new Error('Membership belongs to another account.');
@@ -247,7 +246,7 @@ export function useHouseholdSession() {
         selected,
         user.id,
         own,
-        start?.snapshot ?? undefined,
+        start.snapshot,
       ).finally(() => {
         reading.current -= 1;
       });
