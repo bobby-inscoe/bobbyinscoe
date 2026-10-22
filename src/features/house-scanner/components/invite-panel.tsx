@@ -1,7 +1,13 @@
 import { Alert, Button, Stack, Text, TextInput, Title } from '@mantine/core';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
-
+import { FormattedMessage, useIntl } from 'react-intl';
 import type { InvitationPreview } from '@/features/house-scanner/api/household-client';
+import {
+  errorFeedback,
+  type Feedback,
+  formatFeedback,
+  messageValue,
+} from '@/features/house-scanner/i18n/catalogs';
 import { formatDate } from '@/features/house-scanner/utils/format';
 
 interface InvitePanelProps {
@@ -32,6 +38,8 @@ export function InvitePanel({
   onAccept,
   signIn,
 }: InvitePanelProps) {
+  const intl = useIntl();
+
   const [preview, setPreview] = useState<InvitationPreview | 'loading'>(
     'loading',
   );
@@ -40,7 +48,7 @@ export function InvitePanel({
   const [householdName, setHouseholdName] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<{ text: string; error: boolean }>();
+  const [message, setMessage] = useState<{ text: Feedback; error: boolean }>();
   // The session hands out a new function on every render; the preview is fetched once per token.
   const preview$ = useRef(onPreview);
   preview$.current = onPreview;
@@ -54,7 +62,7 @@ export function InvitePanel({
       current = false;
     };
   }, [token]);
-  async function perform(action: () => Promise<string | undefined>) {
+  async function perform(action: () => Promise<Feedback | undefined>) {
     setBusy(true);
     setMessage(undefined);
     try {
@@ -62,8 +70,7 @@ export function InvitePanel({
       if (done) setMessage({ text: done, error: false });
     } catch (error) {
       setMessage({
-        text:
-          error instanceof Error ? error.message : 'Request failed. Try again.',
+        text: errorFeedback(error),
         error: true,
       });
     } finally {
@@ -71,36 +78,69 @@ export function InvitePanel({
     }
   }
   if (preview === 'loading')
-    return <Text role="status">Checking the invitation…</Text>;
+    return (
+      <Text role="status">
+        <FormattedMessage id="access.checkingTheInvitation" />
+      </Text>
+    );
   if (!preview.valid)
     return (
       <Stack align="flex-start">
-        <Title order={2}>This invitation cannot be used</Title>
+        <Title order={2}>
+          <FormattedMessage id="access.thisInvitationCannotBeUsed" />
+        </Title>
         <Text>
-          It has expired, been used or been revoked. Ask the person who sent it
-          for a fresh link.
+          <FormattedMessage id="access.itHasExpiredBeenUsedOrBeenRevokedAsk" />
         </Text>
       </Stack>
     );
   const create = preview.purpose === 'create';
-  const from = preview.issuerName ?? 'A Shellter member';
+  const from =
+    preview.issuerName ?? intl.formatMessage({ id: 'access.aShellterMember' });
   return (
     <Stack gap="lg">
       <Stack gap="xs">
         <Title order={2}>
           {create
-            ? 'Create your own household'
-            : `Join ${preview.householdName ?? 'a household'}`}
+            ? intl.formatMessage({ id: 'access.createYourOwnHousehold' })
+            : intl.formatMessage(
+                { id: 'access.join' },
+                {
+                  value0: messageValue(
+                    preview.householdName ??
+                      intl.formatMessage({ id: 'access.aHousehold' }),
+                  ),
+                },
+              )}
         </Title>
         <Text>
-          {create
-            ? `${from} invited you to start your own Shellter household. It shares nothing with theirs.`
-            : `${from} invited you to join their household and share its shortlist.`}{' '}
-          The link works until {formatDate(preview.expiresAt)}.
+          <FormattedMessage
+            id="access.theLinkWorksUntil"
+            values={{
+              value0: messageValue(
+                create
+                  ? intl.formatMessage(
+                      {
+                        id: 'access.invitedYouToStartYourOwnShellterHouseholdIt',
+                      },
+                      { value0: messageValue(from) },
+                    )
+                  : intl.formatMessage(
+                      {
+                        id: 'access.invitedYouToJoinTheirHouseholdAndShareIts',
+                      },
+                      { value0: messageValue(from) },
+                    ),
+              ),
+              value1: messageValue(formatDate(preview.expiresAt, intl)),
+            }}
+          />
         </Text>
       </Stack>
       {message && (
-        <Alert role={message.error ? 'alert' : 'status'}>{message.text}</Alert>
+        <Alert role={message.error ? 'alert' : 'status'}>
+          {formatFeedback(intl, message.text)}
+        </Alert>
       )}
       {signedIn ? (
         <form
@@ -111,12 +151,15 @@ export function InvitePanel({
               return undefined;
             });
           }}
+          noValidate
         >
           <Stack align="flex-start" gap="md">
             {create && (
               <TextInput
-                label="Household name"
-                description="Members see it when they pick a household."
+                label={intl.formatMessage({ id: 'access.householdName' })}
+                description={intl.formatMessage({
+                  id: 'access.membersSeeItWhenTheyPickAHousehold',
+                })}
                 w="100%"
                 maw="22rem"
                 required
@@ -129,8 +172,10 @@ export function InvitePanel({
               />
             )}
             <TextInput
-              label="Your name"
-              description="How the other members see you."
+              label={intl.formatMessage({ id: 'access.yourName' })}
+              description={intl.formatMessage({
+                id: 'access.howTheOtherMembersSeeYou',
+              })}
               w="100%"
               maw="22rem"
               required
@@ -140,7 +185,9 @@ export function InvitePanel({
               onChange={(event) => setDisplayName(event.currentTarget.value)}
             />
             <Button type="submit" loading={busy}>
-              {create ? 'Create household' : 'Join household'}
+              {create
+                ? intl.formatMessage({ id: 'access.createHousehold' })
+                : intl.formatMessage({ id: 'access.joinHousehold' })}
             </Button>
           </Stack>
         </form>
@@ -154,14 +201,17 @@ export function InvitePanel({
                 return undefined;
               });
             }}
+            noValidate
           >
             <Stack align="flex-start" gap="md">
-              <Title order={3}>New to Shellter?</Title>
+              <Title order={3}>
+                <FormattedMessage id="access.newToShellter" />
+              </Title>
               <Text size="sm">
-                Create your account with the email this link was sent to.
+                <FormattedMessage id="access.createYourAccountWithTheEmailThisLinkWas" />
               </Text>
               <TextInput
-                label="Your email"
+                label={intl.formatMessage({ id: 'access.yourEmail' })}
                 type="email"
                 autoComplete="email"
                 autoCapitalize="none"
@@ -173,8 +223,10 @@ export function InvitePanel({
                 onChange={(event) => setEmail(event.currentTarget.value)}
               />
               <TextInput
-                label="Choose a password"
-                description="8 to 72 characters."
+                label={intl.formatMessage({ id: 'access.chooseAPassword' })}
+                description={intl.formatMessage({
+                  id: 'access.8To72Characters',
+                })}
                 type="password"
                 autoComplete="new-password"
                 w="100%"
@@ -187,7 +239,7 @@ export function InvitePanel({
                 onChange={(event) => setPassword(event.currentTarget.value)}
               />
               <Button type="submit" loading={busy}>
-                Create account
+                <FormattedMessage id="access.createAccount" />
               </Button>
             </Stack>
           </form>

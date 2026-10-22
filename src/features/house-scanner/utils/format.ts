@@ -1,22 +1,24 @@
-export function formatPrice(value: number | null) {
+import type { IntlShape } from 'react-intl';
+import { englishIntl } from '@/features/house-scanner/i18n/catalogs';
+
+export function formatPrice(
+  value: number | null,
+  intl: IntlShape = englishIntl,
+) {
   return value === null
-    ? 'Price unknown'
-    : `${new Intl.NumberFormat('sv-SE').format(value)} SEK`;
+    ? intl.formatMessage({ id: 'listings.details.priceUnknown' })
+    : `${intl.formatNumber(value)} SEK`;
 }
-
-/** A monthly amount such as the fee: 4 250 SEK/month. */
-export function formatFee(value: number) {
-  return `${new Intl.NumberFormat('sv-SE').format(value)} SEK/month`;
+export function formatFee(value: number, intl: IntlShape = englishIntl) {
+  return `${intl.formatNumber(value)} ${intl.formatMessage({ id: 'listings.details.monthlyUnit' })}`;
 }
-
-/** Short price for a map pin: 850k, 2,8M, 3M. */
-export function compactPrice(sek: number) {
-  if (sek < 1_000_000) return `${Math.round(sek / 1000)}k`;
-  return `${(sek / 1_000_000).toFixed(1).replace('.', ',').replace(',0', '')}M`;
+export function compactPrice(sek: number, intl: IntlShape = englishIntl) {
+  return sek < 1_000_000
+    ? `${intl.formatNumber(Math.round(sek / 1000), { useGrouping: false })}k`
+    : `${intl.formatNumber(sek / 1_000_000, { maximumFractionDigits: 1, useGrouping: false })}M`;
 }
-
-export function formatDate(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
+export function formatDate(value: string, intl: IntlShape = englishIntl) {
+  return new Intl.DateTimeFormat(intl.locale, {
     dateStyle: 'medium',
     timeZone: 'Europe/Stockholm',
     timeStyle: 'short',

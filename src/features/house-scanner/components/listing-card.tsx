@@ -9,6 +9,7 @@ import {
   UnstyledButton,
 } from '@mantine/core';
 import { memo, useMemo } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { FavoriteStar } from '@/features/house-scanner/components/favorite-star';
 import { HideButton } from '@/features/house-scanner/components/hide-button';
 import { ListingCardMenu } from '@/features/house-scanner/components/listing-card-menu';
@@ -29,6 +30,8 @@ import {
 } from '@/features/house-scanner/components/price-estimate';
 import { NextViewing } from '@/features/house-scanner/components/viewing-list';
 import type { ListingNotesController } from '@/features/house-scanner/hooks/use-listing-notes';
+import { messageValue } from '@/features/house-scanner/i18n/catalogs';
+import { displayLabel } from '@/features/house-scanner/i18n/display-labels';
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type {
   Listing,
@@ -87,6 +90,8 @@ export const ListingCard = memo(function ListingCard({
   onToggleHidden,
   onSeeOnMap,
 }: ListingCardProps) {
+  const intl = useIntl();
+
   const { saved, mine, summary } = useMemo(() => {
     const saved = snapshot.favorites.filter(
       (favorite) => favorite.listingId === listing.id,
@@ -99,7 +104,7 @@ export const ListingCard = memo(function ListingCard({
         listing.facts.status !== 'unknown');
     const memberName = (id: string | null) =>
       snapshot.members.find((member) => member.userId === id)?.displayName ||
-      'Household member';
+      intl.formatMessage({ id: 'listings.details.householdMember' });
     // A sold or withdrawn status already says why it is gone.
     const delisted =
       listing.delistedAt !== undefined &&
@@ -109,13 +114,13 @@ export const ListingCard = memo(function ListingCard({
     const hiddenBy = snapshot.hides?.find(
       (hide) => hide.listingId === listing.id,
     )?.userId;
-    const chips = reasonChips(listing);
+    const chips = reasonChips(listing, intl);
     const position =
-      estimatedPositionLabel(listing.coordinates) ??
+      estimatedPositionLabel(listing.coordinates, intl) ??
       (listing.coordinates?.precision === 'approximate_area'
-        ? 'Approximate area only'
+        ? intl.formatMessage({ id: 'listings.details.approximateAreaOnly' })
         : !listing.coordinates
-          ? 'Position unknown'
+          ? intl.formatMessage({ id: 'listings.details.positionUnknown' })
           : null);
     return {
       saved,
@@ -140,18 +145,36 @@ export const ListingCard = memo(function ListingCard({
             <Group gap="xs" className={classes.cardStatus}>
               {showStatus && (
                 <Badge variant="light">
-                  {statusDisputed ? 'Status disputed' : listing.facts.status}
+                  {statusDisputed
+                    ? intl.formatMessage({
+                        id: 'listings.details.statusDisputed',
+                      })
+                    : displayLabel(intl, listing.facts.status)}
                 </Badge>
               )}
               {listing.origin === 'manual' && (
                 <Badge variant="outline">
-                  Added by {memberName(listing.addedBy)}
+                  <FormattedMessage
+                    id="listings.details.addedBy"
+                    values={{
+                      value0: messageValue(memberName(listing.addedBy)),
+                    }}
+                  />
                 </Badge>
               )}
-              {delisted && <Badge variant="outline">No longer listed</Badge>}
+              {delisted && (
+                <Badge variant="outline">
+                  <FormattedMessage id="listings.details.noLongerListed" />
+                </Badge>
+              )}
               {hidden && (
                 <Badge variant="outline">
-                  {hiddenBy ? `Hidden by ${memberName(hiddenBy)}` : 'Hidden'}
+                  {hiddenBy
+                    ? intl.formatMessage(
+                        { id: 'listings.details.hiddenBy' },
+                        { value0: messageValue(memberName(hiddenBy)) },
+                      )
+                    : intl.formatMessage({ id: 'listings.details.hidden' })}
                 </Badge>
               )}
             </Group>
@@ -165,28 +188,38 @@ export const ListingCard = memo(function ListingCard({
           </Box>
           {saved.length > 0 && (
             <Text size="sm" {...desktopOnly(details)}>
-              Saved by{' '}
+              <FormattedMessage id="listings.details.savedBy" />{' '}
               {saved.map((favorite) => memberName(favorite.userId)).join(', ')}
             </Text>
           )}
         </>
       ),
     };
-  }, [listing, snapshot, userId, details, hidden]);
+  }, [listing, snapshot, userId, details, hidden, intl]);
   // Keep checkbox widgets mounted and reusable; opening Select only reveals their lightweight wrappers.
   const selectionControl = useMemo(
     () => (
       <Checkbox
-        label={`Select ${listing.title}`}
+        label={intl.formatMessage(
+          { id: 'listings.details.select' },
+          { value0: messageValue(listing.title) },
+        )}
         checked={checked === true}
         disabled={selectionDisabled}
         onChange={() => onToggleSelection?.(listing.id)}
       />
     ),
-    [listing.id, listing.title, checked, selectionDisabled, onToggleSelection],
+    [
+      listing.id,
+      listing.title,
+      checked,
+      selectionDisabled,
+      onToggleSelection,
+      intl,
+    ],
   );
   const estimated = useHasEstimate(listing);
-  const selectionLabel = `${checked ? 'Deselect' : 'Select'} ${listing.title}`;
+  const selectionLabel = `${checked ? intl.formatMessage({ id: 'common.deselect' }) : intl.formatMessage({ id: 'common.select' })} ${listing.title}`;
   const openPrimary = () => {
     if (selectionMode) {
       if (!selectionDisabled) onToggleSelection?.(listing.id);
@@ -296,7 +329,7 @@ export const ListingCard = memo(function ListingCard({
           aria-pressed={details ? selected : undefined}
           aria-haspopup={details ? undefined : 'dialog'}
         >
-          Details
+          <FormattedMessage id="listings.details.details" />
         </Button>
         {onSeeOnMap && hasPin(listing.coordinates) && (
           <Box {...desktopOnly(details)}>
@@ -305,7 +338,7 @@ export const ListingCard = memo(function ListingCard({
               variant="default"
               onClick={() => onSeeOnMap(listing.id)}
             >
-              See on map
+              <FormattedMessage id="listings.details.seeOnMap" />
             </Button>
           </Box>
         )}
@@ -314,13 +347,16 @@ export const ListingCard = memo(function ListingCard({
         </Box>
         {saved.length > 0 && (
           <Text size="xs" {...phoneOnly(details)}>
-            Saved by {saved.length} {saved.length === 1 ? 'member' : 'members'}
+            <FormattedMessage
+              id="listings.details.savedByMembers"
+              values={{ count: saved.length }}
+            />
           </Text>
         )}
       </Group>
       {!canSave && (
         <Text size="xs" className={classes.cardNotice}>
-          Favorite changes are unavailable in this view.
+          <FormattedMessage id="listings.details.favoriteChangesAreUnavailableInThisView" />
         </Text>
       )}
       {details && (

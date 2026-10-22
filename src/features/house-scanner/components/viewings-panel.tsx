@@ -9,10 +9,12 @@ import {
   UnstyledButton,
 } from '@mantine/core';
 import { useMemo } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { ListingCardMenu } from '@/features/house-scanner/components/listing-card-menu';
 import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
 import { KeyFacts } from '@/features/house-scanner/components/listing-summary';
 import { CalendarButton } from '@/features/house-scanner/components/viewing-list';
+import { messageValue } from '@/features/house-scanner/i18n/catalogs';
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type {
   Listing,
@@ -62,29 +64,38 @@ export function ViewingsPanel({
   onOpenListing: (id: string) => void;
   onSeeOnMap: (id: string) => void;
 }) {
+  const intl = useIntl();
   const days = useMemo(() => {
     const now = Date.now();
-    return groupByDay(favoriteViewings(snapshot, person, userId, now), now);
-  }, [snapshot, person, userId]);
+    return groupByDay(
+      favoriteViewings(snapshot, person, userId, now),
+      now,
+      intl,
+    );
+  }, [snapshot, person, userId, intl]);
   const names = (listingId: string) =>
     snapshot.favorites
       .filter((entry) => entry.listingId === listingId)
       .map(
         (entry) =>
           snapshot.members.find((member) => member.userId === entry.userId)
-            ?.displayName || 'Household member',
+            ?.displayName ||
+          intl.formatMessage({ id: 'viewings.householdMember' }),
       )
       .join(', ');
   return (
     <Stack>
       <Select
-        label="Saved by"
+        label={intl.formatMessage({ id: 'viewings.savedBy' })}
         w={{ base: 140, sm: 200 }}
         value={person}
         onChange={(value) => onPersonChange(value ?? 'everyone')}
         data={[
-          { value: 'everyone', label: 'Everyone' },
-          { value: 'mine', label: 'Mine' },
+          {
+            value: 'everyone',
+            label: intl.formatMessage({ id: 'viewings.everyone' }),
+          },
+          { value: 'mine', label: intl.formatMessage({ id: 'viewings.mine' }) },
           ...snapshot.members.map((member) => ({
             value: member.userId,
             label: member.displayName,
@@ -93,8 +104,7 @@ export function ViewingsPanel({
       />
       {days.length === 0 ? (
         <Text>
-          No saved home has an upcoming viewing. Save homes with the star; times
-          appear here when the broker publishes them. Not every broker does.
+          <FormattedMessage id="viewings.noSavedHomeHasAnUpcomingViewingSaveHomes" />
         </Text>
       ) : (
         days.map((day) => (
@@ -118,11 +128,23 @@ export function ViewingsPanel({
         ))
       )}
       <Text size="sm" c="dimmed">
-        {snapshot.edition
-          ? `Updated ${formatDate(snapshot.edition.publishedAt)}. `
-          : ''}
-        A viewing can be cancelled or moved between scans, so confirm it on the
-        broker's page.
+        <FormattedMessage
+          id="viewings.aViewingCanBeCancelledOrMovedBetweenScans"
+          values={{
+            value0: messageValue(
+              snapshot.edition
+                ? intl.formatMessage(
+                    { id: 'viewings.updated' },
+                    {
+                      value0: messageValue(
+                        formatDate(snapshot.edition.publishedAt, intl),
+                      ),
+                    },
+                  )
+                : '',
+            ),
+          }}
+        />
       </Text>
     </Stack>
   );
@@ -141,10 +163,11 @@ function ViewingCard({
   onOpen: () => void;
   onSeeOnMap: () => void;
 }) {
+  const intl = useIntl();
   return (
     <Box
       component="article"
-      aria-label={`${listing.title}, ${formatViewing(viewing)}`}
+      aria-label={`${listing.title}, ${formatViewing(viewing, intl)}`}
       className={`${classes.card} ${classes.viewingCard}`}
     >
       <Box className={classes.viewingThumb}>
@@ -152,7 +175,7 @@ function ViewingCard({
       </Box>
       <Stack gap={4} className={classes.grow}>
         <Text size="md" fw={800} className={classes.viewingTag}>
-          {formatViewing(viewing)}
+          {formatViewing(viewing, intl)}
         </Text>
         <Title order={4} size="h4">
           <UnstyledButton
@@ -166,7 +189,10 @@ function ViewingCard({
         </Title>
         <KeyFacts listing={listing} />
         <Text size="sm" c="dimmed">
-          Saved by {savedBy}
+          <FormattedMessage
+            id="viewings.savedBy2"
+            values={{ value0: savedBy }}
+          />
         </Text>
       </Stack>
       <Group gap="xs">
@@ -177,7 +203,7 @@ function ViewingCard({
           onClick={onOpen}
           aria-haspopup="dialog"
         >
-          Details
+          <FormattedMessage id="listings.details.details" />
         </Button>
         <ListingCardMenu listing={listing} onSeeOnMap={onSeeOnMap} />
       </Group>

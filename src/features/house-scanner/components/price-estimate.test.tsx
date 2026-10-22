@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 import { MantineProvider } from '@mantine/core';
 import { cleanup, render, screen } from '@testing-library/react';
+import { IntlProvider } from 'react-intl';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-
 import {
   EstimateLine,
   PriceEstimateProvider,
 } from '@/features/house-scanner/components/price-estimate';
+import { catalogs } from '@/features/house-scanner/i18n/catalogs';
 import { SYNTHETIC_SNAPSHOT } from '@/features/house-scanner/mock/synthetic-household';
 import type { Listing } from '@/features/house-scanner/types/contracts';
 
@@ -63,15 +64,22 @@ const target = flat('Målgatan 1', 0, null);
 function show(listing: Listing, others: Listing[]) {
   render(
     <MantineProvider>
-      <PriceEstimateProvider listings={[...others, listing]}>
-        <EstimateLine listing={listing} />
-      </PriceEstimateProvider>
+      <IntlProvider
+        locale="en-GB"
+        defaultLocale="en-GB"
+        timeZone="Europe/Stockholm"
+        messages={catalogs.en}
+      >
+        <PriceEstimateProvider listings={[...others, listing]}>
+          <EstimateLine listing={listing} />
+        </PriceEstimateProvider>
+      </IntlProvider>
     </MantineProvider>,
   );
 }
 
 it('shows the range and what it rests on for a home with no price', () => {
   show(target, neighbours);
-  expect(screen.getByText(/Estimate 4,3M–6,9M/)).toBeTruthy();
+  expect(screen.getByText(/Estimate 4.3M–6.9M/)).toBeTruthy();
   expect(screen.getByText(/from 8 nearby asking prices/)).toBeTruthy();
 });

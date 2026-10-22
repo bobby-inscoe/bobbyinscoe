@@ -8,10 +8,16 @@ import {
   Title,
 } from '@mantine/core';
 import type { ReactNode } from 'react';
+import { FormattedMessage, type IntlShape, useIntl } from 'react-intl';
 import { ListingNotes } from '@/features/house-scanner/components/listing-notes';
 import { ManualListingActions } from '@/features/house-scanner/components/manual-listing-actions';
 import { ViewingRows } from '@/features/house-scanner/components/viewing-list';
 import type { ListingNotesController } from '@/features/house-scanner/hooks/use-listing-notes';
+import {
+  englishIntl,
+  messageValue,
+} from '@/features/house-scanner/i18n/catalogs';
+import { displayLabel } from '@/features/house-scanner/i18n/display-labels';
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type {
   Listing,
@@ -35,25 +41,30 @@ interface ListingDetailsProps {
   headingOrder?: 3 | 4;
 }
 
-const yesNo = (value: boolean | null) =>
-  value === null ? null : value ? 'Yes' : 'No';
+const yesNo = (value: boolean | null, intl: IntlShape = englishIntl) =>
+  value === null
+    ? null
+    : value
+      ? intl.formatMessage({ id: 'common.yes' })
+      : intl.formatMessage({ id: 'common.no' });
 
-const OUTDOOR = {
-  balcony: 'Balcony',
-  terrace: 'Terrace',
-  both: 'Balcony and terrace',
-  none: 'None',
-} as const;
+const OUTDOOR = (intl: IntlShape) =>
+  ({
+    balcony: intl.formatMessage({ id: 'listings.details.balcony' }),
+    terrace: intl.formatMessage({ id: 'listings.details.terrace' }),
+    both: intl.formatMessage({ id: 'listings.details.balconyAndTerrace' }),
+    none: intl.formatMessage({ id: 'common.none' }),
+  }) as const;
 
-const TENURE = {
-  cooperative: 'Cooperative (bostadsrätt)',
-  ownership: 'Owned',
-  rental: 'Rental',
-  unknown: null,
-} as const;
-
-const capitalized = (text: string) =>
-  text.charAt(0).toUpperCase() + text.slice(1);
+const TENURE = (intl: IntlShape) =>
+  ({
+    cooperative: intl.formatMessage({
+      id: 'listings.details.cooperativeBostadsratt',
+    }),
+    ownership: intl.formatMessage({ id: 'listings.details.owned' }),
+    rental: intl.formatMessage({ id: 'listings.details.rental' }),
+    unknown: null,
+  }) as const;
 
 // A label and its value on one line each. An unknown value is dimmed, so what is missing stands out.
 function FactList({ rows }: { rows: [string, ReactNode | null][] }) {
@@ -65,7 +76,7 @@ function FactList({ rows }: { rows: [string, ReactNode | null][] }) {
           <dd>
             {value ?? (
               <Text span size="sm" c="dimmed">
-                Unknown
+                <FormattedMessage id="common.unknown" />
               </Text>
             )}
           </dd>
@@ -104,90 +115,150 @@ export function ListingDetails({
   notes,
   headingOrder = 4,
 }: ListingDetailsProps) {
+  const intl = useIntl();
+
   const { facts, conflicts } = listing;
   const house = facts.propertyType === 'house';
   const sectionOrder = headingOrder === 3 ? 4 : 5;
   const timestamps = [
-    { label: 'First found', value: listing.firstSeenAt },
-    { label: 'Last changed', value: listing.lastChangedAt },
-    { label: 'Last checked', value: listing.lastCheckedAt },
+    {
+      label: intl.formatMessage({ id: 'listings.details.firstFound' }),
+      value: listing.firstSeenAt,
+    },
+    {
+      label: intl.formatMessage({ id: 'listings.details.lastChanged' }),
+      value: listing.lastChangedAt,
+    },
+    {
+      label: intl.formatMessage({ id: 'listings.details.lastChecked' }),
+      value: listing.lastCheckedAt,
+    },
   ];
   const floor =
     facts.groundFloor === null
       ? null
       : facts.groundFloor
-        ? 'Ground floor'
-        : 'Above ground floor';
+        ? intl.formatMessage({ id: 'listings.details.groundFloor' })
+        : intl.formatMessage({ id: 'listings.details.aboveGroundFloor' });
   return (
     <>
       {listing.delistedAt && (
-        <Paper withBorder p="sm" role="note" aria-label="No longer listed">
+        <Paper
+          withBorder
+          p="sm"
+          role="note"
+          aria-label={intl.formatMessage({
+            id: 'listings.details.noLongerListed',
+          })}
+        >
           <Text size="sm">
-            No longer listed since {formatDate(listing.delistedAt)}: the source
-            stopped showing it in two full reads in a row. Last seen{' '}
-            {formatDate(listing.observedAt)}.
+            <FormattedMessage
+              id="listings.details.noLongerListedSinceTheSourceStoppedShowingIt"
+              values={{
+                value0: messageValue(formatDate(listing.delistedAt, intl)),
+                value1: messageValue(formatDate(listing.observedAt, intl)),
+              }}
+            />
           </Text>
         </Paper>
       )}
       <Title order={headingOrder} size="h4">
-        Facts and source evidence
+        <FormattedMessage id="listings.details.factsAndSourceEvidence" />
       </Title>
       <ManualListingActions listing={listing} />
       <Stack gap="md">
         <FactList
           rows={[
             [
-              'Asking price',
+              intl.formatMessage({ id: 'listings.details.askingPrice' }),
               facts.askingPriceSek === null
                 ? null
-                : formatPrice(facts.askingPriceSek),
+                : formatPrice(facts.askingPriceSek, intl),
             ],
             [
-              'Monthly fee',
+              intl.formatMessage({ id: 'listings.details.monthlyFee' }),
               house
-                ? 'Not applicable to a house'
+                ? intl.formatMessage({
+                    id: 'listings.details.notApplicableToAHouse',
+                  })
                 : facts.baseFeeSek === null
                   ? null
-                  : formatFee(facts.baseFeeSek),
+                  : formatFee(facts.baseFeeSek, intl),
             ],
             ...(house
               ? []
               : ([
                   [
-                    'Mandatory additions',
+                    intl.formatMessage({
+                      id: 'listings.details.mandatoryAdditions',
+                    }),
                     facts.mandatoryMonthlySek === null
                       ? null
-                      : formatFee(facts.mandatoryMonthlySek),
+                      : formatFee(facts.mandatoryMonthlySek, intl),
                   ],
                 ] as [string, string | null][])),
             [
-              'Living area',
-              facts.livingAreaM2 === null ? null : `${facts.livingAreaM2} m²`,
+              intl.formatMessage({ id: 'listings.details.livingArea' }),
+              facts.livingAreaM2 === null
+                ? null
+                : intl.formatMessage(
+                    { id: 'listings.details.m' },
+                    {
+                      value0: messageValue(
+                        intl.formatNumber(facts.livingAreaM2),
+                      ),
+                    },
+                  ),
             ],
-            ['Rooms', facts.rooms === null ? null : String(facts.rooms)],
             [
-              'Home type',
+              intl.formatMessage({ id: 'listings.details.rooms' }),
+              facts.rooms === null ? null : intl.formatNumber(facts.rooms),
+            ],
+            [
+              intl.formatMessage({ id: 'listings.details.homeType' }),
               facts.propertyType === null
                 ? null
-                : capitalized(facts.propertyType),
+                : displayLabel(intl, facts.propertyType),
             ],
-            ['Tenure', TENURE[facts.tenure]],
             [
-              'Status',
-              facts.status === 'unknown' ? null : capitalized(facts.status),
+              intl.formatMessage({ id: 'listings.details.tenure' }),
+              TENURE(intl)[facts.tenure],
+            ],
+            [
+              intl.formatMessage({ id: 'listings.details.status' }),
+              facts.status === 'unknown'
+                ? null
+                : displayLabel(intl, facts.status),
             ],
           ]}
         />
         {conflicts.length > 0 && (
-          <Text size="sm">Conflicting fields: {conflicts.join(', ')}</Text>
+          <Text size="sm">
+            <FormattedMessage
+              id="listings.details.conflictingFields"
+              values={{
+                value0: messageValue(
+                  intl.formatList(
+                    conflicts.map((field) => displayLabel(intl, field)),
+                  ),
+                ),
+              }}
+            />
+          </Text>
         )}
         {upcomingViewings(listing, Date.now()).length > 0 && (
-          <Section title="Viewings" order={sectionOrder}>
+          <Section
+            title={intl.formatMessage({ id: 'listings.details.viewings' })}
+            order={sectionOrder}
+          >
             <ViewingRows listing={listing} />
           </Section>
         )}
         {listing.photos && listing.photos.length > 1 && (
-          <Section title="Photos" order={sectionOrder}>
+          <Section
+            title={intl.formatMessage({ id: 'listings.details.photos' })}
+            order={sectionOrder}
+          >
             <Group gap="xs">
               {listing.photos.map((photo) => (
                 <a
@@ -211,43 +282,88 @@ export function ListingDetails({
             </Group>
           </Section>
         )}
-        <Section title="Building and outdoor" order={sectionOrder}>
+        <Section
+          title={intl.formatMessage({
+            id: 'listings.details.buildingAndOutdoor',
+          })}
+          order={sectionOrder}
+        >
           <FactList
             rows={[
-              ['Floor', floor],
-              ['Lift', yesNo(facts.lift)],
+              [intl.formatMessage({ id: 'listings.details.floor' }), floor],
               [
-                'Outdoor space',
-                facts.outdoor === null ? null : OUTDOOR[facts.outdoor],
+                intl.formatMessage({ id: 'listings.details.lift' }),
+                yesNo(facts.lift, intl),
               ],
-              ['Glazed outdoor space', yesNo(facts.glazed)],
+              [
+                intl.formatMessage({ id: 'listings.details.outdoorSpace' }),
+                facts.outdoor === null ? null : OUTDOOR(intl)[facts.outdoor],
+              ],
+              [
+                intl.formatMessage({
+                  id: 'listings.details.glazedOutdoorSpace',
+                }),
+                yesNo(facts.glazed, intl),
+              ],
             ]}
           />
         </Section>
-        <Section title="Location" order={sectionOrder}>
+        <Section
+          title={intl.formatMessage({ id: 'listings.details.location' })}
+          order={sectionOrder}
+        >
           <FactList
             rows={[
-              ['Municipality', facts.municipality],
-              ['Neighborhood', listingNeighborhoodLabel(listing)],
               [
-                'Position',
+                intl.formatMessage({ id: 'listings.details.municipality' }),
+                facts.municipality,
+              ],
+              [
+                intl.formatMessage({ id: 'listings.details.neighborhood' }),
+                listingNeighborhoodLabel(listing),
+              ],
+              [
+                intl.formatMessage({ id: 'listings.details.position' }),
                 listing.coordinates
-                  ? `${capitalized(listing.coordinates.precision.replaceAll('_', ' '))}, from ${listing.coordinates.source}, observed ${formatDate(listing.coordinates.observedAt)}`
+                  ? intl.formatMessage(
+                      { id: 'listings.details.fromObserved' },
+                      {
+                        value0: messageValue(
+                          displayLabel(intl, listing.coordinates.precision),
+                        ),
+                        value1: messageValue(
+                          displayLabel(intl, listing.coordinates.source),
+                        ),
+                        value2: messageValue(
+                          formatDate(listing.coordinates.observedAt, intl),
+                        ),
+                      },
+                    )
                   : null,
               ],
             ]}
           />
           {listing.coordinates && !hasPin(listing.coordinates) && (
-            <Text size="sm">Approximate area; no exact pin is shown.</Text>
+            <Text size="sm">
+              <FormattedMessage id="listings.details.approximateAreaNoExactPinIsShown" />
+            </Text>
           )}
           {!listing.coordinates && (
-            <Text size="sm">Listed without a map position.</Text>
+            <Text size="sm">
+              <FormattedMessage id="listings.details.listedWithoutAMapPosition" />
+            </Text>
           )}
         </Section>
-        <Section title="Source" order={sectionOrder}>
+        <Section
+          title={intl.formatMessage({ id: 'listings.details.source' })}
+          order={sectionOrder}
+        >
           <FactList
             rows={[
-              ['Last observed', formatDate(listing.observedAt)],
+              [
+                intl.formatMessage({ id: 'listings.details.lastObserved' }),
+                formatDate(listing.observedAt, intl),
+              ],
               ...(listing.origin === 'manual' &&
               [
                 facts.propertyType,
@@ -256,18 +372,27 @@ export function ListingDetails({
                 facts.rooms,
                 facts.outdoor,
               ].some((fact) => fact !== null)
-                ? ([['Facts', 'Entered by a member']] as [string, string][])
+                ? ([
+                    [
+                      intl.formatMessage({ id: 'listings.details.facts' }),
+                      intl.formatMessage({
+                        id: 'listings.details.enteredByAMember',
+                      }),
+                    ],
+                  ] as [string, string][])
                 : []),
               ...timestamps.flatMap(({ label, value }) =>
                 value
-                  ? ([[label, formatDate(value)]] as [string, string][])
+                  ? ([[label, formatDate(value, intl)]] as [string, string][])
                   : [],
               ),
               ...(listing.userTags.length > 0
-                ? ([['Tags', listing.userTags.join(', ')]] as [
-                    string,
-                    string,
-                  ][])
+                ? ([
+                    [
+                      intl.formatMessage({ id: 'listings.details.tags' }),
+                      listing.userTags.join(', '),
+                    ],
+                  ] as [string, string][])
                 : []),
             ]}
           />
@@ -280,20 +405,26 @@ export function ListingDetails({
               rel="noopener noreferrer"
               referrerPolicy="no-referrer"
             >
-              {new URL(url).hostname}: original listing
+              <FormattedMessage
+                id="listings.details.originalListing"
+                values={{ value0: messageValue(new URL(url).hostname) }}
+              />
             </Anchor>
           ))}
         </Section>
-        <Section title="Evidence" order={sectionOrder}>
+        <Section
+          title={intl.formatMessage({ id: 'listings.details.evidence' })}
+          order={sectionOrder}
+        >
           {listing.evidence.length ? (
             listing.evidence.map((evidence) => (
               <Stack key={evidence.id} gap={4}>
                 <Text size="sm">
-                  {evidence.kind.replaceAll('_', ' ')} ·{' '}
-                  {evidence.subject.replaceAll('_', ' ')}: {evidence.summary}
+                  {displayLabel(intl, evidence.kind)} ·{' '}
+                  {displayLabel(intl, evidence.subject)}: {evidence.summary}
                 </Text>
                 <Text size="xs">
-                  {formatDate(evidence.observedAt)}
+                  {formatDate(evidence.observedAt, intl)}
                   {evidence.method ? ` · ${evidence.method}` : ''}
                 </Text>
                 {evidence.sourceUrl && (
@@ -303,20 +434,20 @@ export function ListingDetails({
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Evidence source
+                    <FormattedMessage id="listings.details.evidenceSource" />
                   </Anchor>
                 )}
               </Stack>
             ))
           ) : (
             <Text size="sm">
-              No supporting nature, transit or other evidence recorded.
+              <FormattedMessage id="listings.details.noSupportingNatureTransitOrOtherEvidenceRecorded" />
             </Text>
           )}
         </Section>
         <Divider />
         <Title order={headingOrder} size="h4">
-          Notes
+          <FormattedMessage id="listings.details.notes" />
         </Title>
         <ListingNotes
           controller={notes}

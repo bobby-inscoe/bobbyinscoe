@@ -13,7 +13,7 @@ export type ListingNote = z.infer<typeof noteSchema>;
 
 export class NoteConflictError extends Error {
   constructor() {
-    super('This note changed since you loaded it.');
+    super('validation.thisNoteChangedSinceYouLoadedIt');
     this.name = 'NoteConflictError';
   }
 }

@@ -1,7 +1,11 @@
 import { Alert, Button, Group, Stack, Text, Textarea } from '@mantine/core';
 import { useEffect, useRef } from 'react';
-
+import { FormattedMessage, useIntl } from 'react-intl';
 import type { ListingNotesController } from '@/features/house-scanner/hooks/use-listing-notes';
+import {
+  formatFeedback,
+  messageValue,
+} from '@/features/house-scanner/i18n/catalogs';
 import type { Member } from '@/features/house-scanner/types/contracts';
 import { NOTE_MAX_LENGTH } from '@/features/house-scanner/types/notes';
 import { formatDate } from '@/features/house-scanner/utils/format';
@@ -17,29 +21,41 @@ export function ListingNotes({
   members,
   userId,
 }: ListingNotesProps) {
+  const intl = useIntl();
+
   const conflictRegion = useRef<HTMLDivElement>(null);
   const conflict = controller?.conflict ?? false;
   useEffect(() => {
     if (conflict) conflictRegion.current?.focus();
   }, [conflict]);
   if (!controller || controller.status === 'unavailable')
-    return <Text size="sm">Shared notes are unavailable in this view.</Text>;
+    return (
+      <Text size="sm">
+        <FormattedMessage id="listings.details.sharedNotesAreUnavailableInThisView" />
+      </Text>
+    );
   const memberName = (id: string) =>
     members.find((member) => member.userId === id)?.displayName ||
-    'Household member';
+    intl.formatMessage({ id: 'listings.details.householdMember' });
   return (
-    <Stack gap="xs" aria-label="Shared notes" component="section">
+    <Stack
+      gap="xs"
+      aria-label={intl.formatMessage({ id: 'listings.details.sharedNotes' })}
+      component="section"
+    >
       {controller.status === 'loading' && (
         <Text size="sm" role="status">
-          Loading notes…
+          <FormattedMessage id="listings.details.loadingNotes" />
         </Text>
       )}
       {controller.status === 'error' && (
         <Alert role="alert" color="red">
           <Group gap="sm">
-            <Text size="sm">Notes could not be loaded.</Text>
+            <Text size="sm">
+              <FormattedMessage id="listings.details.notesCouldNotBeLoaded" />
+            </Text>
             <Button size="xs" variant="default" onClick={controller.retry}>
-              Retry
+              <FormattedMessage id="common.retry" />
             </Button>
           </Group>
         </Alert>
@@ -47,23 +63,44 @@ export function ListingNotes({
       {controller.status === 'ready' && (
         <>
           {controller.notes.length ? (
-            <ul aria-label="Household notes">
+            <ul
+              aria-label={intl.formatMessage({
+                id: 'listings.details.householdNotes',
+              })}
+            >
               {controller.notes.map((note) => (
                 <li key={note.userId}>
                   <Text size="sm" fw={600}>
-                    {note.userId === userId
-                      ? `You (${memberName(note.userId)})`
-                      : memberName(note.userId)}{' '}
-                    · edited {formatDate(note.editedAt)}
+                    <FormattedMessage
+                      id="listings.details.edited"
+                      values={{
+                        value0: messageValue(
+                          note.userId === userId
+                            ? intl.formatMessage(
+                                { id: 'listings.details.you' },
+                                {
+                                  value0: messageValue(memberName(note.userId)),
+                                },
+                              )
+                            : memberName(note.userId),
+                        ),
+                        value1: messageValue(formatDate(note.editedAt, intl)),
+                      }}
+                    />
                   </Text>
                   <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
-                    {note.body || 'This note is empty.'}
+                    {note.body ||
+                      intl.formatMessage({
+                        id: 'listings.details.thisNoteIsEmpty',
+                      })}
                   </Text>
                 </li>
               ))}
             </ul>
           ) : (
-            <Text size="sm">No notes yet.</Text>
+            <Text size="sm">
+              <FormattedMessage id="listings.details.noNotesYet" />
+            </Text>
           )}
           {controller.conflict && (
             <Alert
@@ -71,12 +108,23 @@ export function ListingNotes({
               role="alert"
               tabIndex={-1}
               color="yellow"
-              title="Your note changed since you opened it"
+              title={intl.formatMessage({
+                id: 'listings.details.yourNoteChangedSinceYouOpenedIt',
+              })}
             >
               <Stack gap="xs">
                 <Text size="sm">
-                  Latest saved note:{' '}
-                  {controller.ownNote?.body || 'No saved note.'}
+                  <FormattedMessage
+                    id="listings.details.latestSavedNote"
+                    values={{
+                      value0: messageValue(
+                        controller.ownNote?.body ||
+                          intl.formatMessage({
+                            id: 'listings.details.noSavedNote',
+                          }),
+                      ),
+                    }}
+                  />
                 </Text>
                 <Group>
                   <Button
@@ -84,7 +132,7 @@ export function ListingNotes({
                     loading={controller.saving}
                     onClick={controller.keepDraftAndSave}
                   >
-                    Keep my draft and save over latest
+                    <FormattedMessage id="listings.details.keepMyDraftAndSaveOverLatest" />
                   </Button>
                   <Button
                     size="xs"
@@ -92,15 +140,23 @@ export function ListingNotes({
                     disabled={controller.saving}
                     onClick={controller.discardDraft}
                   >
-                    Use latest and discard my draft
+                    <FormattedMessage id="listings.details.useLatestAndDiscardMyDraft" />
                   </Button>
                 </Group>
               </Stack>
             </Alert>
           )}
           <Textarea
-            label="Your shared note"
-            description={`${controller.draft.length} of ${NOTE_MAX_LENGTH} characters`}
+            label={intl.formatMessage({
+              id: 'listings.details.yourSharedNote',
+            })}
+            description={intl.formatMessage(
+              { id: 'listings.details.ofCharacters' },
+              {
+                value0: messageValue(controller.draft.length),
+                value1: messageValue(NOTE_MAX_LENGTH),
+              },
+            )}
             value={controller.draft}
             maxLength={NOTE_MAX_LENGTH}
             rows={4}
@@ -113,13 +169,13 @@ export function ListingNotes({
               loading={controller.saving && !controller.conflict}
               onClick={controller.save}
             >
-              Save note
+              <FormattedMessage id="listings.details.saveNote" />
             </Button>
           </Group>
         </>
       )}
       <Text size="sm" role="status">
-        {controller.result}
+        {formatFeedback(intl, controller.result)}
       </Text>
     </Stack>
   );

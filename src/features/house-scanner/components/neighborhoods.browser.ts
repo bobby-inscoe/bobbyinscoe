@@ -121,6 +121,7 @@ test('multiple neighborhoods show their official names and survive a reload', as
     exact: true,
   });
   for (const neighborhood of [first, second]) {
+    await input.click();
     await input.fill(neighborhood.name);
     await page
       .getByRole('option', { name: neighborhood.name, exact: true })

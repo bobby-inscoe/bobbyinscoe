@@ -8,6 +8,8 @@ import {
   Text,
   TextInput,
 } from '@mantine/core';
+import { FormattedMessage, useIntl } from 'react-intl';
+import { messageValue } from '@/features/house-scanner/i18n/catalogs';
 
 import type {
   Listing,
@@ -74,69 +76,90 @@ export function ManualFields({
   fields: ManualFieldsState;
   onChange: (fields: ManualFieldsState) => void;
 }) {
+  const intl = useIntl();
+
   const { imageUrls } = fields;
   const setImageUrls = (next: string[]) =>
     onChange({ ...fields, imageUrls: next });
   return (
     <>
       <Text size="sm" fw={500}>
-        Details you know (optional)
+        <FormattedMessage id="listings.addLink.detailsYouKnowOptional" />
       </Text>
       <SimpleGrid cols={2}>
         <Select
-          label="Type"
+          label={intl.formatMessage({ id: 'listings.addLink.type' })}
           data={[
-            { value: 'apartment', label: 'Apartment' },
-            { value: 'house', label: 'House' },
+            {
+              value: 'apartment',
+              label: intl.formatMessage({ id: 'listings.addLink.apartment' }),
+            },
+            {
+              value: 'house',
+              label: intl.formatMessage({ id: 'listings.addLink.house' }),
+            },
           ]}
           value={fields.propertyType}
           onChange={(propertyType) => onChange({ ...fields, propertyType })}
           clearable
         />
         <Select
-          label="Outdoor space"
+          label={intl.formatMessage({ id: 'listings.addLink.outdoorSpace' })}
           data={[
-            { value: 'balcony', label: 'Balcony' },
-            { value: 'terrace', label: 'Terrace' },
-            { value: 'both', label: 'Balcony and terrace' },
-            { value: 'none', label: 'None' },
+            {
+              value: 'balcony',
+              label: intl.formatMessage({ id: 'listings.addLink.balcony' }),
+            },
+            {
+              value: 'terrace',
+              label: intl.formatMessage({ id: 'listings.addLink.terrace' }),
+            },
+            {
+              value: 'both',
+              label: intl.formatMessage({
+                id: 'listings.addLink.balconyAndTerrace',
+              }),
+            },
+            { value: 'none', label: intl.formatMessage({ id: 'common.none' }) },
           ]}
           value={fields.outdoor}
           onChange={(outdoor) => onChange({ ...fields, outdoor })}
           clearable
         />
         <NumberInput
-          label="Asking price (SEK)"
+          label={intl.formatMessage({ id: 'listings.addLink.askingPriceSEK' })}
           value={fields.price}
           onChange={(price) => onChange({ ...fields, price })}
           min={1}
           max={1_000_000_000}
           allowDecimal={false}
-          thousandSeparator=" "
+          thousandSeparator={intl.locale.startsWith('sv') ? ' ' : ','}
+          decimalSeparator={intl.locale.startsWith('sv') ? ',' : '.'}
         />
         <NumberInput
-          label="Living area (m²)"
+          label={intl.formatMessage({ id: 'listings.addLink.livingAreaM' })}
           value={fields.area}
           onChange={(area) => onChange({ ...fields, area })}
           min={1}
           max={10000}
+          decimalSeparator={intl.locale.startsWith('sv') ? ',' : '.'}
         />
         <NumberInput
-          label="Rooms"
+          label={intl.formatMessage({ id: 'listings.addLink.rooms' })}
           value={fields.rooms}
           onChange={(rooms) => onChange({ ...fields, rooms })}
           min={0.5}
           max={100}
           step={0.5}
+          decimalSeparator={intl.locale.startsWith('sv') ? ',' : '.'}
         />
       </SimpleGrid>
       <Stack gap={4}>
         <Text size="sm" fw={500}>
-          Photo link (optional)
+          <FormattedMessage id="listings.addLink.photoLinkOptional" />
         </Text>
         <Text size="xs" c="dimmed">
-          Right-click a photo on the listing page and copy its image address.
-          The photos stay on the original site.
+          <FormattedMessage id="listings.addLink.rightClickAPhotoOnTheListingPageAnd" />
         </Text>
         {imageUrls.map((value, index) => {
           const last = index === imageUrls.length - 1;
@@ -146,7 +169,10 @@ export function ManualFields({
             <Group key={index} gap="xs" wrap="nowrap">
               <TextInput
                 flex={1}
-                aria-label={`Photo link ${index + 1}`}
+                aria-label={intl.formatMessage(
+                  { id: 'listings.addLink.photoLink' },
+                  { value0: messageValue(index + 1) },
+                )}
                 type="url"
                 value={value}
                 onChange={(event) =>
@@ -162,7 +188,13 @@ export function ManualFields({
                 variant="default"
                 size={36}
                 aria-label={
-                  last ? 'Add another photo link' : 'Remove photo link'
+                  last
+                    ? intl.formatMessage({
+                        id: 'listings.addLink.addAnotherPhotoLink',
+                      })
+                    : intl.formatMessage({
+                        id: 'listings.addLink.removePhotoLink',
+                      })
                 }
                 disabled={last && (!value.trim() || imageUrls.length >= 10)}
                 onClick={() =>

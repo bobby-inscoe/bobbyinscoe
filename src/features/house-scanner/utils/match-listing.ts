@@ -1,3 +1,6 @@
+import type { IntlShape } from 'react-intl';
+import { englishIntl } from '@/features/house-scanner/i18n/catalogs';
+import type { MessageId } from '@/features/house-scanner/i18n/types/translations';
 import type {
   Criteria,
   Listing,
@@ -15,89 +18,114 @@ export interface MatchResult {
 
 type Section = MatchResult['section'];
 
-const MISSING_LABELS: Record<string, string> = {
-  purchase: 'whether it is for sale',
-  propertyType: 'home type',
-  livingAreaM2: 'living area',
-  rooms: 'rooms',
-  groundFloor: 'floor',
-  lift: 'lift',
-  outdoor: 'balcony or terrace',
-  glazed: 'glazing',
-  askingPriceSek: 'price',
-  tenure: 'tenure',
-  status: 'status',
-  'geographic scope': 'location',
+const MISSING_LABELS: Record<string, MessageId> = {
+  purchase: 'listings.filters.whetherItIsForSale',
+  propertyType: 'listings.filters.homeType',
+  livingAreaM2: 'listings.filters.livingArea2',
+  rooms: 'listings.filters.rooms',
+  groundFloor: 'listings.filters.floor',
+  lift: 'listings.filters.lift2',
+  outdoor: 'listings.filters.balconyOrTerrace2',
+  glazed: 'listings.filters.glazing',
+  askingPriceSek: 'listings.filters.price',
+  tenure: 'listings.filters.tenure',
+  status: 'listings.filters.status',
+  'geographic scope': 'listings.filters.location',
 };
 
-export const SECTION_LABELS: Record<Section, string> = {
-  preferred: 'Within budget',
-  stretch: 'Stretch budget',
-  exceptions: 'Close to your criteria',
-  'needs-details': 'Missing info',
-  outside: 'Outside current criteria',
-};
+export const SECTION_LABELS = (intl: IntlShape): Record<Section, string> => ({
+  preferred: intl.formatMessage({ id: 'listings.filters.withinBudget' }),
+  stretch: intl.formatMessage({ id: 'listings.filters.stretchBudget' }),
+  exceptions: intl.formatMessage({
+    id: 'listings.filters.closeToYourCriteria',
+  }),
+  'needs-details': intl.formatMessage({ id: 'listings.filters.missingInfo' }),
+  outside: intl.formatMessage({
+    id: 'listings.filters.outsideCurrentCriteria',
+  }),
+});
 
 // The Match picker's choices, in order, and what each means; outside homes are never listed.
-export const MATCH_CHOICES: {
+export const MATCH_CHOICES = (
+  intl: IntlShape,
+): {
   value: Exclude<Section, 'outside'> | 'manual';
   label: string;
   description: string;
-}[] = [
+}[] => [
   {
     value: 'preferred',
-    label: SECTION_LABELS.preferred,
-    description: 'at or under your preferred price.',
+    label: SECTION_LABELS(intl).preferred,
+    description: intl.formatMessage({
+      id: 'listings.filters.atOrUnderYourPreferredPrice',
+    }),
   },
   {
     value: 'stretch',
-    label: SECTION_LABELS.stretch,
-    description: 'over it, within your stretch limit.',
+    label: SECTION_LABELS(intl).stretch,
+    description: intl.formatMessage({
+      id: 'listings.filters.overItWithinYourStretchLimit',
+    }),
   },
   {
     value: 'exceptions',
-    label: SECTION_LABELS.exceptions,
-    description: 'misses one rule that can bend.',
+    label: SECTION_LABELS(intl).exceptions,
+    description: intl.formatMessage({
+      id: 'listings.filters.missesOneRuleThatCanBend',
+    }),
   },
   {
     value: 'needs-details',
-    label: SECTION_LABELS['needs-details'],
-    description: 'facts are unknown, so it can’t be judged.',
+    label: SECTION_LABELS(intl)['needs-details'],
+    description: intl.formatMessage({
+      id: 'listings.filters.factsAreUnknownSoItCanTBeJudged',
+    }),
   },
   {
     value: 'manual',
-    label: 'Links we added',
-    description: 'pasted in by the household.',
+    label: intl.formatMessage({ id: 'listings.filters.linksWeAdded' }),
+    description: intl.formatMessage({
+      id: 'listings.filters.pastedInByTheHousehold',
+    }),
   },
 ];
 
-const OUTDOOR_CHIPS = {
-  balcony: 'Balcony',
-  terrace: 'Terrace',
-  both: 'Balcony and terrace',
-} as const;
+const OUTDOOR_CHIPS = (intl: IntlShape) =>
+  ({
+    balcony: intl.formatMessage({ id: 'listings.filters.balcony' }),
+    terrace: intl.formatMessage({ id: 'listings.filters.terrace' }),
+    both: intl.formatMessage({ id: 'listings.filters.balconyAndTerrace' }),
+  }) as const;
 
 // Compact cards show only confirmed features; match caveats remain in details.
-export function reasonChips(listing: Listing) {
+export function reasonChips(listing: Listing, intl: IntlShape = englishIntl) {
   const { facts, conflicts } = listing;
   const known = (key: 'outdoor' | 'lift' | 'glazed') =>
     !conflicts.includes(key);
   const chips = [
     facts.outdoor && facts.outdoor !== 'none' && known('outdoor')
-      ? OUTDOOR_CHIPS[facts.outdoor]
+      ? OUTDOOR_CHIPS(intl)[facts.outdoor]
       : null,
-    facts.lift === true && known('lift') ? 'Lift' : null,
-    facts.glazed === true && known('glazed') ? 'Glazed' : null,
+    facts.lift === true && known('lift')
+      ? intl.formatMessage({ id: 'listings.filters.lift' })
+      : null,
+    facts.glazed === true && known('glazed')
+      ? intl.formatMessage({ id: 'listings.filters.glazed' })
+      : null,
   ].filter((chip) => chip !== null);
   return chips;
 }
 
-export function listingMatches(listing: Listing, snapshot: Snapshot) {
+export function listingMatches(
+  listing: Listing,
+  snapshot: Snapshot,
+  intl: IntlShape = englishIntl,
+) {
   return snapshot.profiles
     .filter((profile) => profile.enabled)
     .map((profile) => ({
       profile,
-      result: matchListing(listing, profile.criteria),
+      result: matchListing(listing, profile.criteria, intl),
     }));
 }
 
@@ -130,6 +158,7 @@ function geographicScope(listing: Listing, criteria: Criteria): boolean | null {
 export function matchListing(
   listing: Listing,
   criteria: Criteria,
+  intl: IntlShape = englishIntl,
 ): MatchResult {
   const f = listing.facts;
   const excluded: string[] = [];
@@ -145,28 +174,39 @@ export function matchListing(
     listing.sourceId &&
     !criteria.sourceIds.includes(listing.sourceId)
   )
-    excluded.push('Source not selected');
+    excluded.push(
+      intl.formatMessage({ id: 'listings.filters.sourceNotSelected' }),
+    );
   if (required('purchase') && !f.purchase)
-    excluded.push('Not offered for purchase');
+    excluded.push(
+      intl.formatMessage({ id: 'listings.filters.notOfferedForPurchase' }),
+    );
   if (!listing.conflicts.includes('tenure') && f.tenure === 'rental')
-    excluded.push('Rental');
+    excluded.push(intl.formatMessage({ id: 'listings.filters.rental' }));
   if (
     required('propertyType') &&
     f.propertyType &&
     !criteria.propertyTypes.includes(f.propertyType)
   )
-    excluded.push('Property type outside profile');
+    excluded.push(
+      intl.formatMessage({ id: 'listings.filters.propertyTypeOutsideProfile' }),
+    );
   if (
     required('livingAreaM2') &&
     f.livingAreaM2 !== null &&
     (f.livingAreaM2 < criteria.minAreaM2 ||
       (criteria.maxAreaM2 !== null && f.livingAreaM2 > criteria.maxAreaM2))
   )
-    excluded.push('Living area outside profile');
+    excluded.push(
+      intl.formatMessage({ id: 'listings.filters.livingAreaOutsideProfile' }),
+    );
   if (required('rooms') && f.rooms !== null && f.rooms < criteria.minRooms)
-    excluded.push('Too few rooms');
+    excluded.push(intl.formatMessage({ id: 'listings.filters.tooFewRooms' }));
   const geography = geographicScope(listing, criteria);
-  if (geography === false) excluded.push('Outside geographic scope');
+  if (geography === false)
+    excluded.push(
+      intl.formatMessage({ id: 'listings.filters.outsideGeographicScope' }),
+    );
   if (geography === null) missing.push('geographic scope');
   if (listing.conflicts.includes('tenure')) missing.push('tenure');
   if (listing.conflicts.includes('status')) missing.push('status');
@@ -176,62 +216,108 @@ export function matchListing(
     f.askingPriceSek !== null &&
     f.askingPriceSek > criteria.stretchPriceSek
   )
-    excluded.push('Above profile stretch budget');
+    excluded.push(
+      intl.formatMessage({ id: 'listings.filters.aboveProfileStretchBudget' }),
+    );
   let exception = false;
   if (
     f.propertyType === 'apartment' &&
     !listing.conflicts.includes('propertyType')
   ) {
     if (criteria.excludeGroundFloor && required('groundFloor') && f.groundFloor)
-      excluded.push('Ground-floor apartment');
+      excluded.push(
+        intl.formatMessage({ id: 'listings.filters.groundFloorApartment' }),
+      );
     if (criteria.requireLift && required('lift') && !f.lift)
-      excluded.push('Apartment without a lift');
+      excluded.push(
+        intl.formatMessage({ id: 'listings.filters.apartmentWithoutALift' }),
+      );
     if (f.liftServesHome === false)
-      caveats.push('Lift does not serve the home');
-    if (f.stepFree === false) caveats.push('Access is not fully step-free');
+      caveats.push(
+        intl.formatMessage({ id: 'listings.filters.liftDoesNotServeTheHome' }),
+      );
+    if (f.stepFree === false)
+      caveats.push(
+        intl.formatMessage({ id: 'listings.filters.accessIsNotFullyStepFree' }),
+      );
     if (criteria.requireOutdoor && required('outdoor') && f.outdoor === 'none')
-      excluded.push('No balcony or terrace');
+      excluded.push(
+        intl.formatMessage({ id: 'listings.filters.noBalconyOrTerrace' }),
+      );
     if (criteria.preferGlazing && f.outdoor !== 'none') {
       if (required('glazed') && !f.glazed) {
         exception = true;
         caveats.push(
           !listing.conflicts.includes('largePrivateTerrace') &&
             f.largePrivateTerrace === true
-            ? 'Large private unglazed terrace'
-            : 'Outdoor space is unglazed',
+            ? intl.formatMessage({
+                id: 'listings.filters.largePrivateUnglazedTerrace',
+              })
+            : intl.formatMessage({
+                id: 'listings.filters.outdoorSpaceIsUnglazed',
+              }),
         );
       }
     }
   }
   if (f.propertyType === 'apartment' && f.baseFeeSek !== null) {
     if (f.baseFeeSek > criteria.feeReferenceSek)
-      caveats.push('Base monthly fee exceeds profile reference');
+      caveats.push(
+        intl.formatMessage({
+          id: 'listings.filters.baseMonthlyFeeExceedsProfileReference',
+        }),
+      );
     else if (
       f.mandatoryMonthlySek !== null &&
       f.baseFeeSek + f.mandatoryMonthlySek > criteria.feeReferenceSek
     )
-      caveats.push('Known monthly total exceeds profile reference');
+      caveats.push(
+        intl.formatMessage({
+          id: 'listings.filters.knownMonthlyTotalExceedsProfileReference',
+        }),
+      );
     if (f.mandatoryMonthlySek === null)
-      caveats.push('Mandatory additions unknown; total incomplete');
+      caveats.push(
+        intl.formatMessage({
+          id: 'listings.filters.mandatoryAdditionsUnknownTotalIncomplete',
+        }),
+      );
   }
   if (
     !listing.conflicts.includes('status') &&
     (f.status === 'sold' || f.status === 'withdrawn')
   )
-    excluded.push('No longer available');
-  else if (listing.delistedAt) excluded.push('No longer listed');
+    excluded.push(
+      intl.formatMessage({ id: 'listings.filters.noLongerAvailable' }),
+    );
+  else if (listing.delistedAt)
+    excluded.push(
+      intl.formatMessage({ id: 'listings.filters.noLongerListed' }),
+    );
   if (excluded.length)
     return { section: 'outside', reasons: excluded, caveats, missing: [] };
   if (missing.length) {
     const named = [
-      ...new Set(missing.map((key) => MISSING_LABELS[key] ?? key)),
+      ...new Set(
+        missing.map((key) => {
+          const id = MISSING_LABELS[key];
+          return id ? intl.formatMessage({ id }) : key;
+        }),
+      ),
     ];
     return {
       section: 'needs-details',
-      reasons: ['Details need confirmation'],
+      reasons: [
+        intl.formatMessage({ id: 'listings.filters.detailsNeedConfirmation' }),
+      ],
       caveats: [
         ...caveats,
-        ...named.map((label) => `Unknown or disputed: ${label}`),
+        ...named.map((label) =>
+          intl.formatMessage(
+            { id: 'listings.filters.unknownOrDisputed' },
+            { label },
+          ),
+        ),
       ],
       missing: named,
     };
@@ -240,10 +326,14 @@ export function matchListing(
 
   reasons.push(
     price !== null && price <= criteria.preferredPriceSek
-      ? 'Within preferred budget'
-      : 'Within stretch budget',
+      ? intl.formatMessage({ id: 'listings.filters.withinPreferredBudget' })
+      : intl.formatMessage({ id: 'listings.filters.withinStretchBudget' }),
   );
-  reasons.push('Living area and rooms meet profile');
+  reasons.push(
+    intl.formatMessage({
+      id: 'listings.filters.livingAreaAndRoomsMeetProfile',
+    }),
+  );
   return {
     section: exception
       ? 'exceptions'

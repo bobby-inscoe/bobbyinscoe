@@ -7,10 +7,11 @@ import {
   screen,
   within,
 } from '@testing-library/react';
+import { IntlProvider } from 'react-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { ListingNotes } from '@/features/house-scanner/components/listing-notes';
 import type { ListingNotesController } from '@/features/house-scanner/hooks/use-listing-notes';
+import { catalogs } from '@/features/house-scanner/i18n/catalogs';
 import {
   DEMO_OTHER_USER_ID,
   DEMO_USER_ID,
@@ -71,11 +72,18 @@ function controller(
 function view(value?: ListingNotesController) {
   return (
     <MantineProvider>
-      <ListingNotes
-        controller={value}
-        members={SYNTHETIC_SNAPSHOT.members}
-        userId={DEMO_USER_ID}
-      />
+      <IntlProvider
+        locale="en-GB"
+        defaultLocale="en-GB"
+        timeZone="Europe/Stockholm"
+        messages={catalogs.en}
+      >
+        <ListingNotes
+          controller={value}
+          members={SYNTHETIC_SNAPSHOT.members}
+          userId={DEMO_USER_ID}
+        />
+      </IntlProvider>
     </MantineProvider>
   );
 }

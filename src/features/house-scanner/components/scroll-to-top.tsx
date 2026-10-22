@@ -1,9 +1,12 @@
 import { ActionIcon, Affix, Transition } from '@mantine/core';
 import { useScrollDirection, useWindowScroll } from '@mantine/hooks';
 import { ArrowUp } from 'lucide-react';
+import { useIntl } from 'react-intl';
 
 // Shown only while the reader scrolls up, past the first screen of the list.
 export function ScrollToTop() {
+  const intl = useIntl();
+
   const [scroll, scrollTo] = useWindowScroll();
   const show = useScrollDirection() === 'up' && scroll.y > 400;
   return (
@@ -22,7 +25,7 @@ export function ScrollToTop() {
             radius="xl"
             variant="default"
             opacity={0.85}
-            aria-label="Back to top"
+            aria-label={intl.formatMessage({ id: 'navigation.backToTop' })}
             onClick={() => scrollTo({ y: 0 })}
           >
             <ArrowUp size={20} aria-hidden />

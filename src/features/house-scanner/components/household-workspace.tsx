@@ -1,7 +1,7 @@
 import { Button, Group, Menu, Text } from '@mantine/core';
 import { CalendarDays, Ellipsis, House, Star } from 'lucide-react';
 import { useDeferredValue, useMemo, useState } from 'react';
-
+import { FormattedMessage, useIntl } from 'react-intl';
 import { AddLinkPanel } from '@/features/house-scanner/components/add-link-panel';
 import { ListingDrawer } from '@/features/house-scanner/components/listing-drawer';
 import { ListingsPanel } from '@/features/house-scanner/components/listings-panel';
@@ -13,6 +13,10 @@ import { useBrowseNavigation } from '@/features/house-scanner/hooks/use-browse-n
 import { useFavoriteToggle } from '@/features/house-scanner/hooks/use-favorite-toggle';
 import { useHiddenListings } from '@/features/house-scanner/hooks/use-hidden-listings';
 import { useListingNotes } from '@/features/house-scanner/hooks/use-listing-notes';
+import {
+  formatFeedback,
+  messageValue,
+} from '@/features/house-scanner/i18n/catalogs';
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type { Snapshot } from '@/features/house-scanner/types/contracts';
 import type {
@@ -54,6 +58,8 @@ export function HouseholdWorkspace({
   onSaveNote,
   access,
 }: HouseholdWorkspaceProps) {
+  const intl = useIntl();
+
   const navigation = useBrowseNavigation();
   const { tab, search, listingId } = navigation;
   const { person, section, filters, view } = search;
@@ -162,7 +168,10 @@ export function HouseholdWorkspace({
       : null;
   return (
     <ManualActionsProvider value={manualActions}>
-      <section className={classes.workspace} aria-label="Household shortlist">
+      <section
+        className={classes.workspace}
+        aria-label={intl.formatMessage({ id: 'navigation.householdShortlist' })}
+      >
         {/* A new household starts with one profile at revision 1, set to the collector bounds. */}
         {!synthetic &&
           tab !== 'settings' &&
@@ -170,21 +179,22 @@ export function HouseholdWorkspace({
           snapshot.profiles[0].revision === 1 && (
             <Group gap={4} role="note">
               <Text size="sm">
-                This household uses starter criteria: apartments in Göteborg
-                from 60 m², up to 6M SEK.
+                <FormattedMessage id="navigation.thisHouseholdUsesStarterCriteriaApartmentsInGoteborgFrom" />
               </Text>
               <Button
                 size="compact-sm"
                 variant="subtle"
                 onClick={() => navigation.changeTab('settings')}
               >
-                Adjust them in Settings
+                <FormattedMessage id="navigation.adjustThemInSettings" />
               </Button>
             </Group>
           )}
         <Group
           component="nav"
-          aria-label="Shortlist sections"
+          aria-label={intl.formatMessage({
+            id: 'navigation.shortlistSections',
+          })}
           gap="xs"
           wrap="wrap"
           p={4}
@@ -209,7 +219,9 @@ export function HouseholdWorkspace({
               }
               onClick={() => navigation.changeTab(value)}
             >
-              {value === 'suggestions' ? 'Listings' : 'Favorites'}
+              {value === 'suggestions'
+                ? intl.formatMessage({ id: 'navigation.listings' })
+                : intl.formatMessage({ id: 'navigation.favorites' })}
             </Button>
           ))}
           <Button
@@ -223,7 +235,7 @@ export function HouseholdWorkspace({
             }
             onClick={() => navigation.changeTab('viewings')}
           >
-            Viewings
+            <FormattedMessage id="navigation.viewings" />
           </Button>
           <Menu position="bottom-end">
             <Menu.Target>
@@ -250,36 +262,51 @@ export function HouseholdWorkspace({
                     : 'default'
                 }
               >
-                More
+                <FormattedMessage id="navigation.more" />
               </Button>
             </Menu.Target>
             <Menu.Dropdown>
               <Menu.Item onClick={() => navigation.changeTab('manual')}>
-                Add link
+                <FormattedMessage id="navigation.addLink" />
               </Menu.Item>
               <Menu.Item onClick={() => navigation.changeTab('settings')}>
-                Settings
+                <FormattedMessage id="navigation.settings" />
               </Menu.Item>
-              {onSignOut && <Menu.Item onClick={onSignOut}>Sign out</Menu.Item>}
+              {onSignOut && (
+                <Menu.Item onClick={onSignOut}>
+                  <FormattedMessage id="navigation.signOut" />
+                </Menu.Item>
+              )}
             </Menu.Dropdown>
           </Menu>
         </Group>
         {listingId && !selected && (
           <Group role="status">
-            <Text>This home is unavailable in this household.</Text>
+            <Text>
+              <FormattedMessage id="navigation.thisHomeIsUnavailableInThisHousehold" />
+            </Text>
             <Button variant="default" onClick={navigation.closeListing}>
-              Back to{' '}
-              {tab === 'favorites'
-                ? 'Favorites'
-                : tab === 'viewings'
-                  ? 'Viewings'
-                  : 'Listings'}
+              <FormattedMessage
+                id="navigation.backTo"
+                values={{
+                  value0: messageValue(
+                    tab === 'favorites'
+                      ? intl.formatMessage({ id: 'navigation.favorites' })
+                      : intl.formatMessage({
+                          id:
+                            tab === 'viewings'
+                              ? 'navigation.viewings'
+                              : 'navigation.listings',
+                        }),
+                  ),
+                }}
+              />
             </Button>
           </Group>
         )}
         {message && (
           <Text role="status" aria-live="polite">
-            {message}
+            {formatFeedback(intl, message)}
           </Text>
         )}
         {tab === 'manual' ? (
@@ -298,7 +325,9 @@ export function HouseholdWorkspace({
         ) : tab === 'viewings' ? (
           <>
             {!detailsOpen && hiddenActions.error && (
-              <Text role="alert">{hiddenActions.error}</Text>
+              <Text role="alert">
+                {formatFeedback(intl, hiddenActions.error)}
+              </Text>
             )}
             <ViewingsPanel
               snapshot={snapshot}
@@ -336,7 +365,7 @@ export function HouseholdWorkspace({
                   busy: selected ? pending.includes(selected.id) : false,
                 }}
                 notes={notes}
-                hideError={hiddenActions.error}
+                hideError={formatFeedback(intl, hiddenActions.error)}
                 onToggleHidden={(id) => {
                   if (hidden.has(id)) unhide(id);
                   else hide(id);
@@ -384,7 +413,7 @@ export function HouseholdWorkspace({
               onHideMany={hiddenActions.hideMany}
               onUndoHide={hiddenActions.undo}
               hideBusy={hiddenActions.busy}
-              hideError={hiddenActions.error}
+              hideError={formatFeedback(intl, hiddenActions.error)}
               undoHideCount={hiddenActions.undoCount}
               canHide={hiddenActions.canHide}
               selecting={search.select}
@@ -426,7 +455,9 @@ export function HouseholdWorkspace({
               pending={pending}
               mapWarning={
                 stale && !synthetic
-                  ? 'Over 36 hours old, so facts may be stale.'
+                  ? intl.formatMessage({
+                      id: 'navigation.over36HoursOldSoFactsMayBeStale',
+                    })
                   : undefined
               }
               canSave={canSave}
@@ -445,10 +476,26 @@ export function HouseholdWorkspace({
           role="status"
         >
           {synthetic
-            ? 'Fictional demo · Changes stay in memory.'
+            ? intl.formatMessage({
+                id: 'navigation.fictionalDemoChangesStayInMemory',
+              })
             : snapshot.edition
-              ? `Updated ${formatDate(snapshot.edition.publishedAt)}${stale ? '. Over 36 hours old, so facts may be stale.' : ''}`
-              : 'No data has been published yet.'}
+              ? intl.formatMessage(
+                  { id: 'navigation.updated' },
+                  {
+                    value0: messageValue(
+                      formatDate(snapshot.edition.publishedAt, intl),
+                    ),
+                    value1: messageValue(
+                      stale
+                        ? intl.formatMessage({ id: 'navigation.staleSuffix' })
+                        : '',
+                    ),
+                  },
+                )
+              : intl.formatMessage({
+                  id: 'navigation.noDataHasBeenPublishedYet',
+                })}
         </Text>
       </section>
     </ManualActionsProvider>

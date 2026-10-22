@@ -32,7 +32,7 @@ export const listingUrlSchema = z
       !url.username &&
       !url.password
     );
-  }, 'Use an HTTP(S) link without credentials.');
+  }, 'validation.useAnHTTPSLinkWithoutCredentials');
 
 export const criteriaSchema = z
   .strictObject({
@@ -72,16 +72,16 @@ export const criteriaSchema = z
   })
   .refine(
     (c) => c.maxAreaM2 === null || c.maxAreaM2 >= c.minAreaM2,
-    'Maximum area must cover minimum area.',
+    'validation.maximumAreaMustCoverMinimumArea',
   )
   .refine(
     (c) => c.stretchPriceSek >= c.preferredPriceSek,
-    'Stretch price must cover preferred price.',
+    'validation.stretchPriceMustCoverPreferredPrice',
   )
   .refine(
     (c) =>
       c.transit.tradeoffJourneyMinutes >= c.transit.preferredJourneyMinutes,
-    'Trade-off journey must cover preferred journey.',
+    'validation.tradeOffJourneyMustCoverPreferredJourney',
   );
 
 export const profileSchema = z.strictObject({
@@ -341,7 +341,7 @@ export const manualSubmissionSchema = z.strictObject({
     .array(
       listingUrlSchema.refine(
         (value) => value.startsWith('https://'),
-        'Photo links must start with https://.',
+        'validation.photoLinksMustStartWithHttps',
       ),
     )
     .max(10),

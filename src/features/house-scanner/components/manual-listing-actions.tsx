@@ -1,11 +1,17 @@
 import { Button, Group, Paper, Stack, Text, TextInput } from '@mantine/core';
 import { createContext, useContext, useState } from 'react';
-
+import { FormattedMessage, useIntl } from 'react-intl';
 import {
   fieldsOf,
   ManualFields,
   submissionOf,
 } from '@/features/house-scanner/components/manual-listing-fields';
+import {
+  errorFeedback,
+  type Feedback,
+  formatFeedback,
+  validationFeedback,
+} from '@/features/house-scanner/i18n/catalogs';
 import {
   type Listing,
   type ManualEdit,
@@ -21,16 +27,17 @@ interface ManualActions {
 const ManualActionsContext = createContext<ManualActions | null>(null);
 export const ManualActionsProvider = ManualActionsContext.Provider;
 
-const errorText = (error: unknown) =>
-  error instanceof Error ? error.message : 'Something went wrong. Try again.';
+const errorText = errorFeedback;
 
 // Edit and delete for a listing a member added by link. Any member of the household may use them.
 export function ManualListingActions({ listing }: { listing: Listing }) {
+  const intl = useIntl();
+
   const actions = useContext(ManualActionsContext);
   const [mode, setMode] = useState<'view' | 'edit' | 'confirm'>('view');
   const [title, setTitle] = useState('');
   const [fields, setFields] = useState(() => fieldsOf(listing));
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState<Feedback>('');
   const [busy, setBusy] = useState(false);
   if (listing.origin !== 'manual' || !actions) return null;
 
@@ -53,7 +60,7 @@ export function ManualListingActions({ listing }: { listing: Listing }) {
       ...submissionOf(fields),
     });
     if (!result.success) {
-      setMessage(result.error.issues.map((issue) => issue.message).join(' '));
+      setMessage(validationFeedback(result.error.issues));
       return;
     }
     void run(() => actions.onUpdate(listing.id, result.data));
@@ -61,10 +68,10 @@ export function ManualListingActions({ listing }: { listing: Listing }) {
 
   if (mode === 'edit')
     return (
-      <form onSubmit={save}>
+      <form onSubmit={save} noValidate>
         <Stack maw="36rem" gap="sm">
           <TextInput
-            label="Title"
+            label={intl.formatMessage({ id: 'listings.details.title' })}
             value={title}
             onChange={(event) => setTitle(event.currentTarget.value)}
             maxLength={200}
@@ -72,7 +79,7 @@ export function ManualListingActions({ listing }: { listing: Listing }) {
           <ManualFields fields={fields} onChange={setFields} />
           <Group>
             <Button type="submit" loading={busy}>
-              Save changes
+              <FormattedMessage id="listings.details.saveChanges" />
             </Button>
             <Button
               variant="default"
@@ -82,20 +89,26 @@ export function ManualListingActions({ listing }: { listing: Listing }) {
                 setMessage('');
               }}
             >
-              Cancel
+              <FormattedMessage id="common.cancel" />
             </Button>
           </Group>
-          <Text role="status">{message}</Text>
+          <Text role="status">{formatFeedback(intl, message)}</Text>
         </Stack>
       </form>
     );
   if (mode === 'confirm')
     return (
-      <Paper withBorder p="sm" role="alertdialog" aria-label="Delete listing">
+      <Paper
+        withBorder
+        p="sm"
+        role="alertdialog"
+        aria-label={intl.formatMessage({
+          id: 'listings.details.deleteListing',
+        })}
+      >
         <Stack gap="xs">
           <Text size="sm">
-            Delete this link for the whole household? Everyone's favorites and
-            notes on it are removed too.
+            <FormattedMessage id="listings.details.deleteThisLinkForTheWholeHouseholdEveryoneS" />
           </Text>
           <Group>
             <Button
@@ -103,7 +116,7 @@ export function ManualListingActions({ listing }: { listing: Listing }) {
               loading={busy}
               onClick={() => void run(() => actions.onDelete(listing.id))}
             >
-              Delete
+              <FormattedMessage id="common.delete" />
             </Button>
             <Button
               variant="default"
@@ -113,10 +126,10 @@ export function ManualListingActions({ listing }: { listing: Listing }) {
                 setMessage('');
               }}
             >
-              Keep it
+              <FormattedMessage id="listings.details.keepIt" />
             </Button>
           </Group>
-          <Text role="status">{message}</Text>
+          <Text role="status">{formatFeedback(intl, message)}</Text>
         </Stack>
       </Paper>
     );
@@ -131,7 +144,7 @@ export function ManualListingActions({ listing }: { listing: Listing }) {
           setMode('edit');
         }}
       >
-        Edit
+        <FormattedMessage id="common.edit" />
       </Button>
       <Button
         size="compact-sm"
@@ -139,7 +152,7 @@ export function ManualListingActions({ listing }: { listing: Listing }) {
         color="red"
         onClick={() => setMode('confirm')}
       >
-        Delete
+        <FormattedMessage id="common.delete" />
       </Button>
     </Group>
   );

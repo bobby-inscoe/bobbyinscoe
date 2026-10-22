@@ -1,5 +1,6 @@
 import { Button, Menu } from '@mantine/core';
 import { useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type { Listing } from '@/features/house-scanner/types/contracts';
 import { hasPin } from '@/features/house-scanner/utils/listing-position';
@@ -11,6 +12,7 @@ export function ListingCardMenu({
   listing: Listing;
   onSeeOnMap?: (id: string) => void;
 }) {
+  const intl = useIntl();
   const [copied, setCopied] = useState(false);
   const shareUrl = listing.sourceUrls[0];
   const located = onSeeOnMap && hasPin(listing.coordinates);
@@ -35,20 +37,27 @@ export function ListingCardMenu({
         <Button
           size="xs"
           variant="subtle"
-          aria-label={`More actions for ${listing.title}`}
+          aria-label={intl.formatMessage(
+            { id: 'listings.details.moreActionsFor' },
+            { value0: listing.title },
+          )}
         >
-          More
+          <FormattedMessage id="listings.details.more" />
         </Button>
       </Menu.Target>
       <Menu.Dropdown>
         {shareUrl && (
           <Menu.Item onClick={share} closeMenuOnClick={canShare}>
-            {copied ? 'Link copied' : 'Share this listing'}
+            {copied ? (
+              <FormattedMessage id="listings.details.linkCopied" />
+            ) : (
+              <FormattedMessage id="listings.details.shareThisListing" />
+            )}
           </Menu.Item>
         )}
         {located && (
           <Menu.Item onClick={() => onSeeOnMap(listing.id)}>
-            See on map
+            <FormattedMessage id="listings.details.seeOnMap" />
           </Menu.Item>
         )}
       </Menu.Dropdown>
