@@ -5,6 +5,10 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import {
+  expandSnapshot,
+  snapshotV2Schema,
+} from '@/features/house-scanner/api/snapshot-v2';
 import { SYNTHETIC_SNAPSHOT } from '@/features/house-scanner/mock/synthetic-household';
 import { snapshotSchema } from '@/features/house-scanner/types/contracts';
 
@@ -212,6 +216,38 @@ describe('official polygon assignments and compatibility', () => {
         }) => home,
       ),
     ).toEqual(old.listings);
+  });
+  it('sends the same areas in the v2 snapshot once expanded', async () => {
+    await db.exec('begin; set local role authenticated;');
+    let v2: unknown;
+    try {
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+        USER,
+      ]);
+      v2 = (
+        await db.query<{ value: unknown }>(
+          'select public.hs_household_snapshot($1) as value',
+          [HOUSE],
+        )
+      ).rows[0].value;
+    } finally {
+      await db.exec('rollback;');
+    }
+    const parsed = snapshotV2Schema.parse(v2);
+    expect(parsed.listings[0]).toMatchObject({
+      neighborhoodId: 'goteborg-107',
+      neighborhoodIds: ['goteborg-107'],
+      neighborhoodRadiusM: 0,
+    });
+    expect(parsed.neighborhoods).toEqual({
+      'goteborg-107': {
+        name: 'Haga',
+        datasetVersion: 'goteborg-primary-areas-2025',
+      },
+    });
+    expect(expandSnapshot(parsed)).toEqual(
+      snapshotSchema.parse(await snapshot(true)),
+    );
   });
   it('updates and clears assignments when future ingestion changes the coordinates', async () => {
     await db.query(

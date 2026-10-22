@@ -4,6 +4,10 @@ import { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import {
+  expandSnapshot,
+  snapshotV2Schema,
+} from '@/features/house-scanner/api/snapshot-v2';
+import {
   type Criteria,
   criteriaSchema,
   type IngestRequest,
@@ -1069,6 +1073,7 @@ describe('candidates filtered by household criteria', () => {
       "update hs.listings set delisted_at=now(),missed_full_reads=2 where value->>'title'='fits-both'",
     );
     // Rollbacks go newest first: the household rows call the hard rules these migrations replace.
+    await db.exec(await rollback(SNAPSHOT_V2));
     await db.exec(await rollback(HOUSEHOLDS));
     await down(delisted);
     expect(
@@ -1098,6 +1103,7 @@ describe('candidates filtered by household criteria', () => {
     await db.exec(await migration(`${shared}.sql`));
     await db.exec(await migration(`${delisted}.sql`));
     await db.exec(await migration(`${HOUSEHOLDS}.sql`));
+    await db.exec(await migration(`${SNAPSHOT_V2}.sql`));
     expect(await titles()).not.toContain('too-small-for-b');
     expect((await snapshot(HOUSE_A, OWNER_A)).hides).toHaveLength(2);
   });
@@ -1775,8 +1781,33 @@ describe('set-based publish', () => {
 const WRITE_PATH = '20261022102043_house_scanner_write_path';
 const CARDS = '20261022103309_house_scanner_listing_cards';
 const HOUSEHOLDS = '20261022105133_house_scanner_household_listings';
+const SNAPSHOT_V2 = '20261022113745_house_scanner_household_snapshot';
 const rollback = (name: string) =>
   readFile(new URL(`../rollbacks/${name}_down.sql`, import.meta.url), 'utf8');
+
+// The member's v2 snapshot, expanded by the client adapter, equals today's snapshot. Returns the v2 response.
+async function sameAsV2(database: PGlite, household: string, user: string) {
+  const [today, v2] = await as(
+    'authenticated',
+    user,
+    async () => [
+      await rpc(
+        'select public.hs_snapshot_neighborhoods($1) as value',
+        [household],
+        database,
+      ),
+      await rpc(
+        'select public.hs_household_snapshot($1) as value',
+        [household],
+        database,
+      ),
+    ],
+    database,
+  );
+  const parsed = snapshotV2Schema.parse(v2);
+  expect(expandSnapshot(parsed)).toEqual(snapshotSchema.parse(today));
+  return parsed;
+}
 
 // A database with the migrations up to and including the named one.
 async function migratedThrough(last: string) {
@@ -2025,6 +2056,7 @@ describe('listing cards', () => {
     expect(byId(cards.rows.map((row) => row.item))).toEqual(byId(homes));
     const drift = await database.query('select * from hs.card_drift()');
     expect(drift.rows).toEqual([]);
+    await sameAsV2(database, household, user);
     return homes;
   }
 
@@ -2263,6 +2295,7 @@ describe('household rows', () => {
     );
     const drift = await database.query('select * from hs.household_drift()');
     expect(drift.rows).toEqual([]);
+    await sameAsV2(database, household, user);
     return homes.map((item) => item.title).sort();
   }
 
@@ -2476,6 +2509,214 @@ describe('household rows', () => {
       await database.close();
     }
   });
+});
+
+describe('household snapshot v2', () => {
+  const now = () => new Date().toISOString();
+
+  // A fresh database with one source, household A and its owner, and the owner's profile.
+  async function household() {
+    const database = await sources('alpha');
+    await database.query('insert into auth.users values($1)', [OWNER_A]);
+    await database.query(
+      "insert into hs.households(id,name) values($1,'Synthetic household')",
+      [HOUSE_A],
+    );
+    await database.query(
+      "insert into hs.members(household_id,user_id,display_name,role) values($1,$2,'Synthetic owner','owner')",
+      [HOUSE_A, OWNER_A],
+    );
+    await database.query(
+      "insert into hs.profiles(id,household_id,name,enabled,criteria,edited_by) values($1,$2,'Synthetic profile',true,$3::jsonb,$4)",
+      [PROFILE_A, HOUSE_A, JSON.stringify(criteria), OWNER_A],
+    );
+    return database;
+  }
+
+  it('rolls back to exactly the earlier schema and applies again', async () => {
+    const database = await migratedThrough(SNAPSHOT_V2);
+    try {
+      const migrated = await fingerprint(database);
+      await database.exec(await rollback(SNAPSHOT_V2));
+      const earlier = await migratedThrough(HOUSEHOLDS);
+      try {
+        expect(await fingerprint(database)).toEqual(await fingerprint(earlier));
+      } finally {
+        await earlier.close();
+      }
+      await database.exec(await migration(`${SNAPSHOT_V2}.sql`));
+      expect(await fingerprint(database)).toEqual(migrated);
+      const grants = (name: string) =>
+        migrated.filter((line) => line.startsWith(`fn ${name}(`));
+      for (const name of [
+        'public.hs_household_snapshot',
+        'public.hs_set_favorites',
+      ])
+        expect(grants(name)).toEqual([
+          expect.stringMatching(/anon=false auth=true svc=false$/),
+        ]);
+      expect(grants('hs.visible_listings')).toEqual([
+        expect.stringMatching(/anon=false auth=false svc=false$/),
+      ]);
+    } finally {
+      await database.close();
+    }
+  });
+
+  it('expands to today’s snapshot for every member of both households on the shared database', async () => {
+    for (const [house, user] of [
+      [HOUSE_A, OWNER_A],
+      [HOUSE_A, MEMBER_A],
+      [HOUSE_B, OWNER_B],
+    ]) {
+      const v2 = await sameAsV2(db, house, user);
+      expect(v2.listings.length).toBeGreaterThan(0);
+    }
+    // The shared household reaches manual homes, hides and notes.
+    const a = await sameAsV2(db, HOUSE_A, OWNER_A);
+    expect(a.listings.some((home) => home.origin === 'manual')).toBe(true);
+    expect(a.hides.length).toBeGreaterThan(0);
+    expect(a.notes.length).toBeGreaterThan(0);
+  });
+
+  it('refuses people outside the household and anonymous callers', async () => {
+    await expect(
+      as('authenticated', OWNER_B, () =>
+        rpc('select public.hs_household_snapshot($1) as value', [HOUSE_A]),
+      ),
+    ).rejects.toThrow('Household access denied');
+    await expect(
+      as('anon', null, () =>
+        rpc('select public.hs_household_snapshot($1) as value', [HOUSE_A]),
+      ),
+    ).rejects.toThrow('permission denied');
+    await expect(
+      as('anon', null, () =>
+        rpc('select public.hs_set_favorites($1,$2::uuid[],true) as value', [
+          HOUSE_A,
+          `{${randomUUID()}}`,
+        ]),
+      ),
+    ).rejects.toThrow('permission denied');
+  });
+
+  it('saves and removes favorites in one call with the single-favorite rules', async () => {
+    const database = await household();
+    try {
+      await publish(
+        ['one', 'two', 'three'].map((id) => home(id, { observedAt: now() })),
+        { database },
+      );
+      const ids = Object.fromEntries(
+        (
+          await database.query<{ id: string; key: string }>(
+            'select id,source_listing_id key from hs.listings',
+          )
+        ).rows.map((row) => [row.key, row.id]),
+      );
+      const save = (listings: string[], saved: boolean) =>
+        as(
+          'authenticated',
+          OWNER_A,
+          () =>
+            rpc(
+              'select public.hs_set_favorites($1,$2::uuid[],$3) as value',
+              [HOUSE_A, `{${listings.join(',')}}`, saved],
+              database,
+            ),
+          database,
+        );
+      const saved = async () =>
+        (
+          await database.query<{ key: string }>(
+            'select l.source_listing_id key from hs.favorites f join hs.listings l on l.id=f.listing_id order by 1',
+          )
+        ).rows.map((row) => row.key);
+      await expect(save([ids.one, ids.two, ids.one], true)).resolves.toEqual({
+        ok: true,
+      });
+      expect(await saved()).toEqual(['one', 'two']);
+      // One listing the household cannot see refuses the whole call.
+      await expect(save([ids.three, randomUUID()], true)).rejects.toThrow(
+        'Listing unavailable',
+      );
+      expect(await saved()).toEqual(['one', 'two']);
+      await expect(save([], true)).rejects.toThrow('Invalid favorite request');
+      await expect(
+        save(
+          Array.from({ length: 501 }, () => ids.three),
+          true,
+        ),
+      ).rejects.toThrow('Invalid favorite request');
+      await save([ids.one], false);
+      expect(await saved()).toEqual(['two']);
+      const v2 = await sameAsV2(database, HOUSE_A, OWNER_A);
+      expect(v2.favorites.map((favorite) => favorite.listingId)).toEqual([
+        ids.two,
+      ]);
+      const drift = await database.query('select * from hs.household_drift()');
+      expect(drift.rows).toEqual([]);
+    } finally {
+      await database.close();
+    }
+  });
+
+  it('costs in proportion to the household’s homes, not the size of the catalog', async () => {
+    const database = await household();
+    try {
+      await publish(
+        Array.from({ length: 40 }, (_, index) =>
+          home(`fits-${index}`, { observedAt: now() }),
+        ),
+        { database },
+      );
+      // Median milliseconds of five calls of each snapshot.
+      const timings = () =>
+        as(
+          'authenticated',
+          OWNER_A,
+          async () => {
+            const median = async (call: string) => {
+              const runs: number[] = [];
+              for (let run = 0; run < 5; run += 1) {
+                const started = performance.now();
+                await rpc(
+                  `select public.${call}($1) as value`,
+                  [HOUSE_A],
+                  database,
+                );
+                runs.push(performance.now() - started);
+              }
+              return runs.sort((a, b) => a - b)[2];
+            };
+            return {
+              today: await median('hs_snapshot_neighborhoods'),
+              v2: await median('hs_household_snapshot'),
+            };
+          },
+          database,
+        );
+      await database.exec('analyze');
+      const small = await timings();
+      // 20,000 homes too small for every profile, which nobody saved, noted or hid.
+      await database.query(
+        `insert into hs.listings(source_id,source_listing_id,episode_id,value)
+         select 'alpha','bulk-'||g,'synthetic-episode',jsonb_build_object('sourceListingId','bulk-'||g,'episodeId','synthetic-episode',
+          'sourceUrl',$1||'/bulk-'||g,'title','bulk-'||g,'observedAt',now(),'publishedAt',null,'facts',$2::jsonb,
+          'conflicts','[]'::jsonb,'coordinates',null,'evidence','[]'::jsonb,'photo',null)
+         from generate_series(1,20000) g`,
+        [ORIGIN, JSON.stringify({ ...home('x').facts, livingAreaM2: 10 })],
+      );
+      await database.exec('analyze');
+      const large = await timings();
+      const v2 = await sameAsV2(database, HOUSE_A, OWNER_A);
+      expect(v2.listings).toHaveLength(40);
+      expect(large.v2).toBeLessThan(small.v2 * 1.2 + 5);
+      expect(large.today).toBeGreaterThan(small.today * 3);
+    } finally {
+      await database.close();
+    }
+  }, 300_000);
 });
 
 describe('catalog administration and grants', () => {
