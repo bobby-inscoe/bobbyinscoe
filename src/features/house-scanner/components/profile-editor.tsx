@@ -226,6 +226,7 @@ export function ProfileEditor({
               Places to search
             </LabelWithInfo>
           }
+          styles={{ input: { display: 'grid', alignItems: 'center' } }}
           value={criteria.geography.municipalities}
           onChange={(municipalities) =>
             setCriteria((current) => ({
