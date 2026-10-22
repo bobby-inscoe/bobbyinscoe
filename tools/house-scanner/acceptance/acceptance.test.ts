@@ -124,18 +124,12 @@ describe('against a well-behaved backend', () => {
       householdId: string;
     }[];
     const snapshot = (
-      await a.caller.rpc('hs_snapshot', {
+      await a.caller.rpc('hs_household_snapshot', {
         p_household_id: memberships[0].householdId,
       })
-    ).data as { favorites: unknown[]; listings: { id: string }[] };
+    ).data as { favorites: unknown[]; notes: { body: string }[] };
     expect(snapshot.favorites).toEqual([]);
-    const notes = (
-      await a.caller.rpc('hs_notes', {
-        p_household_id: memberships[0].householdId,
-        p_listing_id: snapshot.listings[0].id,
-      })
-    ).data as { body: string }[];
-    expect(notes.map((n) => n.body)).toEqual(['']);
+    expect(snapshot.notes.map((n) => n.body)).toEqual(['']);
   });
 
   it('records the real error shape of a stale save', async () => {

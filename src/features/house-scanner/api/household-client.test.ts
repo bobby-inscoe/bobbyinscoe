@@ -8,7 +8,6 @@ import {
   deleteManual,
   householdSnapshot,
   householdStart,
-  memberships,
   privateBackendSettings,
   saveNote,
   saveProfile,
@@ -30,6 +29,7 @@ import {
   sdk,
   sdkStorage,
   sdkStorageKey,
+  toV2,
   USER_ID,
   v2Snapshot,
 } from '@/features/house-scanner/api/session-test-helpers';
@@ -142,34 +142,23 @@ describe('House Scanner storage boundaries', () => {
 });
 
 describe('House Scanner RPC boundaries', () => {
+  const own = () => [fixtureSnapshot().members[0]];
   it('accepts a valid private response', async () => {
     await expect(
-      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
+      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID, own()),
     ).resolves.toEqual(fixtureSnapshot());
-    expect(sdk.rpc).toHaveBeenCalledWith('hs_snapshot_neighborhoods', {
-      p_household_id: HOUSEHOLD_ID,
-    });
+    expect(sdk.rpc.mock.calls).toEqual([
+      ['hs_household_snapshot', { p_household_id: HOUSEHOLD_ID }],
+    ]);
   });
-  it('falls back only when the neighborhood endpoint is not installed', async () => {
-    sdk.rpc.mockResolvedValueOnce(reply(fixtureSnapshot().members));
-    sdk.rpc.mockResolvedValueOnce(missing());
-    sdk.rpc.mockResolvedValueOnce({
-      data: null,
-      error: { code: 'PGRST202', message: 'Function missing' },
-    });
-    sdk.rpc.mockResolvedValueOnce(reply(fixtureSnapshot()));
-    await expect(
-      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
-    ).resolves.toEqual(fixtureSnapshot());
-    expect(sdk.rpc).toHaveBeenLastCalledWith('hs_snapshot', {
-      p_household_id: HOUSEHOLD_ID,
-    });
-  });
-  it('reads the household snapshot from the read model when it is installed', async () => {
-    sdk.rpc
-      .mockResolvedValueOnce(reply([fixtureSnapshot().members[0]]))
-      .mockResolvedValueOnce(reply(v2Snapshot()));
-    const snapshot = await householdSnapshot(client(), HOUSEHOLD_ID, USER_ID);
+  it('reads a source home from the read model', async () => {
+    sdk.rpc.mockResolvedValueOnce(reply(v2Snapshot()));
+    const snapshot = await householdSnapshot(
+      client(),
+      HOUSEHOLD_ID,
+      USER_ID,
+      own(),
+    );
     expect(snapshot.listings).toEqual([
       expect.objectContaining({
         householdId: HOUSEHOLD_ID,
@@ -178,66 +167,73 @@ describe('House Scanner RPC boundaries', () => {
         sourceUrls: ['https://example.invalid/home'],
       }),
     ]);
-    expect(sdk.rpc.mock.calls.map(([name]) => name)).toEqual([
-      'hs_memberships',
-      'hs_household_snapshot',
-    ]);
   });
-  it('reads the previous snapshot when the read model sends a response the client cannot read', async () => {
-    sdk.rpc
-      .mockResolvedValueOnce(reply([fixtureSnapshot().members[0]]))
-      .mockResolvedValueOnce(reply({ ...v2Snapshot(), contractVersion: 3 }))
-      .mockResolvedValueOnce(reply(fixtureSnapshot()));
-    await expect(
-      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
-    ).resolves.toEqual(fixtureSnapshot());
-    expect(sdk.rpc.mock.calls.map(([name]) => name)).toEqual([
-      'hs_memberships',
-      'hs_household_snapshot',
-      'hs_snapshot_neighborhoods',
-    ]);
-  });
-  it('reads the previous snapshot when a read model value is invalid', async () => {
-    const invalid = v2Snapshot();
-    invalid.listings[0].facts = { rooms: 2, tenure: 'leasehold' } as never;
-    sdk.rpc
-      .mockResolvedValueOnce(reply([fixtureSnapshot().members[0]]))
-      .mockResolvedValueOnce(reply(invalid))
-      .mockResolvedValueOnce(reply(fixtureSnapshot()));
-    await expect(
-      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
-    ).resolves.toEqual(fixtureSnapshot());
-    expect(sdk.rpc).toHaveBeenLastCalledWith('hs_snapshot_neighborhoods', {
-      p_household_id: HOUSEHOLD_ID,
-    });
-  });
+  it.each([
+    ['a newer contract', { ...v2Snapshot(), contractVersion: 3 }],
+    [
+      'an invalid value',
+      {
+        ...v2Snapshot(),
+        listings: [
+          { ...v2Snapshot().listings[0], facts: { tenure: 'leasehold' } },
+        ],
+      },
+    ],
+    [
+      'a home in an area the reply lacks',
+      {
+        ...v2Snapshot(),
+        listings: [
+          { ...v2Snapshot().listings[0], neighborhoodId: 'goteborg-101' },
+        ],
+      },
+    ],
+  ])(
+    'refuses a read model reply with %s and reads nothing else',
+    async (_label, data) => {
+      sdk.rpc.mockResolvedValueOnce(reply(data));
+      await expect(
+        householdSnapshot(client(), HOUSEHOLD_ID, USER_ID, own()),
+      ).rejects.toThrow(
+        'The server returned an unsupported household response.',
+      );
+      expect(sdk.rpc).toHaveBeenCalledTimes(1);
+    },
+  );
   it('asks for the memberships and the snapshot in one request', async () => {
-    const own = [fixtureSnapshot().members[0]];
     sdk.rpc.mockResolvedValueOnce(
-      reply({ memberships: own, snapshot: v2Snapshot() }),
+      reply({ memberships: own(), snapshot: v2Snapshot() }),
     );
     await expect(householdStart(client(), null)).resolves.toEqual({
-      memberships: own,
+      memberships: own(),
       snapshot: v2Snapshot(),
     });
     expect(sdk.rpc).toHaveBeenLastCalledWith('hs_household_start', {});
-    sdk.rpc.mockResolvedValueOnce(reply({ memberships: own, snapshot: null }));
+    sdk.rpc.mockResolvedValueOnce(
+      reply({ memberships: own(), snapshot: null }),
+    );
     await householdStart(client(), HOUSEHOLD_ID);
     expect(sdk.rpc).toHaveBeenLastCalledWith('hs_household_start', {
       p_household_id: HOUSEHOLD_ID,
     });
   });
   it.each([
-    ['missing', missing()],
-    ['unreadable', reply([fixtureSnapshot().members[0]])],
-  ])(
-    'leaves the caller to ask separately when the start request is %s',
-    async (_label, answer) => {
-      sdk.rpc.mockResolvedValueOnce(answer);
-      await expect(householdStart(client(), null)).resolves.toBeNull();
-    },
-  );
-  it('reports a failed start request', async () => {
+    ['missing', missing(), 'household request failed'],
+    ['unreadable', reply(own()), 'unsupported household response'],
+    [
+      'oversized',
+      reply({
+        memberships: Array.from({ length: 11 }, () => own()[0]),
+        snapshot: null,
+      }),
+      'unsupported household response',
+    ],
+  ])('reports a start request that is %s', async (_label, answer, message) => {
+    sdk.rpc.mockResolvedValueOnce(answer);
+    await expect(householdStart(client(), null)).rejects.toThrow(message);
+    expect(sdk.rpc).toHaveBeenCalledTimes(1);
+  });
+  it('reports a failed start request without database details', async () => {
     sdk.rpc.mockResolvedValueOnce({
       data: null,
       error: { message: 'synthetic confidential database detail' },
@@ -251,7 +247,7 @@ describe('House Scanner RPC boundaries', () => {
       client(),
       HOUSEHOLD_ID,
       USER_ID,
-      [fixtureSnapshot().members[0]],
+      own(),
       v2Snapshot(),
     );
     expect(snapshot.listings).toEqual([
@@ -272,25 +268,23 @@ describe('House Scanner RPC boundaries', () => {
     ).toThrow();
     expect(() => setFavorites(client(), HOUSEHOLD_ID, [], true)).toThrow();
   });
-  it('does not mask authorization failures with a fallback request', async () => {
-    sdk.rpc.mockResolvedValueOnce(reply(fixtureSnapshot().members));
+  it('reports an authorization failure without another request', async () => {
     sdk.rpc.mockResolvedValueOnce({
       data: null,
       error: { code: '42501', message: 'Access denied' },
     });
     await expect(
-      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
+      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID, own()),
     ).rejects.toThrow('household request failed');
-    expect(sdk.rpc).toHaveBeenCalledTimes(2);
+    expect(sdk.rpc).toHaveBeenCalledTimes(1);
   });
   it('does not request a snapshot without current matching membership', async () => {
-    sdk.rpc.mockResolvedValueOnce(
-      reply([{ ...fixtureSnapshot().members[0], userId: OTHER_USER_ID }]),
-    );
     await expect(
-      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
+      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID, [
+        { ...fixtureSnapshot().members[0], userId: OTHER_USER_ID },
+      ]),
     ).rejects.toThrow('no longer active');
-    expect(sdk.rpc).toHaveBeenCalledTimes(1);
+    expect(sdk.rpc).not.toHaveBeenCalled();
   });
   const noteRow = (listingId: string, userId: string) => ({
     listingId,
@@ -299,35 +293,12 @@ describe('House Scanner RPC boundaries', () => {
     revision: 1,
     editedAt: '2026-10-17T10:00:00.000Z',
   });
+  // What a server bug could send in v2. The household of each row is the reply's own, so only the reply's can differ.
   const invalidSnapshots: [string, (snapshot: Snapshot) => void][] = [
     [
       'snapshot household',
       (s) => {
         s.householdId = OTHER_HOUSEHOLD_ID;
-      },
-    ],
-    [
-      'member household',
-      (s) => {
-        s.members[1].householdId = OTHER_HOUSEHOLD_ID;
-      },
-    ],
-    [
-      'profile household',
-      (s) => {
-        s.profiles[0].householdId = OTHER_HOUSEHOLD_ID;
-      },
-    ],
-    [
-      'listing household',
-      (s) => {
-        s.listings[0].householdId = OTHER_HOUSEHOLD_ID;
-      },
-    ],
-    [
-      'favorite household',
-      (s) => {
-        s.favorites[0].householdId = OTHER_HOUSEHOLD_ID;
       },
     ],
     [
@@ -373,12 +344,6 @@ describe('House Scanner RPC boundaries', () => {
       },
     ],
     [
-      'hidden listing that is not in the snapshot',
-      (s) => {
-        s.hiddenListingIds = ['00000000-0000-4000-8000-0000000000ff'];
-      },
-    ],
-    [
       'household hide of a listing that is not in the snapshot',
       (s) => {
         s.hides = [
@@ -402,49 +367,35 @@ describe('House Scanner RPC boundaries', () => {
         ];
       },
     ],
-    [
-      'demo listing',
-      (s) => {
-        s.listings[0].origin = 'synthetic';
-      },
-    ],
   ];
   it.each(invalidSnapshots)(
     'rejects inconsistent %s data',
     async (_label, change) => {
       const snapshot = fixtureSnapshot();
       change(snapshot);
-      sdk.rpc
-        .mockResolvedValueOnce(reply([fixtureSnapshot().members[0]]))
-        .mockResolvedValueOnce(missing())
-        .mockResolvedValueOnce(reply(snapshot));
+      sdk.rpc.mockResolvedValueOnce(reply(toV2(snapshot)));
       await expect(
-        householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
+        householdSnapshot(client(), HOUSEHOLD_ID, USER_ID, own()),
       ).rejects.toThrow('inconsistent household data');
     },
   );
-  it.each([
-    null,
-    {},
-    { contractVersion: 2 },
-    { ...fixtureSnapshot(), unexpected: 'field' },
-  ])('rejects unsupported snapshot responses %#', async (data) => {
-    sdk.rpc
-      .mockResolvedValueOnce(reply([fixtureSnapshot().members[0]]))
-      .mockResolvedValueOnce(missing())
-      .mockResolvedValueOnce(reply(data));
-    await expect(
-      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
-    ).rejects.toThrow('unsupported household response');
-  });
+  it.each([null, {}, { contractVersion: 2 }, fixtureSnapshot()])(
+    'rejects unsupported snapshot responses %#',
+    async (data) => {
+      sdk.rpc.mockResolvedValueOnce(reply(data));
+      await expect(
+        householdSnapshot(client(), HOUSEHOLD_ID, USER_ID, own()),
+      ).rejects.toThrow('unsupported household response');
+    },
+  );
   it('does not reveal database details in RPC errors', async () => {
     sdk.rpc.mockResolvedValue({
       data: null,
       error: { message: 'synthetic confidential database detail' },
     });
-    await expect(memberships(client())).rejects.toThrow(
-      'The household request failed. Reload and try again.',
-    );
+    await expect(
+      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID, own()),
+    ).rejects.toThrow('The household request failed. Reload and try again.');
   });
   it('reports a note revision conflict as a typed error', async () => {
     sdk.rpc.mockResolvedValue({
@@ -480,14 +431,6 @@ describe('House Scanner RPC boundaries', () => {
     );
     await expect(call).rejects.not.toBeInstanceOf(NoteConflictError);
   });
-  it('rejects oversized membership responses', async () => {
-    sdk.rpc.mockResolvedValue(
-      reply(Array.from({ length: 11 }, () => fixtureSnapshot().members[0])),
-    );
-    await expect(memberships(client())).rejects.toThrow(
-      'unsupported household response',
-    );
-  });
   it('leaves favorite actor identity to the server', async () => {
     await setFavorite(
       client(),
@@ -506,24 +449,10 @@ describe('House Scanner RPC boundaries', () => {
     snapshot.notes = [
       noteRow(snapshot.listings[0].id, snapshot.members[0].userId),
     ];
-    sdk.rpc
-      .mockResolvedValueOnce(reply([snapshot.members[0]]))
-      .mockResolvedValueOnce(missing())
-      .mockResolvedValueOnce(reply(snapshot));
+    sdk.rpc.mockResolvedValueOnce(reply(toV2(snapshot)));
     await expect(
-      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
+      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID, own()),
     ).resolves.toMatchObject({ notes: [{ body: 'sample' }] });
-  });
-  it('keeps a snapshot whose hidden ids are all listed', async () => {
-    const snapshot = fixtureSnapshot();
-    snapshot.hiddenListingIds = [snapshot.listings[0].id];
-    sdk.rpc
-      .mockResolvedValueOnce(reply([snapshot.members[0]]))
-      .mockResolvedValueOnce(missing())
-      .mockResolvedValueOnce(reply(snapshot));
-    await expect(
-      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
-    ).resolves.toMatchObject({ hiddenListingIds: [snapshot.listings[0].id] });
   });
   it('sends hides as a list and leaves the member to the server', async () => {
     const ids = fixtureSnapshot().listings.map((listing) => listing.id);

@@ -14,7 +14,6 @@ import {
   memberSchema,
   profileSchema,
   type SearchProfile,
-  snapshotSchema,
 } from '@/features/house-scanner/types/contracts';
 import {
   NOTE_MAX_LENGTH,
@@ -124,17 +123,14 @@ const manualResultSchema = z.strictObject({
   listingId: z.uuid(),
   existing: z.boolean(),
 });
+const UNSUPPORTED = 'The server returned an unsupported household response.';
 async function rpc<T>(
   client: SupabaseClient,
   name: string,
   args: Record<string, string | number | boolean | object>,
   schema: z.ZodType<T>,
-  fallback?: string,
 ) {
-  let { data, error } = await client.rpc(name, args);
-  // Older deployments can serve the unchanged snapshot while the migration rolls out.
-  if (fallback && error && ['PGRST202', '42883'].includes(error.code))
-    ({ data, error } = await client.rpc(fallback, args));
+  const { data, error } = await client.rpc(name, args);
   if (error) {
     // 40001 is the server's revision-conflict code; only a note save treats it as recoverable.
     if (name === 'hs_save_note' && error.code === '40001')
@@ -142,76 +138,58 @@ async function rpc<T>(
     throw new Error('The household request failed. Reload and try again.');
   }
   const parsed = schema.safeParse(data);
-  if (!parsed.success)
-    throw new Error('The server returned an unsupported household response.');
+  if (!parsed.success) throw new Error(UNSUPPORTED);
   return parsed.data;
 }
-const membershipsSchema = z.array(memberSchema).max(10);
-export function memberships(client: SupabaseClient) {
-  return rpc(client, 'hs_memberships', {}, membershipsSchema);
-}
-// The memberships and, for the named household or the member's only one, its v2 snapshot, in one request.
-// shortcut: null when the database lacks hs_household_start or its reply cannot be read; the caller then asks for
-// each separately. Drop the fallback with the old snapshot functions (S7).
-export async function householdStart(
+// The memberships and, for the named household or the member's only one, its v2 snapshot, in one request. The
+// snapshot is null when the member must first choose among several households.
+export function householdStart(
   client: SupabaseClient,
   householdId: string | null,
 ) {
-  const { data, error } = await client.rpc(
+  return rpc(
+    client,
     'hs_household_start',
     householdId ? { p_household_id: householdId } : {},
+    z.strictObject({
+      memberships: z.array(memberSchema).max(10),
+      snapshot: z.unknown(),
+    }),
   );
-  if (error && !['PGRST202', '42883'].includes(error.code))
-    throw new Error('The household request failed. Reload and try again.');
-  const parsed = z
-    .strictObject({ memberships: membershipsSchema, snapshot: z.unknown() })
-    .safeParse(data);
-  return parsed.success ? parsed.data : null;
 }
 // The household snapshot from the read model (hs_household_snapshot), expanded to the shape the app uses.
-// shortcut: a database without it, or a response the adapter cannot read, falls back to the previous snapshot;
-// remove the fallback with the old snapshot functions (spec house-scanner-data-foundation, S7).
 async function readSnapshot(
   client: SupabaseClient,
   householdId: string,
   // A v2 snapshot hs_household_start already returned.
   started?: unknown,
 ) {
-  let data = started;
-  if (data === undefined) {
-    const reply = await client.rpc('hs_household_snapshot', {
-      p_household_id: householdId,
-    });
-    if (reply.error && !['PGRST202', '42883'].includes(reply.error.code))
-      throw new Error('The household request failed. Reload and try again.');
-    data = reply.data;
-  }
+  const data =
+    started ??
+    (await rpc(
+      client,
+      'hs_household_snapshot',
+      { p_household_id: householdId },
+      z.unknown(),
+    ));
   const parsed = snapshotV2Schema.safeParse(data);
-  if (parsed.success)
-    try {
-      return expandSnapshot(parsed.data);
-    } catch {
-      // Read the previous snapshot instead.
-    }
-  return rpc(
-    client,
-    'hs_snapshot_neighborhoods',
-    { p_household_id: householdId },
-    snapshotSchema,
-    'hs_snapshot',
-  );
+  if (!parsed.success) throw new Error(UNSUPPORTED);
+  try {
+    return expandSnapshot(parsed.data);
+  } catch {
+    throw new Error(UNSUPPORTED);
+  }
 }
 export async function householdSnapshot(
   client: SupabaseClient,
   householdId: string,
   userId: string,
-  // Memberships the caller fetched moments ago in the same refresh; hs_snapshot re-checks on the server.
-  fetched?: Member[],
+  // Memberships the caller fetched moments ago in the same load; the server re-checks them.
+  members: Member[],
   started?: unknown,
 ) {
-  const current = fetched ?? (await memberships(client));
   if (
-    !current.some((m) => m.householdId === householdId && m.userId === userId)
+    !members.some((m) => m.householdId === householdId && m.userId === userId)
   )
     throw new Error('Your household access is no longer active.');
   const snapshot = await readSnapshot(client, householdId, started);
@@ -231,9 +209,6 @@ export async function householdSnapshot(
         favorite.householdId !== householdId ||
         !listingIds.has(favorite.listingId) ||
         !memberIds.has(favorite.userId),
-    ) ||
-    snapshot.hiddenListingIds?.some(
-      (listingId) => !listingIds.has(listingId),
     ) ||
     snapshot.hides?.some(
       (hide) => !listingIds.has(hide.listingId) || !memberIds.has(hide.userId),

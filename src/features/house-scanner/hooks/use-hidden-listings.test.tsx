@@ -13,7 +13,14 @@ const [first, second] = fixtureSnapshot().listings.map((listing) => listing.id);
 const KEY = `house-scanner:hidden:${fixtureSnapshot().householdId}:${USER_ID}`;
 
 function snapshotWith(hiddenListingIds?: string[]): Snapshot {
-  return { ...fixtureSnapshot(), hiddenListingIds };
+  return {
+    ...fixtureSnapshot(),
+    hides: hiddenListingIds?.map((listingId) => ({
+      listingId,
+      userId: USER_ID,
+      hiddenAt: '2026-10-20T12:00:00Z',
+    })),
+  };
 }
 
 function options(
