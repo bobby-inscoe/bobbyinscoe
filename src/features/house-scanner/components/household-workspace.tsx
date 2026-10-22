@@ -1,5 +1,5 @@
 import { Badge, Button, Group, Menu, Text } from '@mantine/core';
-import { Ellipsis, House, Star } from 'lucide-react';
+import { CalendarDays, Ellipsis, House, Star } from 'lucide-react';
 import { useDeferredValue, useMemo, useState } from 'react';
 
 import { AddLinkPanel } from '@/features/house-scanner/components/add-link-panel';
@@ -221,13 +221,35 @@ export function HouseholdWorkspace({
               {value === 'suggestions' ? 'Listings' : 'Favorites'}
             </Button>
           ))}
+          <Button
+            className={classes.navTab}
+            variant={tab === 'viewings' ? 'filled' : 'default'}
+            aria-pressed={tab === 'viewings'}
+            leftSection={<CalendarDays size={20} aria-hidden />}
+            rightSection={
+              viewingsSoon > 0 && (
+                <Badge
+                  size="sm"
+                  variant="light"
+                  aria-label={`${viewingsSoon} saved viewings in the next 48 hours`}
+                >
+                  {viewingsSoon}
+                </Badge>
+              )
+            }
+            onClick={() => navigation.changeTab('viewings')}
+          >
+            Viewings
+          </Button>
           <Menu position="bottom-end">
             <Menu.Target>
               <Button
                 className={classes.navTab}
                 leftSection={<Ellipsis size={20} aria-hidden />}
                 variant={
-                  tab !== 'suggestions' && tab !== 'favorites'
+                  tab !== 'suggestions' &&
+                  tab !== 'favorites' &&
+                  tab !== 'viewings'
                     ? 'filled'
                     : 'default'
                 }
@@ -236,18 +258,6 @@ export function HouseholdWorkspace({
               </Button>
             </Menu.Target>
             <Menu.Dropdown>
-              <Menu.Item onClick={() => navigation.changeTab('viewings')}>
-                Viewings
-                {viewingsSoon > 0 && (
-                  <Badge
-                    size="sm"
-                    variant="light"
-                    aria-label={`${viewingsSoon} saved viewings in the next 48 hours`}
-                  >
-                    {viewingsSoon}
-                  </Badge>
-                )}
-              </Menu.Item>
               <Menu.Item onClick={() => navigation.changeTab('manual')}>
                 Add link
               </Menu.Item>
