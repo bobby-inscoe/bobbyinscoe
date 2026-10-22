@@ -1,10 +1,26 @@
-import { Anchor, Box, Group, Select, Stack, Text, Title } from '@mantine/core';
+import {
+  Box,
+  Button,
+  Group,
+  Menu,
+  Select,
+  Stack,
+  Text,
+  Title,
+  UnstyledButton,
+} from '@mantine/core';
 import { useMemo, useState } from 'react';
 import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
+import { KeyFacts } from '@/features/house-scanner/components/listing-summary';
 import { CalendarButton } from '@/features/house-scanner/components/viewing-list';
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
-import type { Snapshot } from '@/features/house-scanner/types/contracts';
+import type {
+  Listing,
+  Snapshot,
+  Viewing,
+} from '@/features/house-scanner/types/contracts';
 import { formatDate } from '@/features/house-scanner/utils/format';
+import { hasPin } from '@/features/house-scanner/utils/listing-position';
 import {
   formatViewing,
   groupByDay,
@@ -35,11 +51,18 @@ export function favoriteViewings(
 export function ViewingsPanel({
   snapshot,
   userId,
+  person,
+  onPersonChange,
+  onOpenListing,
+  onSeeOnMap,
 }: {
   snapshot: Snapshot;
   userId: string;
+  person: string;
+  onPersonChange: (person: string) => void;
+  onOpenListing: (id: string) => void;
+  onSeeOnMap: (id: string) => void;
 }) {
-  const [person, setPerson] = useState('everyone');
   const days = useMemo(() => {
     const now = Date.now();
     return groupByDay(favoriteViewings(snapshot, person, userId, now), now);
@@ -55,12 +78,11 @@ export function ViewingsPanel({
       .join(', ');
   return (
     <Stack>
-      <Title order={2}>Viewings</Title>
       <Select
         label="Saved by"
         w={{ base: 140, sm: 200 }}
         value={person}
-        onChange={(value) => setPerson(value ?? 'everyone')}
+        onChange={(value) => onPersonChange(value ?? 'everyone')}
         data={[
           { value: 'everyone', label: 'Everyone' },
           { value: 'mine', label: 'Mine' },
@@ -83,35 +105,14 @@ export function ViewingsPanel({
             </Title>
             <Box className={classes.viewingList}>
               {day.entries.map(({ listing, viewing }) => (
-                <Box
+                <ViewingCard
                   key={`${listing.id}-${viewing.startsAt}`}
-                  className={`${classes.card} ${classes.viewingCard}`}
-                >
-                  <Box className={classes.viewingThumb}>
-                    <ListingPhoto listing={listing} />
-                  </Box>
-                  <Stack gap={4} className={classes.grow}>
-                    <Text size="md" fw={800} className={classes.viewingTag}>
-                      {formatViewing(viewing)}
-                    </Text>
-                    <Text fw={600}>{listing.title}</Text>
-                    <Text size="sm" c="dimmed">
-                      Saved by {names(listing.id)}
-                    </Text>
-                  </Stack>
-                  <Group gap="md">
-                    <CalendarButton listing={listing} viewing={viewing} />
-                    <Anchor
-                      size="sm"
-                      href={listing.sourceUrls[0]}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      referrerPolicy="no-referrer"
-                    >
-                      Original listing
-                    </Anchor>
-                  </Group>
-                </Box>
+                  listing={listing}
+                  viewing={viewing}
+                  savedBy={names(listing.id)}
+                  onOpen={() => onOpenListing(listing.id)}
+                  onSeeOnMap={() => onSeeOnMap(listing.id)}
+                />
               ))}
             </Box>
           </Stack>
@@ -125,5 +126,104 @@ export function ViewingsPanel({
         broker's page.
       </Text>
     </Stack>
+  );
+}
+
+function ViewingCard({
+  listing,
+  viewing,
+  savedBy,
+  onOpen,
+  onSeeOnMap,
+}: {
+  listing: Listing;
+  viewing: Viewing;
+  savedBy: string;
+  onOpen: () => void;
+  onSeeOnMap: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  const shareUrl = listing.sourceUrls[0];
+  const canShare = typeof navigator.share === 'function';
+  const share = async () => {
+    try {
+      if (canShare) {
+        await navigator.share({ title: listing.title, url: shareUrl });
+        return;
+      }
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // A dismissed share sheet or blocked clipboard leaves the card unchanged.
+    }
+  };
+  const located = hasPin(listing.coordinates);
+  return (
+    <Box
+      component="article"
+      aria-label={`${listing.title}, ${formatViewing(viewing)}`}
+      className={`${classes.card} ${classes.viewingCard}`}
+    >
+      <Box className={classes.viewingThumb}>
+        <ListingPhoto listing={listing} onOpen={onOpen} />
+      </Box>
+      <Stack gap={4} className={classes.grow}>
+        <Text size="md" fw={800} className={classes.viewingTag}>
+          {formatViewing(viewing)}
+        </Text>
+        <Title order={4} size="h4">
+          <UnstyledButton
+            type="button"
+            className={classes.titleButton}
+            onClick={onOpen}
+            aria-haspopup="dialog"
+          >
+            {listing.title}
+          </UnstyledButton>
+        </Title>
+        <KeyFacts listing={listing} />
+        <Text size="sm" c="dimmed">
+          Saved by {savedBy}
+        </Text>
+      </Stack>
+      <Group gap="xs">
+        <CalendarButton listing={listing} viewing={viewing} />
+        <Button
+          size="xs"
+          variant="default"
+          onClick={onOpen}
+          aria-haspopup="dialog"
+        >
+          Details
+        </Button>
+        {(shareUrl || located) && (
+          <Menu
+            position="bottom-end"
+            classNames={{ item: classes.cardMenuItem }}
+          >
+            <Menu.Target>
+              <Button
+                size="xs"
+                variant="subtle"
+                aria-label={`More actions for ${listing.title}`}
+              >
+                More
+              </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+              {shareUrl && (
+                <Menu.Item onClick={share} closeMenuOnClick={canShare}>
+                  {copied ? 'Link copied' : 'Share this listing'}
+                </Menu.Item>
+              )}
+              {located && (
+                <Menu.Item onClick={onSeeOnMap}>See on map</Menu.Item>
+              )}
+            </Menu.Dropdown>
+          </Menu>
+        )}
+      </Group>
+    </Box>
   );
 }
