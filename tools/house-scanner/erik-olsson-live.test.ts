@@ -4,6 +4,7 @@ import {
   IMAGE_ACCOUNT,
   listingPage,
   PHOTO_ID,
+  PLAN_ID,
   search,
 } from '@house-scanner-tools/erik-olsson-test-pages';
 import { runCollection, USER_AGENT } from '@house-scanner-tools/live-reader';
@@ -14,6 +15,7 @@ import {
   type Reply,
 } from '@house-scanner-tools/live-test-helpers';
 import { parseRobots, robotsAllows } from '@house-scanner-tools/robots';
+import { emptyMemory } from '@house-scanner-tools/run-memory';
 import { erikOlssonAdapter } from '@house-scanner-tools/source-adapters';
 import { sourceRegistry } from '@house-scanner-tools/source-registry';
 import { describe, expect, it } from 'vitest';
@@ -214,6 +216,50 @@ describe('Erik Olsson guarded run', () => {
     );
     const result = await run(goteborg, deps(impl), (all) => all);
     expect(result.observations[0].photo).toBeNull();
+  });
+
+  it('adds up to three more photos and the floor plan, and keeps them for a home read from memory', async () => {
+    const photo = (n: number) =>
+      `${n}1111111-2222-4333-8444-555555555555`.slice(-36);
+    const images = [
+      { is_floor_plan: true, cloudflare_image_id: PLAN_ID },
+      ...[1, 2, 3, 4, 5].map((n) => ({
+        is_floor_plan: false,
+        cloudflare_image_id: photo(n),
+      })),
+    ];
+    const url = (id: string, variant: string) =>
+      `https://imagedelivery.net/${IMAGE_ACCOUNT}/${id}/${variant}`;
+    const thumb = 'w=640,h=480,fit=cover,quality=80,format=auto';
+    const expected = {
+      photo: { url: url(photo(1), thumb) },
+      morePhotos: [2, 3, 4].map((n) => ({ url: url(photo(n), thumb) })),
+      floorPlan: {
+        url: url(
+          PLAN_ID,
+          'w=1200,h=1200,fit=scale-down,quality=80,format=auto',
+        ),
+        attribution: 'Erik Olsson',
+      },
+    };
+    const memory = emptyMemory();
+    const first = fakeFetch(
+      site(1, 1, () => ({ body: listingPage({ ...home(), images }) })),
+    );
+    const read = await run(goteborg, deps(first.impl), (all) => all, memory);
+    expect(read.observations[0]).toMatchObject(expected);
+    assertAdapterOutput(erikOlsson().policy, read.observations[0]);
+
+    // An hour later, by the next run's clock, the remembered page is still fresh.
+    for (const entry of Object.values(memory.details))
+      entry.readAt = new Date(
+        Date.parse(entry.readAt) - 3_600_000,
+      ).toISOString();
+    const again = fakeFetch(site(1, 1));
+    const cached = await run(goteborg, deps(again.impl), (all) => all, memory);
+    expect(again.calls.filter((call) => isListing(call.url))).toHaveLength(0);
+    expect(cached).toMatchObject({ detailCached: 1 });
+    expect(cached.observations[0]).toMatchObject(expected);
   });
 });
 

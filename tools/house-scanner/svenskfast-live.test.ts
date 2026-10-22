@@ -5,9 +5,15 @@ import {
   type Reply,
 } from '@house-scanner-tools/live-test-helpers';
 import { parseRobots, robotsAllows } from '@house-scanner-tools/robots';
+import { emptyMemory } from '@house-scanner-tools/run-memory';
 import { svenskfastAdapter } from '@house-scanner-tools/source-adapters';
 import { sourceRegistry } from '@house-scanner-tools/source-registry';
-import { home, list, pathOf } from '@house-scanner-tools/svenskfast-test-pages';
+import {
+  collagePhoto,
+  home,
+  list,
+  pathOf,
+} from '@house-scanner-tools/svenskfast-test-pages';
 import { describe, expect, it } from 'vitest';
 import { assertSourceAllowed } from '@/features/house-scanner/utils/source-policy';
 
@@ -200,6 +206,34 @@ describe('Svensk Fastighetsförmedling guarded run', () => {
       },
     ]);
     expect(first.photo).not.toBeNull();
+  });
+
+  it('adds the collage photos at the Large size and keeps them for a home read from memory', async () => {
+    const memory = emptyMemory();
+    const first = fakeFetch(
+      site(1, 1, () => ({
+        body: home({ collage: [1, 2, 3].map(collagePhoto) }),
+      })),
+    );
+    const read = await run(goteborg, deps(first.impl), (all) => all, memory);
+    const expected = {
+      photo: { url: collagePhoto(1).replace('/Small/', '/Large/') },
+      morePhotos: [2, 3].map((n) => ({
+        url: collagePhoto(n).replace('/Small/', '/Large/'),
+      })),
+    };
+    expect(read.observations[0]).toMatchObject(expected);
+    expect(read.observations[0].floorPlan).toBeUndefined();
+
+    // An hour later, by the next run's clock, the remembered page is still fresh.
+    for (const entry of Object.values(memory.details))
+      entry.readAt = new Date(
+        Date.parse(entry.readAt) - 3_600_000,
+      ).toISOString();
+    const again = fakeFetch(site(1, 1));
+    const cached = await run(goteborg, deps(again.impl), (all) => all, memory);
+    expect(again.calls.filter((call) => isHome(call.url))).toHaveLength(0);
+    expect(cached.observations[0]).toMatchObject(expected);
   });
 });
 

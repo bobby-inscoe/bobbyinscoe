@@ -1,14 +1,17 @@
+import { extractNextData } from '@house-scanner-tools/boneo-parser';
 import { groundFloorOf } from '@house-scanner-tools/floor';
 import {
   area,
   MAX_HTML_CHARS,
   type MorePages,
   numberOf,
+  type PageFailure,
   type PageRead,
   positionPrecision,
   positiveInt,
   type ReadContext,
 } from '@house-scanner-tools/page-read';
+import type { DetailFacts } from '@house-scanner-tools/run-memory';
 import {
   finishViewings,
   viewingFromLabelledWallClock,
@@ -241,5 +244,63 @@ export function readHusmanHagbergSearchPage(
     skipped: estates.length - observations.length,
     total: count ?? estates.length,
     more,
+  };
+}
+
+/** An image's place on the media host, "<customer folder>/<media id>", as the adapter rebuilds its address. */
+export const HUSMAN_HAGBERG_IMAGE_KEY =
+  /^[A-Za-z0-9]{1,20}\/[A-Za-z0-9]{1,40}$/;
+
+// The key of one estate-page image, from its own list2x address; anything off the media host or misshapen is dropped.
+function imageKeyOf(entry: unknown): string | null {
+  const url = text(record(record(record(entry).sizes).list2x).url);
+  try {
+    const { origin, search, pathname } = new URL(url);
+    if (origin !== IMAGE_ORIGIN || search !== '' || !IMAGE_PATH.test(pathname))
+      return null;
+    const key = pathname.slice('/images/'.length).replace(/-\d+x\d+\.jpg$/, '');
+    return HUSMAN_HAGBERG_IMAGE_KEY.test(key) ? key : null;
+  } catch {
+    return null;
+  }
+}
+
+const keysOf = (entries: unknown) =>
+  (Array.isArray(entries) ? entries : []).flatMap((entry) => {
+    const key = imageKeyOf(entry);
+    return key === null ? [] : [{ key, category: record(entry).category }];
+  });
+
+export type HusmanHagbergDetailRead =
+  | { kind: 'detail'; facts: DetailFacts }
+  | { kind: 'failed'; reason: PageFailure };
+
+/**
+ * Estate page: image keys only, from the published photos and plans in the page data. Area pictures
+ * (Områdesbild) are not photos of the home. Everything else on the page is read past and dropped.
+ */
+export function readHusmanHagbergDetailPage(
+  html: string,
+): HusmanHagbergDetailRead {
+  if (html.length > MAX_HTML_CHARS)
+    return { kind: 'failed', reason: 'too-large' };
+  const data = extractNextData(html);
+  if (data === undefined) return { kind: 'failed', reason: 'no-embedded-data' };
+  if (data === null) return { kind: 'failed', reason: 'invalid-embedded-data' };
+  const estate = record(record(record(data).props).pageProps).estateDetails;
+  if (!isRecord(estate)) return { kind: 'failed', reason: 'unexpected-shape' };
+  const photoKeys = keysOf(estate.images)
+    .filter((image) => image.category !== 'Områdesbild')
+    .slice(0, 4)
+    .map((image) => image.key);
+  const planKey = keysOf(estate.plans)[0]?.key;
+  return {
+    kind: 'detail',
+    facts: {
+      outdoor: null,
+      glazed: null,
+      ...(photoKeys.length > 0 ? { photoKeys } : {}),
+      ...(planKey === undefined ? {} : { planKey }),
+    },
   };
 }

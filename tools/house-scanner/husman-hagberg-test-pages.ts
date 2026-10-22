@@ -60,3 +60,55 @@ export function numbered(n: number, over: Record<string, unknown> = {}) {
 
 export const hhList = (homes: unknown[], count = homes.length) =>
   JSON.stringify({ estates: homes, count });
+
+// Authored estate page shaped like the site's /estate/<ref>/ page data (a look at one page on 22 October 2026):
+// props.pageProps.estateDetails with images[] and plans[], each image a set of sizes on the media host.
+export const FOLDER = 'M00000';
+export const media = (id: string, size = '672x448', folder = FOLDER) =>
+  `https://media.husmanhagberg.se/images/${folder}/${id}-${size}.jpg`;
+export const estateImage = (
+  id: string,
+  category: string | null = null,
+  list2x = media(id),
+) => ({
+  sizes: {
+    source: {
+      url: `https://media.husmanhagberg.se/images/${FOLDER}/${id}.jpg`,
+      w: 2000,
+      h: 1333,
+    },
+    full: { url: media(id, '1410x940'), w: 1410, h: 940 },
+    list: { url: media(id, '336x224'), w: 336, h: 224 },
+    list2x: { url: list2x, w: 672, h: 448 },
+  },
+  mediaData: null,
+  mediaId: id,
+  text: category === null ? null : 'Påhittad bildtext',
+  category,
+});
+
+export function estatePage(
+  images: unknown[] = [],
+  plans: unknown[] = [],
+  extra: Record<string, unknown> = {},
+) {
+  const data = {
+    props: {
+      pageProps: {
+        estateDetails: {
+          images,
+          plans,
+          estate: {
+            details: {
+              images: [{ imageId: 'MEDRAW', showImageOnInternet: false }],
+            },
+          },
+          ...extra,
+        },
+        originUrl: 'https://www.husmanhagberg.se',
+      },
+    },
+    page: '/estate/[id]',
+  };
+  return `<!doctype html><html><head><title>Exempelgatan 1</title></head><body><h1>Exempelgatan 1</h1><script id="__NEXT_DATA__" type="application/json">${JSON.stringify(data)}</script></body></html>`;
+}

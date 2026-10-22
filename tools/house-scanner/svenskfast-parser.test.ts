@@ -6,6 +6,7 @@ import {
 } from '@house-scanner-tools/svenskfast-parser';
 import {
   type card,
+  collagePhoto,
   home,
   IMAGE_HOST,
   imageUrl,
@@ -228,6 +229,21 @@ describe('Svensk Fastighetsförmedling home page', () => {
     expect(read(home({ ownership: 'Något annat' }))).not.toHaveProperty(
       'tenure',
     );
+  });
+
+  it('reads up to four distinct collage photos in page order and drops a bad address', () => {
+    const photos = [1, 2, 3, 4, 5].map(collagePhoto);
+    const bad = collagePhoto(6).replace('i.sfcdn.se', 'example.invalid');
+    const { photoKeys } = read(
+      home({ collage: [photos[0], bad, photos[0], ...photos.slice(1)] }),
+    );
+    expect(photoKeys).toEqual([
+      '401000/638544103481000000/ExempelBild1Xyz...jpg',
+      '402000/638544103482000000/ExempelBild2Xyz...jpg',
+      '403000/638544103483000000/ExempelBild3Xyz...jpg',
+      '404000/638544103484000000/ExempelBild4Xyz...jpg',
+    ]);
+    expect(read(home()).photoKeys).toBeUndefined();
   });
 
   it('ignores a fact that appears only inside a script', () => {

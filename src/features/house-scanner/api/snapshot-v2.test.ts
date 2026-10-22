@@ -5,7 +5,10 @@ import {
 } from '@/features/house-scanner/api/snapshot-v2';
 import frozen from '@/features/house-scanner/api/snapshot-v2.fixture.json';
 import { syntheticV2 } from '@/features/house-scanner/api/snapshot-v2-fixtures';
-import { snapshotSchema } from '@/features/house-scanner/types/contracts';
+import {
+  listingSchema,
+  snapshotSchema,
+} from '@/features/house-scanner/types/contracts';
 
 const HOUSE = '10000000-0000-4000-8000-000000000001';
 const USER = '20000000-0000-4000-8000-000000000001';
@@ -62,6 +65,15 @@ const response = {
       },
       photo: {
         url: 'https://example.invalid/a.jpg',
+        expiresAt: LATER,
+        observedAt: AT,
+      },
+      photos: [
+        { url: 'https://example.invalid/a.jpg' },
+        { url: 'https://example.invalid/b.jpg' },
+      ],
+      floorPlan: {
+        url: 'https://example.invalid/plan.jpg',
         expiresAt: LATER,
         observedAt: AT,
       },
@@ -165,6 +177,32 @@ describe('snapshot v2 expansion', () => {
     };
     expect(home(CREDITED)?.neighborhood).toEqual(area);
     expect(home(CREDITED)?.neighborhoodCandidates).toEqual([area]);
+  });
+
+  it('gives a catalog gallery the lead photo’s credit and the plan the source’s', () => {
+    const own = structuredClone(response);
+    Object.assign(own.listings[1].photo ?? {}, {
+      attribution: 'Other broker',
+      rightsBasis: 'Other permission',
+    });
+    const credited = expandSnapshot(snapshotV2Schema.parse(own)).listings.find(
+      (listing) => listing.id === CREDITED,
+    );
+    expect(credited?.photos?.[0]).toEqual(credited?.photo);
+    expect(credited?.photos?.[1]).toEqual({
+      ...credited?.photo,
+      url: 'https://example.invalid/b.jpg',
+    });
+    expect(credited?.floorPlan).toEqual({
+      url: 'https://example.invalid/plan.jpg',
+      attribution: 'Alpha broker',
+      rightsBasis: 'Synthetic permission',
+      expiresAt: LATER,
+      observedAt: AT,
+      displayAllowed: true,
+      hotlinkAllowed: true,
+    });
+    expect(listingSchema.safeParse(credited).success).toBe(true);
   });
 
   it('keeps a photo’s own credit when it differs from its source', () => {

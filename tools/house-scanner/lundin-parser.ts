@@ -1,10 +1,13 @@
 import {
   area,
+  MAX_HTML_CHARS,
   numberOf,
+  type PageFailure,
   type PageRead,
   positiveInt,
   type ReadContext,
 } from '@house-scanner-tools/page-read';
+import type { DetailFacts } from '@house-scanner-tools/run-memory';
 import {
   type Observation,
   observationSchema,
@@ -24,11 +27,11 @@ const isRecord = (value: unknown): value is Rec =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const OBJECT_ID = /^[A-Za-z0-9_]{3,40}$/;
-const IMAGE_ID = /^[A-Za-z0-9]{6,60}$/;
+export const LUNDIN_IMAGE_ID = /^[A-Za-z0-9]{6,60}$/;
 const DESCRIPTION_PATH =
   /^\/beskrivning\/([A-Za-z0-9_]{3,40})\/([a-z0-9-]{1,120})$/;
 // A thumbnail size of the image resizer the site's own pages use for their previews.
-const PHOTO_QUERY = 'mode=max&w=640&h=480&scale=down';
+export const LUNDIN_PHOTO_QUERY = 'mode=max&w=640&h=480&scale=down';
 // The daily run refreshes the photo, so a week is ample before the app stops showing it.
 const PHOTO_VALID_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -76,9 +79,9 @@ function municipalityOf(city: unknown, district: unknown): string | null {
 
 function photoFrom(item: Rec, origin: string, observedAt: string) {
   const id = item.ImageGuid;
-  if (typeof id !== 'string' || !IMAGE_ID.test(id)) return null;
+  if (typeof id !== 'string' || !LUNDIN_IMAGE_ID.test(id)) return null;
   return {
-    url: `${origin}/dc/${id}.jpg?${PHOTO_QUERY}`,
+    url: `${origin}/dc/${id}.jpg?${LUNDIN_PHOTO_QUERY}`,
     attribution: 'Lundin',
     rightsBasis:
       'Shown to the household owner for personal use, loaded from the broker image host and never copied or stored.',
@@ -186,5 +189,55 @@ export function readLundinSearchPage(
     skipped: data.length - observations.length,
     total: data.length,
     more: { kind: 'none' },
+  };
+}
+
+// Every home page seen links its canonical address under /beskrivning/.
+const HOME_PAGE = /rel="canonical"[^>]*\/beskrivning\//;
+const PHOTOS = /<section\b[^>]*\bid="sectionimages"[^>]*>([\s\S]*?)<\/section>/;
+const FIGURE = /<figure\b([^>]*)>/g;
+const classes = (attrs: string) =>
+  (/\bclass="([^"]*)"/.exec(attrs)?.[1] ?? '').split(/\s+/);
+
+/**
+ * Home page: image ids only, nothing else on the page is read. Photos are the first four safe data-id
+ * values of the preview figures in #sectionimages, in page order; the plan is the first plan figure in
+ * #section-planimages, whose id is only in its /dc/<id>.jpg address. A page without images is a home
+ * page with none; one that is not a home page at all is failed.
+ */
+export function readLundinDetailPage(
+  html: string,
+):
+  | { kind: 'detail'; facts: DetailFacts }
+  | { kind: 'failed'; reason: PageFailure } {
+  if (html.length > MAX_HTML_CHARS)
+    return { kind: 'failed', reason: 'too-large' };
+  if (!HOME_PAGE.test(html))
+    return { kind: 'failed', reason: 'unexpected-shape' };
+  const photoKeys = [...(PHOTOS.exec(html)?.[1] ?? '').matchAll(FIGURE)]
+    .filter(([, attrs]) => classes(attrs).includes('object-image'))
+    .map(([, attrs]) => /\bdata-id="([^"]*)"/.exec(attrs)?.[1] ?? '')
+    .filter((id) => LUNDIN_IMAGE_ID.test(id))
+    .slice(0, 4);
+  const plans = html.split(/\bid="section-planimages"/)[1] ?? '';
+  const plan = [...plans.matchAll(FIGURE)].find(([, attrs]) =>
+    classes(attrs).includes('object-image-plan'),
+  );
+  const planId =
+    plan === undefined
+      ? undefined
+      : /\/dc\/([^./"?]+)\.jpg/.exec(
+          plans.slice(plan.index).split('</figure>')[0],
+        )?.[1];
+  return {
+    kind: 'detail',
+    facts: {
+      outdoor: null,
+      glazed: null,
+      ...(photoKeys.length > 0 ? { photoKeys } : {}),
+      ...(planId !== undefined && LUNDIN_IMAGE_ID.test(planId)
+        ? { planKey: planId }
+        : {}),
+    },
   };
 }

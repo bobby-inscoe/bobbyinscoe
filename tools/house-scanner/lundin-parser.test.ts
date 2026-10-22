@@ -1,12 +1,14 @@
 import { assertAdapterOutput } from '@house-scanner-tools/live-run';
 import {
   LUNDIN_MAX_CHARS,
+  readLundinDetailPage,
   readLundinSearchPage,
 } from '@house-scanner-tools/lundin-parser';
 import {
   GUID,
   IMAGE_GUID,
   lundinHome,
+  lundinHomePage,
   lundinList,
 } from '@house-scanner-tools/lundin-test-pages';
 import { MAX_HTML_CHARS } from '@house-scanner-tools/page-read';
@@ -242,5 +244,35 @@ describe('Lundin list', () => {
     const [observation] = page(lundinList([lundinHome()])).observations;
     expect(JSON.stringify(observation)).not.toContain('aldrig sparas');
     expect(JSON.stringify(observation)).not.toContain('Pris:');
+  });
+});
+
+describe('Lundin home page', () => {
+  it('reads the first four safe preview photo ids in page order and the first plan, and nothing else', () => {
+    expect(readLundinDetailPage(lundinHomePage())).toEqual({
+      kind: 'detail',
+      facts: {
+        outdoor: null,
+        glazed: null,
+        photoKeys: [
+          'MED0000000000000000011',
+          'MED0000000000000000012',
+          'MED0000000000000000013',
+          'MED0000000000000000014',
+        ],
+        planKey: 'MED0000000000000000021',
+      },
+    });
+  });
+
+  it('reads a home page without images as one with none, and fails a page that is not a home page', () => {
+    expect(readLundinDetailPage(lundinHomePage(GUID, false))).toEqual({
+      kind: 'detail',
+      facts: { outdoor: null, glazed: null },
+    });
+    expect(readLundinDetailPage('<html>underhåll</html>')).toEqual({
+      kind: 'failed',
+      reason: 'unexpected-shape',
+    });
   });
 });

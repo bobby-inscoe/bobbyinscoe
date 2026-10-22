@@ -1,7 +1,14 @@
-import { readHusmanHagbergSearchPage } from '@house-scanner-tools/husman-hagberg-parser';
 import {
+  readHusmanHagbergDetailPage,
+  readHusmanHagbergSearchPage,
+} from '@house-scanner-tools/husman-hagberg-parser';
+import {
+  estateImage,
+  estatePage,
+  FOLDER,
   hhHome,
   hhList,
+  media,
   PHOTO_ID,
   REF,
 } from '@house-scanner-tools/husman-hagberg-test-pages';
@@ -375,5 +382,56 @@ describe('Husman Hagberg viewing times', () => {
       [viewing('nonsense', null), null, 'x'],
     ])
       expect(one({ viewings })).not.toHaveProperty('viewings');
+  });
+});
+
+describe('Husman Hagberg estate page', () => {
+  it('names up to four photos in display order without area pictures, and the first plan', () => {
+    const read = readHusmanHagbergDetailPage(
+      estatePage(
+        [
+          estateImage('MEDA1', 'Områdesbild'),
+          estateImage('MEDP1'),
+          // An address off the media host is skipped, not taken as the end of the list.
+          estateImage(
+            'MEDBAD',
+            null,
+            'https://example.invalid/images/M00000/MEDBAD-672x448.jpg',
+          ),
+          estateImage('MEDP2', 'Vardagsrum'),
+          estateImage('MEDTRAVERSE', null, media('..', '672x448', '..')),
+          estateImage('MEDA2', 'Områdesbild'),
+          estateImage('MEDP3'),
+          estateImage('MEDP4'),
+          estateImage('MEDP5'),
+        ],
+        [
+          estateImage('MEDPLAN1', 'Planritningar'),
+          estateImage('MEDPLAN2', 'Planritningar'),
+        ],
+      ),
+    );
+    expect(read).toEqual({
+      kind: 'detail',
+      facts: {
+        outdoor: null,
+        glazed: null,
+        photoKeys: ['MEDP1', 'MEDP2', 'MEDP3', 'MEDP4'].map(
+          (id) => `${FOLDER}/${id}`,
+        ),
+        planKey: `${FOLDER}/MEDPLAN1`,
+      },
+    });
+  });
+
+  it('gives no keys for a page without images, and fails a page without its data', () => {
+    expect(readHusmanHagbergDetailPage(estatePage())).toEqual({
+      kind: 'detail',
+      facts: { outdoor: null, glazed: null },
+    });
+    expect(readHusmanHagbergDetailPage('<html></html>')).toEqual({
+      kind: 'failed',
+      reason: 'no-embedded-data',
+    });
   });
 });

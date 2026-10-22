@@ -1,25 +1,36 @@
 import {
+  BJURFORS_IMAGE_KEY,
   readBjurforsDetailPage,
   readBjurforsSearchPage,
 } from '@house-scanner-tools/bjurfors-parser';
 import {
+  BONEO_PHOTO_NAME,
   readBoneoDetailPage,
   readBoneoSearchPage,
 } from '@house-scanner-tools/boneo-parser';
 import {
+  ERIK_OLSSON_IMAGE_KEY,
   readErikOlssonDetailPage,
   readErikOlssonSearchPage,
 } from '@house-scanner-tools/erik-olsson-parser';
-import { readHusmanHagbergSearchPage } from '@house-scanner-tools/husman-hagberg-parser';
+import {
+  HUSMAN_HAGBERG_IMAGE_KEY,
+  readHusmanHagbergDetailPage,
+  readHusmanHagbergSearchPage,
+} from '@house-scanner-tools/husman-hagberg-parser';
 import {
   type LivePartitionInput,
   type SourceAdapter,
   USER_AGENT,
 } from '@house-scanner-tools/live-reader';
 import {
+  LUNDIN_IMAGE_ID,
   LUNDIN_MAX_CHARS,
+  LUNDIN_PHOTO_QUERY,
+  readLundinDetailPage,
   readLundinSearchPage,
 } from '@house-scanner-tools/lundin-parser';
+import { imagesOf } from '@house-scanner-tools/page-read';
 import {
   BJURFORS_ORIGIN,
   BJURFORS_SOURCE_ID,
@@ -45,10 +56,12 @@ import {
 import {
   readStadshemDetailPage,
   readStadshemSearchPage,
+  STADSHEM_IMAGE_KEY,
 } from '@house-scanner-tools/stadshem-parser';
 import {
   readSvenskfastDetailPage,
   readSvenskfastSearchPage,
+  SVENSKFAST_IMAGE_KEY,
 } from '@house-scanner-tools/svenskfast-parser';
 
 // Path segments proven from one public Goteborg district URL. The municipality
@@ -67,6 +80,11 @@ export function partitionUrl(municipality: string): string | null {
     .join('/')}`;
 }
 
+// Styles the site's own listing page uses with the same webp names as `resize_image`: 872x580 for its gallery, and
+// the larger 1650x1100 for the plan, so it is readable. The search page's 550x366 style was only seen with jpeg names.
+const BONEO_GALLERY_BASE = `${BONEO_IMAGE_ORIGIN}/target_styles/properties/sizex2/872x580/`;
+const BONEO_PLAN_BASE = `${BONEO_IMAGE_ORIGIN}/target_styles/properties/sizex2/1650x1100/`;
+
 export const boneoAdapter: SourceAdapter = {
   sourceId: BONEO_SOURCE_ID,
   executor: 'boneo-personal-read',
@@ -84,6 +102,19 @@ export const boneoAdapter: SourceAdapter = {
       return { unsupported: 'only-apartment-path-known' };
     return base;
   },
+  imagesFor(facts, observedAt) {
+    const plan = facts.planKey;
+    return imagesOf(
+      (facts.photoKeys ?? [])
+        .filter((key) => BONEO_PHOTO_NAME.test(key))
+        .map((key) => `${BONEO_GALLERY_BASE}${key}`),
+      plan !== undefined && BONEO_PHOTO_NAME.test(plan)
+        ? `${BONEO_PLAN_BASE}${plan}`
+        : undefined,
+      'Boneo',
+      observedAt,
+    );
+  },
   readSearchPage: readBoneoSearchPage,
   readDetailPage(html) {
     const read = readBoneoDetailPage(html);
@@ -97,6 +128,10 @@ export const boneoAdapter: SourceAdapter = {
 const BJURFORS_PATHS: Record<string, string> = {
   göteborg: 'vastra-gotaland/goteborg',
 };
+// The site's own resizer sizes: its landscape gallery size (MatrixLandscape) and its whole-image list size for a plan.
+const BJURFORS_PHOTO_SIZE =
+  'format=auto,fit=crop,width=658,height=480,quality=90';
+const BJURFORS_PLAN_SIZE = 'format=auto,fit=scale-down,width=1265,quality=90';
 
 export const bjurforsAdapter: SourceAdapter = {
   sourceId: BJURFORS_SOURCE_ID,
@@ -119,6 +154,21 @@ export const bjurforsAdapter: SourceAdapter = {
       ? { unsupported: 'municipality-path-unproven' }
       : `${BJURFORS_ORIGIN}/sv/tillsalu/${path}`;
   },
+  imagesFor(facts, observedAt) {
+    const url = (key: string, size: string) =>
+      `${BJURFORS_ORIGIN}/cdn-cgi/image/${size}${key}`;
+    const plan = facts.planKey;
+    return imagesOf(
+      (facts.photoKeys ?? [])
+        .filter((key) => BJURFORS_IMAGE_KEY.test(key))
+        .map((key) => url(key, BJURFORS_PHOTO_SIZE)),
+      plan !== undefined && BJURFORS_IMAGE_KEY.test(plan)
+        ? url(plan, BJURFORS_PLAN_SIZE)
+        : undefined,
+      'Bjurfors',
+      observedAt,
+    );
+  },
   readSearchPage: readBjurforsSearchPage,
   readDetailPage: readBjurforsDetailPage,
 };
@@ -128,10 +178,10 @@ const ERIK_OLSSON_PATHS: Record<string, string> = {
   göteborg: 'goteborg-166',
 };
 
-// A thumbnail size of the image account's flexible variants; the site's own pages use the same family.
+// Sizes from the image account's flexible variants; the site's own pages use the same family. A plan is shown whole,
+// large enough to read.
 const PHOTO_VARIANT = 'w=640,h=480,fit=cover,quality=80,format=auto';
-// The daily run refreshes the photo, so a week is ample before the app stops showing it.
-const PHOTO_VALID_MS = 7 * 24 * 60 * 60 * 1000;
+const PLAN_VARIANT = 'w=1200,h=1200,fit=scale-down,quality=80,format=auto';
 
 export const erikOlssonAdapter: SourceAdapter = {
   sourceId: ERIK_OLSSON_SOURCE_ID,
@@ -154,20 +204,24 @@ export const erikOlssonAdapter: SourceAdapter = {
       ? { unsupported: 'municipality-path-unproven' }
       : `${ERIK_OLSSON_ORIGIN}/municipalities/${path}?tab=homes`;
   },
-  photoFor(facts, observedAt) {
-    if (facts.photoPath === undefined) return null;
-    return {
-      url: `${ERIK_OLSSON_IMAGE_ORIGIN}/${facts.photoPath}/${PHOTO_VARIANT}`,
-      attribution: 'Erik Olsson',
-      rightsBasis:
-        'Shown to the household owner for personal use, loaded from the broker image host and never copied or stored.',
-      expiresAt: new Date(
-        Date.parse(observedAt) + PHOTO_VALID_MS,
-      ).toISOString(),
+  imagesFor(facts, observedAt) {
+    // A remembered page from before photoKeys holds only photoPath.
+    const keys =
+      facts.photoKeys ??
+      (facts.photoPath === undefined ? [] : [facts.photoPath]);
+    const url = (key: string, variant: string) =>
+      `${ERIK_OLSSON_IMAGE_ORIGIN}/${key}/${variant}`;
+    const plan = facts.planKey;
+    return imagesOf(
+      keys
+        .filter((key) => ERIK_OLSSON_IMAGE_KEY.test(key))
+        .map((key) => url(key, PHOTO_VARIANT)),
+      plan !== undefined && ERIK_OLSSON_IMAGE_KEY.test(plan)
+        ? url(plan, PLAN_VARIANT)
+        : undefined,
+      'Erik Olsson',
       observedAt,
-      displayAllowed: true,
-      hotlinkAllowed: true,
-    };
+    );
   },
   // The search address already carries a query.
   pageUrl: (base, page) => `${base}&page=${page}`,
@@ -205,12 +259,26 @@ export const stadshemAdapter: SourceAdapter = {
   // People open the public page; floor and lift are read from the estate's own record.
   detailUrl: (observation) =>
     `${STADSHEM_ORIGIN}/api/estates/${observation.sourceListingId}`,
+  imagesFor(facts, observedAt) {
+    const url = (key: string | undefined) =>
+      key !== undefined && STADSHEM_IMAGE_KEY.test(key)
+        ? `${STADSHEM_IMAGE_ORIGIN}/${key}`
+        : undefined;
+    return imagesOf(
+      (facts.photoKeys ?? []).map(url).filter((u) => u !== undefined),
+      url(facts.planKey),
+      'Stadshem',
+      observedAt,
+    );
+  },
   readSearchPage: readStadshemSearchPage,
   readDetailPage: readStadshemDetailPage,
 };
 
 // One list of everything the broker sells, read for the two municipalities its fields can place.
 const LUNDIN_MUNICIPALITIES = ['göteborg', 'mölndal'];
+// The same resizer as the lead photo; a plan gets a larger box so its text stays legible.
+const LUNDIN_PLAN_QUERY = 'mode=max&w=1200&h=1200&scale=down';
 
 export const lundinAdapter: SourceAdapter = {
   sourceId: LUNDIN_SOURCE_ID,
@@ -220,15 +288,13 @@ export const lundinAdapter: SourceAdapter = {
   imageOrigin: LUNDIN_ORIGIN,
   headers: {
     'user-agent': USER_AGENT,
-    // robots.txt is asked with the same headers, so plain text stays acceptable.
-    accept: 'application/json, text/plain;q=0.9',
+    // robots.txt and the home pages are asked with the same headers, so text and HTML stay acceptable.
+    accept: 'application/json, text/html;q=0.9, text/plain;q=0.8',
     'accept-language': 'sv-SE,sv;q=0.9,en;q=0.8',
   },
   coordinateSource: 'lundin-list',
   detailLabel: 'Home pages',
   notCovered: 'Not covered: other cities, floor, lift and balcony.',
-  // The list already holds everything, so the run is one request.
-  listOnly: true,
   maxBodyChars: LUNDIN_MAX_CHARS,
   partitionUrl(partition: LivePartitionInput) {
     return LUNDIN_MUNICIPALITIES.includes(
@@ -237,19 +303,37 @@ export const lundinAdapter: SourceAdapter = {
       ? `${LUNDIN_ORIGIN}/api/list?id=1`
       : { unsupported: 'municipality-path-unproven' };
   },
+  // A kept home's public page is read for its photos and plan only.
+  imagesFor(facts, observedAt) {
+    const url = (id: string, query: string) =>
+      `${LUNDIN_ORIGIN}/dc/${id}.jpg?${query}`;
+    const plan = facts.planKey;
+    return imagesOf(
+      (facts.photoKeys ?? [])
+        .filter((id) => LUNDIN_IMAGE_ID.test(id))
+        .map((id) => url(id, LUNDIN_PHOTO_QUERY)),
+      plan !== undefined && LUNDIN_IMAGE_ID.test(plan)
+        ? url(plan, LUNDIN_PLAN_QUERY)
+        : undefined,
+      'Lundin',
+      observedAt,
+    );
+  },
   readSearchPage: readLundinSearchPage,
-  // Never called: the run reads no home pages.
-  readDetailPage: () => ({ kind: 'failed', reason: 'unexpected-shape' }),
+  readDetailPage: readLundinDetailPage,
 };
 
 // One text search for the municipality name, asked for 200 homes a page so the whole answer is one request.
 // The list is served from the API host the site's own pages call. It has no robots.txt (404), so the run
-// asks the robots.txt of the site, whose rules cover the path.
+// asks the robots.txt of the site, whose rules cover the list path and the estate pages on the site itself.
 const HUSMAN_HAGBERG_SEARCHES: Record<string, string> = {
   göteborg: 'G%C3%B6teborg',
 };
 const HUSMAN_HAGBERG_LIST =
   'https://api.husmanhagberg.se/object/api/objects?ps=200&regX=';
+// Sizes the media host already serves: list2x is the list's lead photo, full is large enough to read a plan.
+const HUSMAN_HAGBERG_PHOTO_SIZE = '672x448';
+const HUSMAN_HAGBERG_PLAN_SIZE = '1410x940';
 
 export const husmanHagbergAdapter: SourceAdapter = {
   sourceId: HUSMAN_HAGBERG_SOURCE_ID,
@@ -259,15 +343,13 @@ export const husmanHagbergAdapter: SourceAdapter = {
   imageOrigin: HUSMAN_HAGBERG_IMAGE_ORIGIN,
   headers: {
     'user-agent': USER_AGENT,
-    // robots.txt is asked with the same headers, so plain text stays acceptable.
-    accept: 'application/json, text/plain;q=0.9',
+    // The list is JSON and estate pages are HTML; robots.txt is asked with the same headers.
+    accept: 'application/json, text/html;q=0.9, text/plain;q=0.8',
     'accept-language': 'sv-SE,sv;q=0.9,en;q=0.8',
   },
   coordinateSource: 'husman-hagberg-list',
-  detailLabel: 'Home pages',
+  detailLabel: 'Estate pages',
   notCovered: 'Not covered: other cities, lift, balcony and glazing.',
-  // The list already holds everything, so the run is one request.
-  listOnly: true,
   partitionUrl(partition: LivePartitionInput) {
     const search =
       HUSMAN_HAGBERG_SEARCHES[partition.municipality.trim().toLowerCase()];
@@ -275,9 +357,24 @@ export const husmanHagbergAdapter: SourceAdapter = {
       ? { unsupported: 'municipality-path-unproven' }
       : `${HUSMAN_HAGBERG_LIST}${search}`;
   },
+  imagesFor(facts, observedAt) {
+    const url = (key: string, size: string) =>
+      `${HUSMAN_HAGBERG_IMAGE_ORIGIN}/images/${key}-${size}.jpg`;
+    const plan = facts.planKey;
+    return imagesOf(
+      (facts.photoKeys ?? [])
+        .filter((key) => HUSMAN_HAGBERG_IMAGE_KEY.test(key))
+        .map((key) => url(key, HUSMAN_HAGBERG_PHOTO_SIZE)),
+      plan !== undefined && HUSMAN_HAGBERG_IMAGE_KEY.test(plan)
+        ? url(plan, HUSMAN_HAGBERG_PLAN_SIZE)
+        : undefined,
+      'Husman Hagberg',
+      observedAt,
+    );
+  },
   readSearchPage: readHusmanHagbergSearchPage,
-  // Never called: the run reads no home pages.
-  readDetailPage: () => ({ kind: 'failed', reason: 'unexpected-shape' }),
+  // Each kept home's public estate page (its sourceUrl), for photos and the floor plan.
+  readDetailPage: readHusmanHagbergDetailPage,
 };
 
 // The municipality list page; later pages add ?p=N, which robots.txt allows (it disallows other query strings).
@@ -304,6 +401,20 @@ export const svenskfastAdapter: SourceAdapter = {
     return path === undefined
       ? { unsupported: 'municipality-path-unproven' }
       : `${SVENSKFAST_ORIGIN}/bostad/vastra-gotaland/${path}/`;
+  },
+  imagesFor(facts, observedAt) {
+    // Large, like the list card's photo.
+    return imagesOf(
+      (facts.photoKeys ?? [])
+        .filter((key) => SVENSKFAST_IMAGE_KEY.test(key))
+        .map((key) => {
+          const [id, ...rest] = key.split('/');
+          return `${SVENSKFAST_IMAGE_ORIGIN}/Resurs/Image/${id}/Large/${rest.join('/')}`;
+        }),
+      undefined,
+      'Svensk Fastighetsförmedling',
+      observedAt,
+    );
   },
   pageUrl: (base, page) => `${base}?p=${page}`,
   readSearchPage: readSvenskfastSearchPage,

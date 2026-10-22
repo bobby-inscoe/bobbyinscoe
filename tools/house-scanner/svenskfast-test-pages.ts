@@ -20,6 +20,10 @@ export interface CardInput {
 export const imageUrl = (id: number) =>
   `${IMAGE_HOST}/Resurs/Image/${id}/Large/639262842740000000/MDIyNnwwMDAyNDI0Nzk5NXw5Ng...jpg`;
 
+// A collage photo at the Small size; `n` gives each its own id, stamp and name.
+export const collagePhoto = (n: number) =>
+  `${IMAGE_HOST}/Resurs/Image/40${n}000/Small/63854410348${n}000000/ExempelBild${n}Xyz...jpg`;
+
 export const pathOf = ({
   id = 471704,
   kind = 'bostadsratt',
@@ -110,6 +114,8 @@ export interface HomeInput {
     to: string;
   }[];
   withListing?: boolean;
+  // Collage photo addresses in page order, as the Small size; the Medium and Large attributes follow from them.
+  collage?: string[];
 }
 
 // Spaces inside numbers are the non-breaking space the site writes as &#160;.
@@ -123,6 +129,7 @@ export function home({
   longitude = '11,91933',
   viewings = [],
   withListing = true,
+  collage = [],
 }: HomeInput = {}) {
   const listing = JSON.stringify({
     '@context': 'https://schema.org/',
@@ -165,6 +172,12 @@ export function home({
         <div class="summary__exhibition--register">Anm&#228;lan kr&#228;vs</div></div></div></a>`,
     )
     .join('\n');
+  const cells = collage
+    .map(
+      (small) =>
+        `<div class="col33"><img class="lazy-image" data-srcsmall="${small}" data-srcmedium="${small.replace('/Small/', '/Medium/')}" data-srclarge="${small.replace('/Small/', '/Medium/')}" /></div>`,
+    )
+    .join('');
   return `<html><head><title>Exempelgatan 1 | Svensk Fastighetsförmedling</title>${
     withListing ? `<script type="application/ld+json">${listing}</script>` : ''
   }<style>.a{}</style></head><body>
@@ -172,6 +185,7 @@ export function home({
   <span>Månadsavgift</span>: ${fee ?? ''}/månad
   <div class="summary__exhibitions--wrapper"><div class="summary__exhibitions--header">V&#228;lj visningstid</div>
   <div class="summary__exhibitions--row">${rows}</div></div></div>
+  <div class="object-images__collage" id="collageWrapper">${cells}</div>
   <div id="bofakta-container">Om Bostaden Sammanfattning Typ: Bostadsr&#228;ttsl&#228;genhet Rum: 3, varav 2 sovrum
   Boarea: 70 m 2 L&#228;genhetsnummer: 2 Byggnads&#229;r: 1996${fee === null ? '' : ` M&#229;nadsavgift: ${fee}`}
   Uppl&#229;telseform: ${ownership}${floor === null ? '' : ` V&#229;ning: ${floor}`}${lift === null ? '' : ` Hiss: ${lift}`}

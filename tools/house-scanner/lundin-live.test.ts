@@ -4,6 +4,7 @@ import {
   runCollection,
   USER_AGENT,
 } from '@house-scanner-tools/live-reader';
+import { assertAdapterOutput } from '@house-scanner-tools/live-run';
 import {
   deps,
   fakeFetch,
@@ -12,10 +13,12 @@ import {
 import { LUNDIN_MAX_CHARS } from '@house-scanner-tools/lundin-parser';
 import {
   lundinHome,
+  lundinHomePage,
   lundinList,
   numbered,
 } from '@house-scanner-tools/lundin-test-pages';
 import { parseRobots, robotsAllows } from '@house-scanner-tools/robots';
+import { emptyMemory } from '@house-scanner-tools/run-memory';
 import {
   boneoAdapter,
   lundinAdapter,
@@ -43,10 +46,14 @@ const run = (
 const site =
   (homes: unknown[]) =>
   (url: string): Reply =>
-    url.endsWith('/robots.txt') ? robotsReply : { body: lundinList(homes) };
+    url.endsWith('/robots.txt')
+      ? robotsReply
+      : url.includes('/beskrivning/')
+        ? { body: lundinHomePage() }
+        : { body: lundinList(homes) };
 
 describe('Lundin guarded run', () => {
-  it('makes exactly two requests, robots.txt and the list, with the honest user agent and a JSON Accept header', async () => {
+  it('asks robots.txt, then the list, with the honest user agent and a JSON Accept header', async () => {
     const { impl, calls } = fakeFetch(site([numbered(1), numbered(2)]));
     const result = await run(goteborg, deps(impl));
     expect(calls.map((call) => call.url)).toEqual([
@@ -65,17 +72,39 @@ describe('Lundin guarded run', () => {
     });
   });
 
-  it('reads no home page even when every home is kept', async () => {
-    const { impl, calls } = fakeFetch(site([numbered(1), numbered(2)]));
-    const result = await run(goteborg, deps(impl), (all) => all);
-    expect(calls).toHaveLength(2);
-    expect(result).toMatchObject({
-      detailRead: 0,
-      detailFailed: 0,
-      detailSkipped: 0,
-      stopped: null,
-    });
-    expect(result.observations[0].facts.lift).toBeNull();
+  it("reads each kept home's page once for its gallery, and a home reused from memory makes no page request but keeps it", async () => {
+    const dc = (n: number, query: string) =>
+      `https://www.lundin.se/dc/MED00000000000000000${n}.jpg?${query}`;
+    const thumb = 'mode=max&w=640&h=480&scale=down';
+    const expected = {
+      photo: { url: dc(11, thumb), attribution: 'Lundin' },
+      morePhotos: [12, 13, 14].map((n) => ({ url: dc(n, thumb) })),
+      floorPlan: { url: dc(21, 'mode=max&w=1200&h=1200&scale=down') },
+    };
+    const memory = emptyMemory();
+    const first = fakeFetch(site([numbered(1), numbered(2)]));
+    const read = await run(goteborg, deps(first.impl), (all) => all, memory);
+    expect(first.calls.map((call) => call.url)).toEqual([
+      'https://www.lundin.se/robots.txt',
+      LIST,
+      'https://www.lundin.se/beskrivning/OBJ0000000000000000001/gata-1',
+      'https://www.lundin.se/beskrivning/OBJ0000000000000000002/gata-2',
+    ]);
+    expect(read).toMatchObject({ detailRead: 2, stopped: null });
+    expect(read.observations[0]).toMatchObject(expected);
+    expect(read.observations[0].facts.lift).toBeNull();
+    assertAdapterOutput(lundin().policy, read.observations[0]);
+
+    // An hour later, by the next run's clock, the remembered pages are still fresh.
+    for (const entry of Object.values(memory.details))
+      entry.readAt = new Date(
+        Date.parse(entry.readAt) - 3_600_000,
+      ).toISOString();
+    const again = fakeFetch(site([numbered(1), numbered(2)]));
+    const cached = await run(goteborg, deps(again.impl), (all) => all, memory);
+    expect(again.calls).toHaveLength(2);
+    expect(cached).toMatchObject({ detailCached: 2, detailRead: 0 });
+    expect(cached.observations[0]).toMatchObject(expected);
   });
 
   it('keeps only the partition municipality from a list that covers the whole region', async () => {

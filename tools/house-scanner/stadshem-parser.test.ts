@@ -9,6 +9,8 @@ import {
 } from '@house-scanner-tools/stadshem-parser';
 import {
   estate,
+  imageKey,
+  images,
   list,
   photoUrl,
   record,
@@ -304,6 +306,31 @@ describe('Stadshem estate record', () => {
     expect(tenure('Okänt')).toBeUndefined();
     expect(facts(record({ baseInformation: null }))).toMatchObject({
       lift: true,
+    });
+  });
+
+  it('names up to four photos in record order and the first floor plan, dropping other hosts and odd paths', () => {
+    const keys = (block: unknown) => {
+      const { photoKeys, planKey } = facts(record({ images: block }));
+      return { photoKeys, planKey };
+    };
+    const block = images(['A1', 'A2', 'A3', 'A4', 'A5'], ['P1', 'P2']);
+    expect(keys(block)).toEqual({
+      photoKeys: ['A1', 'A2', 'A3', 'A4'].map(imageKey),
+      planKey: imageKey('P1'),
+    });
+    // An unusable address is skipped, not taken as the end of the list.
+    const odd = (medium: string) => ({ sizes: { medium } });
+    const other = [
+      odd('https://example.com/example-bucket/a.jpg'),
+      odd('https://storage.googleapis.com/example-bucket/../a.jpg'),
+      odd('https://storage.googleapis.com/example-bucket/a.jpg?x=1'),
+      ...block.other,
+    ];
+    expect(keys({ ...block, other }).photoKeys?.[0]).toBe(imageKey('A1'));
+    expect(keys(undefined)).toEqual({
+      photoKeys: undefined,
+      planKey: undefined,
     });
   });
 

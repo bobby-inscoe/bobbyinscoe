@@ -2816,6 +2816,150 @@ describe('old snapshot removal', () => {
   });
 });
 
+// Extra photos and a floor plan per home (spec: house-scanner-listing-gallery, S1).
+const LOCATION_MODE = '20261022171317_house_scanner_location_mode';
+const GALLERY = '20261022210000_house_scanner_listing_gallery';
+
+describe('listing gallery', () => {
+  const image = (
+    path: string,
+    patch: Partial<NonNullable<Observation['photo']>> = {},
+  ) => ({
+    url: `${ORIGIN}/${path}`,
+    attribution: 'Synthetic image',
+    rightsBasis: 'Synthetic permission',
+    observedAt: new Date(baseTime).toISOString(),
+    expiresAt: new Date(baseTime + DAY).toISOString(),
+    displayAllowed: true as const,
+    hotlinkAllowed: true as const,
+    ...patch,
+  });
+  const gallery = () =>
+    home('gallery', {
+      photo: image('lead'),
+      morePhotos: [image('two'), image('three')],
+      floorPlan: image('plan'),
+    });
+
+  async function household() {
+    const database = await sourcesOn(await migratedThrough(GALLERY), ['alpha']);
+    await database.query('insert into auth.users values($1)', [OWNER_A]);
+    await database.query(
+      "insert into hs.households(id,name) values($1,'Synthetic household')",
+      [HOUSE_A],
+    );
+    await database.query(
+      "insert into hs.members(household_id,user_id,display_name,role) values($1,$2,'Synthetic owner','owner')",
+      [HOUSE_A, OWNER_A],
+    );
+    await database.query(
+      "insert into hs.profiles(id,household_id,name,enabled,criteria,edited_by) values($1,$2,'Synthetic profile',true,$3::jsonb,$4)",
+      [PROFILE_A, HOUSE_A, JSON.stringify(criteria), OWNER_A],
+    );
+    return database;
+  }
+  // The raw reply: the client schema drops keys it does not read yet.
+  async function homes(database: PGlite) {
+    const reply = (await as(
+      'authenticated',
+      OWNER_A,
+      () =>
+        rpc(
+          'select public.hs_household_snapshot($1) as value',
+          [HOUSE_A],
+          database,
+        ),
+      database,
+    )) as { listings: Record<string, unknown>[] };
+    return Object.fromEntries(reply.listings.map((item) => [item.title, item]));
+  }
+  const drift = async (database: PGlite) =>
+    (await database.query('select * from hs.card_drift()')).rows;
+
+  it('rolls back to exactly the earlier schema and applies again', async () => {
+    const database = await migratedThrough(GALLERY);
+    try {
+      const migrated = await fingerprint(database);
+      await database.exec(await rollback(GALLERY));
+      const earlier = await migratedThrough(LOCATION_MODE);
+      try {
+        expect(await fingerprint(database)).toEqual(await fingerprint(earlier));
+      } finally {
+        await earlier.close();
+      }
+      await database.exec(await migration(`${GALLERY}.sql`));
+      expect(await fingerprint(database)).toEqual(migrated);
+    } finally {
+      await database.close();
+    }
+  });
+
+  it('sends the extra photos and floor plan its policy allows, and follows policy changes', async () => {
+    const database = await household();
+    try {
+      await publish([gallery(), home('plain', { photo: image('only') })], {
+        database,
+      });
+      const seen = await homes(database);
+      expect(seen.gallery).toMatchObject({
+        photo: { url: `${ORIGIN}/lead` },
+        photos: [
+          { url: `${ORIGIN}/lead` },
+          { url: `${ORIGIN}/two` },
+          { url: `${ORIGIN}/three` },
+        ],
+        floorPlan: {
+          url: `${ORIGIN}/plan`,
+          expiresAt: image('plan').expiresAt,
+          observedAt: image('plan').observedAt,
+        },
+      });
+      expect(seen.plain).toMatchObject({ photo: { url: `${ORIGIN}/only` } });
+      expect(seen.plain).not.toHaveProperty('photos');
+      expect(seen.plain).not.toHaveProperty('floorPlan');
+      expect(await drift(database)).toEqual([]);
+
+      // Images from an origin the policy no longer lists leave the cards and the snapshot.
+      await database.query(
+        "update hs.source_policies set policy=jsonb_set(policy,'{imageOrigins}','[\"https://other.invalid\"]') where source_id='alpha'",
+      );
+      const moved = await homes(database);
+      for (const key of ['photo', 'photos', 'floorPlan'])
+        expect(moved.gallery).not.toHaveProperty(key);
+      expect(await drift(database)).toEqual([]);
+    } finally {
+      await database.close();
+    }
+  });
+
+  it('refuses images the policy does not allow, expired ones and extra photos without a lead', async () => {
+    const database = await household();
+    const check = (observation: Observation) =>
+      database.query(
+        "select hs.assert_observation(policy,$1::jsonb) from hs.source_policies where source_id='alpha'",
+        [JSON.stringify(observation)],
+      );
+    try {
+      await check(gallery());
+      for (const refused of [
+        home('off-origin', {
+          photo: image('lead'),
+          morePhotos: [{ ...image('two'), url: 'https://other.invalid/two' }],
+        }),
+        home('expired-plan', {
+          floorPlan: image('plan', {
+            expiresAt: new Date(baseTime - HOUR).toISOString(),
+          }),
+        }),
+        home('no-lead', { morePhotos: [image('two')] }),
+      ])
+        await expect(check(refused)).rejects.toThrow('Photo not permitted');
+    } finally {
+      await database.close();
+    }
+  });
+});
+
 describe('catalog administration and grants', () => {
   it('sets source policies and issues and revokes credentials without a household', async () => {
     const created = await rpc(

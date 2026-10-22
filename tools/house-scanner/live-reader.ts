@@ -3,6 +3,7 @@ import {
   sourceIdentity,
 } from '@house-scanner-tools/collector';
 import {
+  type Images,
   type PageRead,
   positionPrecision,
   type ReadContext,
@@ -128,8 +129,8 @@ export interface SourceAdapter {
   maxBodyChars?: number;
   /** Where a listing's extra facts are read, when that is not the page people open. */
   detailUrl?(observation: Observation): string;
-  /** The photo a listing page's facts point to, for a source whose photos sit on an image host. */
-  photoFor?(facts: DetailFacts, observedAt: string): Observation['photo'];
+  /** The photos and floor plan a listing page's image keys point to. Keys it leaves out keep the search page's. */
+  imagesFor?(facts: DetailFacts, observedAt: string): Images;
   /** URL of a later page. Without it the page number is added as ?page=N. */
   pageUrl?(base: string, page: number): string;
   readSearchPage(html: string, context: ReadContext): PageRead;
@@ -152,6 +153,8 @@ function applyDetail(
     latitude,
     longitude,
     photoPath: _photoPath,
+    photoKeys: _photoKeys,
+    planKey: _planKey,
     viewings,
     ...facts
   } = detail;
@@ -164,8 +167,10 @@ function applyDetail(
       ),
     ),
   );
-  const photo = adapter.photoFor?.(detail, observation.observedAt);
-  if (photo) observation.photo = photo;
+  Object.assign(
+    observation,
+    adapter.imagesFor?.(detail, observation.observedAt),
+  );
   // A page that lists viewings replaces what the search gave; one that lists none leaves it alone.
   const upcoming = viewings ? finishViewings(viewings, now) : undefined;
   if (upcoming) observation.viewings = upcoming;

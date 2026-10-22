@@ -223,7 +223,8 @@ describe('Erik Olsson listing page', () => {
       rooms: 3,
       latitude: 57.7,
       longitude: 11.95,
-      photoPath: `${IMAGE_ACCOUNT}/${PHOTO_ID}`,
+      photoKeys: [`${IMAGE_ACCOUNT}/${PHOTO_ID}`],
+      planKey: `${IMAGE_ACCOUNT}/${PLAN_ID}`,
     });
   });
 
@@ -319,23 +320,40 @@ describe('Erik Olsson listing page', () => {
     });
   });
 
-  it('names the first image that is not a floor plan, with the image account from the page', () => {
-    const photoPath = (images: unknown, imageHost = true) =>
-      detail(listingPage({ ...home(), images }, 3, imageHost)).photoPath;
+  it('names up to four photos in page order and the first floor plan, with the image account from the page', () => {
+    const keys = (images: unknown, imageHost = true) => {
+      const { photoKeys, planKey } = detail(
+        listingPage({ ...home(), images }, 3, imageHost),
+      );
+      return { photoKeys, planKey };
+    };
     const img = (id: string, plan = false) => ({
       is_floor_plan: plan,
       cloudflare_image_id: id,
     });
-    expect(photoPath([img(PLAN_ID, true), img(PHOTO_ID)])).toBe(
-      `${IMAGE_ACCOUNT}/${PHOTO_ID}`,
-    );
+    const photo = (n: number) =>
+      `${n}1111111-2222-4333-8444-555555555555`.slice(-36);
+    const key = (id: string) => `${IMAGE_ACCOUNT}/${id}`;
+    expect(
+      keys([img(PLAN_ID, true), ...[1, 2, 3, 4, 5].map((n) => img(photo(n)))]),
+    ).toEqual({
+      photoKeys: [1, 2, 3, 4].map((n) => key(photo(n))),
+      planKey: key(PLAN_ID),
+    });
+    // An unusable id is skipped, not taken as the end of the list.
+    expect(keys([img('x/../../y'), img(PHOTO_ID)]).photoKeys).toEqual([
+      key(PHOTO_ID),
+    ]);
     // No image, only a floor plan, an unusable id, or no image address on the page gives no photo.
-    expect(photoPath([])).toBeUndefined();
-    expect(photoPath(undefined)).toBeUndefined();
-    expect(photoPath([img(PLAN_ID, true)])).toBeUndefined();
-    expect(photoPath([img('not-an-id')])).toBeUndefined();
-    expect(photoPath([img('x/../../y')])).toBeUndefined();
-    expect(photoPath([img(PHOTO_ID)], false)).toBeUndefined();
+    const none = { photoKeys: undefined, planKey: undefined };
+    expect(keys([])).toEqual(none);
+    expect(keys(undefined)).toEqual(none);
+    expect(keys([img(PLAN_ID, true)])).toEqual({
+      photoKeys: undefined,
+      planKey: key(PLAN_ID),
+    });
+    expect(keys([img('not-an-id')])).toEqual(none);
+    expect(keys([img(PHOTO_ID)], false)).toEqual(none);
   });
 
   it('keeps no description, broker, image or nearby text', () => {
