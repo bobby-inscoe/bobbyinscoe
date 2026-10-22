@@ -410,6 +410,8 @@ export function sourceRegistry(): SourceCapability[] {
       policy: {
         ...common,
         sourceId: HUSMAN_HAGBERG_SOURCE_ID,
+        // Revision 2 reads each kept home's estate page for up to four photos and the floor plan.
+        revision: 2,
         viewings: true,
         // Pending is not approved: the operator sets approval in the database.
         status: 'pending',
@@ -421,7 +423,7 @@ export function sourceRegistry(): SourceCapability[] {
         automatedCollection: false,
         privateDisplay: false,
         rightsBasis:
-          "Permission unresolved. The household owner chose to read the broker's public list for personal use at their own judgment. The terms of use (checked 17 October 2026) say nothing about automated reading and bar copying and spreading protected texts and images without consent, and robots.txt allows everything. Technical access is not a reuse license.",
+          "Permission unresolved. The household owner chose to read the broker's public list and the public estate page of each kept home for personal use at their own judgment. The terms of use (checked 17 October 2026) say nothing about automated reading and bar copying and spreading protected texts and images without consent, and robots.txt allows everything. Technical access is not a reuse license.",
         allowedFactFields: [
           'propertyType',
           'tenure',
@@ -444,13 +446,13 @@ export function sourceRegistry(): SourceCapability[] {
           coverageGaps: [
             'Permission is unresolved and the source is not approved.',
             'Only Göteborg is supported. The list is a text search on the name Göteborg, so a home in the municipality whose address never says Göteborg may be missed: the broker counted 206 for Göteborg and the search returned 143, and the reason for the gap was not checked.',
-            'The data is the JSON list that the site pages load from api.husmanhagberg.se (object/api/objects). It is not a documented public API and can change without notice. That host serves no robots.txt (404), so the run reads the robots.txt of www.husmanhagberg.se.',
+            'The data is the JSON list that the site pages load from api.husmanhagberg.se (object/api/objects). It is not a documented public API and can change without notice. That host serves no robots.txt (404), so the run reads the robots.txt of www.husmanhagberg.se, which also covers the estate pages.',
             'The answer holds every match when asked for 200 a page (143 on 17 October) and reports a total, so a list shorter than its total is detected and reported as truncated. A paging parameter was not found.',
             'Coming-soon homes (taken in and shown as coming) are read too and marked upcoming; most have no asking price. Whether every coming-soon home is listed is unproven.',
             'The list gives no tenure for houses, so it stays unknown. Holiday homes, commercial property and any other type are skipped.',
             'The floor of an apartment comes from the list: floor 2 or higher, or floor 0, is a floor fact. Lift, balcony and glazing are not in the list and stay unknown.',
             'Coordinates come from the broker and are labelled address-level when the title has a house number. They were not compared with an independent geocoder. A hidden address gets no position.',
-            'Only the primary photo is shown, hotlinked from the broker media host. Nothing is copied or stored.',
+            'Up to four photos and one floor plan come from the estate page of each kept home, read up to the per-run cap and reused for a week; area pictures are left out. Otherwise only the list photo is shown. Images are hotlinked from the broker media host and never copied or stored.',
             'Listing identity is the object reference and the episode never changes, so a relisting of the same home is not told apart.',
             'Viewing times are the full list in the search data, with a year. The feed labels Stockholm wall-clock time with a Z (the same home shows identical values on Boneo), so the letter is dropped. Only viewings marked for the internet are kept.',
             'Known listings cannot be refreshed outside discovery.',
