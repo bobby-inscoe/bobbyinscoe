@@ -297,7 +297,6 @@ export function ProfileEditor({
             })),
           ]}
           allowDeselect={false}
-          searchable
           disabled={!canEdit || !onSave}
           onChange={(next) => {
             const selected = SEARCH_HUBS.find(
