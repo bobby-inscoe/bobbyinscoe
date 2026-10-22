@@ -15,17 +15,27 @@ const NOTES = '../migrations/202610170002_house_scanner_snapshot_notes.sql';
 const DOWN_NOTES =
   '../rollbacks/202610170002_house_scanner_snapshot_notes_down.sql';
 
+// Each migration prefix is built once; every caller gets its own clone.
+const prefixes = new Map<string, Promise<PGlite>>();
 async function create(paths: string[]) {
-  const db = await PGlite.create();
-  await db.exec(`
+  const key = paths.join('|');
+  let master = prefixes.get(key);
+  if (!master) {
+    master = (async () => {
+      const db = await PGlite.create();
+      await db.exec(`
     create role anon; create role authenticated; create role service_role;
     create schema auth; create table auth.users(id uuid primary key);
     create function auth.uid() returns uuid language sql stable as $$
       select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
     $$;
   `);
-  for (const path of paths) await db.exec(await read(path));
-  return db;
+      for (const path of paths) await db.exec(await read(path));
+      return db;
+    })();
+    prefixes.set(key, master);
+  }
+  return (await master).clone();
 }
 
 // Everything about the objects the migration touches, as text.
@@ -63,6 +73,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await beforeDb?.close();
   await afterDb?.close();
+  for (const master of prefixes.values()) await (await master).close();
 });
 
 describe('rollback of the personal-hide migration', () => {

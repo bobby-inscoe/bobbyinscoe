@@ -162,20 +162,36 @@ function home(id: string, overrides: Partial<Observation> = {}): Observation {
 
 const aged = (days: number) => new Date(baseTime - days * DAY).toISOString();
 
-async function freshDatabase(through: 'before' | 'all') {
-  const database = await PGlite.create();
-  await database.exec(`create role anon; create role authenticated; create role service_role;
+// Each migration prefix is built once per run. Every caller gets its own clone, so tests stay independent.
+const prefixes = new Map<string, Promise<PGlite>>();
+async function clonedPrefix(key: string, include: (name: string) => boolean) {
+  let master = prefixes.get(key);
+  if (!master) {
+    master = (async () => {
+      const database = await PGlite.create();
+      await database.exec(`create role anon; create role authenticated; create role service_role;
     create schema auth; create table auth.users(id uuid primary key);
     create function auth.uid() returns uuid language sql stable as $$
       select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;`);
-  const names = (await readdir(new URL('../migrations/', import.meta.url)))
-    .filter((name) => name.endsWith('.sql'))
-    .sort();
-  for (const name of names) {
-    if (through === 'before' && name === CATALOG) break;
-    await database.exec(await migration(name));
+      const names = (await readdir(new URL('../migrations/', import.meta.url)))
+        .filter((name) => name.endsWith('.sql') && include(name))
+        .sort();
+      for (const name of names) await database.exec(await migration(name));
+      return database;
+    })();
+    prefixes.set(key, master);
   }
-  return database;
+  return (await master).clone();
+}
+
+afterAll(async () => {
+  for (const master of prefixes.values()) await (await master).close();
+});
+
+async function freshDatabase(through: 'before' | 'all') {
+  return clonedPrefix(`fresh-${through}`, (name) =>
+    through === 'before' ? name < CATALOG : true,
+  );
 }
 
 function migration(name: string) {
@@ -1811,16 +1827,7 @@ async function sameAsV2(database: PGlite, household: string, user: string) {
 
 // A database with the migrations up to and including the named one.
 async function migratedThrough(last: string) {
-  const database = await PGlite.create();
-  await database.exec(`create role anon; create role authenticated; create role service_role;
-    create schema auth; create table auth.users(id uuid primary key);
-    create function auth.uid() returns uuid language sql stable as $$
-      select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;`);
-  for (const name of (await readdir(new URL('../migrations/', import.meta.url)))
-    .filter((name) => name.endsWith('.sql') && name <= `${last}.sql`)
-    .sort())
-    await database.exec(await migration(name));
-  return database;
+  return clonedPrefix(`through-${last}`, (name) => name <= `${last}.sql`);
 }
 
 // Functions with their grants, tables, indexes, columns, triggers and storage options of hs, as text. Function texts
