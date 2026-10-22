@@ -6,6 +6,7 @@ import {
   deferred,
   emitAuth,
   fixtureSnapshot,
+  missing,
   reply,
   resetSdk,
   sdk,
@@ -26,6 +27,8 @@ beforeEach(resetSdk);
 afterEach(cleanup);
 
 const names = () => sdk.rpc.mock.calls.map(([name]) => name);
+// One snapshot read: the read-model snapshot, which these tests leave uninstalled, then the previous one.
+const READ = ['hs_household_snapshot', 'hs_snapshot_neighborhoods'];
 const requests = () => ({
   users: sdk.auth.getUser.mock.calls.length,
   rpc: names(),
@@ -76,6 +79,7 @@ describe('requests made by a signed-in session', () => {
     const pending = deferred<ReturnType<typeof reply>>();
     sdk.rpc
       .mockImplementationOnce(async () => reply([fixtureSnapshot().members[0]]))
+      .mockImplementationOnce(async () => missing())
       .mockReturnValueOnce(pending.promise)
       .mockImplementationOnce(async () => reply({ ok: true }));
     const before = names().length;
@@ -83,7 +87,7 @@ describe('requests made by a signed-in session', () => {
     act(() => {
       refresh = hook.result.current.refresh();
     });
-    await waitFor(() => expect(names().length).toBe(before + 2));
+    await waitFor(() => expect(names().length).toBe(before + 3));
     await act(() => hook.result.current.onSetHidden([id], true));
     await act(async () => {
       pending.resolve(reply(fixtureSnapshot()));
@@ -91,9 +95,9 @@ describe('requests made by a signed-in session', () => {
     });
     expect(names().slice(before)).toEqual([
       'hs_memberships',
-      'hs_snapshot_neighborhoods',
+      ...READ,
       'hs_set_hidden',
-      'hs_snapshot_neighborhoods',
+      ...READ,
     ]);
   });
 
@@ -128,7 +132,7 @@ describe('requests made by a signed-in session', () => {
     await settle();
     expect(requests()).toEqual({
       users: 1,
-      rpc: ['hs_memberships', 'hs_snapshot_neighborhoods'],
+      rpc: ['hs_memberships', ...READ],
     });
   });
 
@@ -190,96 +194,73 @@ describe('requests made by a signed-in session', () => {
     expect(hook.result.current.state.status).toBe('authenticated');
     expect(requests()).toEqual({
       users: 1,
-      rpc: ['hs_memberships', 'hs_snapshot_neighborhoods'],
+      rpc: ['hs_memberships', ...READ],
     });
   });
 
-  it('reloads partial favorites and retries only the remaining home with one snapshot per attempt', async () => {
+  it('saves only the new favorites in one request, and keeps the workspace when that request fails', async () => {
     const snapshot = fixtureSnapshot();
     const [first, second] = snapshot.listings;
     const existingIds = snapshot.favorites
       .filter((favorite) => favorite.userId === USER_ID)
       .map((favorite) => favorite.listingId);
     const ids = [first.id, second.id, ...existingIds];
-    const firstSaved = {
-      householdId: snapshot.householdId,
-      listingId: first.id,
-      userId: USER_ID,
-      savedAt: '2026-10-19T10:00:00Z',
-    };
-    const partial = {
-      ...snapshot,
-      favorites: [...snapshot.favorites, firstSaved],
-    };
     const complete = {
-      ...partial,
+      ...snapshot,
       favorites: [
-        ...partial.favorites,
-        { ...firstSaved, listingId: second.id },
+        ...snapshot.favorites,
+        ...[first.id, second.id].map((listingId) => ({
+          householdId: snapshot.householdId,
+          listingId,
+          userId: USER_ID,
+          savedAt: '2026-10-19T10:00:00Z',
+        })),
       ],
     };
+    const save = [
+      'hs_set_favorites',
+      {
+        p_household_id: snapshot.householdId,
+        p_listing_ids: [first.id, second.id],
+        p_saved: true,
+      },
+    ];
+    const read = READ.map((name) => [
+      name,
+      { p_household_id: snapshot.householdId },
+    ]);
     const hook = await authenticated();
+    const before = hook.result.current.state;
     const users = sdk.auth.getUser.mock.calls.length;
     sdk.rpc.mockClear();
     sdk.rpc
-      .mockResolvedValueOnce(reply({ ok: true }))
       .mockResolvedValueOnce({
         data: null,
         error: { message: 'Network failure' },
       })
-      .mockResolvedValueOnce(reply(partial));
+      .mockResolvedValueOnce(missing())
+      .mockResolvedValueOnce(reply(snapshot));
 
     await act(async () => {
       await expect(hook.result.current.onSaveFavorites(ids)).rejects.toThrow(
-        'Saved 1 of 2 new favorites',
+        'The 2 new favorites could not be saved',
       );
     });
-    expect(hook.result.current.state).toEqual({
-      status: 'authenticated',
-      userId: USER_ID,
-      snapshot: partial,
-    });
-    expect(sdk.rpc.mock.calls).toEqual([
-      [
-        'hs_set_favorite',
-        {
-          p_household_id: snapshot.householdId,
-          p_listing_id: first.id,
-          p_saved: true,
-        },
-      ],
-      [
-        'hs_set_favorite',
-        {
-          p_household_id: snapshot.householdId,
-          p_listing_id: second.id,
-          p_saved: true,
-        },
-      ],
-      ['hs_snapshot_neighborhoods', { p_household_id: snapshot.householdId }],
-    ]);
+    expect(hook.result.current.state).toEqual(before);
+    expect(sdk.rpc.mock.calls).toEqual([save, ...read]);
     expect(sdk.auth.getUser).toHaveBeenCalledTimes(users);
 
     sdk.rpc.mockClear();
     sdk.rpc
       .mockResolvedValueOnce(reply({ ok: true }))
+      .mockResolvedValueOnce(missing())
       .mockResolvedValueOnce(reply(complete));
     await act(async () => {
       await expect(
         hook.result.current.onSaveFavorites(ids),
       ).resolves.toBeUndefined();
     });
-    expect(sdk.rpc.mock.calls).toEqual([
-      [
-        'hs_set_favorite',
-        {
-          p_household_id: snapshot.householdId,
-          p_listing_id: second.id,
-          p_saved: true,
-        },
-      ],
-      ['hs_snapshot_neighborhoods', { p_household_id: snapshot.householdId }],
-    ]);
+    expect(sdk.rpc.mock.calls).toEqual([save, ...read]);
     expect(sdk.auth.getUser).toHaveBeenCalledTimes(users);
     expect(hook.result.current.state).toEqual({
       status: 'authenticated',
@@ -288,7 +269,7 @@ describe('requests made by a signed-in session', () => {
     });
   });
 
-  it('stops the remaining favorite writes after sign-out without restoring the session', async () => {
+  it('stops after sign-out while favorites are saving, without restoring the session', async () => {
     const hook = await authenticated();
     const snapshot = fixtureSnapshot();
     const [first, second] = snapshot.listings;
@@ -302,10 +283,10 @@ describe('requests made by a signed-in session', () => {
     });
     const firstRequest = [
       [
-        'hs_set_favorite',
+        'hs_set_favorites',
         {
           p_household_id: snapshot.householdId,
-          p_listing_id: first.id,
+          p_listing_ids: [first.id, second.id],
           p_saved: true,
         },
       ],
@@ -332,7 +313,7 @@ describe('requests made by a signed-in session', () => {
     expect(sdk.auth.getUser.mock.calls.length).toBe(before.users);
     expect(names().slice(before.rpc.length)).toEqual([
       'hs_delete_manual',
-      'hs_snapshot_neighborhoods',
+      ...READ,
     ]);
   });
 
@@ -413,21 +394,15 @@ describe('notes come with the snapshot', () => {
     expect(names()).toHaveLength(before);
   });
 
-  it('saves a note and then re-reads only the snapshot, which carries the new note', async () => {
+  it('writes a saved note into the snapshot without re-reading it', async () => {
     const [first] = fixtureSnapshot().listings;
-    let saved = false;
     sdk.rpc.mockImplementation(async (name) => {
       if (name === 'hs_memberships')
         return reply([fixtureSnapshot().members[0]]);
-      if (name === 'hs_save_note') {
-        saved = true;
-        return reply({ revision: 1 });
-      }
+      if (name === 'hs_save_note') return reply({ revision: 1 });
       if (name === 'hs_snapshot_neighborhoods')
-        return reply({
-          ...fixtureSnapshot(),
-          notes: saved ? [noteRow(first.id, 'Saved text')] : [],
-        });
+        return reply({ ...fixtureSnapshot(), notes: [] });
+      if (name === 'hs_household_snapshot') return missing();
       return reply({ ok: true });
     });
     const hook = await authenticated();
@@ -435,15 +410,36 @@ describe('notes come with the snapshot', () => {
     await expect(
       hook.result.current.onSaveNote(first.id, 'Saved text', 0),
     ).resolves.toBe(1);
-    expect(names().slice(before)).toEqual([
-      'hs_save_note',
-      'hs_snapshot_neighborhoods',
-    ]);
     const reread = await hook.result.current.onLoadNotes(first.id);
-    expect(reread?.map((note) => note.body)).toEqual(['Saved text']);
-    expect(names().slice(before)).toEqual([
-      'hs_save_note',
-      'hs_snapshot_neighborhoods',
+    expect(reread).toEqual([
+      expect.objectContaining({
+        userId: USER_ID,
+        body: 'Saved text',
+        revision: 1,
+      }),
     ]);
+    expect(names().slice(before)).toEqual(['hs_save_note']);
+  });
+
+  it('re-reads the snapshot when a note is cleared, since its home may leave the list', async () => {
+    const [first] = fixtureSnapshot().listings;
+    sdk.rpc.mockImplementation(async (name) => {
+      if (name === 'hs_memberships')
+        return reply([fixtureSnapshot().members[0]]);
+      if (name === 'hs_save_note') return reply({ revision: 2 });
+      if (name === 'hs_snapshot_neighborhoods')
+        return reply({
+          ...fixtureSnapshot(),
+          notes: [noteRow(first.id, 'Old text')],
+        });
+      if (name === 'hs_household_snapshot') return missing();
+      return reply({ ok: true });
+    });
+    const hook = await authenticated();
+    const before = names().length;
+    await expect(
+      hook.result.current.onSaveNote(first.id, '  ', 1),
+    ).resolves.toBe(2);
+    expect(names().slice(before)).toEqual(['hs_save_note', ...READ]);
   });
 });

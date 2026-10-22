@@ -91,6 +91,13 @@ export function userReply(id: string | null = USER_ID): UserReply {
 export function reply(data: unknown): Reply {
   return { data, error: null };
 }
+// The reply for a database function that is not installed.
+export function missing(): Reply {
+  return {
+    data: null,
+    error: { code: 'PGRST202', message: 'Function missing' },
+  };
+}
 export function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (error: Error) => void;
@@ -123,6 +130,8 @@ export function resetSdk() {
   sdk.functions.invoke.mockClear();
   sdk.rpc.mockReset().mockImplementation(async (name) => {
     if (name === 'hs_memberships') return reply([fixtureSnapshot().members[0]]);
+    // Most suites test the session on the previous snapshot, which the client reads when this one is missing.
+    if (name === 'hs_household_snapshot') return missing();
     if (name === 'hs_snapshot' || name === 'hs_snapshot_neighborhoods')
       return reply(fixtureSnapshot());
     return reply({ ok: true });

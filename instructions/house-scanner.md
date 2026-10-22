@@ -18,6 +18,13 @@ redirects them. Add `/shellter/...` to those URLs before pointing Auth at the ne
   raise the cap or narrow the source, and re-enable with a higher revision.
 - Deploy in this order: the app (strict schemas reject unknown keys), then any Edge Function that must accept new
   fields, the migration, then the policy revisions or collector change that switch a feature on. Never switch on first.
+  The app reads the household from `hs_household_snapshot`, whose reader drops keys it does not know, so a field added
+  there can ship before the app reads it; removing or retyping one still needs the app first. The app falls back to
+  `hs_snapshot_neighborhoods` when that function is missing or its response cannot be read.
+- That snapshot reads a read model kept by triggers: `hs.listing_cards` (one policy-filtered card per listing) and
+  `hs.household_listings` (the homes each household could see, and why). After any migration or data repair that
+  touches listings, policies, profiles, favorites, notes or hides, `select * from hs.card_drift()` and
+  `select * from hs.household_drift()` must both be empty. Roll migrations back newest first.
 - Name a new migration and its rollback with the UTC time you create them, to the second
   (`date -u +%Y%m%d%H%M%S`), never a rounded or future slot, and record that same version on the hosted project.
   The connector's `apply_migration` stamps its own apply time, so apply with `supabase db query --linked -f` or the

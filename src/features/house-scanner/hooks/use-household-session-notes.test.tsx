@@ -7,6 +7,7 @@ import {
   emitAuth,
   fixtureSnapshot,
   HOUSEHOLD_ID,
+  missing,
   OTHER_HOUSEHOLD_ID,
   OTHER_USER_ID,
   type Reply,
@@ -133,6 +134,7 @@ describe('House Scanner session notes', () => {
               args.p_household_id === OTHER_HOUSEHOLD_ID
               ? reply(second)
               : reply(fixtureSnapshot());
+          if (name === 'hs_household_snapshot') return missing();
           return pending.promise;
         });
         const hook = renderHook(useHouseholdSession);
@@ -179,6 +181,7 @@ describe('House Scanner session notes', () => {
     // The conflict brings in the newer note with one snapshot read, and the workspace stays as it was.
     expect(sdk.rpc.mock.calls.map(([name]) => name)).toEqual([
       'hs_save_note',
+      'hs_household_snapshot',
       'hs_snapshot_neighborhoods',
     ]);
   });
