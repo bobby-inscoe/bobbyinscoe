@@ -327,4 +327,71 @@ describe('official polygon assignments and compatibility', () => {
     );
     expect(holeBorder.rows[0].ids).toEqual(['test-a']);
   });
+  it('gives the same answers through the box indexes as the scan of every shape', async () => {
+    const WRITE_PATH = '20261022102043_house_scanner_write_path';
+    // A grid over the city and the first corner of every tenth shape, which lies on its border, for an exact source
+    // point and both kinds of estimate.
+    const answers = async () =>
+      (
+        await db.query<{ value: unknown }>(`
+          with points as (
+            select 11.75+0.4*x/14.0 lon,57.6+0.25*y/14.0 lat from generate_series(0,14) x,generate_series(0,14) y
+            union all
+            select m[1]::double precision,m[2]::double precision from (
+              select regexp_match(outline::text,'^\\(\\(([^,]+),([^)]+)\\)') m,row_number() over (order by neighborhood_id,part) n
+              from hs.neighborhood_shapes where neighborhood_id like 'goteborg-%') corners where n%10=0),
+          kinds(kind) as (values
+            ('{"precision":"address","source":"Synthetic"}'::jsonb),
+            ('{"precision":"address","estimated":true,"source":"Estimated from the address (OpenStreetMap)"}'),
+            ('{"precision":"street","estimated":true,"source":"Estimated from the street name (OpenStreetMap)"}')),
+          asked as (select kind||jsonb_build_object('longitude',lon,'latitude',lat) c from points,kinds)
+          select jsonb_agg(jsonb_build_array(c,hs.neighborhood_candidate_ids(c),hs.neighborhood_for_coordinates(c)) order by c::text) value
+          from asked`)
+      ).rows[0].value as [object, string[], string | null][];
+    const indexed = await answers();
+    // Shared buffers one lookup of each kind reads once its plans are cached; the scan of every shape read about 400.
+    const buffers = async (value: object) => {
+      const sql = `explain (analyze, buffers, format json) select hs.neighborhood_candidate_ids($1::jsonb),hs.neighborhood_for_coordinates($1::jsonb)`;
+      await db.query(sql, [JSON.stringify(value)]);
+      const plan = (
+        await db.query<{ 'QUERY PLAN': { Plan: Record<string, number> }[] }>(
+          sql,
+          [JSON.stringify(value)],
+        )
+      ).rows[0]['QUERY PLAN'][0].Plan;
+      return plan['Shared Hit Blocks'] + plan['Shared Read Blocks'];
+    };
+    for (const estimate of [
+      {},
+      {
+        estimated: true,
+        source: 'Estimated from the address (OpenStreetMap)',
+      },
+      {
+        estimated: true,
+        source: 'Estimated from the street name (OpenStreetMap)',
+      },
+    ])
+      expect(await buffers({ ...coordinates, ...estimate })).toBeLessThan(60);
+    await db.exec(
+      await readFile(
+        new URL(`../rollbacks/${WRITE_PATH}_down.sql`, import.meta.url),
+        'utf8',
+      ),
+    );
+    const scanned = await answers();
+    await db.exec(
+      await readFile(
+        new URL(`../migrations/${WRITE_PATH}.sql`, import.meta.url),
+        'utf8',
+      ),
+    );
+    expect(indexed).toEqual(scanned);
+    expect(indexed.length).toBeGreaterThan(900);
+    // The sample reaches matches, several areas at once and no area.
+    expect(indexed.some(([, ids]) => ids.length === 1)).toBe(true);
+    expect(indexed.some(([, ids]) => ids.length > 1)).toBe(true);
+    expect(indexed.some(([, ids]) => ids.length === 0)).toBe(true);
+    expect(indexed.some(([, , id]) => id !== null)).toBe(true);
+  }, 120_000);
 });

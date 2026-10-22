@@ -1768,6 +1768,198 @@ describe('set-based publish', () => {
   });
 });
 
+describe('write-path fixes', () => {
+  const WRITE_PATH = '20261022102043_house_scanner_write_path';
+  const WRITE_PATH_DOWN = new URL(
+    `../rollbacks/${WRITE_PATH}_down.sql`,
+    import.meta.url,
+  );
+  const now = () => new Date().toISOString();
+  // The rule the snapshot used before each source recorded its latest run.
+  const OLD_LATEST = `select distinct on (result->>'sourceId') result->>'sourceId' source_id,r.id
+    from hs.editions e join hs.runs r on r.id=e.run_id, lateral jsonb_array_elements(r.results) result
+    where r.state='published' and result->>'status' in ('success','partial')
+    order by result->>'sourceId',e.published_at desc,e.id desc`;
+
+  async function sources(...ids: string[]) {
+    const database = await freshDatabase('all');
+    for (const id of ids)
+      await database.query(
+        'insert into hs.source_policies(source_id,policy) values($1,$2::jsonb)',
+        [id, JSON.stringify(policy(id))],
+      );
+    await database.query(
+      "insert into hs.ingest_credentials(key_id,source_ids,expires_at) values($1,$2,now()+interval '1 day')",
+      [KEY, ids],
+    );
+    return database;
+  }
+
+  // Functions with their grants, indexes, columns, triggers and storage options of hs, as text. Function texts ignore
+  // carriage returns: a Windows checkout gives the migration files CRLF line endings.
+  async function fingerprint(database: PGlite) {
+    const result = await database.query<{ line: string }>(`
+      select 'fn '||n.nspname||'.'||p.proname||'('||pg_get_function_identity_arguments(p.oid)||') '||md5(replace(pg_get_functiondef(p.oid),chr(13),''))
+        ||' anon='||has_function_privilege('anon',p.oid,'execute')||' auth='||has_function_privilege('authenticated',p.oid,'execute')
+        ||' svc='||has_function_privilege('service_role',p.oid,'execute') line
+      from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('hs','public')
+      union all select 'index '||indexdef from pg_indexes where schemaname='hs'
+      union all select 'column '||table_name||'.'||column_name||' '||data_type from information_schema.columns where table_schema='hs'
+      union all select 'trigger '||pg_get_triggerdef(t.oid) from pg_trigger t join pg_class c on c.oid=t.tgrelid
+        join pg_namespace n on n.oid=c.relnamespace where n.nspname='hs' and not t.tgisinternal
+      union all select 'options '||c.relname||' '||coalesce(array_to_string(c.reloptions,','),'') from pg_class c
+        join pg_namespace n on n.oid=c.relnamespace where n.nspname='hs' and c.relkind='r'
+      order by line`);
+    return result.rows.map((row) => row.line);
+  }
+
+  it('rolls back to exactly the earlier schema and applies again', async () => {
+    const earlier = await freshDatabase('all');
+    try {
+      await earlier.exec(await readFile(WRITE_PATH_DOWN, 'utf8'));
+      const rolledBack = await fingerprint(earlier);
+      const plain = await PGlite.create();
+      try {
+        await plain.exec(`create role anon; create role authenticated; create role service_role;
+          create schema auth; create table auth.users(id uuid primary key);
+          create function auth.uid() returns uuid language sql stable as $$
+            select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;`);
+        for (const name of (
+          await readdir(new URL('../migrations/', import.meta.url))
+        )
+          .filter((name) => name.endsWith('.sql') && name < WRITE_PATH)
+          .sort())
+          await plain.exec(await migration(name));
+        expect(rolledBack).toEqual(await fingerprint(plain));
+      } finally {
+        await plain.close();
+      }
+      await earlier.exec(await migration(`${WRITE_PATH}.sql`));
+      const migrated = await fingerprint(earlier);
+      expect(migrated).not.toEqual(rolledBack);
+      expect(migrated).toContain('options listings fillfactor=70');
+      expect(
+        migrated.filter((line) => line.startsWith('fn hs.record_latest_run')),
+      ).toEqual([expect.stringMatching(/anon=false auth=false svc=false$/)]);
+    } finally {
+      await earlier.close();
+    }
+  });
+
+  it('serves the same snapshots with each source’s latest run as with the scan of every run', async () => {
+    const both = async () => [
+      await snapshot(HOUSE_A, OWNER_A),
+      await snapshot(HOUSE_B, OWNER_B),
+    ];
+    await db.exec(await readFile(WRITE_PATH_DOWN, 'utf8'));
+    const scanned = await both();
+    await db.exec(await migration(`${WRITE_PATH}.sql`));
+    expect(await both()).toEqual(scanned);
+    expect(
+      scanned.flatMap((state) => state.listings).some((item) => item.isNew),
+    ).toBe(true);
+    const latest = await db.query(
+      `select p.source_id,p.latest_run_id id from hs.source_policies p
+       where p.latest_run_id is not null order by 1`,
+    );
+    expect(latest.rows.length).toBeGreaterThan(0);
+    expect(latest.rows).toEqual(
+      (await db.query(`select * from (${OLD_LATEST}) x order by 1`)).rows,
+    );
+  });
+
+  it('records the latest run of each source that succeeded or was partial, as the scan found it', async () => {
+    const database = await sources('alpha', 'beta');
+    try {
+      const steps: Parameters<typeof publish>[] = [
+        [[home('a1', { observedAt: now() })], { source: 'alpha', database }],
+        [[home('b1', { observedAt: now() })], { source: 'beta', database }],
+        [[home('a2', { observedAt: now() })], { source: 'alpha', database }],
+        [
+          [home('a3', { observedAt: now() })],
+          { source: 'alpha', status: 'failed', database },
+        ],
+        [
+          [home('b1', { observedAt: now() })],
+          { source: 'beta', status: 'partial', database },
+        ],
+      ];
+      for (const step of steps) {
+        await publish(...step);
+        const recorded = await database.query(
+          'select source_id,latest_run_id id from hs.source_policies where latest_run_id is not null order by 1',
+        );
+        expect(recorded.rows).toEqual(
+          (await database.query(`select * from (${OLD_LATEST}) x order by 1`))
+            .rows,
+        );
+      }
+      const fresh = await database.query<{ id: string; fresh: boolean }>(
+        `select l.source_listing_id id,l.first_seen_run_id=p.latest_run_id fresh
+         from hs.listings l join hs.source_policies p on p.source_id=l.source_id order by 1`,
+      );
+      expect(fresh.rows).toEqual([
+        { id: 'a1', fresh: false },
+        { id: 'a2', fresh: true },
+        { id: 'b1', fresh: false },
+      ]);
+    } finally {
+      await database.close();
+    }
+  });
+
+  it('leaves a delisted home untouched on later full reads until a run sees it again', async () => {
+    const database = await sources('alpha');
+    try {
+      const read = (seen: string[]) =>
+        publish([home('kept', { observedAt: now() })], {
+          database,
+          seen,
+          fullRead: true,
+        });
+      const gone = async () =>
+        (
+          await database.query<{
+            version: string;
+            missed: number;
+            delisted: boolean;
+            changes: string[];
+          }>(
+            `select l.xmin::text version,l.missed_full_reads missed,l.delisted_at is not null delisted,
+              array(select field from hs.listing_changes c where c.listing_id=l.id order by c.id) changes
+             from hs.listings l where source_listing_id='gone'`,
+          )
+        ).rows[0];
+      await publish(
+        [
+          home('kept', { observedAt: now() }),
+          home('gone', { observedAt: now() }),
+        ],
+        { database },
+      );
+      await read(['kept']);
+      await read(['kept']);
+      const delisted = await gone();
+      expect(delisted).toMatchObject({
+        missed: 2,
+        delisted: true,
+        changes: ['delisted'],
+      });
+      await read(['kept']);
+      await read(['kept']);
+      expect(await gone()).toEqual(delisted);
+      await read(['kept', 'gone']);
+      expect(await gone()).toMatchObject({
+        missed: 0,
+        delisted: false,
+        changes: ['delisted', 'relisted'],
+      });
+    } finally {
+      await database.close();
+    }
+  });
+});
+
 describe('catalog administration and grants', () => {
   it('sets source policies and issues and revokes credentials without a household', async () => {
     const created = await rpc(
