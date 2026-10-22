@@ -12,10 +12,10 @@ spec from a new conversation without a pasted implementation prompt.
 
 ## Local development
 
-Install dependencies, then start the Vite development server:
+Install the locked dependencies, then start the Vite development server:
 
 ```sh
-npm install
+npm ci
 npm run dev
 ```
 
