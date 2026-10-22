@@ -36,6 +36,9 @@ const PHOTO_VALID_MS = 7 * 24 * 60 * 60 * 1000;
 // Ids seen: OBJ followed by letters and digits, and for some homes an underscore and digits.
 const ESTATE_ID = /^[A-Za-z0-9_]{6,40}$/;
 const SLUG = /^[a-z0-9-]{1,120}$/;
+/** An image's path on the storage host, as the adapter rebuilds its address: a bucket, folders and a file name. */
+export const STADSHEM_IMAGE_KEY =
+  /^[a-z0-9_-]{3,63}(?:\/[A-Za-z0-9_-]{1,100}){1,6}\.(?:jpe?g|png|webp)$/;
 
 const HOUSE_TYPES = /^(?:villa|radhus|hus|parhus|kedjehus|fritidshus)/;
 function propertyTypeOf(type: unknown) {
@@ -231,12 +234,37 @@ const TENURE: Record<string, Facts['tenure']> = {
   hyresrätt: 'rental',
 };
 
+/** The key of an image's medium size, or undefined when it is not a plain path on the storage host. */
+function imageKeyOf(image: unknown): string | undefined {
+  const medium = record(record(image).sizes).medium;
+  if (typeof medium !== 'string' || !medium.startsWith(`${PHOTO_ORIGIN}/`))
+    return undefined;
+  const key = medium.slice(PHOTO_ORIGIN.length + 1);
+  return key.length <= 200 && STADSHEM_IMAGE_KEY.test(key) ? key : undefined;
+}
+
+/** Up to four photos in record order (the first is the primary image) and the first floor plan. */
+function imageKeysOf(images: Rec): Pick<DetailFacts, 'photoKeys' | 'planKey'> {
+  const other = Array.isArray(images.other) ? images.other : [];
+  const photoKeys = other
+    .map(imageKeyOf)
+    .filter((key) => key !== undefined)
+    .slice(0, 4);
+  const planKey = imageKeyOf(
+    Array.isArray(images.floorPlans) ? images.floorPlans[0] : undefined,
+  );
+  return {
+    ...(photoKeys.length > 0 ? { photoKeys } : {}),
+    ...(planKey === undefined ? {} : { planKey }),
+  };
+}
+
 export type StadshemDetailRead =
   | { kind: 'detail'; facts: DetailFacts }
   | { kind: 'failed'; reason: PageFailure };
 
 /**
- * Estate record: floor, lift and tenure. A missing value is unknown, and only a yes counts for a lift.
+ * Estate record: floor, lift, tenure and image keys. A missing value is unknown, and only a yes counts for a lift.
  * Descriptions, agent and association text are read past and dropped. Balcony and glazing have no
  * structured field, so they stay unknown.
  */
@@ -266,6 +294,7 @@ export function readStadshemDetailPage(body: string): StadshemDetailRead {
       groundFloor: groundFloorOf(levels.floor),
       lift: levels.elevator === 'Yes' ? true : null,
       ...(tenure === undefined ? {} : { tenure }),
+      ...imageKeysOf(record(record(data).images)),
     },
   };
 }

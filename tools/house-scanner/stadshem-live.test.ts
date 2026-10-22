@@ -1,13 +1,22 @@
 import { runCollection, USER_AGENT } from '@house-scanner-tools/live-reader';
+import { assertAdapterOutput } from '@house-scanner-tools/live-run';
 import {
   deps,
   fakeFetch,
   type Reply,
 } from '@house-scanner-tools/live-test-helpers';
 import { parseRobots, robotsAllows } from '@house-scanner-tools/robots';
+import { emptyMemory } from '@house-scanner-tools/run-memory';
 import { stadshemAdapter } from '@house-scanner-tools/source-adapters';
 import { sourceRegistry } from '@house-scanner-tools/source-registry';
-import { estate, list, record } from '@house-scanner-tools/stadshem-test-pages';
+import {
+  estate,
+  imageKey,
+  images,
+  list,
+  PHOTO_HOST,
+  record,
+} from '@house-scanner-tools/stadshem-test-pages';
 import { describe, expect, it } from 'vitest';
 import { assertSourceAllowed } from '@/features/house-scanner/utils/source-policy';
 
@@ -193,6 +202,38 @@ describe('Stadshem guarded run', () => {
     // The list gave the position and the photo; the record does not replace them.
     expect(first.coordinates?.source).toBe('stadshem-estates');
     expect(first.photo).not.toBeNull();
+  });
+
+  it('adds up to three more photos and the floor plan from the record, and keeps them for a home read from memory', async () => {
+    const url = (name: string) => `${PHOTO_HOST}/${imageKey(name)}`;
+    const expected = {
+      photo: { url: url('A1'), attribution: 'Stadshem' },
+      morePhotos: ['A2', 'A3', 'A4'].map((name) => ({ url: url(name) })),
+      floorPlan: { url: url('PLAN1'), attribution: 'Stadshem' },
+    };
+    const detail = () => ({
+      body: record({ images: images(['A1', 'A2', 'A3', 'A4', 'A5']) }),
+    });
+    const memory = emptyMemory();
+    const read = await run(
+      goteborg,
+      deps(fakeFetch(site(1, 100, detail)).impl),
+      (all) => all,
+      memory,
+    );
+    expect(read.observations[0]).toMatchObject(expected);
+    assertAdapterOutput(stadshem().policy, read.observations[0]);
+
+    // An hour later, by the next run's clock, the remembered record is still fresh.
+    for (const entry of Object.values(memory.details))
+      entry.readAt = new Date(
+        Date.parse(entry.readAt) - 3_600_000,
+      ).toISOString();
+    const again = fakeFetch(site(1, 100));
+    const cached = await run(goteborg, deps(again.impl), (all) => all, memory);
+    expect(again.calls.filter((call) => isRecord(call.url))).toHaveLength(0);
+    expect(cached).toMatchObject({ detailCached: 1 });
+    expect(cached.observations[0]).toMatchObject(expected);
   });
 });
 

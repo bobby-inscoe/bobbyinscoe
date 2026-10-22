@@ -58,3 +58,26 @@ export function record(over: Record<string, unknown> = {}) {
     ...over,
   });
 }
+
+// The record's images block: `other` holds the photos in page order, the first being the primary image.
+export const imageKey = (name: string) =>
+  `example-bucket/estate/2026/01/${name}-1000x667.jpg`;
+const image = (name: string) => ({
+  id: 1,
+  sizes: {
+    thumbnail: `${PHOTO_HOST}/example-bucket/estate/2026/01/${name}-300x300.jpg`,
+    medium: `${PHOTO_HOST}/${imageKey(name)}`,
+    full: `${PHOTO_HOST}/example-bucket/estate/2026/01/${name}.jpg`,
+  },
+  aspect_ratio: 1.5,
+  text: '',
+});
+
+export function images(photos: string[], plans: string[] = ['PLAN1']) {
+  return {
+    primary: photos[0] === undefined ? undefined : image(photos[0]),
+    other: photos.map(image),
+    floorPlans: plans.map(image),
+    facadeIllustration: [],
+  };
+}

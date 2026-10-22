@@ -47,6 +47,7 @@ import {
 import {
   readStadshemDetailPage,
   readStadshemSearchPage,
+  STADSHEM_IMAGE_KEY,
 } from '@house-scanner-tools/stadshem-parser';
 import {
   readSvenskfastDetailPage,
@@ -211,6 +212,18 @@ export const stadshemAdapter: SourceAdapter = {
   // People open the public page; floor and lift are read from the estate's own record.
   detailUrl: (observation) =>
     `${STADSHEM_ORIGIN}/api/estates/${observation.sourceListingId}`,
+  imagesFor(facts, observedAt) {
+    const url = (key: string | undefined) =>
+      key !== undefined && STADSHEM_IMAGE_KEY.test(key)
+        ? `${STADSHEM_IMAGE_ORIGIN}/${key}`
+        : undefined;
+    return imagesOf(
+      (facts.photoKeys ?? []).map(url).filter((u) => u !== undefined),
+      url(facts.planKey),
+      'Stadshem',
+      observedAt,
+    );
+  },
   readSearchPage: readStadshemSearchPage,
   readDetailPage: readStadshemDetailPage,
 };
