@@ -1,4 +1,4 @@
-import { Button, Stack, Text, Textarea, TextInput, Title } from '@mantine/core';
+import { Button, Stack, Text, Textarea, TextInput } from '@mantine/core';
 import { useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import {
@@ -77,9 +77,6 @@ export function ManualListingForm({
   return (
     <form onSubmit={submit} noValidate>
       <Stack maw="36rem">
-        <Title order={2}>
-          <FormattedMessage id="listings.addLink.addAListingLink" />
-        </Title>
         <Text size="sm" c="dimmed">
           <FormattedMessage id="listings.addLink.savesTheLinkWithoutOpeningThePageTheTitle" />
         </Text>

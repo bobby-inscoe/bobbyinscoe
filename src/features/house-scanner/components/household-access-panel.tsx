@@ -2,6 +2,7 @@ import {
   Alert,
   Badge,
   Button,
+  Divider,
   Group,
   Modal,
   Paper,
@@ -164,210 +165,233 @@ export function HouseholdAccessPanel({
           <FormattedMessage id="settings.household.household" />
         </Title>
         {error && <Alert role="alert">{formatFeedback(intl, error)}</Alert>}
-        {owner ? (
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              void perform('rename', async () => {
-                await actions.current.rename(name);
-                await load();
-              });
-            }}
-            noValidate
+        <Stack gap="xs">
+          {owner ? (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void perform('rename', async () => {
+                  await actions.current.rename(name);
+                  await load();
+                });
+              }}
+              noValidate
+            >
+              <Group align="flex-end" wrap="nowrap" maw="30rem">
+                <TextInput
+                  flex={1}
+                  miw={0}
+                  label={intl.formatMessage({
+                    id: 'settings.household.householdName',
+                  })}
+                  required
+                  maxLength={80}
+                  value={name}
+                  disabled={pending === 'rename'}
+                  onChange={(event) => setName(event.currentTarget.value)}
+                />
+                <Button
+                  type="submit"
+                  variant="default"
+                  loading={pending === 'rename'}
+                  disabled={name.trim() === data.name}
+                >
+                  <FormattedMessage id="settings.household.rename" />
+                </Button>
+              </Group>
+            </form>
+          ) : (
+            <Text>{data.name}</Text>
+          )}
+        </Stack>
+        <Stack gap="xs" mt="sm">
+          <Title order={3}>
+            <FormattedMessage id="settings.household.members" />
+          </Title>
+          <Text size="sm" c="dimmed">
+            <FormattedMessage
+              id="settings.household.of10MemberPlacesUsed"
+              values={{
+                value0: messageValue(
+                  data.members.filter((member) => member.active).length,
+                ),
+              }}
+            />
+          </Text>
+          <Stack
+            gap="xs"
+            component="ul"
+            p={0}
+            m={0}
+            style={{ listStyle: 'none' }}
           >
-            <Group align="flex-end">
-              <TextInput
-                label={intl.formatMessage({
-                  id: 'settings.household.householdName',
-                })}
-                required
-                maxLength={80}
-                value={name}
-                disabled={pending === 'rename'}
-                onChange={(event) => setName(event.currentTarget.value)}
-              />
-              <Button
-                type="submit"
-                variant="default"
-                loading={pending === 'rename'}
-                disabled={name.trim() === data.name}
-              >
-                <FormattedMessage id="settings.household.rename" />
-              </Button>
-            </Group>
-          </form>
-        ) : (
-          <Text>{data.name}</Text>
-        )}
-
-        <Title order={3}>
-          <FormattedMessage id="settings.household.members" />
-        </Title>
-        <Text size="sm" c="dimmed">
-          <FormattedMessage
-            id="settings.household.of10MemberPlacesUsed"
-            values={{
-              value0: messageValue(
-                data.members.filter((member) => member.active).length,
-              ),
-            }}
-          />
-        </Text>
-        <Stack
-          gap="xs"
-          component="ul"
-          p={0}
-          m={0}
-          style={{ listStyle: 'none' }}
-        >
-          {data.members
-            .filter((member) => member.active)
-            .map((member) => (
-              <Group component="li" key={member.userId} gap="xs" wrap="wrap">
-                <Text>
-                  {member.displayName}
-                  {member.userId === userId
-                    ? intl.formatMessage({ id: 'common.youSuffix' })
-                    : ''}
-                </Text>
-                {member.role === 'owner' && (
-                  <Badge variant="light">
-                    <FormattedMessage id="settings.household.owner" />
-                  </Badge>
-                )}
-                {owner && member.userId !== userId && (
-                  <>
-                    {member.role === 'member' && (
+            {data.members
+              .filter((member) => member.active)
+              .map((member) => (
+                <Group
+                  component="li"
+                  key={member.userId}
+                  gap="sm"
+                  justify="space-between"
+                  wrap="wrap"
+                  py="xs"
+                >
+                  <Group gap="xs" style={{ flex: '1 1 12rem', minWidth: 0 }}>
+                    <Text style={{ overflowWrap: 'anywhere' }}>
+                      {member.displayName}
+                      {member.userId === userId
+                        ? intl.formatMessage({ id: 'common.youSuffix' })
+                        : ''}
+                    </Text>
+                    {member.role === 'owner' && (
+                      <Badge
+                        variant="light"
+                        styles={{ label: { lineHeight: 1 } }}
+                      >
+                        <FormattedMessage id="settings.household.owner" />
+                      </Badge>
+                    )}
+                  </Group>
+                  {owner && member.userId !== userId && (
+                    <Group gap="xs" ml="auto">
+                      {member.role === 'member' && (
+                        <Button
+                          size="xs"
+                          variant="default"
+                          loading={pending === `owner:${member.userId}`}
+                          onClick={() =>
+                            void perform(`owner:${member.userId}`, async () => {
+                              await actions.current.makeOwner(member.userId);
+                              await load();
+                            })
+                          }
+                        >
+                          <FormattedMessage id="settings.household.makeOwner" />
+                        </Button>
+                      )}
                       <Button
                         size="xs"
-                        variant="default"
-                        loading={pending === `owner:${member.userId}`}
-                        onClick={() =>
-                          void perform(`owner:${member.userId}`, async () => {
-                            await actions.current.makeOwner(member.userId);
-                            await load();
-                          })
-                        }
-                      >
-                        <FormattedMessage id="settings.household.makeOwner" />
-                      </Button>
-                    )}
-                    <Button
-                      size="xs"
-                      variant="subtle"
-                      color="red"
-                      loading={pending === `remove:${member.userId}`}
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            intl.formatMessage(
-                              {
-                                id: 'settings.household.removeFromThisHouseholdTheirSavesAndNotesStay',
-                              },
-                              { value0: messageValue(member.displayName) },
-                            ),
+                        variant="subtle"
+                        color="red"
+                        loading={pending === `remove:${member.userId}`}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              intl.formatMessage(
+                                {
+                                  id: 'settings.household.removeFromThisHouseholdTheirSavesAndNotesStay',
+                                },
+                                { value0: messageValue(member.displayName) },
+                              ),
+                            )
                           )
-                        )
-                          void perform(`remove:${member.userId}`, async () => {
-                            await actions.current.deactivate(member.userId);
-                            await load();
-                          });
-                      }}
-                    >
-                      <FormattedMessage id="common.remove" />
-                    </Button>
-                  </>
-                )}
-              </Group>
-            ))}
+                            void perform(
+                              `remove:${member.userId}`,
+                              async () => {
+                                await actions.current.deactivate(member.userId);
+                                await load();
+                              },
+                            );
+                        }}
+                      >
+                        <FormattedMessage id="common.remove" />
+                      </Button>
+                    </Group>
+                  )}
+                </Group>
+              ))}
+          </Stack>
         </Stack>
-
-        <Title order={3}>
-          <FormattedMessage id="settings.household.invitePeople" />
-        </Title>
-        {inviteForm(
-          'create',
-          intl.formatMessage({
-            id: 'settings.household.inviteSomeoneToStartTheirOwnHousehold',
-          }),
-          intl.formatMessage({
-            id: 'settings.household.theirHouseholdSharesNothingWithYours',
-          }),
-        )}
-        {owner &&
-          inviteForm(
-            'join',
+        <Stack gap="md" mt="sm">
+          <Title order={3}>
+            <FormattedMessage id="settings.household.invitePeople" />
+          </Title>
+          {inviteForm(
+            'create',
             intl.formatMessage({
-              id: 'settings.household.inviteSomeoneToJoinThisHousehold',
+              id: 'settings.household.inviteSomeoneToStartTheirOwnHousehold',
             }),
             intl.formatMessage({
-              id: 'settings.household.onlySomeoneWhoSignsInWithThisEmailCan',
+              id: 'settings.household.theirHouseholdSharesNothingWithYours',
             }),
           )}
-        {notice && <Alert role="status">{formatFeedback(intl, notice)}</Alert>}
-        {owner && data.invitations.length > 0 && (
-          <Stack gap="xs">
-            <Text size="sm">
-              <FormattedMessage id="settings.household.pendingJoinLinks" />
-            </Text>
-            <Text size="sm" c="dimmed">
-              <FormattedMessage id="settings.household.lostAnInvitationCopyNewLinkMakesAFresh" />
-            </Text>
-            {data.invitations.map((invitation) => (
-              <Group key={invitation.id} gap="xs">
-                <Text size="sm">
-                  <FormattedMessage
-                    id="settings.household.until"
-                    values={{
-                      value0: messageValue(invitation.email),
-                      value1: messageValue(
-                        formatDate(invitation.expiresAt, intl),
-                      ),
-                    }}
-                  />
-                </Text>
-                <Button
-                  size="xs"
-                  variant="default"
-                  loading={pending === `renew:${invitation.id}`}
-                  onClick={() =>
-                    void perform(`renew:${invitation.id}`, async () => {
-                      const url = await actions.current.createLink(
-                        'join',
-                        invitation.email,
-                      );
-                      setNotice(
-                        (await copy(url))
-                          ? {
-                              id: 'settings.household.copiedANewLinkForTheEarlierOneNo',
-                              values: { value0: invitation.email },
-                            }
-                          : 'settings.household.theNewLinkCouldNotBeCopiedPressCopy',
-                      );
-                      await load();
-                    })
-                  }
-                >
-                  <FormattedMessage id="settings.household.copyNewLink" />
-                </Button>
-                <Button
-                  size="xs"
-                  variant="subtle"
-                  loading={pending === `revoke:${invitation.id}`}
-                  onClick={() =>
-                    void perform(`revoke:${invitation.id}`, async () => {
-                      await actions.current.revoke(invitation.id);
-                      await load();
-                    })
-                  }
-                >
-                  <FormattedMessage id="settings.household.revoke" />
-                </Button>
-              </Group>
-            ))}
-          </Stack>
-        )}
-
+          {owner &&
+            inviteForm(
+              'join',
+              intl.formatMessage({
+                id: 'settings.household.inviteSomeoneToJoinThisHousehold',
+              }),
+              intl.formatMessage({
+                id: 'settings.household.onlySomeoneWhoSignsInWithThisEmailCan',
+              }),
+            )}
+          {notice && (
+            <Alert role="status">{formatFeedback(intl, notice)}</Alert>
+          )}
+          {owner && data.invitations.length > 0 && (
+            <Stack gap="xs">
+              <Text size="sm">
+                <FormattedMessage id="settings.household.pendingJoinLinks" />
+              </Text>
+              <Text size="sm" c="dimmed">
+                <FormattedMessage id="settings.household.lostAnInvitationCopyNewLinkMakesAFresh" />
+              </Text>
+              {data.invitations.map((invitation) => (
+                <Group key={invitation.id} gap="xs">
+                  <Text size="sm">
+                    <FormattedMessage
+                      id="settings.household.until"
+                      values={{
+                        value0: messageValue(invitation.email),
+                        value1: messageValue(
+                          formatDate(invitation.expiresAt, intl),
+                        ),
+                      }}
+                    />
+                  </Text>
+                  <Button
+                    size="xs"
+                    variant="default"
+                    loading={pending === `renew:${invitation.id}`}
+                    onClick={() =>
+                      void perform(`renew:${invitation.id}`, async () => {
+                        const url = await actions.current.createLink(
+                          'join',
+                          invitation.email,
+                        );
+                        setNotice(
+                          (await copy(url))
+                            ? {
+                                id: 'settings.household.copiedANewLinkForTheEarlierOneNo',
+                                values: { value0: invitation.email },
+                              }
+                            : 'settings.household.theNewLinkCouldNotBeCopiedPressCopy',
+                        );
+                        await load();
+                      })
+                    }
+                  >
+                    <FormattedMessage id="settings.household.copyNewLink" />
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="subtle"
+                    loading={pending === `revoke:${invitation.id}`}
+                    onClick={() =>
+                      void perform(`revoke:${invitation.id}`, async () => {
+                        await actions.current.revoke(invitation.id);
+                        await load();
+                      })
+                    }
+                  >
+                    <FormattedMessage id="settings.household.revoke" />
+                  </Button>
+                </Group>
+              ))}
+            </Stack>
+          )}
+        </Stack>
+        <Divider mt="sm" />
         <Group>
           <Button
             variant="light"
