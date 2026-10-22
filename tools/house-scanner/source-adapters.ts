@@ -11,7 +11,11 @@ import {
   readErikOlssonDetailPage,
   readErikOlssonSearchPage,
 } from '@house-scanner-tools/erik-olsson-parser';
-import { readHusmanHagbergSearchPage } from '@house-scanner-tools/husman-hagberg-parser';
+import {
+  HUSMAN_HAGBERG_IMAGE_KEY,
+  readHusmanHagbergDetailPage,
+  readHusmanHagbergSearchPage,
+} from '@house-scanner-tools/husman-hagberg-parser';
 import {
   type LivePartitionInput,
   type SourceAdapter,
@@ -250,12 +254,15 @@ export const lundinAdapter: SourceAdapter = {
 
 // One text search for the municipality name, asked for 200 homes a page so the whole answer is one request.
 // The list is served from the API host the site's own pages call. It has no robots.txt (404), so the run
-// asks the robots.txt of the site, whose rules cover the path.
+// asks the robots.txt of the site, whose rules cover the list path and the estate pages on the site itself.
 const HUSMAN_HAGBERG_SEARCHES: Record<string, string> = {
   göteborg: 'G%C3%B6teborg',
 };
 const HUSMAN_HAGBERG_LIST =
   'https://api.husmanhagberg.se/object/api/objects?ps=200&regX=';
+// Sizes the media host already serves: list2x is the list's lead photo, full is large enough to read a plan.
+const HUSMAN_HAGBERG_PHOTO_SIZE = '672x448';
+const HUSMAN_HAGBERG_PLAN_SIZE = '1410x940';
 
 export const husmanHagbergAdapter: SourceAdapter = {
   sourceId: HUSMAN_HAGBERG_SOURCE_ID,
@@ -265,15 +272,13 @@ export const husmanHagbergAdapter: SourceAdapter = {
   imageOrigin: HUSMAN_HAGBERG_IMAGE_ORIGIN,
   headers: {
     'user-agent': USER_AGENT,
-    // robots.txt is asked with the same headers, so plain text stays acceptable.
-    accept: 'application/json, text/plain;q=0.9',
+    // The list is JSON and estate pages are HTML; robots.txt is asked with the same headers.
+    accept: 'application/json, text/html;q=0.9, text/plain;q=0.8',
     'accept-language': 'sv-SE,sv;q=0.9,en;q=0.8',
   },
   coordinateSource: 'husman-hagberg-list',
-  detailLabel: 'Home pages',
+  detailLabel: 'Estate pages',
   notCovered: 'Not covered: other cities, lift, balcony and glazing.',
-  // The list already holds everything, so the run is one request.
-  listOnly: true,
   partitionUrl(partition: LivePartitionInput) {
     const search =
       HUSMAN_HAGBERG_SEARCHES[partition.municipality.trim().toLowerCase()];
@@ -281,9 +286,24 @@ export const husmanHagbergAdapter: SourceAdapter = {
       ? { unsupported: 'municipality-path-unproven' }
       : `${HUSMAN_HAGBERG_LIST}${search}`;
   },
+  imagesFor(facts, observedAt) {
+    const url = (key: string, size: string) =>
+      `${HUSMAN_HAGBERG_IMAGE_ORIGIN}/images/${key}-${size}.jpg`;
+    const plan = facts.planKey;
+    return imagesOf(
+      (facts.photoKeys ?? [])
+        .filter((key) => HUSMAN_HAGBERG_IMAGE_KEY.test(key))
+        .map((key) => url(key, HUSMAN_HAGBERG_PHOTO_SIZE)),
+      plan !== undefined && HUSMAN_HAGBERG_IMAGE_KEY.test(plan)
+        ? url(plan, HUSMAN_HAGBERG_PLAN_SIZE)
+        : undefined,
+      'Husman Hagberg',
+      observedAt,
+    );
+  },
   readSearchPage: readHusmanHagbergSearchPage,
-  // Never called: the run reads no home pages.
-  readDetailPage: () => ({ kind: 'failed', reason: 'unexpected-shape' }),
+  // Each kept home's public estate page (its sourceUrl), for photos and the floor plan.
+  readDetailPage: readHusmanHagbergDetailPage,
 };
 
 // The municipality list page; later pages add ?p=N, which robots.txt allows (it disallows other query strings).

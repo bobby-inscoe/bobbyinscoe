@@ -1,15 +1,20 @@
 import {
+  estateImage,
+  estatePage,
   hhHome,
   hhList,
+  media,
   numbered,
 } from '@house-scanner-tools/husman-hagberg-test-pages';
 import { runCollection, USER_AGENT } from '@house-scanner-tools/live-reader';
+import { assertAdapterOutput } from '@house-scanner-tools/live-run';
 import {
   deps,
   fakeFetch,
   type Reply,
 } from '@house-scanner-tools/live-test-helpers';
 import { parseRobots, robotsAllows } from '@house-scanner-tools/robots';
+import { emptyMemory } from '@house-scanner-tools/run-memory';
 import { husmanHagbergAdapter } from '@house-scanner-tools/source-adapters';
 import { sourceRegistry } from '@house-scanner-tools/source-registry';
 import { describe, expect, it } from 'vitest';
@@ -41,7 +46,7 @@ const site =
       : { body: hhList(homes, count), type: 'application/json' };
 
 describe('Husman Hagberg guarded run', () => {
-  it('makes exactly two requests, robots.txt and the list, with the honest user agent and a JSON Accept header', async () => {
+  it('makes two requests, robots.txt and the list, when no home is kept, with the honest user agent and a JSON Accept header', async () => {
     const { impl, calls } = fakeFetch(site([numbered(1), numbered(2)]));
     const result = await run(goteborg, deps(impl));
     expect(calls.map((call) => call.url)).toEqual([
@@ -67,17 +72,44 @@ describe('Husman Hagberg guarded run', () => {
     });
   });
 
-  it('reads no home page even when every home is kept', async () => {
-    const { impl, calls } = fakeFetch(site([numbered(1), numbered(2)]));
-    const result = await run(goteborg, deps(impl), (all) => all);
-    expect(calls).toHaveLength(2);
-    expect(result).toMatchObject({
-      detailRead: 0,
-      detailFailed: 0,
-      detailSkipped: 0,
-      stopped: null,
-    });
-    expect(result.observations[0].facts.lift).toBeNull();
+  it('reads the estate page of each kept home once for its gallery, and reuses it from memory', async () => {
+    const page = estatePage(
+      ['MEDP1', 'MEDP2', 'MEDP3', 'MEDP4', 'MEDP5'].map((id) =>
+        estateImage(id),
+      ),
+      [estateImage('MEDPLAN1', 'Planritningar')],
+    );
+    const estate =
+      'https://www.husmanhagberg.se/estate/OBJ0000000000000000001/';
+    const reply = (url: string): Reply =>
+      url === estate ? { body: page } : site([numbered(1)])(url);
+    const expected = {
+      photo: { url: media('MEDP1'), attribution: 'Husman Hagberg' },
+      morePhotos: ['MEDP2', 'MEDP3', 'MEDP4'].map((id) => ({ url: media(id) })),
+      floorPlan: { url: media('MEDPLAN1', '1410x940') },
+    };
+    const memory = emptyMemory();
+    const first = fakeFetch(reply);
+    const read = await run(goteborg, deps(first.impl), (all) => all, memory);
+    expect(first.calls.map((call) => call.url)).toEqual([
+      'https://www.husmanhagberg.se/robots.txt',
+      LIST,
+      estate,
+    ]);
+    expect(read).toMatchObject({ detailRead: 1, stopped: null });
+    expect(read.observations[0]).toMatchObject(expected);
+    assertAdapterOutput(husmanHagberg().policy, read.observations[0]);
+
+    // An hour later, by the next run's clock, the remembered page is still fresh.
+    for (const entry of Object.values(memory.details))
+      entry.readAt = new Date(
+        Date.parse(entry.readAt) - 3_600_000,
+      ).toISOString();
+    const again = fakeFetch(reply);
+    const cached = await run(goteborg, deps(again.impl), (all) => all, memory);
+    expect(again.calls).toHaveLength(2);
+    expect(cached).toMatchObject({ detailCached: 1, detailRead: 0 });
+    expect(cached.observations[0]).toMatchObject(expected);
   });
 
   it('keeps only the partition municipality from a list that matched by text', async () => {
