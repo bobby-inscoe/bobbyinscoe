@@ -42,6 +42,22 @@ palette and its font (Nunito Sans, in `src/assets/fonts/nunito-sans/`) inside
 its scope. The workshop and Duck Feed keep their own stylesheets, scoped
 to their root class.
 
+## Shellter translations
+
+`src/features/house-scanner/i18n/` owns Shellter's React Intl provider,
+local language preference, and translations. `en.ts` and `sv.ts` export matching
+nested language objects. Their shapes are composed from separate capability
+types under `i18n/types/`. Keys stay in English in both languages, with paths
+such as `listings.list`, `listings.map`, `viewings`, `settings.criteria` and
+`common`. `catalogs.ts` flattens those objects once for React Intl.
+
+Use `FormattedMessage` for JSX text and `useIntl().formatMessage` for strings.
+Store message IDs and values in feedback state so existing messages can change
+language. Pass the active intl object to presentation helpers. Domain values,
+user content, broker text, and legal attribution keep their original values.
+The provider wraps only Shellter, and `shellter.language` is independent of
+household data and authentication storage.
+
 ## Routing
 
 `src/app/router.ts` creates the root route and composes the workshop, Duck Feed,

@@ -1,7 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
-
 import {
   addManual,
   clearOwnedSessionStorage,
@@ -29,6 +28,7 @@ import {
   setRememberDevice,
   updateManual,
 } from '@/features/house-scanner/api/household-client';
+import { MessageError } from '@/features/house-scanner/i18n/catalogs';
 import type {
   ManualEdit,
   ManualSubmission,
@@ -130,8 +130,7 @@ export function useHouseholdSession() {
     } catch {
       return {
         client: null,
-        error:
-          'Browser storage is unavailable. Allow site storage, then reload to sign in.',
+        error: 'errors.browserStorageIsUnavailableAllowSiteStorageThenReload',
       };
     }
   });
@@ -211,7 +210,7 @@ export function useHouseholdSession() {
           scope: 'local',
         });
         if (signOutError && mounted.current && ticket === generation.current)
-          fail('Session changed. Sign out and try again.');
+          fail('errors.sessionChangedSignOutAndTryAgain');
         return;
       }
       userId.current = user.id;
@@ -224,7 +223,7 @@ export function useHouseholdSession() {
       const own = start.memberships;
       if (!mounted.current || ticket !== generation.current) return;
       if (own.some((member) => member.userId !== user.id))
-        throw new Error('Membership belongs to another account.');
+        throw new Error('errors.membershipBelongsToAnotherAccount');
       if (own.length === 0) {
         householdId.current = null;
         forget();
@@ -265,7 +264,7 @@ export function useHouseholdSession() {
       }
     } catch {
       if (mounted.current && ticket === generation.current)
-        fail('Could not load your household. Retry or sign out.');
+        fail('errors.couldNotLoadYourHouseholdRetryOrSignOut');
     }
   }, [client, fail, forget]);
   // The full load: who is signed in, then the households and the snapshot in one request. It runs once per session
@@ -310,7 +309,7 @@ export function useHouseholdSession() {
       } catch (error) {
         if (quiet) throw error;
         if (mounted.current && ticket === generation.current)
-          fail('Could not load your household. Retry or sign out.');
+          fail('errors.couldNotLoadYourHouseholdRetryOrSignOut');
       }
     },
     [client, fail],
@@ -338,9 +337,7 @@ export function useHouseholdSession() {
         try {
           clearOwnedSessionStorage();
         } catch {
-          fail(
-            'Signed out, but browser storage could not be cleared. Close this tab and clear site data.',
-          );
+          fail('errors.signedOutButBrowserStorageCouldNotBeCleared');
         }
       } else if (
         session &&
@@ -363,13 +360,11 @@ export function useHouseholdSession() {
         try {
           clearOwnedSessionStorage();
         } catch {
-          fail(
-            'Session changed, but browser storage could not be cleared. Close this tab and clear site data.',
-          );
+          fail('errors.sessionChangedButBrowserStorageCouldNotBeCleared');
         }
         queueMicrotask(() => {
           void client.auth.signOut({ scope: 'local' }).then(({ error }) => {
-            if (error) fail('Session changed. Sign out and try again.');
+            if (error) fail('errors.sessionChangedSignOutAndTryAgain');
           });
         });
       } else if (
@@ -428,54 +423,50 @@ export function useHouseholdSession() {
     code: string,
     remember: boolean,
   ) {
-    if (!client) throw new Error('Private access is not configured.');
+    if (!client) throw new Error('errors.privateAccessIsNotConfigured');
     const address = z.email().max(254).safeParse(login.trim());
     if (!address.success || code.length < 6 || code.length > 72)
-      throw new Error('Enter your email and password.');
+      throw new Error('errors.enterYourEmailAndPassword');
     setRememberDevice(remember);
     const { error } = await client.auth.signInWithPassword({
       email: address.data,
       password: code,
     });
-    if (error) throw new Error('The email or password was not accepted.');
+    if (error) throw new Error('errors.theEmailOrPasswordWasNotAccepted');
     await (inflight.current ?? refresh());
   }
   // The answer is the same whether or not the address has an account.
   async function requestPasswordReset(email: string) {
-    if (!client) throw new Error('Private access is not configured.');
+    if (!client) throw new Error('errors.privateAccessIsNotConfigured');
     const address = z.email().max(254).safeParse(email.trim());
-    if (!address.success) throw new Error('Enter your email.');
+    if (!address.success) throw new Error('errors.enterYourEmail');
     // Auth only returns to allow-listed URLs, still on the old path; the app redirects it to /shellter.
     await client.auth.resetPasswordForEmail(address.data, {
       redirectTo: `${window.location.origin}/projects/house-scanner/listings`,
     });
   }
   async function setPassword(password: string) {
-    if (!client) throw new Error('Private access is not configured.');
+    if (!client) throw new Error('errors.privateAccessIsNotConfigured');
     if (password.length < 8 || password.length > 72)
-      throw new Error('Choose a password of 8 to 72 characters.');
+      throw new Error('errors.chooseAPasswordOf8To72Characters');
     const { error } = await client.auth.updateUser({ password });
     if (error)
-      throw new Error(
-        'The password could not be saved. Choose a different one or ask for a fresh link.',
-      );
+      throw new Error('errors.thePasswordCouldNotBeSavedChooseADifferent');
     setPasswordSetup(null);
   }
   // The link is the invitation: the server creates the account for its email, then this signs in with the same
   // password. An address that already has an account only gets in when the password is its own.
   async function createAccount(value: string, email: string, password: string) {
-    if (!client) throw new Error('Private access is not configured.');
+    if (!client) throw new Error('errors.privateAccessIsNotConfigured');
     if (password.length < 8 || password.length > 72)
-      throw new Error('Choose a password of 8 to 72 characters.');
+      throw new Error('errors.chooseAPasswordOf8To72Characters');
     await invokeInvite(client, value, email, password);
     const { error } = await client.auth.signInWithPassword({
       email: email.trim(),
       password,
     });
     if (error)
-      throw new Error(
-        'That email already has an account. Sign in below with its password.',
-      );
+      throw new Error('errors.thatEmailAlreadyHasAnAccountSignInBelow');
     await (inflight.current ?? refresh());
   }
   // Accepting a link adds a household to this account; the session then opens it.
@@ -484,7 +475,7 @@ export function useHouseholdSession() {
     householdName: string | null,
     displayName: string,
   ) {
-    if (!client) throw new Error('Private access is not configured.');
+    if (!client) throw new Error('errors.privateAccessIsNotConfigured');
     const household = await redeemInvitation(
       client,
       value,
@@ -507,9 +498,7 @@ export function useHouseholdSession() {
       if (client) {
         const { error } = await client.auth.signOut({ scope: 'local' });
         if (error)
-          throw new Error(
-            'Could not finish signing out. Close this tab and clear site data.',
-          );
+          throw new Error('errors.couldNotFinishSigningOutCloseThisTabAnd');
       }
     } finally {
       clearOwnedSessionStorage();
@@ -525,7 +514,7 @@ export function useHouseholdSession() {
       userId.current !== state.userId ||
       householdId.current !== state.snapshot.householdId
     )
-      throw new Error('Reload your household before making a change.');
+      throw new Error('errors.reloadYourHouseholdBeforeMakingAChange');
     const ticket = sessionGeneration.current;
     const owner = state.userId;
     const household = state.snapshot.householdId;
@@ -566,7 +555,7 @@ export function useHouseholdSession() {
       if (scope.active() && !patched(scope.userId, change)) await reload();
     } catch (error) {
       if (scope.active())
-        fail('The change could not be saved. Reload before trying again.');
+        fail('errors.theChangeCouldNotBeSavedReloadBeforeTrying');
       throw error;
     }
   }
@@ -618,7 +607,7 @@ export function useHouseholdSession() {
     const ids = [...new Set(listingIds)];
     const available = new Set(snapshot?.listings.map((listing) => listing.id));
     if (!snapshot || ids.length > 500 || ids.some((id) => !available.has(id)))
-      throw new Error('Select up to 500 homes that are still available.');
+      throw new Error('errors.selectUpTo500HomesThatAreStillAvailable');
     const owner = scope.userId;
     const existing = new Set(
       snapshot.favorites
@@ -632,23 +621,24 @@ export function useHouseholdSession() {
         await setFavorites(scope.client, scope.householdId, pending, true);
       } catch {
         if (scope.active()) await reload(true).catch(() => {});
-        throw new Error(
+        throw new MessageError(
           scope.active()
-            ? `The ${pending.length} new favorites could not be saved. Retry to save them.`
-            : 'Your session changed; saving stopped.',
+            ? 'errors.favoritesSaveFailed'
+            : 'errors.yourSessionChangedSavingStopped',
+          { count: pending.length },
         );
       }
     if (!scope.active())
-      throw new Error('Your session changed; saving stopped.');
+      throw new Error('errors.yourSessionChangedSavingStopped');
     // One snapshot refresh for the batch keeps server timestamps and concurrent changes authoritative.
     try {
       await reload(true);
     } catch {
-      throw new Error(
-        `Saved ${pending.length} new favorites, but the updated list could not load. Reload before retrying.`,
-      );
+      throw new MessageError('errors.favoritesReloadFailed', {
+        count: pending.length,
+      });
     }
-    if (!scope.active()) throw new Error('Your session changed.');
+    if (!scope.active()) throw new Error('errors.yourSessionChanged');
   }
   async function setPersonalHidden(listingIds: string[], hidden: boolean) {
     const scope = beginActive();
@@ -672,7 +662,7 @@ export function useHouseholdSession() {
         if (scope.active()) await reload(true);
       }
     }
-    if (!scope.active()) throw new Error('Your session changed.');
+    if (!scope.active()) throw new Error('errors.yourSessionChanged');
   }
   // Household settings for the open household. A change to members re-reads the snapshot, since cards name members;
   // leaving re-reads the memberships, since the household may no longer be one of them.
@@ -719,7 +709,7 @@ export function useHouseholdSession() {
     previewInvitation: (value: string) =>
       client
         ? previewInvitation(client, value)
-        : Promise.reject(new Error('Private access is not configured.')),
+        : Promise.reject(new Error('errors.privateAccessIsNotConfigured')),
     createAccount,
     access: accessActions(),
     selectHousehold: async (id: string) => {

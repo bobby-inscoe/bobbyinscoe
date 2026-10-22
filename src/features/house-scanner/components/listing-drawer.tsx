@@ -1,5 +1,6 @@
 import { Button, Drawer, Group, Stack, Text } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { FavoriteStar } from '@/features/house-scanner/components/favorite-star';
 import { HideButton } from '@/features/house-scanner/components/hide-button';
 import { ListingDetails } from '@/features/house-scanner/components/listing-details';
@@ -61,13 +62,19 @@ export function ListingDrawer({
   alsoOn,
   hideError,
 }: ListingDrawerProps) {
+  const intl = useIntl();
+
   const wide = useMediaQuery('(min-width: 48em)');
   return (
     <Drawer
       opened={opened}
       onClose={onClose}
       title={listing?.title}
-      closeButtonProps={{ 'aria-label': 'Close listing details' }}
+      closeButtonProps={{
+        'aria-label': intl.formatMessage({
+          id: 'listings.details.closeListingDetails',
+        }),
+      }}
       position={wide ? 'right' : 'bottom'}
       size={wide ? 'lg' : '85%'}
       classNames={{
@@ -104,14 +111,17 @@ export function ListingDrawer({
             (favorite) => favorite.listingId === listing.id,
           ) && (
             <Text size="sm">
-              Saved by{' '}
+              <FormattedMessage id="listings.details.savedBy" />{' '}
               {snapshot.favorites
                 .filter((favorite) => favorite.listingId === listing.id)
                 .map(
                   (favorite) =>
                     snapshot.members.find(
                       (member) => member.userId === favorite.userId,
-                    )?.displayName || 'Household member',
+                    )?.displayName ||
+                    intl.formatMessage({
+                      id: 'listings.details.householdMember',
+                    }),
                 )
                 .join(', ')}
             </Text>
@@ -121,7 +131,7 @@ export function ListingDrawer({
             <OriginalListingButton listing={listing} />
             {onSeeOnMap && hasPin(listing.coordinates) && (
               <Button size="xs" variant="default" onClick={onSeeOnMap}>
-                See on map
+                <FormattedMessage id="listings.details.seeOnMap" />
               </Button>
             )}
           </Group>

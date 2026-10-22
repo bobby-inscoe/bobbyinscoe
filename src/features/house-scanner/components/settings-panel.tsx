@@ -1,5 +1,5 @@
 import { Flex, Paper, Stack, Text, Title } from '@mantine/core';
-
+import { FormattedMessage } from 'react-intl';
 import { CriteriaHelp } from '@/features/house-scanner/components/criteria-help';
 import { HouseholdAccessPanel } from '@/features/house-scanner/components/household-access-panel';
 import { ProfileEditor } from '@/features/house-scanner/components/profile-editor';
@@ -29,12 +29,14 @@ export function SettingsPanel({
   const header = (
     <>
       <Flex gap="sm" align="center" wrap="wrap">
-        <Title order={2}>Default filter</Title>
+        <Title order={2}>
+          <FormattedMessage id="settings.criteria.defaultFilter" />
+        </Title>
         <CriteriaHelp />
       </Flex>
       {synthetic && (
         <Text size="sm" c="dimmed">
-          These criteria are fictional. Edits affect this demo only.
+          <FormattedMessage id="settings.criteria.theseCriteriaAreFictionalEditsAffectThisDemoOnly" />
         </Text>
       )}
     </>
@@ -55,7 +57,9 @@ export function SettingsPanel({
         <Paper>
           <Stack>
             {header}
-            <Text>No search profiles yet.</Text>
+            <Text>
+              <FormattedMessage id="settings.criteria.noSearchProfilesYet" />
+            </Text>
           </Stack>
         </Paper>
       )}

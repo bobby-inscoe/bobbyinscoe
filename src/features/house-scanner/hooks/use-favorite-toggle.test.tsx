@@ -2,7 +2,6 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import {
   deferred,
   fixtureSnapshot,
@@ -10,6 +9,7 @@ import {
   USER_ID,
 } from '@/features/house-scanner/api/session-test-helpers';
 import { useFavoriteToggle } from '@/features/house-scanner/hooks/use-favorite-toggle';
+import { MessageError } from '@/features/house-scanner/i18n/catalogs';
 import type { Snapshot } from '@/features/house-scanner/types/contracts';
 import type { HouseholdActions } from '@/features/house-scanner/types/household';
 
@@ -64,21 +64,21 @@ describe('useFavoriteToggle batch saves', () => {
     expect(result.current.tab).toBe('favorites');
     expect(result.current.batchBusy).toBe(true);
 
-    const error = new Error(
-      'Saved 1 of 2 new favorites. The next save could not be confirmed. Retry to finish saving.',
-    );
+    const error = new MessageError('errors.favoritesReloadFailed', {
+      count: 1,
+    });
     let succeeded: boolean | undefined;
     await act(async () => {
       batch.reject(error);
       succeeded = await saving;
     });
     expect(succeeded).toBe(false);
-    expect(result.current.message).toBe(error.message);
+    expect(result.current.message).toBe(error.feedback);
     expect(result.current.batchBusy).toBe(false);
     expect(result.current.tab).toBe('favorites');
 
     act(() => result.current.setTab('suggestions'));
-    expect(result.current.message).toBe(error.message);
+    expect(result.current.message).toBe(error.feedback);
   });
 
   it('keeps a bulk error when an earlier individual save finishes later', async () => {
@@ -96,20 +96,18 @@ describe('useFavoriteToggle batch saves', () => {
     });
     expect(props.onSaveFavorite).toHaveBeenCalledWith(first);
     expect(props.onSaveFavorites).toHaveBeenCalledWith([second]);
-    const error = new Error(
-      'The save could not be confirmed. Retry to finish saving.',
-    );
+    const error = new MessageError('errors.favoritesSaveFailed', { count: 1 });
     await act(async () => {
       batch.reject(error);
       await savingBatch;
     });
-    expect(result.current.message).toBe(error.message);
+    expect(result.current.message).toBe(error.feedback);
     await act(async () => {
       individual.resolve();
       await savingOne;
     });
     expect(result.current.pending).toEqual([]);
-    expect(result.current.message).toBe(error.message);
+    expect(result.current.message).toBe(error.feedback);
   });
 
   it('waits for a selected saved home to finish removal before retrying the whole selection', async () => {

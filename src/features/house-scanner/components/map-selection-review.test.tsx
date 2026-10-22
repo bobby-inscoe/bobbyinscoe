@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 import { MantineProvider } from '@mantine/core';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { IntlProvider } from 'react-intl';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { MapSelectionReview } from '@/features/house-scanner/components/map-selection-review';
+import { catalogs } from '@/features/house-scanner/i18n/catalogs';
 import { SYNTHETIC_SNAPSHOT } from '@/features/house-scanner/mock/synthetic-household';
 
 beforeEach(() => {
@@ -46,7 +48,14 @@ it('starts with saved homes unchecked and submits only the reviewed IDs', () => 
   const input = props();
   render(
     <MantineProvider>
-      <MapSelectionReview {...input} />
+      <IntlProvider
+        locale="en-GB"
+        defaultLocale="en-GB"
+        timeZone="Europe/Stockholm"
+        messages={catalogs.en}
+      >
+        <MapSelectionReview {...input} />
+      </IntlProvider>
     </MantineProvider>,
   );
   const saved = screen.getByRole('checkbox', {
@@ -72,7 +81,14 @@ it('cancel does not submit and a failed hide keeps the reviewed set', () => {
   const input = props();
   const { rerender } = render(
     <MantineProvider>
-      <MapSelectionReview {...input} />
+      <IntlProvider
+        locale="en-GB"
+        defaultLocale="en-GB"
+        timeZone="Europe/Stockholm"
+        messages={catalogs.en}
+      >
+        <MapSelectionReview {...input} />
+      </IntlProvider>
     </MantineProvider>,
   );
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
@@ -80,7 +96,14 @@ it('cancel does not submit and a failed hide keeps the reviewed set', () => {
   expect(input.onHide).not.toHaveBeenCalled();
   rerender(
     <MantineProvider>
-      <MapSelectionReview {...input} busy />
+      <IntlProvider
+        locale="en-GB"
+        defaultLocale="en-GB"
+        timeZone="Europe/Stockholm"
+        messages={catalogs.en}
+      >
+        <MapSelectionReview {...input} busy />
+      </IntlProvider>
     </MantineProvider>,
   );
   expect(
@@ -88,7 +111,14 @@ it('cancel does not submit and a failed hide keeps the reviewed set', () => {
   ).toBe(true);
   rerender(
     <MantineProvider>
-      <MapSelectionReview {...input} error="Try again" />
+      <IntlProvider
+        locale="en-GB"
+        defaultLocale="en-GB"
+        timeZone="Europe/Stockholm"
+        messages={catalogs.en}
+      >
+        <MapSelectionReview {...input} error="Try again" />
+      </IntlProvider>
     </MantineProvider>,
   );
   expect(screen.getByRole('alert').textContent).toContain('Try again');
@@ -107,15 +137,29 @@ it('does not add new results or submit homes removed while review is open', () =
   const input = props();
   const { rerender } = render(
     <MantineProvider>
-      <MapSelectionReview {...input} />
+      <IntlProvider
+        locale="en-GB"
+        defaultLocale="en-GB"
+        timeZone="Europe/Stockholm"
+        messages={catalogs.en}
+      >
+        <MapSelectionReview {...input} />
+      </IntlProvider>
     </MantineProvider>,
   );
   rerender(
     <MantineProvider>
-      <MapSelectionReview
-        {...input}
-        listings={[listings[0], SYNTHETIC_SNAPSHOT.listings[2]]}
-      />
+      <IntlProvider
+        locale="en-GB"
+        defaultLocale="en-GB"
+        timeZone="Europe/Stockholm"
+        messages={catalogs.en}
+      >
+        <MapSelectionReview
+          {...input}
+          listings={[listings[0], SYNTHETIC_SNAPSHOT.listings[2]]}
+        />
+      </IntlProvider>
     </MantineProvider>,
   );
   expect(
@@ -137,7 +181,14 @@ it('caps a 501-home capture at 500 and lets users exchange a selected home', () 
   }));
   render(
     <MantineProvider>
-      <MapSelectionReview {...input} listings={many} savedIds={new Set()} />
+      <IntlProvider
+        locale="en-GB"
+        defaultLocale="en-GB"
+        timeZone="Europe/Stockholm"
+        messages={catalogs.en}
+      >
+        <MapSelectionReview {...input} listings={many} savedIds={new Set()} />
+      </IntlProvider>
     </MantineProvider>,
   );
   const last = screen.getByRole('checkbox', { name: 'Select Home 500' });

@@ -29,7 +29,9 @@ import {
   useRef,
   useState,
 } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import type { MapCameraState } from '@/features/house-scanner/components/household-map';
+import { LanguageSelect } from '@/features/house-scanner/components/language-select';
 import { ListingCard } from '@/features/house-scanner/components/listing-card';
 import { ListingDrawer } from '@/features/house-scanner/components/listing-drawer';
 import { ListingFilterPanel } from '@/features/house-scanner/components/listing-filter-panel';
@@ -38,6 +40,11 @@ import { MapStackSelection } from '@/features/house-scanner/components/map-stack
 import { PinCard } from '@/features/house-scanner/components/pin-card';
 import { ScrollToTop } from '@/features/house-scanner/components/scroll-to-top';
 import type { ListingNotesController } from '@/features/house-scanner/hooks/use-listing-notes';
+import {
+  type Feedback,
+  formatFeedback,
+  messageValue,
+} from '@/features/house-scanner/i18n/catalogs';
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type {
   Listing,
@@ -80,7 +87,7 @@ class MapLoadBoundary extends Component<
   render() {
     return this.state.failed ? (
       <Text role="alert">
-        The map could not load. Use the listing controls and details below.
+        <FormattedMessage id="listings.list.theMapCouldNotLoadUseTheListingControls" />
       </Text>
     ) : (
       this.props.children
@@ -111,7 +118,7 @@ interface ListingsPanelProps {
   onHideMany: (ids: string[]) => Promise<boolean>;
   onUndoHide: () => Promise<boolean>;
   hideBusy: boolean;
-  hideError: string;
+  hideError: Feedback;
   undoHideCount: number;
   canHide: boolean;
   selecting: boolean;
@@ -201,6 +208,8 @@ export function ListingsPanel({
   onSaveMany,
   saveBusy = false,
 }: ListingsPanelProps) {
+  const intl = useIntl();
+
   const mobile = useMediaQuery('(max-width: 36em)');
   const mobileMap = mobile && view === 'map';
   const shell = useRef<HTMLElement>(null);
@@ -390,8 +399,8 @@ export function ListingsPanel({
   );
   const filtersActive = activeFilterCount(filters);
   const points = useMemo(
-    () => mapPoints(visible, hiddenIds, snapshot.favorites, userId),
-    [visible, hiddenIds, snapshot.favorites, userId],
+    () => mapPoints(visible, hiddenIds, snapshot.favorites, userId, intl),
+    [visible, hiddenIds, snapshot.favorites, userId, intl],
   );
   // One handler per action, shared by every card, so unchanged cards skip rendering.
   // The favorite handler is rebuilt on every render, so the latest one is read through a ref.
@@ -447,17 +456,24 @@ export function ListingsPanel({
       ref={shell}
       className={mobileMap ? classes.mobileMapShell : classes.listingsPanel}
       tabIndex={mobileMap ? -1 : undefined}
-      aria-label={mobileMap ? 'Map browsing' : 'Listing results'}
+      aria-label={
+        mobileMap
+          ? intl.formatMessage({ id: 'listings.list.mapBrowsing' })
+          : intl.formatMessage({ id: 'listings.list.listingResults' })
+      }
     >
       {/* Stays in the accessibility tree while the active tab already names the view. */}
       <VisuallyHidden renderRoot={(props) => <Title order={2} {...props} />}>
-        {tab === 'favorites' ? 'Favorites' : 'Listings'}
+        {tab === 'favorites'
+          ? intl.formatMessage({ id: 'listings.list.favorites' })
+          : intl.formatMessage({ id: 'listings.list.listings' })}
       </VisuallyHidden>
       {mobileMap && (
         <header className={classes.mobileMapHeader}>
+          <LanguageSelect />
           <Group gap="xs" wrap="wrap">
             <Button variant="default" onClick={() => onViewChange('list')}>
-              List
+              <FormattedMessage id="listings.list.list" />
             </Button>
             <Button
               variant="default"
@@ -468,7 +484,14 @@ export function ListingsPanel({
                 onFiltersOpenChange(true);
               }}
             >
-              Filters{filtersActive > 0 ? ` (${filtersActive})` : ''}
+              <FormattedMessage
+                id="listings.list.filters"
+                values={{
+                  value0: messageValue(
+                    filtersActive > 0 ? ` (${filtersActive})` : '',
+                  ),
+                }}
+              />
             </Button>
             {canSelect && (
               <Button
@@ -476,14 +499,33 @@ export function ListingsPanel({
                 disabled={batchBusy}
                 onClick={() => onSelectingChange(!selecting)}
               >
-                {selecting ? 'Cancel' : 'Select'}
+                {selecting
+                  ? intl.formatMessage({ id: 'common.cancel' })
+                  : intl.formatMessage({ id: 'common.select' })}
               </Button>
             )}
           </Group>
           <Text size="sm" c="dimmed" role="status">
-            {visible.length} homes
-            {hiddenCount > 0 && ` · ${hiddenCount} hidden`}
-            {duplicateCount > 0 && ` · ${duplicateCount} duplicates folded`}
+            <FormattedMessage
+              id="listings.list.homes"
+              values={{
+                value0: messageValue(visible.length),
+                value1: messageValue(
+                  hiddenCount > 0 &&
+                    intl.formatMessage(
+                      { id: 'listings.list.hidden' },
+                      { value0: messageValue(hiddenCount) },
+                    ),
+                ),
+                value2: messageValue(
+                  duplicateCount > 0 &&
+                    intl.formatMessage(
+                      { id: 'listings.list.duplicatesFolded' },
+                      { value0: messageValue(duplicateCount) },
+                    ),
+                ),
+              }}
+            />
           </Text>
           {mapWarning && (
             <Text size="sm" c="red.8" role="status">
@@ -502,13 +544,19 @@ export function ListingsPanel({
           >
             {tab === 'favorites' && (
               <Select
-                label="Saved by"
+                label={intl.formatMessage({ id: 'listings.list.savedBy' })}
                 w={{ base: 140, sm: 200 }}
                 value={person}
                 onChange={(value) => onPersonChange(value ?? 'everyone')}
                 data={[
-                  { value: 'everyone', label: 'Everyone' },
-                  { value: 'mine', label: 'Mine' },
+                  {
+                    value: 'everyone',
+                    label: intl.formatMessage({ id: 'listings.list.everyone' }),
+                  },
+                  {
+                    value: 'mine',
+                    label: intl.formatMessage({ id: 'listings.list.mine' }),
+                  },
                   ...snapshot.members.map((entry) => ({
                     value: entry.userId,
                     label: entry.displayName,
@@ -518,19 +566,47 @@ export function ListingsPanel({
             )}
             <div className={classes.toolbarSortControls}>
               <Select
-                label="Sort"
-                aria-label="Sort homes"
+                label={intl.formatMessage({ id: 'listings.list.sort' })}
+                aria-label={intl.formatMessage({
+                  id: 'listings.list.sortHomes',
+                })}
                 value={sort}
                 onChange={(value) =>
                   onSortChange((value as ListingSort) ?? 'newest')
                 }
                 data={[
-                  { value: 'newest', label: 'Newest' },
-                  { value: 'oldest', label: 'Oldest' },
-                  { value: 'next-viewing', label: 'Next viewing' },
-                  { value: 'alphabetical', label: 'Alphabetical' },
-                  { value: 'price-asc', label: 'Price: low to high' },
-                  { value: 'price-desc', label: 'Price: high to low' },
+                  {
+                    value: 'newest',
+                    label: intl.formatMessage({ id: 'listings.list.newest' }),
+                  },
+                  {
+                    value: 'oldest',
+                    label: intl.formatMessage({ id: 'listings.list.oldest' }),
+                  },
+                  {
+                    value: 'next-viewing',
+                    label: intl.formatMessage({
+                      id: 'listings.list.nextViewing',
+                    }),
+                  },
+                  {
+                    value: 'alphabetical',
+                    label: intl.formatMessage({
+                      id: 'listings.list.alphabetical',
+                    }),
+                  },
+                  {
+                    value: 'price-asc',
+                    label: intl.formatMessage({
+                      id: 'listings.list.priceLowToHigh',
+                    }),
+                  },
+                  {
+                    value: 'price-desc',
+                    label: intl.formatMessage({
+                      id: 'listings.list.priceHighToLow',
+                    }),
+                  },
                 ]}
                 w={{ base: 140, sm: 180 }}
               />
@@ -543,14 +619,23 @@ export function ListingsPanel({
                   onFiltersOpenChange(true);
                 }}
               >
-                Filters{filtersActive > 0 ? ` (${filtersActive})` : ''}
+                <FormattedMessage
+                  id="listings.list.filters"
+                  values={{
+                    value0: messageValue(
+                      filtersActive > 0 ? ` (${filtersActive})` : '',
+                    ),
+                  }}
+                />
               </Button>
             </div>
           </Flex>
           <TextInput
             type="search"
-            label="Search by title"
-            placeholder="Street or listing title"
+            label={intl.formatMessage({ id: 'listings.list.searchByTitle' })}
+            placeholder={intl.formatMessage({
+              id: 'listings.list.streetOrListingTitle',
+            })}
             value={filters.titleQuery}
             maxLength={128}
             onChange={(event) =>
@@ -570,10 +655,22 @@ export function ListingsPanel({
             className={classes.toolbarView}
           >
             <Text size="sm" c="dimmed">
-              {visible.length} homes
-              {notLocated > 0 && ` · ${notLocated} not located`}
-              {hiddenCount > 0 && ` · ${hiddenCount} hidden`}
-              {duplicateCount > 0 && ` · ${duplicateCount} duplicates folded`}
+              {visible.length} <FormattedMessage id="listings.list.homes2" />
+              {notLocated > 0 &&
+                intl.formatMessage(
+                  { id: 'listings.list.notLocated' },
+                  { value0: messageValue(notLocated) },
+                )}
+              {hiddenCount > 0 &&
+                intl.formatMessage(
+                  { id: 'listings.list.hidden' },
+                  { value0: messageValue(hiddenCount) },
+                )}
+              {duplicateCount > 0 &&
+                intl.formatMessage(
+                  { id: 'listings.list.duplicatesFolded' },
+                  { value0: messageValue(duplicateCount) },
+                )}
               {filtersActive > 0 && (
                 <>
                   {' · '}
@@ -583,19 +680,23 @@ export function ListingsPanel({
                     size="sm"
                     onClick={() => onFiltersChange(emptyFilters)}
                   >
-                    Clear all filters
+                    <FormattedMessage id="listings.list.clearAllFilters" />
                   </Anchor>
                 </>
               )}
             </Text>
             <Group gap="xs" wrap="wrap">
-              <Group gap="xs" role="group" aria-label="View">
+              <Group
+                gap="xs"
+                role="group"
+                aria-label={intl.formatMessage({ id: 'listings.list.view' })}
+              >
                 <Button
                   variant={view === 'list' ? 'filled' : 'default'}
                   aria-pressed={view === 'list'}
                   onClick={() => onViewChange('list')}
                 >
-                  List
+                  <FormattedMessage id="listings.list.list" />
                 </Button>
                 <Button
                   ref={mapViewButton}
@@ -603,7 +704,7 @@ export function ListingsPanel({
                   aria-pressed={view === 'map'}
                   onClick={() => onViewChange('map')}
                 >
-                  Map
+                  <FormattedMessage id="listings.list.map" />
                 </Button>
               </Group>
               {canSelect && (
@@ -612,7 +713,11 @@ export function ListingsPanel({
                   disabled={batchBusy}
                   onClick={() => onSelectingChange(!selecting)}
                 >
-                  {selecting ? 'Cancel selection' : 'Select'}
+                  {selecting
+                    ? intl.formatMessage({
+                        id: 'listings.list.cancelSelection',
+                      })
+                    : intl.formatMessage({ id: 'common.select' })}
                 </Button>
               )}
             </Group>
@@ -622,10 +727,14 @@ export function ListingsPanel({
       <Drawer
         opened={filtersOpen}
         onClose={() => onFiltersOpenChange(false)}
-        title="Filters"
+        title={intl.formatMessage({ id: 'listings.list.filters2' })}
         position="right"
         size="md"
-        closeButtonProps={{ 'aria-label': 'Close filters' }}
+        closeButtonProps={{
+          'aria-label': intl.formatMessage({
+            id: 'listings.list.closeFilters',
+          }),
+        }}
       >
         <Stack>
           <ListingFilterPanel
@@ -640,7 +749,7 @@ export function ListingsPanel({
                 <Stack gap={4} flex="1 1 15rem">
                   <Group gap={4} wrap="nowrap">
                     <Text size="sm" fw={500}>
-                      Match
+                      <FormattedMessage id="listings.list.match" />
                     </Text>
                     <Tooltip
                       multiline
@@ -648,7 +757,7 @@ export function ListingsPanel({
                       events={{ hover: true, focus: true, touch: true }}
                       label={
                         <Stack gap={4}>
-                          {MATCH_CHOICES.map(
+                          {MATCH_CHOICES(intl).map(
                             ({ value, label, description }) => (
                               <Text key={value} size="xs">
                                 {label}: {description}
@@ -663,19 +772,26 @@ export function ListingsPanel({
                         color="gray"
                         size="sm"
                         className={classes.matchHelp}
-                        aria-label="What the match options mean"
+                        aria-label={intl.formatMessage({
+                          id: 'listings.list.whatTheMatchOptionsMean',
+                        })}
                       >
                         <Info size={16} aria-hidden />
                       </ActionIcon>
                     </Tooltip>
                   </Group>
                   <Select
-                    aria-label="Match"
+                    aria-label={intl.formatMessage({
+                      id: 'listings.list.match',
+                    })}
                     value={section}
                     onChange={(value) => onSectionChange(value ?? 'all')}
                     data={[
-                      { value: 'all', label: 'All' },
-                      ...MATCH_CHOICES.map(({ value, label }) => ({
+                      {
+                        value: 'all',
+                        label: intl.formatMessage({ id: 'listings.list.all' }),
+                      },
+                      ...MATCH_CHOICES(intl).map(({ value, label }) => ({
                         value,
                         label,
                       })),
@@ -704,10 +820,13 @@ export function ListingsPanel({
               variant="default"
               onClick={() => onFiltersOpenChange(false)}
             >
-              Cancel
+              <FormattedMessage id="common.cancel" />
             </Button>
             <Button onClick={() => onFiltersChange(draft)}>
-              Show {draftCount} homes
+              <FormattedMessage
+                id="listings.list.showHomes"
+                values={{ value0: messageValue(draftCount) }}
+              />
             </Button>
           </Group>
         </Stack>
@@ -718,11 +837,20 @@ export function ListingsPanel({
           className={mobileMap ? classes.mobileMapStatus : undefined}
         >
           <Text role="status" aria-live="polite">
-            {checkedIds.length} selected · Saves are yours; hiding is for the
-            household
-            {savedCount > 0
-              ? ` · Includes ${savedCount} saved ${savedCount === 1 ? 'home' : 'homes'}`
-              : ''}
+            <FormattedMessage
+              id="listings.list.selectedSavesAreYoursHidingIsForTheHousehold"
+              values={{
+                value0: messageValue(checkedIds.length),
+                value1: messageValue(
+                  savedCount > 0
+                    ? intl.formatMessage(
+                        { id: 'listings.list.includesSavedCount' },
+                        { count: savedCount },
+                      )
+                    : '',
+                ),
+              }}
+            />
           </Text>
           <Group gap="xs">
             {view === 'list' && (
@@ -732,7 +860,12 @@ export function ListingsPanel({
                 disabled={batchBusy || unsavedIds.length === 0}
                 onClick={() => setSelection(unsavedIds.slice(0, 500))}
               >
-                Select unsaved ({Math.min(500, unsavedIds.length)})
+                <FormattedMessage
+                  id="listings.list.selectUnsaved"
+                  values={{
+                    value0: messageValue(Math.min(500, unsavedIds.length)),
+                  }}
+                />
               </Button>
             )}
             <Button
@@ -740,18 +873,17 @@ export function ListingsPanel({
               disabled={batchBusy || !checkedIds.length}
               onClick={() => setSelection([])}
             >
-              Clear selection
+              <FormattedMessage id="listings.list.clearSelection" />
             </Button>
           </Group>
           {checkedIds.length === 500 && (
             <Text size="sm">
-              500-home limit reached. Apply this batch before selecting more.
+              <FormattedMessage id="listings.list.500HomeLimitReachedApplyThisBatchBeforeSelecting" />
             </Text>
           )}
           {view === 'map' && !mobileMap && (
             <Text size="sm">
-              Tap pins to select homes and see a preview. Use Review this area
-              for a larger batch.
+              <FormattedMessage id="listings.list.tapPinsToSelectHomesAndSeeAPreview" />
             </Text>
           )}
         </Stack>
@@ -762,22 +894,36 @@ export function ListingsPanel({
           role={hideError ? 'alert' : 'status'}
           aria-live="polite"
         >
-          {hideError && <Text size="sm">{hideError}</Text>}
+          {hideError && (
+            <Text size="sm">{formatFeedback(intl, hideError)}</Text>
+          )}
           {undoHideCount > 0 && (
             <Button
               variant="default"
               disabled={batchBusy}
               onClick={() => void onUndoHide()}
             >
-              Undo hide ({undoHideCount})
+              <FormattedMessage
+                id="listings.list.undoHide"
+                values={{ value0: messageValue(undoHideCount) }}
+              />
             </Button>
           )}
         </Group>
       )}
       {!visible.length && view === 'list' && (
         <Text>
-          No homes here.
-          {activeFilterCount(filters) > 0 && ' Clear the filters to see more.'}
+          <FormattedMessage
+            id="listings.list.noHomesHere"
+            values={{
+              value0: messageValue(
+                activeFilterCount(filters) > 0 &&
+                  intl.formatMessage({
+                    id: 'listings.list.clearTheFiltersToSeeMore',
+                  }),
+              ),
+            }}
+          />
         </Text>
       )}
       {mobile && view === 'list' && <ScrollToTop />}
@@ -817,7 +963,9 @@ export function ListingsPanel({
           {/* The same view the Hidden homes filter sets, so the list and the map stay in step. */}
           {!mobileMap && tab !== 'favorites' && (
             <Switch
-              label="Show hidden homes"
+              label={intl.formatMessage({
+                id: 'listings.list.showHiddenHomes',
+              })}
               checked={filters.hidden !== 'not-hidden'}
               onChange={(event) =>
                 onFiltersChange({
@@ -829,7 +977,13 @@ export function ListingsPanel({
           )}
           {visible.length ? (
             <MapLoadBoundary>
-              <Suspense fallback={<Text role="status">Loading map…</Text>}>
+              <Suspense
+                fallback={
+                  <Text role="status">
+                    <FormattedMessage id="listings.list.loadingMap" />
+                  </Text>
+                }
+              >
                 <LazyMap
                   fillMobile
                   onCaptureView={
@@ -843,14 +997,20 @@ export function ListingsPanel({
                   satellite={satellite}
                   points={points}
                   controls={
-                    <Group gap="xs" role="group" aria-label="Basemap">
+                    <Group
+                      gap="xs"
+                      role="group"
+                      aria-label={intl.formatMessage({
+                        id: 'listings.list.basemap',
+                      })}
+                    >
                       <Button
                         size="xs"
                         variant={satellite ? 'default' : 'filled'}
                         aria-pressed={!satellite}
                         onClick={() => onSatelliteChange(false)}
                       >
-                        Street map
+                        <FormattedMessage id="listings.list.streetMap" />
                       </Button>
                       <Button
                         size="xs"
@@ -858,7 +1018,7 @@ export function ListingsPanel({
                         aria-pressed={satellite}
                         onClick={() => onSatelliteChange(true)}
                       >
-                        Satellite
+                        <FormattedMessage id="listings.list.satellite" />
                       </Button>
                     </Group>
                   }
@@ -917,14 +1077,19 @@ export function ListingsPanel({
             </MapLoadBoundary>
           ) : (
             <Text p="sm">
-              No homes to show. Change the filters to see more.
+              <FormattedMessage id="listings.list.noHomesToShowChangeTheFiltersToSee" />
             </Text>
           )}
         </div>
       )}
       {selecting && (
         <Group className={classes.selectionBar} justify="space-between">
-          <Text>{checkedIds.length} selected</Text>
+          <Text>
+            <FormattedMessage
+              id="listings.list.selected"
+              values={{ value0: messageValue(checkedIds.length) }}
+            />
+          </Text>
           <Group gap="xs">
             {onSaveMany && (
               <Button
@@ -934,7 +1099,10 @@ export function ListingsPanel({
                 loading={saveBusy}
                 onClick={() => void saveSelected()}
               >
-                Save {saveIds.length}
+                <FormattedMessage
+                  id="listings.list.save"
+                  values={{ value0: messageValue(saveIds.length) }}
+                />
               </Button>
             )}
             {canHide && (
@@ -944,7 +1112,10 @@ export function ListingsPanel({
                 loading={hideBusy}
                 onClick={() => void hideSelected()}
               >
-                Hide {checkedIds.length}
+                <FormattedMessage
+                  id="listings.list.hide"
+                  values={{ value0: messageValue(checkedIds.length) }}
+                />
               </Button>
             )}
           </Group>
@@ -980,7 +1151,7 @@ export function ListingsPanel({
           listings={reviewListings}
           savedIds={savedIds}
           busy={batchBusy}
-          error={hideError}
+          error={formatFeedback(intl, hideError)}
           onClose={() => setMapReview(null)}
           onHide={(ids) => void hideSelected(ids)}
         />

@@ -55,7 +55,7 @@ describe('email links', () => {
     expect(window.location.hash).toBe('');
     expect(window.location.search).toBe(`?token=${TOKEN}`);
     await expect(hook.result.current.setPassword('short')).rejects.toThrow(
-      '8 to 72 characters',
+      'errors.chooseAPasswordOf8To72Characters',
     );
     expect(sdk.auth.updateUser).not.toHaveBeenCalled();
     await act(() => hook.result.current.setPassword('a long password'));
@@ -101,7 +101,7 @@ describe('password reset and account setup', () => {
     const hook = renderHook(useHouseholdSession);
     await expect(
       hook.result.current.requestPasswordReset('not an email'),
-    ).rejects.toThrow('Enter your email.');
+    ).rejects.toThrow('errors.enterYourEmail');
     sdk.auth.resetPasswordForEmail.mockResolvedValueOnce({
       error: { message: 'User not found' },
     });
@@ -118,7 +118,7 @@ describe('password reset and account setup', () => {
     const hook = renderHook(useHouseholdSession);
     await expect(
       hook.result.current.createAccount(TOKEN, 'new@example.com', 'short'),
-    ).rejects.toThrow('8 to 72 characters');
+    ).rejects.toThrow('errors.chooseAPasswordOf8To72Characters');
     await act(() =>
       hook.result.current.createAccount(
         TOKEN,
@@ -146,7 +146,7 @@ describe('password reset and account setup', () => {
         'new@example.com',
         'a long password',
       ),
-    ).rejects.toThrow('cannot be used with that email');
+    ).rejects.toThrow('errors.thisInvitationCannotBeUsedWithThatEmailCheck');
     sdk.auth.signInWithPassword.mockResolvedValueOnce({
       error: { message: 'Invalid login credentials' },
     });
@@ -156,7 +156,7 @@ describe('password reset and account setup', () => {
         'known@example.com',
         'a long password',
       ),
-    ).rejects.toThrow('already has an account');
+    ).rejects.toThrow('errors.thatEmailAlreadyHasAnAccountSignInBelow');
   });
 });
 
@@ -186,7 +186,7 @@ describe('accepting an invitation', () => {
     });
     await expect(
       hook.result.current.acceptInvitation(TOKEN, 'Home', 'Casey'),
-    ).rejects.toThrow('Ask for a fresh link');
+    ).rejects.toThrow('errors.thisInvitationHasExpiredBeenUsedOrRevokedOr');
   });
 });
 
@@ -239,7 +239,7 @@ describe('household settings actions', () => {
     });
     await expect(
       access.sendLink('create', 'friend@example.com'),
-    ).rejects.toThrow('email could not be sent');
+    ).rejects.toThrow('errors.theInvitationEmailCouldNotBeSentTryAgain');
   });
 
   it('asks the last owner to hand over, and re-reads memberships after leaving', async () => {
@@ -251,7 +251,7 @@ describe('household settings actions', () => {
       error: { message: 'Make another member an owner before leaving' },
     });
     await expect(access.leave()).rejects.toThrow(
-      'Make another member an owner before leaving.',
+      'errors.makeAnotherMemberAnOwnerBeforeLeaving',
     );
     sdk.rpc.mockImplementation(async (name) => {
       if (name === 'hs_household_leave') return reply({ archived: false });

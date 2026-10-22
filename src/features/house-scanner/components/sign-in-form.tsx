@@ -1,5 +1,11 @@
 import { Button, Checkbox, Stack, Text, TextInput } from '@mantine/core';
 import { type ReactNode, useState } from 'react';
+import { useIntl } from 'react-intl';
+import {
+  errorFeedback,
+  type Feedback,
+  formatFeedback,
+} from '@/features/house-scanner/i18n/catalogs';
 
 interface SignInFormProps {
   title: ReactNode;
@@ -19,13 +25,15 @@ export function SignInForm({
   onResetPassword,
   children,
 }: SignInFormProps) {
+  const intl = useIntl();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<{ text: string; error: boolean }>();
-  async function perform(action: () => Promise<string | undefined>) {
+  const [message, setMessage] = useState<{ text: Feedback; error: boolean }>();
+  async function perform(action: () => Promise<Feedback | undefined>) {
     setBusy(true);
     setMessage(undefined);
     try {
@@ -33,8 +41,7 @@ export function SignInForm({
       if (done) setMessage({ text: done, error: false });
     } catch (error) {
       setMessage({
-        text:
-          error instanceof Error ? error.message : 'Request failed. Try again.',
+        text: errorFeedback(error),
         error: true,
       });
     } finally {
@@ -48,18 +55,19 @@ export function SignInForm({
         void perform(async () => {
           if (resetting) {
             await onResetPassword(email);
-            return 'If an account uses that address, an email with a reset link is on its way.';
+            return 'access.ifAnAccountUsesThatAddressAnEmailWith';
           }
           await onSignIn(email, password, remember);
           setPassword('');
           return undefined;
         });
       }}
+      noValidate
     >
       <Stack align="flex-start" gap="md">
         {title}
         <TextInput
-          label="Email"
+          label={intl.formatMessage({ id: 'access.email' })}
           type="email"
           w="100%"
           maw="22rem"
@@ -73,7 +81,7 @@ export function SignInForm({
         {!resetting && (
           <>
             <TextInput
-              label="Password"
+              label={intl.formatMessage({ id: 'access.password' })}
               w="100%"
               maw="22rem"
               type="password"
@@ -84,8 +92,10 @@ export function SignInForm({
               onChange={(event) => setPassword(event.currentTarget.value)}
             />
             <Checkbox
-              label="Remember this device"
-              description="Leave off on shared devices."
+              label={intl.formatMessage({ id: 'access.rememberThisDevice' })}
+              description={intl.formatMessage({
+                id: 'access.leaveOffOnSharedDevices',
+              })}
               checked={remember}
               disabled={busy}
               onChange={(event) => setRemember(event.currentTarget.checked)}
@@ -94,11 +104,13 @@ export function SignInForm({
         )}
         {message && (
           <Text size="sm" role={message.error ? 'alert' : 'status'}>
-            {message.text}
+            {formatFeedback(intl, message.text)}
           </Text>
         )}
         <Button type="submit" loading={busy}>
-          {resetting ? 'Send reset link' : 'Sign in'}
+          {resetting
+            ? intl.formatMessage({ id: 'access.sendResetLink' })
+            : intl.formatMessage({ id: 'access.signIn' })}
         </Button>
         <Button
           type="button"
@@ -109,7 +121,9 @@ export function SignInForm({
             setMessage(undefined);
           }}
         >
-          {resetting ? 'Back to sign in' : 'Forgot password?'}
+          {resetting
+            ? intl.formatMessage({ id: 'access.backToSignIn' })
+            : intl.formatMessage({ id: 'access.forgotPassword' })}
         </Button>
         {children}
       </Stack>

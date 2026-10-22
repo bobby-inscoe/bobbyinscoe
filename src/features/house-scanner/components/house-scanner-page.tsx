@@ -10,9 +10,12 @@ import {
 import { Link, useNavigate } from '@tanstack/react-router';
 import { ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { HouseScannerAccess } from '@/features/house-scanner/components/house-scanner-access';
 import { HouseholdWorkspace } from '@/features/house-scanner/components/household-workspace';
+import { LanguageSelect } from '@/features/house-scanner/components/language-select';
 import { SyntheticWorkspace } from '@/features/house-scanner/components/synthetic-workspace';
+import { ShellterLanguageProvider } from '@/features/house-scanner/i18n/language-provider';
 import {
   classes,
   shellterScope,
@@ -27,6 +30,16 @@ function readInviteToken() {
 }
 
 export function HouseScannerPage() {
+  return (
+    <ShellterLanguageProvider>
+      <HouseScannerContent />
+    </ShellterLanguageProvider>
+  );
+}
+
+function HouseScannerContent() {
+  const intl = useIntl();
+
   const [demo, setDemo] = useState(false);
   const [inviteToken, setInviteToken] = useState(readInviteToken);
   const navigate = useNavigate();
@@ -43,7 +56,8 @@ export function HouseScannerPage() {
             <Title order={1} className={classes.wordmark}>
               Shellter
             </Title>
-            <Group gap="md" wrap="nowrap">
+            <Group gap="xs" wrap="wrap" maw="100%" miw={0}>
+              <LanguageSelect />
               {/* The demo is a local testing aid, so the deployed site never offers it. */}
               {import.meta.env.DEV && (
                 <Button
@@ -51,7 +65,9 @@ export function HouseScannerPage() {
                   variant="white"
                   onClick={() => setDemo(!demo)}
                 >
-                  {demo ? 'Leave demo' : 'Demo'}
+                  {demo
+                    ? intl.formatMessage({ id: 'navigation.leaveDemo' })
+                    : intl.formatMessage({ id: 'navigation.demo' })}
                 </Button>
               )}
               <Anchor
@@ -66,7 +82,7 @@ export function HouseScannerPage() {
                   aria-hidden
                   className={classes.inlineIcon}
                 />
-                Back to the workshop
+                <FormattedMessage id="navigation.backToTheWorkshop" />
               </Anchor>
             </Group>
           </Group>

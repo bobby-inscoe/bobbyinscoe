@@ -8,7 +8,7 @@ import {
   UnstyledButton,
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-
+import { FormattedMessage, useIntl } from 'react-intl';
 import { FavoriteStar } from '@/features/house-scanner/components/favorite-star';
 import { HideButton } from '@/features/house-scanner/components/hide-button';
 import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
@@ -21,6 +21,7 @@ import {
   useHasEstimate,
 } from '@/features/house-scanner/components/price-estimate';
 import { NextViewing } from '@/features/house-scanner/components/viewing-list';
+import { messageValue } from '@/features/house-scanner/i18n/catalogs';
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type { Listing } from '@/features/house-scanner/types/contracts';
 import { formatPrice } from '@/features/house-scanner/utils/format';
@@ -53,6 +54,8 @@ export function PinCard({
   onDetails: () => void;
   selection?: { checked: boolean; disabled: boolean; onToggle: () => void };
 }) {
+  const intl = useIntl();
+
   const mobile = useMediaQuery('(max-width: 36em)');
   const estimated = useHasEstimate(listing);
   const personalActions = (
@@ -68,7 +71,10 @@ export function PinCard({
   return (
     <article
       className={classes.pinCard}
-      aria-label={`Selected home: ${listing.title}`}
+      aria-label={intl.formatMessage(
+        { id: 'listings.map.selectedHome' },
+        { value0: messageValue(listing.title) },
+      )}
     >
       <Group
         className={classes.pinHeader}
@@ -88,12 +94,17 @@ export function PinCard({
             <>
               {' '}
               <Badge component="span" variant="new">
-                New
+                <FormattedMessage id="listings.map.new" />
               </Badge>
             </>
           )}
         </Title>
-        <CloseButton aria-label="Close selected home" onClick={onClose} />
+        <CloseButton
+          aria-label={intl.formatMessage({
+            id: 'listings.map.closeSelectedHome',
+          })}
+          onClick={onClose}
+        />
       </Group>
       <div className={`${classes.photoWrap} ${classes.pinPhoto}`}>
         <ListingPhoto listing={listing} onOpen={onDetails} />
@@ -105,8 +116,9 @@ export function PinCard({
         </div>
       ) : (
         <Text fz="lg" className={`${classes.pinPrice} ${classes.priceText}`}>
-          {formatPrice(listing.facts.askingPriceSek)}
-          {listing.conflicts.includes('askingPriceSek') && ' (disputed)'}
+          {formatPrice(listing.facts.askingPriceSek, intl)}
+          {listing.conflicts.includes('askingPriceSek') &&
+            intl.formatMessage({ id: 'listings.details.disputed' })}
         </Text>
       )}
       <div className={classes.pinFacts}>
@@ -123,7 +135,9 @@ export function PinCard({
             disabled={selection.disabled}
             onClick={selection.onToggle}
           >
-            {selection.checked ? 'Selected' : 'Select home'}
+            {selection.checked
+              ? intl.formatMessage({ id: 'listings.map.selected2' })
+              : intl.formatMessage({ id: 'listings.map.selectHome' })}
           </Button>
         ) : (
           mobile && personalActions
@@ -140,11 +154,11 @@ export function PinCard({
             c="var(--button-color)"
             td="none"
           >
-            Open original listing
+            <FormattedMessage id="listings.map.openOriginalListing" />
           </Button>
         )}
         <Button size="sm" variant="default" onClick={onDetails}>
-          Details
+          <FormattedMessage id="listings.map.details" />
         </Button>
       </Group>
     </article>
