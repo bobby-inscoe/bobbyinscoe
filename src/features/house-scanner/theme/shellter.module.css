@@ -209,16 +209,29 @@
   }
   .navTab :global(.mantine-Button-inner) {
     flex-direction: column;
-    gap: 4px;
+    align-items: center;
+    justify-content: center;
+    gap: var(--mantine-spacing-xs);
   }
   .navTab :global(.mantine-Button-section) {
     margin: 0;
-    width: 56px;
-    height: 30px;
+    width: 64px;
+    height: 34px;
     border-radius: var(--mantine-radius-xl);
     display: grid;
     place-items: center;
     transition: background-color 150ms ease-out;
+  }
+  .navIcon {
+    position: relative;
+    display: grid;
+    place-items: center;
+  }
+  .navBadge {
+    position: absolute;
+    top: -7px;
+    right: -13px;
+    pointer-events: none;
   }
   .navTab[data-variant="filled"] {
     color: var(--shellter-teal-strong);
