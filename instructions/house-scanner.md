@@ -1,7 +1,8 @@
 # House Scanner hosted data
 
 These rules cover the hosted House Scanner project and the collector in `tools/house-scanner`. Each exists because
-skipping it broke the app once.
+skipping it broke the app once. `instructions/house-scanner-schema.md` maps the tables, the read-model triggers and the
+`public.hs_*` entry points; update it with any migration that changes them.
 
 Users see the app as Shellter at `/shellter`; code, tables and functions keep the house-scanner name. Hosted Auth
 redirect URLs still allow only `/projects/house-scanner/...`, so invite and password emails return there and the app
