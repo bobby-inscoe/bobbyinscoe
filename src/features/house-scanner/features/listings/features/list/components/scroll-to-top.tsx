@@ -17,14 +17,13 @@ export function ScrollToTop() {
         right: 12,
       }}
     >
-      <Transition transition="slide-up" mounted={show}>
+      <Transition transition="fade" duration={250} mounted={show}>
         {(styles) => (
           <ActionIcon
             style={styles}
             size="lg"
             radius="xl"
             variant="default"
-            opacity={0.85}
             aria-label={intl.formatMessage({ id: 'navigation.backToTop' })}
             onClick={() => scrollTo({ y: 0 })}
           >
