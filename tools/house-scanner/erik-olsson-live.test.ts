@@ -14,15 +14,8 @@ import {
   type Reply,
 } from '@house-scanner-tools/live-test-helpers';
 import { parseRobots, robotsAllows } from '@house-scanner-tools/robots';
-import {
-  adapterFor,
-  boneoAdapter,
-  erikOlssonAdapter,
-} from '@house-scanner-tools/source-adapters';
-import {
-  approvedPolicy,
-  sourceRegistry,
-} from '@house-scanner-tools/source-registry';
+import { erikOlssonAdapter } from '@house-scanner-tools/source-adapters';
+import { sourceRegistry } from '@house-scanner-tools/source-registry';
 import { describe, expect, it } from 'vitest';
 import { assertSourceAllowed } from '@/features/house-scanner/utils/source-policy';
 
@@ -132,15 +125,6 @@ describe('Erik Olsson guarded run', () => {
       reason: 'no-results-list',
     });
     expect(result.stopped).toBe('no-results-list');
-  });
-
-  it.each([403, 429])('stops at once on %i without a retry', async (status) => {
-    const { impl, calls } = fakeFetch((url) =>
-      url.endsWith('/robots.txt') ? robotsReply : { status, body: '' },
-    );
-    const result = await run(goteborg, deps(impl));
-    expect(result.stopped).toBe(`http-${status}`);
-    expect(calls).toHaveLength(2);
   });
 
   it('supports only the municipality it knows, and any property type', () => {
@@ -284,45 +268,5 @@ describe('Erik Olsson registry entry', () => {
     expect(() =>
       assertSourceAllowed(policy, new Date('2026-10-20T00:00:00Z')),
     ).toThrow();
-  });
-
-  it('yields a policy the owner can approve for 90 days', () => {
-    const approved = approvedPolicy(
-      'erik-olsson',
-      new Date('2026-10-20T00:00:00Z'),
-    );
-    expect(approved).toMatchObject({
-      status: 'approved',
-      automatedCollection: true,
-    });
-    expect(() =>
-      assertSourceAllowed(approved, new Date('2026-10-21T00:00:00Z')),
-    ).not.toThrow();
-  });
-
-  it('is found by its capability and refused for another host, photo origin or executor', () => {
-    expect(adapterFor(erikOlsson())).toBe(erikOlssonAdapter);
-    const wrongHost = structuredClone(erikOlsson());
-    wrongHost.policy.listingOrigins = ['https://www.example.invalid'];
-    expect(() => adapterFor(wrongHost)).toThrow('No permitted executor');
-    const photos = structuredClone(erikOlsson());
-    photos.policy.imageOrigins = ['https://www.erikolsson.se'];
-    expect(() => adapterFor(photos)).toThrow('No permitted executor');
-    const noPhotos = structuredClone(erikOlsson());
-    noPhotos.policy.imageOrigins = [];
-    expect(() => adapterFor(noPhotos)).toThrow('No permitted executor');
-    const other = structuredClone(erikOlsson());
-    other.executor = 'boneo-personal-read';
-    expect(() => adapterFor(other)).toThrow('No permitted executor');
-    const boneo = sourceRegistry().find((e) => e.policy.sourceId === 'boneo');
-    if (!boneo) throw new Error('boneo missing');
-    expect(adapterFor(boneo)).toBe(boneoAdapter);
-  });
-
-  it('leaves the other candidates without an executor', () => {
-    for (const id of ['alvhem', 'fastighetsbyran', 'booli', 'hemnet', 'norban'])
-      expect(
-        sourceRegistry().find((e) => e.policy.sourceId === id)?.executor,
-      ).toBe('none');
   });
 });

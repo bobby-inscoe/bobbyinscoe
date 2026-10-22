@@ -66,13 +66,10 @@ afterAll(async () => {
 });
 
 describe('rollback of the personal-hide migration', () => {
-  it('differs from the state before only by the objects it removes', () => {
+  it('restores the snapshot function, its schema and its grants exactly', () => {
     expect(migrated).not.toEqual(before);
     expect(migrated.join('\n')).toContain('hs_set_hidden');
     expect(migrated.join('\n')).toContain('snapshot_base');
-  });
-
-  it('restores the snapshot function, its schema and its grants exactly', () => {
     expect(rolledBack).toEqual(before);
     expect(rolledBack.join('\n')).not.toContain('hidden');
     expect(rolledBack.join('\n')).not.toContain('snapshot_base');

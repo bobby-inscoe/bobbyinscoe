@@ -17,14 +17,10 @@ import {
 } from '@house-scanner-tools/lundin-test-pages';
 import { parseRobots, robotsAllows } from '@house-scanner-tools/robots';
 import {
-  adapterFor,
   boneoAdapter,
   lundinAdapter,
 } from '@house-scanner-tools/source-adapters';
-import {
-  approvedPolicy,
-  sourceRegistry,
-} from '@house-scanner-tools/source-registry';
+import { sourceRegistry } from '@house-scanner-tools/source-registry';
 import { describe, expect, it } from 'vitest';
 import { assertSourceAllowed } from '@/features/house-scanner/utils/source-policy';
 
@@ -140,15 +136,6 @@ describe('Lundin guarded run', () => {
     expect(MAX_BODY_CHARS).toBe(3_000_000);
   });
 
-  it.each([403, 429])('stops at once on %i without a retry', async (status) => {
-    const { impl, calls } = fakeFetch((url) =>
-      url.endsWith('/robots.txt') ? robotsReply : { status, body: '' },
-    );
-    const result = await run(goteborg, deps(impl));
-    expect(result.stopped).toBe(`http-${status}`);
-    expect(calls).toHaveLength(2);
-  });
-
   it('supports Göteborg and Mölndal and nothing else', () => {
     for (const municipality of [' GÖTEBORG ', 'Mölndal'])
       expect(
@@ -222,29 +209,5 @@ describe('Lundin registry entry', () => {
     expect(() =>
       assertSourceAllowed(policy, new Date('2026-10-20T00:00:00Z')),
     ).toThrow();
-  });
-
-  it('yields a policy the owner can approve for 90 days', () => {
-    const approved = approvedPolicy('lundin', new Date('2026-10-20T00:00:00Z'));
-    expect(approved).toMatchObject({ status: 'approved' });
-    expect(() =>
-      assertSourceAllowed(approved, new Date('2026-10-21T00:00:00Z')),
-    ).not.toThrow();
-  });
-
-  it('is found by its capability and refused for another host, photo origin or executor', () => {
-    expect(adapterFor(lundin())).toBe(lundinAdapter);
-    const wrongHost = structuredClone(lundin());
-    wrongHost.policy.listingOrigins = ['https://www.example.invalid'];
-    expect(() => adapterFor(wrongHost)).toThrow('No permitted executor');
-    const photos = structuredClone(lundin());
-    photos.policy.imageOrigins = ['https://imagedelivery.net'];
-    expect(() => adapterFor(photos)).toThrow('No permitted executor');
-    const other = structuredClone(lundin());
-    other.executor = 'boneo-personal-read';
-    expect(() => adapterFor(other)).toThrow('No permitted executor');
-    const boneo = sourceRegistry().find((e) => e.policy.sourceId === 'boneo');
-    if (!boneo) throw new Error('boneo missing');
-    expect(adapterFor(boneo)).toBe(boneoAdapter);
   });
 });

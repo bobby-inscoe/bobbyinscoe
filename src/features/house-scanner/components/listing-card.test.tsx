@@ -113,18 +113,20 @@ async function renderCard(
   );
 }
 
-it('shows the badge and the notice with both dates on a listing no longer listed', async () => {
+it('marks a listing no longer listed with a badge, and a notice with both dates when expanded', async () => {
   await renderCard(true, true);
   // The badge, and the match line that says why it is outside the criteria.
   expect(screen.getAllByText('No longer listed').length).toBeGreaterThan(0);
   const notice = screen.getByRole('note', { name: 'No longer listed' });
   expect(notice.textContent).toContain('No longer listed since');
   expect(notice.textContent).toContain('Last seen');
-});
-
-it('shows only the badge in the collapsed summary of a listing no longer listed', async () => {
+  cleanup();
   await renderCard(true, false);
   expect(screen.getByText('No longer listed')).toBeTruthy();
+  expect(screen.queryByRole('note')).toBeNull();
+  cleanup();
+  await renderCard(false, true);
+  expect(screen.queryByText('No longer listed')).toBeNull();
   expect(screen.queryByRole('note')).toBeNull();
 });
 
@@ -132,12 +134,6 @@ it('lets a sold status speak for a listing no longer listed', async () => {
   await renderCard(true, false, 'sold');
   expect(screen.getByText('sold')).toBeTruthy();
   expect(screen.queryByText('No longer listed')).toBeNull();
-});
-
-it('shows neither the badge nor the notice on a listed home', async () => {
-  await renderCard(false, true);
-  expect(screen.queryByText('No longer listed')).toBeNull();
-  expect(screen.queryByRole('note')).toBeNull();
 });
 
 it('names the member who hid the home', async () => {
@@ -234,15 +230,17 @@ async function renderOverridden({
   return base;
 }
 
-it('shows no status badge on an available home', async () => {
+it('shows a status badge only when a home is not available or its status is disputed', async () => {
   const base = await renderOverridden({});
   expect(base.facts.status).toBe('available');
   expect(screen.queryByText('available')).toBeNull();
   expect(screen.queryByText('Status disputed')).toBeNull();
-});
-
-it('shows the status badge when a home is not available or its status is disputed', async () => {
-  const base = SYNTHETIC_SNAPSHOT.listings[0];
+  cleanup();
+  await renderOverridden({
+    listing: { facts: { ...base.facts, status: 'unknown' } },
+  });
+  expect(screen.queryByText('unknown', { exact: true })).toBeNull();
+  cleanup();
   await renderOverridden({
     listing: { facts: { ...base.facts, status: 'sold' } },
   });
@@ -250,14 +248,6 @@ it('shows the status badge when a home is not available or its status is dispute
   cleanup();
   await renderOverridden({ listing: { conflicts: ['status'] } });
   expect(screen.getByText('Status disputed')).toBeTruthy();
-});
-
-it('does not show an unknown status badge', async () => {
-  const base = SYNTHETIC_SNAPSHOT.listings[0];
-  await renderOverridden({
-    listing: { facts: { ...base.facts, status: 'unknown' } },
-  });
-  expect(screen.queryByText('unknown', { exact: true })).toBeNull();
 });
 
 it('prefixes the match label with the profile name only when several profiles are enabled', async () => {
