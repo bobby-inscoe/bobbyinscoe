@@ -113,15 +113,16 @@ Tests use answers authored in `stadshem-test-pages.ts` (fictional streets and va
 
 ## Lundin reader (pending source)
 
-`lundin-parser.ts` reads one JSON document: `https://www.lundin.se/api/list?id=1`, the list the site's own page loads. It is one array of every object the broker has (245 on 17 October 2026). Nothing is parsed from HTML. Photos are hotlinked from the same host (`/dc/<image id>.jpg`), and the policy allows that origin only.
+`lundin-parser.ts` reads two kinds of answer: the JSON list at `https://www.lundin.se/api/list?id=1`, which the site's own page loads and which holds every object the broker has (245 on 17 October 2026), and each kept home's public page. Photos are hotlinked from the same host (`/dc/<image id>.jpg`), and the policy allows that origin only.
 
-- A run is two requests: `robots.txt` and the list. The adapter sets `listOnly`, so no home page is read and floor, lift, balcony and glazing stay unknown.
+- A run is `robots.txt`, the list, then one page per kept home (`/beskrivning/<Guid>/<slug>`, the observation's `sourceUrl`) under the shared guards: robots check, 2 to 4 seconds apart, at most 150 pages, and a page read in the last 7 days is reused from run memory. That is about 100 pages on a first run, then only new or stale homes.
+- From the home page only image ids are read: the first four `figure.object-image[data-id]` inside `<section id="sectionimages">` (the six-photo preview, in page order) and the id in the `/dc/<id>.jpg` address of the first `figure.object-image-plan` inside `#section-planimages`. Each id must be a plain id. Photos are rebuilt with the list photo's size query (`mode=max&w=640&h=480&scale=down`) and the plan with a 1200 by 1200 box. A page without images keeps the list photo; a page with no canonical `/beskrivning/` link is counted as failed. Floor, lift, balcony and glazing stay unknown. The policy is revision 2 for this change, so the operator prints and runs its SQL again.
 - Identity is `Guid`; the public page is `DescrUrl`, which must be `/beskrivning/<Guid>/<slug>`. Facts: `Price` (zero is unknown), `Rent` (the monthly fee), `Area`, `Rooms`, `Type` (`CMBoLgh` in any letter case is a tenant-owner apartment, `CMVilla` and `CMFritidshus` are houses; plots and new production are skipped), `Status` (`Till salu` is available, `Snart till salu` is upcoming; `Såld` is skipped).
 - The list has no municipality. `City` and `ParentLocation` place a home in Göteborg (city Göteborg, or a district such as Innerstaden or Västra Göteborg) or Mölndal (city Mölndal, or `Mölndals kommun`). Anything else is skipped rather than guessed. Run against the saved answer: 90 Göteborg and 13 Mölndal homes kept.
 - There are no coordinates, so the geocoder estimates a position for the homes that are kept.
 - Operator steps as for the others: `--print-policy-sql --source=lundin`, then a credential for this source.
 
-Tests use answers authored in `lundin-test-pages.ts` (fictional streets and values in the same shape); the parser was also run once against the saved real answer, which is not kept in the repository.
+Tests use answers authored in `lundin-test-pages.ts` (fictional streets, values and image ids in the same shape); the parsers were also run against the saved real list and one saved home page, which are not kept in the repository.
 
 ## Husman Hagberg reader (pending source)
 

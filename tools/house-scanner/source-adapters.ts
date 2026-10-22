@@ -18,7 +18,10 @@ import {
   USER_AGENT,
 } from '@house-scanner-tools/live-reader';
 import {
+  LUNDIN_IMAGE_ID,
   LUNDIN_MAX_CHARS,
+  LUNDIN_PHOTO_QUERY,
+  readLundinDetailPage,
   readLundinSearchPage,
 } from '@house-scanner-tools/lundin-parser';
 import { imagesOf } from '@house-scanner-tools/page-read';
@@ -217,6 +220,8 @@ export const stadshemAdapter: SourceAdapter = {
 
 // One list of everything the broker sells, read for the two municipalities its fields can place.
 const LUNDIN_MUNICIPALITIES = ['göteborg', 'mölndal'];
+// The same resizer as the lead photo; a plan gets a larger box so its text stays legible.
+const LUNDIN_PLAN_QUERY = 'mode=max&w=1200&h=1200&scale=down';
 
 export const lundinAdapter: SourceAdapter = {
   sourceId: LUNDIN_SOURCE_ID,
@@ -226,15 +231,13 @@ export const lundinAdapter: SourceAdapter = {
   imageOrigin: LUNDIN_ORIGIN,
   headers: {
     'user-agent': USER_AGENT,
-    // robots.txt is asked with the same headers, so plain text stays acceptable.
-    accept: 'application/json, text/plain;q=0.9',
+    // robots.txt and the home pages are asked with the same headers, so text and HTML stay acceptable.
+    accept: 'application/json, text/html;q=0.9, text/plain;q=0.8',
     'accept-language': 'sv-SE,sv;q=0.9,en;q=0.8',
   },
   coordinateSource: 'lundin-list',
   detailLabel: 'Home pages',
   notCovered: 'Not covered: other cities, floor, lift and balcony.',
-  // The list already holds everything, so the run is one request.
-  listOnly: true,
   maxBodyChars: LUNDIN_MAX_CHARS,
   partitionUrl(partition: LivePartitionInput) {
     return LUNDIN_MUNICIPALITIES.includes(
@@ -243,9 +246,24 @@ export const lundinAdapter: SourceAdapter = {
       ? `${LUNDIN_ORIGIN}/api/list?id=1`
       : { unsupported: 'municipality-path-unproven' };
   },
+  // A kept home's public page is read for its photos and plan only.
+  imagesFor(facts, observedAt) {
+    const url = (id: string, query: string) =>
+      `${LUNDIN_ORIGIN}/dc/${id}.jpg?${query}`;
+    const plan = facts.planKey;
+    return imagesOf(
+      (facts.photoKeys ?? [])
+        .filter((id) => LUNDIN_IMAGE_ID.test(id))
+        .map((id) => url(id, LUNDIN_PHOTO_QUERY)),
+      plan !== undefined && LUNDIN_IMAGE_ID.test(plan)
+        ? url(plan, LUNDIN_PLAN_QUERY)
+        : undefined,
+      'Lundin',
+      observedAt,
+    );
+  },
   readSearchPage: readLundinSearchPage,
-  // Never called: the run reads no home pages.
-  readDetailPage: () => ({ kind: 'failed', reason: 'unexpected-shape' }),
+  readDetailPage: readLundinDetailPage,
 };
 
 // One text search for the municipality name, asked for 200 homes a page so the whole answer is one request.

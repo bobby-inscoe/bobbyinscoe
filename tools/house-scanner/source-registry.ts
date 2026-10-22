@@ -357,6 +357,8 @@ export function sourceRegistry(): SourceCapability[] {
       policy: {
         ...common,
         sourceId: LUNDIN_SOURCE_ID,
+        // 2: each kept home's page is read for photos and the floor plan.
+        revision: 2,
         // Pending is not approved: the operator sets approval in the database.
         status: 'pending',
         retentionDays: 14,
@@ -367,7 +369,7 @@ export function sourceRegistry(): SourceCapability[] {
         automatedCollection: false,
         privateDisplay: false,
         rightsBasis:
-          "Permission unresolved. The household owner chose to read the broker's public list for personal use at their own judgment. The site publishes only a privacy policy and no terms of use, and its robots.txt disallows file paths only. Technical access is not a reuse license.",
+          "Permission unresolved. The household owner chose to read the broker's public list and each kept home's public page for personal use at their own judgment. The site publishes only a privacy policy and no terms of use, and its robots.txt disallows file paths only. Technical access is not a reuse license.",
         allowedFactFields: [
           'propertyType',
           'tenure',
@@ -390,10 +392,10 @@ export function sourceRegistry(): SourceCapability[] {
             'Permission is unresolved and the source is not approved.',
             'Göteborg and Mölndal are supported. The list covers every place the broker sells in; the municipality is worked out from the city and district fields, and homes in other places or in unrecognised districts are skipped.',
             'The data is the JSON list that the site page loads (api/list). It is not a documented public API and can change without notice.',
-            'The whole list is one request, so no home page is read: floor, lift, balcony and glazing stay unknown. Viewing times are not in the list.',
+            "Each kept home's public page is read for its photo and floor plan ids only, at most 150 a run and reused from the local cache for 7 days. Floor, lift, balcony and glazing stay unknown. Viewing times are not in the list.",
             'Coming-soon homes are read too and marked upcoming; many have no asking price. Sold homes, plots and new production are skipped.',
             'The list has no coordinates, so a position is estimated from the street address for the homes that are kept.',
-            "Only the primary photo is shown, hotlinked from the broker's own image address. Nothing is copied or stored.",
+            "Up to four photos (the home page's preview, in page order) and the first floor plan are shown, hotlinked from the broker's own image address. A home whose page was not read keeps the list's one photo. Nothing is copied or stored.",
             'Listing identity is the object id and the episode never changes, so a relisting of the same home is not told apart.',
             'Viewing times are not published in the list; booking goes through a third-party page that is not read.',
             'Known listings cannot be refreshed outside discovery.',
