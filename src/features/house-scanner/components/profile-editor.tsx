@@ -12,7 +12,7 @@ import {
   Tooltip,
 } from '@mantine/core';
 import { Info } from 'lucide-react';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 
 import { NumberSelect } from '@/features/house-scanner/components/number-select';
 import {
@@ -68,7 +68,9 @@ export function ProfileEditor({
   profile,
   canEdit,
   onSave,
+  header,
 }: {
+  header?: ReactNode;
   profile: SearchProfile;
   canEdit: boolean;
   onSave?: (profile: SearchProfile) => Promise<void>;
@@ -158,6 +160,7 @@ export function ProfileEditor({
   return (
     <Paper>
       <Stack>
+        {header}
         <Checkbox
           label="Enabled search profile"
           checked={enabled}

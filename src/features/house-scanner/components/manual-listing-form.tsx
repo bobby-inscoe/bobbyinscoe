@@ -1,4 +1,4 @@
-import { Button, Stack, Text, Textarea, TextInput, Title } from '@mantine/core';
+import { Button, Stack, Text, Textarea, TextInput } from '@mantine/core';
 import { useState } from 'react';
 import {
   EMPTY_FIELDS,
@@ -72,7 +72,6 @@ export function ManualListingForm({
   return (
     <form onSubmit={submit}>
       <Stack maw="36rem">
-        <Title order={2}>Add a listing link</Title>
         <Text size="sm" c="dimmed">
           Saves the link without opening the page. The title and note are shared
           with the household.

@@ -2,6 +2,7 @@ import {
   Alert,
   Badge,
   Button,
+  Divider,
   Group,
   Modal,
   Paper,
@@ -147,168 +148,190 @@ export function HouseholdAccessPanel({
       <Stack>
         <Title order={2}>Household</Title>
         {error && <Alert role="alert">{error}</Alert>}
-        {owner ? (
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              void perform('rename', async () => {
-                await actions.current.rename(name);
-                await load();
-              });
-            }}
-          >
-            <Group align="flex-end">
-              <TextInput
-                label="Household name"
-                required
-                maxLength={80}
-                value={name}
-                disabled={pending === 'rename'}
-                onChange={(event) => setName(event.currentTarget.value)}
-              />
-              <Button
-                type="submit"
-                variant="default"
-                loading={pending === 'rename'}
-                disabled={name.trim() === data.name}
-              >
-                Rename
-              </Button>
-            </Group>
-          </form>
-        ) : (
-          <Text>{data.name}</Text>
-        )}
-
-        <Title order={3}>Members</Title>
-        <Text size="sm" c="dimmed">
-          {data.members.filter((member) => member.active).length} of 10 member
-          places used.
-        </Text>
-        <Stack
-          gap="xs"
-          component="ul"
-          p={0}
-          m={0}
-          style={{ listStyle: 'none' }}
-        >
-          {data.members
-            .filter((member) => member.active)
-            .map((member) => (
-              <Group component="li" key={member.userId} gap="xs" wrap="wrap">
-                <Text>
-                  {member.displayName}
-                  {member.userId === userId ? ' (you)' : ''}
-                </Text>
-                {member.role === 'owner' && (
-                  <Badge variant="light">Owner</Badge>
-                )}
-                {owner && member.userId !== userId && (
-                  <>
-                    {member.role === 'member' && (
-                      <Button
-                        size="xs"
-                        variant="default"
-                        loading={pending === `owner:${member.userId}`}
-                        onClick={() =>
-                          void perform(`owner:${member.userId}`, async () => {
-                            await actions.current.makeOwner(member.userId);
-                            await load();
-                          })
-                        }
-                      >
-                        Make owner
-                      </Button>
-                    )}
-                    <Button
-                      size="xs"
-                      variant="subtle"
-                      color="red"
-                      loading={pending === `remove:${member.userId}`}
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            `Remove ${member.displayName} from this household? Their saves and notes stay, and an owner can invite them back.`,
-                          )
-                        )
-                          void perform(`remove:${member.userId}`, async () => {
-                            await actions.current.deactivate(member.userId);
-                            await load();
-                          });
-                      }}
-                    >
-                      Remove
-                    </Button>
-                  </>
-                )}
+        <Stack gap="xs">
+          {owner ? (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void perform('rename', async () => {
+                  await actions.current.rename(name);
+                  await load();
+                });
+              }}
+            >
+              <Group align="flex-end" wrap="nowrap" maw="30rem">
+                <TextInput
+                  flex={1}
+                  miw={0}
+                  label="Household name"
+                  required
+                  maxLength={80}
+                  value={name}
+                  disabled={pending === 'rename'}
+                  onChange={(event) => setName(event.currentTarget.value)}
+                />
+                <Button
+                  type="submit"
+                  variant="default"
+                  loading={pending === 'rename'}
+                  disabled={name.trim() === data.name}
+                >
+                  Rename
+                </Button>
               </Group>
-            ))}
+            </form>
+          ) : (
+            <Text>{data.name}</Text>
+          )}
         </Stack>
 
-        <Title order={3}>Invite people</Title>
-        {inviteForm(
-          'create',
-          'Invite someone to start their own household',
-          'Their household shares nothing with yours.',
-        )}
-        {owner &&
-          inviteForm(
-            'join',
-            'Invite someone to join this household',
-            'Only someone who signs in with this email can use the link.',
-          )}
-        {notice && <Alert role="status">{notice}</Alert>}
-        {owner && data.invitations.length > 0 && (
-          <Stack gap="xs">
-            <Text size="sm">Pending join links</Text>
-            <Text size="sm" c="dimmed">
-              Lost an invitation? Copy new link makes a fresh link and cancels
-              the old one. It sends no email.
-            </Text>
-            {data.invitations.map((invitation) => (
-              <Group key={invitation.id} gap="xs">
-                <Text size="sm">
-                  {invitation.email} · until {formatDate(invitation.expiresAt)}
-                </Text>
-                <Button
-                  size="xs"
-                  variant="default"
-                  loading={pending === `renew:${invitation.id}`}
-                  onClick={() =>
-                    void perform(`renew:${invitation.id}`, async () => {
-                      const url = await actions.current.createLink(
-                        'join',
-                        invitation.email,
-                      );
-                      setNotice(
-                        (await copy(url))
-                          ? `Copied a new link for ${invitation.email}. The earlier one no longer works.`
-                          : 'The new link could not be copied. Press Copy new link again.',
-                      );
-                      await load();
-                    })
-                  }
+        <Stack gap="xs" mt="sm">
+          <Title order={3}>Members</Title>
+          <Text size="sm" c="dimmed">
+            {data.members.filter((member) => member.active).length} of 10 member
+            places used.
+          </Text>
+          <Stack
+            gap="xs"
+            component="ul"
+            p={0}
+            m={0}
+            style={{ listStyle: 'none' }}
+          >
+            {data.members
+              .filter((member) => member.active)
+              .map((member) => (
+                <Group
+                  component="li"
+                  key={member.userId}
+                  gap="sm"
+                  justify="space-between"
+                  wrap="wrap"
+                  py="xs"
                 >
-                  Copy new link
-                </Button>
-                <Button
-                  size="xs"
-                  variant="subtle"
-                  loading={pending === `revoke:${invitation.id}`}
-                  onClick={() =>
-                    void perform(`revoke:${invitation.id}`, async () => {
-                      await actions.current.revoke(invitation.id);
-                      await load();
-                    })
-                  }
-                >
-                  Revoke
-                </Button>
-              </Group>
-            ))}
+                  <Group gap="xs" style={{ flex: '1 1 12rem', minWidth: 0 }}>
+                    <Text style={{ overflowWrap: 'anywhere' }}>
+                      {member.displayName}
+                      {member.userId === userId ? ' (you)' : ''}
+                    </Text>
+                    {member.role === 'owner' && (
+                      <Badge variant="light">Owner</Badge>
+                    )}
+                  </Group>
+                  {owner && member.userId !== userId && (
+                    <Group gap="xs" ml="auto">
+                      {member.role === 'member' && (
+                        <Button
+                          size="xs"
+                          variant="default"
+                          loading={pending === `owner:${member.userId}`}
+                          onClick={() =>
+                            void perform(`owner:${member.userId}`, async () => {
+                              await actions.current.makeOwner(member.userId);
+                              await load();
+                            })
+                          }
+                        >
+                          Make owner
+                        </Button>
+                      )}
+                      <Button
+                        size="xs"
+                        variant="subtle"
+                        color="red"
+                        loading={pending === `remove:${member.userId}`}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Remove ${member.displayName} from this household? Their saves and notes stay, and an owner can invite them back.`,
+                            )
+                          )
+                            void perform(
+                              `remove:${member.userId}`,
+                              async () => {
+                                await actions.current.deactivate(member.userId);
+                                await load();
+                              },
+                            );
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    </Group>
+                  )}
+                </Group>
+              ))}
           </Stack>
-        )}
+        </Stack>
 
+        <Stack gap="md" mt="sm">
+          <Title order={3}>Invite people</Title>
+          {inviteForm(
+            'create',
+            'Invite someone to start their own household',
+            'Their household shares nothing with yours.',
+          )}
+          {owner &&
+            inviteForm(
+              'join',
+              'Invite someone to join this household',
+              'Only someone who signs in with this email can use the link.',
+            )}
+          {notice && <Alert role="status">{notice}</Alert>}
+          {owner && data.invitations.length > 0 && (
+            <Stack gap="xs">
+              <Text size="sm">Pending join links</Text>
+              <Text size="sm" c="dimmed">
+                Lost an invitation? Copy new link makes a fresh link and cancels
+                the old one. It sends no email.
+              </Text>
+              {data.invitations.map((invitation) => (
+                <Group key={invitation.id} gap="xs">
+                  <Text size="sm">
+                    {invitation.email} · until{' '}
+                    {formatDate(invitation.expiresAt)}
+                  </Text>
+                  <Button
+                    size="xs"
+                    variant="default"
+                    loading={pending === `renew:${invitation.id}`}
+                    onClick={() =>
+                      void perform(`renew:${invitation.id}`, async () => {
+                        const url = await actions.current.createLink(
+                          'join',
+                          invitation.email,
+                        );
+                        setNotice(
+                          (await copy(url))
+                            ? `Copied a new link for ${invitation.email}. The earlier one no longer works.`
+                            : 'The new link could not be copied. Press Copy new link again.',
+                        );
+                        await load();
+                      })
+                    }
+                  >
+                    Copy new link
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="subtle"
+                    loading={pending === `revoke:${invitation.id}`}
+                    onClick={() =>
+                      void perform(`revoke:${invitation.id}`, async () => {
+                        await actions.current.revoke(invitation.id);
+                        await load();
+                      })
+                    }
+                  >
+                    Revoke
+                  </Button>
+                </Group>
+              ))}
+            </Stack>
+          )}
+        </Stack>
+
+        <Divider mt="sm" />
         <Group>
           <Button
             variant="light"

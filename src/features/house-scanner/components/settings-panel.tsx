@@ -1,4 +1,4 @@
-import { Flex, Stack, Text, Title } from '@mantine/core';
+import { Flex, Paper, Stack, Text, Title } from '@mantine/core';
 
 import { CriteriaHelp } from '@/features/house-scanner/components/criteria-help';
 import { HouseholdAccessPanel } from '@/features/house-scanner/components/household-access-panel';
@@ -26,8 +26,8 @@ export function SettingsPanel({
   access,
 }: SettingsPanelProps) {
   const member = snapshot.members.find((entry) => entry.userId === userId);
-  return (
-    <Stack w="100%" maw="48rem">
+  const header = (
+    <>
       <Flex gap="sm" align="center" wrap="wrap">
         <Title order={2}>Default filter</Title>
         <CriteriaHelp />
@@ -37,17 +37,27 @@ export function SettingsPanel({
           These criteria are fictional. Edits affect this demo only.
         </Text>
       )}
+    </>
+  );
+  return (
+    <Stack w="100%" maw="48rem">
       {snapshot.profiles.length ? (
         snapshot.profiles.map((profile) => (
           <ProfileEditor
             key={profile.id}
+            header={header}
             profile={profile}
             canEdit={member?.role === 'owner'}
             onSave={onSaveProfile}
           />
         ))
       ) : (
-        <Text>No search profiles yet.</Text>
+        <Paper>
+          <Stack>
+            {header}
+            <Text>No search profiles yet.</Text>
+          </Stack>
+        </Paper>
       )}
       {access && <HouseholdAccessPanel access={access} userId={userId} />}
     </Stack>
