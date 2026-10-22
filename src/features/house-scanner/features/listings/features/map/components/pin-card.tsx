@@ -37,7 +37,9 @@ export function PinCard({
   onClose,
   onDetails,
   selection,
+  layout = 'classic',
 }: {
+  layout?: 'classic' | 'photo';
   listing: Listing;
   // The member's own favorite of this home.
   favorite: {
@@ -68,6 +70,73 @@ export function PinCard({
       <FavoriteStar {...favorite} onToggle={() => onFavorite(listing.id)} />
     </>
   );
+  const selectionAction = selection && (
+    <Button
+      size="sm"
+      variant={selection.checked ? 'filled' : 'default'}
+      aria-pressed={selection.checked}
+      disabled={selection.disabled}
+      onClick={selection.onToggle}
+    >
+      <FormattedMessage
+        id={
+          selection.checked
+            ? 'listings.map.selected2'
+            : 'listings.map.selectHome'
+        }
+      />
+    </Button>
+  );
+  const closeButton = (
+    <CloseButton
+      aria-label={intl.formatMessage({ id: 'listings.map.closeSelectedHome' })}
+      onClick={onClose}
+    />
+  );
+  if (layout === 'photo')
+    return (
+      <article
+        className={`${classes.pinCard} ${classes.photoPinCard}`}
+        aria-label={intl.formatMessage(
+          { id: 'listings.map.selectedHome' },
+          { value0: messageValue(listing.title) },
+        )}
+      >
+        <div className={classes.photoPinImage}>
+          <ListingPhoto
+            listing={listing}
+            onOpen={onDetails}
+            isNew={listing.isNew}
+          />
+          <div className={classes.photoPinClose}>{closeButton}</div>
+          <Group
+            className={classes.photoPinActions}
+            justify="space-between"
+            gap="xs"
+          >
+            <Button size="sm" variant="default" onClick={onDetails}>
+              <FormattedMessage id="listings.map.details" />
+            </Button>
+            <Group gap="xs">{selectionAction || personalActions}</Group>
+          </Group>
+        </div>
+        <div className={classes.photoPinSummary}>
+          <Title order={3} size="h5">
+            <UnstyledButton className={classes.titleButton} onClick={onDetails}>
+              {listing.title}
+              <Text component="span" display="block" size="sm" fw={700}>
+                {listing.conflicts.includes('askingPriceSek')
+                  ? intl.formatMessage({ id: 'listings.map.priceDisputed' })
+                  : listing.facts.askingPriceSek === null
+                    ? intl.formatMessage({ id: 'listings.map.priceMissing' })
+                    : formatPrice(listing.facts.askingPriceSek, intl)}
+              </Text>
+            </UnstyledButton>
+          </Title>
+          <KeyFacts listing={listing} />
+        </div>
+      </article>
+    );
   return (
     <article
       className={classes.pinCard}
@@ -99,12 +168,7 @@ export function PinCard({
             </>
           )}
         </Title>
-        <CloseButton
-          aria-label={intl.formatMessage({
-            id: 'listings.map.closeSelectedHome',
-          })}
-          onClick={onClose}
-        />
+        {closeButton}
       </Group>
       <div className={`${classes.photoWrap} ${classes.pinPhoto}`}>
         <ListingPhoto listing={listing} onOpen={onDetails} />
@@ -116,7 +180,9 @@ export function PinCard({
         </div>
       ) : (
         <Text fz="lg" className={`${classes.pinPrice} ${classes.priceText}`}>
-          {formatPrice(listing.facts.askingPriceSek, intl)}
+          {listing.facts.askingPriceSek === null
+            ? intl.formatMessage({ id: 'listings.map.priceMissing' })
+            : formatPrice(listing.facts.askingPriceSek, intl)}
           {listing.conflicts.includes('askingPriceSek') &&
             intl.formatMessage({ id: 'listings.details.disputed' })}
         </Text>
@@ -127,21 +193,7 @@ export function PinCard({
       {!mobile && <AlsoOn sites={alsoOn} />}
       {!mobile && <NextViewing listing={listing} />}
       <Group gap="xs" className={classes.pinActions}>
-        {selection ? (
-          <Button
-            size="sm"
-            variant={selection.checked ? 'filled' : 'default'}
-            aria-pressed={selection.checked}
-            disabled={selection.disabled}
-            onClick={selection.onToggle}
-          >
-            {selection.checked
-              ? intl.formatMessage({ id: 'listings.map.selected2' })
-              : intl.formatMessage({ id: 'listings.map.selectHome' })}
-          </Button>
-        ) : (
-          mobile && personalActions
-        )}
+        {selection ? selectionAction : mobile && personalActions}
         {!mobile && !selection && (
           <Button
             component="a"

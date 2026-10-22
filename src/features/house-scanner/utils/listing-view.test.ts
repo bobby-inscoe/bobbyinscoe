@@ -181,15 +181,19 @@ describe('mapPoints', () => {
     },
   );
 
-  it('shows ? and Price unknown when the price is unknown', () => {
-    const [point] = mapPoints([needsDetails]);
+  it('labels a missing price explicitly on the pin and in its accessible label', () => {
+    const [pinned, point] = mapPoints([
+      { ...needsDetails, coordinates: balcony.coordinates },
+      needsDetails,
+    ]);
+    expect(pinned.markerText).toBe('Price missing');
     expect(point.markerText).toBe('?');
     expect(point.label).toBe(
-      'Example home needing details: Price unknown · Available · no known position',
+      'Example home needing details: Price missing · Available · no known position',
     );
   });
 
-  it('shows a disputed price as ? and Price disputed, pinned or not', () => {
+  it('distinguishes a disputed price from a missing one, pinned or not', () => {
     const disputed: Pick<Listing, 'conflicts'> = {
       conflicts: ['askingPriceSek'],
     };
@@ -197,7 +201,7 @@ describe('mapPoints', () => {
       { ...balcony, ...disputed },
       { ...older, ...disputed },
     ]);
-    expect(pinned.markerText).toBe('?');
+    expect(pinned.markerText).toBe('Price disputed');
     expect(pinned.label).toBe(
       'Example balcony home: Price disputed · Available',
     );

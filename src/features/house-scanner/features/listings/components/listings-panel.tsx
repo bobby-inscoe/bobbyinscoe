@@ -237,6 +237,9 @@ export function ListingsPanel({
     };
   }, [mobileMap]);
   const [draft, setDraft] = useState(filters);
+  const [mapCardLayout, setMapCardLayout] = useState<'classic' | 'photo'>(
+    'classic',
+  );
   const [selection, setSelection] = useState<string[]>([]);
   const stackReturnFocus = useRef<HTMLElement | null>(null);
   const [stackReview, setStackReview] = useState<{
@@ -970,30 +973,55 @@ export function ListingsPanel({
                   satellite={satellite}
                   points={points}
                   controls={
-                    <Group
-                      gap="xs"
-                      role="group"
-                      aria-label={intl.formatMessage({
-                        id: 'listings.list.basemap',
-                      })}
-                    >
-                      <Button
-                        size="xs"
-                        variant={satellite ? 'default' : 'filled'}
-                        aria-pressed={!satellite}
-                        onClick={() => onSatelliteChange(false)}
+                    <Stack gap="xs">
+                      <Group
+                        gap="xs"
+                        role="group"
+                        aria-label={intl.formatMessage({
+                          id: 'listings.list.basemap',
+                        })}
                       >
-                        <FormattedMessage id="listings.list.streetMap" />
-                      </Button>
-                      <Button
-                        size="xs"
-                        variant={satellite ? 'filled' : 'default'}
-                        aria-pressed={satellite}
-                        onClick={() => onSatelliteChange(true)}
+                        <Button
+                          size="xs"
+                          variant={satellite ? 'default' : 'filled'}
+                          aria-pressed={!satellite}
+                          onClick={() => onSatelliteChange(false)}
+                        >
+                          <FormattedMessage id="listings.list.streetMap" />
+                        </Button>
+                        <Button
+                          size="xs"
+                          variant={satellite ? 'filled' : 'default'}
+                          aria-pressed={satellite}
+                          onClick={() => onSatelliteChange(true)}
+                        >
+                          <FormattedMessage id="listings.list.satellite" />
+                        </Button>
+                      </Group>
+                      <Group
+                        gap="xs"
+                        role="group"
+                        aria-label={intl.formatMessage({
+                          id: 'listings.map.cardLayout',
+                        })}
                       >
-                        <FormattedMessage id="listings.list.satellite" />
-                      </Button>
-                    </Group>
+                        {(['classic', 'photo'] as const).map((layout) => (
+                          <Button
+                            key={layout}
+                            size="xs"
+                            variant={
+                              mapCardLayout === layout ? 'filled' : 'default'
+                            }
+                            aria-pressed={mapCardLayout === layout}
+                            onClick={() => setMapCardLayout(layout)}
+                          >
+                            <FormattedMessage
+                              id={`listings.map.${layout}Card`}
+                            />
+                          </Button>
+                        ))}
+                      </Group>
+                    </Stack>
                   }
                   selectedId={selected?.id ?? null}
                   selectionMode={selecting}
@@ -1012,6 +1040,7 @@ export function ListingsPanel({
                   overlay={
                     selected ? (
                       <PinCard
+                        layout={mapCardLayout}
                         listing={selected}
                         favorite={selectedFavorite}
                         hidden={hiddenIds.has(selected.id)}
