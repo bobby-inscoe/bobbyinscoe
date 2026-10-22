@@ -21,6 +21,8 @@ export const MAX_MEMORY_BYTES = 2 * 1024 * 1024;
 export const DEFAULT_CACHE_PATH = 'house-scanner.cache.json';
 
 const { shape } = factsSchema;
+// An image's place on its source's host, as that source's adapter rebuilds the address. Each adapter checks its own form.
+const imageKey = z.string().regex(/^[\w.,=?&/-]{1,200}$/);
 // What one listing page supplied: small enums and numbers. Outdoor and glazed are always
 // present; the rest is optional so entries written before they existed still load.
 export const detailFactsSchema = z.strictObject({
@@ -39,13 +41,16 @@ export const detailFactsSchema = z.strictObject({
   longitude: z.number().min(-180).max(180).optional(),
   // Viewing times a listing page published. Future ones are applied again from memory; past ones are dropped.
   viewings: z.array(viewingSchema).max(10).optional(),
-  // Where a source's image host holds the first photo: "<account>/<image id>". Erik Olsson only.
+  // Where a source's image host holds the first photo: "<account>/<image id>". Erik Olsson entries written before photoKeys.
   photoPath: z
     .string()
     .regex(
       /^[A-Za-z0-9_-]{10,40}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
     )
     .optional(),
+  // Up to four photos, in page order, and the floor plan.
+  photoKeys: z.array(imageKey).min(1).max(4).optional(),
+  planKey: imageKey.optional(),
 });
 export type DetailFacts = z.infer<typeof detailFactsSchema>;
 

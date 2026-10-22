@@ -329,17 +329,33 @@ const IMAGE_ID =
 // The image account is read from the page's own image addresses, so a change of account is followed.
 const IMAGE_ACCOUNT = /https:\/\/imagedelivery\.net\/([A-Za-z0-9_-]{10,40})\//;
 
-/** "<account>/<image id>" of the first image that is not a floor plan, or undefined. */
-function photoPathOf(html: string, home: Rec): string | undefined {
+/** An image's place on the image host, as the adapter rebuilds its address. */
+export const ERIK_OLSSON_IMAGE_KEY =
+  /^[A-Za-z0-9_-]{10,40}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/** "<account>/<image id>" of up to four photos in page order and the first floor plan. */
+function imageKeysOf(
+  html: string,
+  home: Rec,
+): Pick<DetailFacts, 'photoKeys' | 'planKey'> {
   const account = IMAGE_ACCOUNT.exec(html)?.[1];
-  const images = Array.isArray(home.images) ? home.images : [];
-  const first = images.find(
-    (image) => isRecord(image) && image.is_floor_plan === false,
+  if (account === undefined) return {};
+  const images = (Array.isArray(home.images) ? home.images : []).filter(
+    (image): image is Rec =>
+      isRecord(image) &&
+      typeof image.cloudflare_image_id === 'string' &&
+      IMAGE_ID.test(image.cloudflare_image_id),
   );
-  const id = isRecord(first) ? first.cloudflare_image_id : undefined;
-  return account !== undefined && typeof id === 'string' && IMAGE_ID.test(id)
-    ? `${account}/${id}`
-    : undefined;
+  const key = (image: Rec) => `${account}/${image.cloudflare_image_id}`;
+  const photoKeys = images
+    .filter((image) => image.is_floor_plan === false)
+    .slice(0, 4)
+    .map(key);
+  const plan = images.find((image) => image.is_floor_plan === true);
+  return {
+    ...(photoKeys.length > 0 ? { photoKeys } : {}),
+    ...(plan ? { planKey: key(plan) } : {}),
+  };
 }
 
 export type ErikOlssonDetailRead =
@@ -380,7 +396,6 @@ export function readErikOlssonDetailPage(html: string): ErikOlssonDetailRead {
   // for_sale is the one status name seen, with the title "Till salu".
   const status = record(found.home.status).name === 'for_sale';
 
-  const photoPath = photoPathOf(html, found.home);
   const facts: DetailFacts = {
     outdoor:
       balcony && patio
@@ -404,7 +419,7 @@ export function readErikOlssonDetailPage(html: string): ErikOlssonDetailRead {
     livingAreaM2: area(numberOf(base.livingSpace)),
     rooms: area(numberOf(record(data.interior).numberOfRooms), 100),
     ...(hasPoint ? { latitude, longitude } : {}),
-    ...(photoPath === undefined ? {} : { photoPath }),
+    ...imageKeysOf(html, found.home),
   };
   return { kind: 'detail', facts };
 }

@@ -7,6 +7,7 @@ import {
   readBoneoSearchPage,
 } from '@house-scanner-tools/boneo-parser';
 import {
+  ERIK_OLSSON_IMAGE_KEY,
   readErikOlssonDetailPage,
   readErikOlssonSearchPage,
 } from '@house-scanner-tools/erik-olsson-parser';
@@ -20,6 +21,7 @@ import {
   LUNDIN_MAX_CHARS,
   readLundinSearchPage,
 } from '@house-scanner-tools/lundin-parser';
+import { imagesOf } from '@house-scanner-tools/page-read';
 import {
   BJURFORS_ORIGIN,
   BJURFORS_SOURCE_ID,
@@ -128,10 +130,10 @@ const ERIK_OLSSON_PATHS: Record<string, string> = {
   göteborg: 'goteborg-166',
 };
 
-// A thumbnail size of the image account's flexible variants; the site's own pages use the same family.
+// Sizes from the image account's flexible variants; the site's own pages use the same family. A plan is shown whole,
+// large enough to read.
 const PHOTO_VARIANT = 'w=640,h=480,fit=cover,quality=80,format=auto';
-// The daily run refreshes the photo, so a week is ample before the app stops showing it.
-const PHOTO_VALID_MS = 7 * 24 * 60 * 60 * 1000;
+const PLAN_VARIANT = 'w=1200,h=1200,fit=scale-down,quality=80,format=auto';
 
 export const erikOlssonAdapter: SourceAdapter = {
   sourceId: ERIK_OLSSON_SOURCE_ID,
@@ -154,20 +156,24 @@ export const erikOlssonAdapter: SourceAdapter = {
       ? { unsupported: 'municipality-path-unproven' }
       : `${ERIK_OLSSON_ORIGIN}/municipalities/${path}?tab=homes`;
   },
-  photoFor(facts, observedAt) {
-    if (facts.photoPath === undefined) return null;
-    return {
-      url: `${ERIK_OLSSON_IMAGE_ORIGIN}/${facts.photoPath}/${PHOTO_VARIANT}`,
-      attribution: 'Erik Olsson',
-      rightsBasis:
-        'Shown to the household owner for personal use, loaded from the broker image host and never copied or stored.',
-      expiresAt: new Date(
-        Date.parse(observedAt) + PHOTO_VALID_MS,
-      ).toISOString(),
+  imagesFor(facts, observedAt) {
+    // A remembered page from before photoKeys holds only photoPath.
+    const keys =
+      facts.photoKeys ??
+      (facts.photoPath === undefined ? [] : [facts.photoPath]);
+    const url = (key: string, variant: string) =>
+      `${ERIK_OLSSON_IMAGE_ORIGIN}/${key}/${variant}`;
+    const plan = facts.planKey;
+    return imagesOf(
+      keys
+        .filter((key) => ERIK_OLSSON_IMAGE_KEY.test(key))
+        .map((key) => url(key, PHOTO_VARIANT)),
+      plan !== undefined && ERIK_OLSSON_IMAGE_KEY.test(plan)
+        ? url(plan, PLAN_VARIANT)
+        : undefined,
+      'Erik Olsson',
       observedAt,
-      displayAllowed: true,
-      hotlinkAllowed: true,
-    };
+    );
   },
   // The search address already carries a query.
   pageUrl: (base, page) => `${base}&page=${page}`,
