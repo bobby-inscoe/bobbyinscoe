@@ -85,9 +85,6 @@ test('private access is closed by default and demo state leaves no browser stora
     .getByRole('article', { name: 'Example balcony home', exact: true })
     .getByRole('button', { name: 'Save favorite', exact: true })
     .click();
-  await expect(
-    page.getByText('Favorite saved.', { exact: true }),
-  ).toBeVisible();
   await page.getByRole('button', { name: 'Leave demo' }).click();
   await expect(page.getByRole('article')).toHaveCount(0);
   await openDemo(page);
@@ -1002,9 +999,6 @@ test('an older saved listing has no scan notice and can be unfavorited by keyboa
   const remove = home.getByRole('button', { name: 'Remove my favorite' });
   await remove.focus();
   await page.keyboard.press('Enter');
-  await expect(
-    page.getByText('Your favorite was removed.', { exact: false }),
-  ).toBeVisible();
   await expect(home.getByText(/^Saved by/)).toHaveCount(0);
   await expect(
     home.getByRole('button', { name: 'Save favorite', exact: true }),
@@ -1570,7 +1564,7 @@ test('the Viewings tab lists saved homes with their times and hands over a calen
     .click();
   await expect(
     page.getByRole('heading', { name: 'Viewings', level: 2 }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   // Two viewings are listed for this home, one a day away and one a week away.
   await expect(page.getByText('Example balcony home')).toHaveCount(2);
   const download = page.waitForEvent('download');
@@ -1581,6 +1575,54 @@ test('the Viewings tab lists saved homes with their times and hands over a calen
   expect((await download).suggestedFilename()).toMatch(
     /^viewing-\d{4}-\d{2}-\d{2}-example-balcony-home\.ics$/,
   );
+
+  await choose(page, 'Saved by', 'Demo Morgan');
+  const viewing = page
+    .getByRole('article', { name: /^Example balcony home,/ })
+    .first();
+  await expect(viewing.getByRole('link')).toHaveCount(0);
+  for (const button of [
+    'Details',
+    'Example balcony home',
+    'View Example balcony home',
+  ]) {
+    const trigger = viewing.getByRole('button', { name: button, exact: true });
+    await trigger.click();
+    const dialog = page.getByRole('dialog', {
+      name: 'Example balcony home',
+      exact: true,
+    });
+    await expect(dialog).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Viewings', exact: true }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    await expect(page).toHaveURL(/from=viewings/);
+    await page.getByRole('button', { name: 'Close listing details' }).click();
+    await expect(dialog).not.toBeVisible();
+    await expect(trigger).toBeFocused();
+    await expect(page.getByRole('combobox', { name: 'Saved by' })).toHaveValue(
+      'Demo Morgan',
+    );
+  }
+  await viewing
+    .getByRole('button', { name: 'More actions for Example balcony home' })
+    .click();
+  await expect(
+    page.getByRole('menuitem', { name: 'Share this listing' }),
+  ).toBeVisible();
+  await page.getByRole('menuitem', { name: 'See on map', exact: true }).click();
+  await expect(page.getByLabel('Listing map')).toBeVisible();
+  await expect(page).toHaveURL(/\/shellter\/favorites\?/);
+  await expect(
+    page.getByRole('article', {
+      name: 'Selected home: Example balcony home',
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'List', exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: 'Favorites', exact: true }),
+  ).toHaveAttribute('aria-pressed', 'true');
 
   await page.getByRole('button', { name: 'Listings', exact: true }).click();
   await page.getByRole('button', { name: /^Filters(?: \(\d+\))?$/ }).click();

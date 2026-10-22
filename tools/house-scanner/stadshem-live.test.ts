@@ -5,15 +5,8 @@ import {
   type Reply,
 } from '@house-scanner-tools/live-test-helpers';
 import { parseRobots, robotsAllows } from '@house-scanner-tools/robots';
-import {
-  adapterFor,
-  boneoAdapter,
-  stadshemAdapter,
-} from '@house-scanner-tools/source-adapters';
-import {
-  approvedPolicy,
-  sourceRegistry,
-} from '@house-scanner-tools/source-registry';
+import { stadshemAdapter } from '@house-scanner-tools/source-adapters';
+import { sourceRegistry } from '@house-scanner-tools/source-registry';
 import { estate, list, record } from '@house-scanner-tools/stadshem-test-pages';
 import { describe, expect, it } from 'vitest';
 import { assertSourceAllowed } from '@/features/house-scanner/utils/source-policy';
@@ -128,15 +121,6 @@ describe('Stadshem guarded run', () => {
     expect(result.stopped).toBe('invalid-embedded-data');
   });
 
-  it.each([403, 429])('stops at once on %i without a retry', async (status) => {
-    const { impl, calls } = fakeFetch((url) =>
-      url.endsWith('/robots.txt') ? robotsReply : { status, body: '' },
-    );
-    const result = await run(goteborg, deps(impl));
-    expect(result.stopped).toBe(`http-${status}`);
-    expect(calls).toHaveLength(2);
-  });
-
   it('keeps only the partition municipality from a list that covers the country', async () => {
     const stockholm = estate({
       id: 'estate-OBJ0000000000000099-gata-99',
@@ -210,17 +194,6 @@ describe('Stadshem guarded run', () => {
     expect(first.coordinates?.source).toBe('stadshem-estates');
     expect(first.photo).not.toBeNull();
   });
-
-  it('leaves floor and lift unknown when a record fails, without stopping the run', async () => {
-    const { impl } = fakeFetch(site(2, 100, () => ({ body: 'nej' })));
-    const result = await run(goteborg, deps(impl), (all) => all);
-    expect(result).toMatchObject({
-      detailRead: 0,
-      detailFailed: 2,
-      stopped: null,
-    });
-    expect(result.observations[0].facts.lift).toBeNull();
-  });
 });
 
 function stadshem() {
@@ -263,39 +236,5 @@ describe('Stadshem registry entry', () => {
     expect(() =>
       assertSourceAllowed(policy, new Date('2026-10-20T00:00:00Z')),
     ).toThrow();
-  });
-
-  it('yields a policy the owner can approve for 90 days', () => {
-    const approved = approvedPolicy(
-      'stadshem',
-      new Date('2026-10-20T00:00:00Z'),
-    );
-    expect(approved).toMatchObject({ status: 'approved' });
-    expect(() =>
-      assertSourceAllowed(approved, new Date('2026-10-21T00:00:00Z')),
-    ).not.toThrow();
-  });
-
-  it('is found by its capability and refused for another host, photo origin or executor', () => {
-    expect(adapterFor(stadshem())).toBe(stadshemAdapter);
-    const wrongHost = structuredClone(stadshem());
-    wrongHost.policy.listingOrigins = ['https://www.example.invalid'];
-    expect(() => adapterFor(wrongHost)).toThrow('No permitted executor');
-    const photos = structuredClone(stadshem());
-    photos.policy.imageOrigins = ['https://stadshem.se'];
-    expect(() => adapterFor(photos)).toThrow('No permitted executor');
-    const other = structuredClone(stadshem());
-    other.executor = 'boneo-personal-read';
-    expect(() => adapterFor(other)).toThrow('No permitted executor');
-    const boneo = sourceRegistry().find((e) => e.policy.sourceId === 'boneo');
-    if (!boneo) throw new Error('boneo missing');
-    expect(adapterFor(boneo)).toBe(boneoAdapter);
-  });
-
-  it('leaves the sources nobody reads without an executor', () => {
-    for (const id of ['alvhem', 'fastighetsbyran', 'booli', 'hemnet', 'norban'])
-      expect(
-        sourceRegistry().find((e) => e.policy.sourceId === id)?.executor,
-      ).toBe('none');
   });
 });

@@ -7,11 +7,12 @@ import {
   emitAuth,
   fixtureSnapshot,
   HOUSEHOLD_ID,
-  missing,
   OTHER_HOUSEHOLD_ID,
   reply,
   resetSdk,
   sdk,
+  startReply,
+  toV2,
   USER_ID,
   v2Snapshot,
 } from '@/features/house-scanner/api/session-test-helpers';
@@ -30,10 +31,10 @@ beforeEach(resetSdk);
 afterEach(cleanup);
 
 const names = () => sdk.rpc.mock.calls.map(([name]) => name);
-// One snapshot read: the read-model snapshot, which these tests leave uninstalled, then the previous one.
-const READ = ['hs_household_snapshot', 'hs_snapshot_neighborhoods'];
-// The start of a load: the one-request start, also left uninstalled, then the memberships.
-const START = ['hs_household_start', 'hs_memberships'];
+// One snapshot read after a write.
+const READ = ['hs_household_snapshot'];
+// A full load: the memberships and the snapshot in one request.
+const START = ['hs_household_start'];
 const requests = () => ({
   users: sdk.auth.getSession.mock.calls.length,
   rpc: names(),
@@ -83,9 +84,6 @@ describe('requests made by a signed-in session', () => {
     const id = fixtureSnapshot().listings[0].id;
     const pending = deferred<ReturnType<typeof reply>>();
     sdk.rpc
-      .mockImplementationOnce(async () => missing())
-      .mockImplementationOnce(async () => reply([fixtureSnapshot().members[0]]))
-      .mockImplementationOnce(async () => missing())
       .mockReturnValueOnce(pending.promise)
       .mockImplementationOnce(async () => reply({ ok: true }));
     const before = names().length;
@@ -93,18 +91,13 @@ describe('requests made by a signed-in session', () => {
     act(() => {
       refresh = hook.result.current.refresh();
     });
-    await waitFor(() => expect(names().length).toBe(before + 4));
+    await waitFor(() => expect(names().length).toBe(before + 1));
     await act(() => hook.result.current.onSetHidden([id], true));
     await act(async () => {
-      pending.resolve(reply(fixtureSnapshot()));
+      pending.resolve(startReply());
       await refresh;
     });
-    expect(names().slice(before)).toEqual([
-      ...START,
-      ...READ,
-      'hs_set_hidden',
-      ...READ,
-    ]);
+    expect(names().slice(before)).toEqual([...START, 'hs_set_hidden', ...READ]);
   });
 
   it('keeps the workspace available after a hide request fails', async () => {
@@ -136,10 +129,7 @@ describe('requests made by a signed-in session', () => {
       expect(hook.result.current.state.status).toBe('authenticated'),
     );
     await settle();
-    expect(requests()).toEqual({
-      users: 1,
-      rpc: [...START, ...READ],
-    });
+    expect(requests()).toEqual({ users: 1, rpc: START });
   });
 
   it('opens the household with one request when the server sends memberships and snapshot together', async () => {
@@ -241,10 +231,7 @@ describe('requests made by a signed-in session', () => {
     );
     await settle();
     expect(hook.result.current.state.status).toBe('authenticated');
-    expect(requests()).toEqual({
-      users: 1,
-      rpc: [...START, ...READ],
-    });
+    expect(requests()).toEqual({ users: 1, rpc: START });
   });
 
   it('saves only the new favorites in one request, and keeps the workspace when that request fails', async () => {
@@ -287,8 +274,7 @@ describe('requests made by a signed-in session', () => {
         data: null,
         error: { message: 'Network failure' },
       })
-      .mockResolvedValueOnce(missing())
-      .mockResolvedValueOnce(reply(snapshot));
+      .mockResolvedValueOnce(reply(toV2(snapshot)));
 
     await act(async () => {
       await expect(hook.result.current.onSaveFavorites(ids)).rejects.toThrow(
@@ -302,8 +288,7 @@ describe('requests made by a signed-in session', () => {
     sdk.rpc.mockClear();
     sdk.rpc
       .mockResolvedValueOnce(reply({ ok: true }))
-      .mockResolvedValueOnce(missing())
-      .mockResolvedValueOnce(reply(complete));
+      .mockResolvedValueOnce(reply(toV2(complete)));
     await act(async () => {
       await expect(
         hook.result.current.onSaveFavorites(ids),
@@ -410,16 +395,14 @@ describe('notes come with the snapshot', () => {
 
   it('opens a listing’s notes from memory without any request', async () => {
     const [first, second] = fixtureSnapshot().listings;
-    sdk.rpc.mockImplementation(async (name) => {
-      if (name === 'hs_memberships')
-        return reply([fixtureSnapshot().members[0]]);
-      if (name === 'hs_snapshot_neighborhoods')
-        return reply({
-          ...fixtureSnapshot(),
-          notes: [noteRow(first.id, 'About the first home')],
-        });
-      return reply({ ok: true });
-    });
+    sdk.rpc.mockImplementation(async (name) =>
+      name === 'hs_household_start'
+        ? startReply({
+            ...fixtureSnapshot(),
+            notes: [noteRow(first.id, 'About the first home')],
+          })
+        : reply({ ok: true }),
+    );
     const hook = await authenticated();
     const before = names().length;
     await expect(hook.result.current.onLoadNotes(first.id)).resolves.toEqual([
@@ -448,12 +431,8 @@ describe('notes come with the snapshot', () => {
   it('writes a saved note into the snapshot without re-reading it', async () => {
     const [first] = fixtureSnapshot().listings;
     sdk.rpc.mockImplementation(async (name) => {
-      if (name === 'hs_memberships')
-        return reply([fixtureSnapshot().members[0]]);
       if (name === 'hs_save_note') return reply({ revision: 1 });
-      if (name === 'hs_snapshot_neighborhoods')
-        return reply({ ...fixtureSnapshot(), notes: [] });
-      if (name === 'hs_household_snapshot') return missing();
+      if (name === 'hs_household_start') return startReply();
       return reply({ ok: true });
     });
     const hook = await authenticated();
@@ -474,16 +453,14 @@ describe('notes come with the snapshot', () => {
 
   it('re-reads the snapshot when a note is cleared, since its home may leave the list', async () => {
     const [first] = fixtureSnapshot().listings;
+    const noted = {
+      ...fixtureSnapshot(),
+      notes: [noteRow(first.id, 'Old text')],
+    };
     sdk.rpc.mockImplementation(async (name) => {
-      if (name === 'hs_memberships')
-        return reply([fixtureSnapshot().members[0]]);
       if (name === 'hs_save_note') return reply({ revision: 2 });
-      if (name === 'hs_snapshot_neighborhoods')
-        return reply({
-          ...fixtureSnapshot(),
-          notes: [noteRow(first.id, 'Old text')],
-        });
-      if (name === 'hs_household_snapshot') return missing();
+      if (name === 'hs_household_start') return startReply(noted);
+      if (name === 'hs_household_snapshot') return reply(toV2(noted));
       return reply({ ok: true });
     });
     const hook = await authenticated();

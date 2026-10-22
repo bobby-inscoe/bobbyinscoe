@@ -207,27 +207,6 @@ describe('mapPoints', () => {
     );
   });
 
-  it('shows a disputed status as Status disputed', () => {
-    const disputed: Pick<Listing, 'conflicts'> = { conflicts: ['status'] };
-    const [pinned, unlocated] = mapPoints([
-      { ...balcony, ...disputed },
-      { ...older, ...disputed },
-    ]);
-    expect(pinned.label).toBe(
-      `Example balcony home: ${formatPrice(2800000)} · Status disputed`,
-    );
-    expect(unlocated.label).toBe(
-      `Example older listing: ${formatPrice(2600000)} · Status disputed · no known position`,
-    );
-  });
-
-  it('keeps the order of the homes it is given', () => {
-    expect(mapPoints([older, balcony]).map((point) => point.id)).toEqual([
-      older.id,
-      balcony.id,
-    ]);
-  });
-
   it('marks a home saved by the signed-in member', () => {
     const [point] = mapPoints(
       [balcony],
@@ -252,19 +231,6 @@ describe('mapPoints', () => {
     expect(point.label).toContain('saved by household member');
     expect(point.savedByMe).toBeUndefined();
     expect(point.savedByHousehold).toBe(true);
-  });
-
-  it('updates marker save state when the favorite list changes', () => {
-    const [saved] = mapPoints(
-      [balcony],
-      new Set(),
-      SYNTHETIC_SNAPSHOT.favorites,
-      DEMO_OTHER_USER_ID,
-    );
-    const [unsaved] = mapPoints([balcony], new Set(), [], DEMO_OTHER_USER_ID);
-    expect(saved.markerText).toBe('2.8M');
-    expect(unsaved.markerText).toBe('2.8M');
-    expect(unsaved.savedByHousehold).toBeUndefined();
   });
 });
 

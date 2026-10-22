@@ -1,11 +1,26 @@
-import { Anchor, Box, Group, Select, Stack, Text, Title } from '@mantine/core';
-import { useMemo, useState } from 'react';
+import {
+  Box,
+  Button,
+  Group,
+  Select,
+  Stack,
+  Text,
+  Title,
+  UnstyledButton,
+} from '@mantine/core';
+import { useMemo } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
+import { ListingCardMenu } from '@/features/house-scanner/components/listing-card-menu';
 import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
+import { KeyFacts } from '@/features/house-scanner/components/listing-summary';
 import { CalendarButton } from '@/features/house-scanner/components/viewing-list';
 import { messageValue } from '@/features/house-scanner/i18n/catalogs';
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
-import type { Snapshot } from '@/features/house-scanner/types/contracts';
+import type {
+  Listing,
+  Snapshot,
+  Viewing,
+} from '@/features/house-scanner/types/contracts';
 import { formatDate } from '@/features/house-scanner/utils/format';
 import {
   formatViewing,
@@ -37,13 +52,19 @@ export function favoriteViewings(
 export function ViewingsPanel({
   snapshot,
   userId,
+  person,
+  onPersonChange,
+  onOpenListing,
+  onSeeOnMap,
 }: {
   snapshot: Snapshot;
   userId: string;
+  person: string;
+  onPersonChange: (person: string) => void;
+  onOpenListing: (id: string) => void;
+  onSeeOnMap: (id: string) => void;
 }) {
   const intl = useIntl();
-
-  const [person, setPerson] = useState('everyone');
   const days = useMemo(() => {
     const now = Date.now();
     return groupByDay(
@@ -64,14 +85,11 @@ export function ViewingsPanel({
       .join(', ');
   return (
     <Stack>
-      <Title order={2}>
-        <FormattedMessage id="viewings.viewings" />
-      </Title>
       <Select
         label={intl.formatMessage({ id: 'viewings.savedBy' })}
         w={{ base: 140, sm: 200 }}
         value={person}
-        onChange={(value) => setPerson(value ?? 'everyone')}
+        onChange={(value) => onPersonChange(value ?? 'everyone')}
         data={[
           {
             value: 'everyone',
@@ -96,38 +114,14 @@ export function ViewingsPanel({
             </Title>
             <Box className={classes.viewingList}>
               {day.entries.map(({ listing, viewing }) => (
-                <Box
+                <ViewingCard
                   key={`${listing.id}-${viewing.startsAt}`}
-                  className={`${classes.card} ${classes.viewingCard}`}
-                >
-                  <Box className={classes.viewingThumb}>
-                    <ListingPhoto listing={listing} />
-                  </Box>
-                  <Stack gap={4} className={classes.grow}>
-                    <Text size="md" fw={800} className={classes.viewingTag}>
-                      {formatViewing(viewing, intl)}
-                    </Text>
-                    <Text fw={600}>{listing.title}</Text>
-                    <Text size="sm" c="dimmed">
-                      <FormattedMessage
-                        id="viewings.savedBy2"
-                        values={{ value0: messageValue(names(listing.id)) }}
-                      />
-                    </Text>
-                  </Stack>
-                  <Group gap="md">
-                    <CalendarButton listing={listing} viewing={viewing} />
-                    <Anchor
-                      size="sm"
-                      href={listing.sourceUrls[0]}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      referrerPolicy="no-referrer"
-                    >
-                      <FormattedMessage id="viewings.originalListing" />
-                    </Anchor>
-                  </Group>
-                </Box>
+                  listing={listing}
+                  viewing={viewing}
+                  savedBy={names(listing.id)}
+                  onOpen={() => onOpenListing(listing.id)}
+                  onSeeOnMap={() => onSeeOnMap(listing.id)}
+                />
               ))}
             </Box>
           </Stack>
@@ -153,5 +147,66 @@ export function ViewingsPanel({
         />
       </Text>
     </Stack>
+  );
+}
+
+function ViewingCard({
+  listing,
+  viewing,
+  savedBy,
+  onOpen,
+  onSeeOnMap,
+}: {
+  listing: Listing;
+  viewing: Viewing;
+  savedBy: string;
+  onOpen: () => void;
+  onSeeOnMap: () => void;
+}) {
+  const intl = useIntl();
+  return (
+    <Box
+      component="article"
+      aria-label={`${listing.title}, ${formatViewing(viewing, intl)}`}
+      className={`${classes.card} ${classes.viewingCard}`}
+    >
+      <Box className={classes.viewingThumb}>
+        <ListingPhoto listing={listing} onOpen={onOpen} />
+      </Box>
+      <Stack gap={4} className={classes.grow}>
+        <Text size="md" fw={800} className={classes.viewingTag}>
+          {formatViewing(viewing, intl)}
+        </Text>
+        <Title order={4} size="h4">
+          <UnstyledButton
+            type="button"
+            className={classes.titleButton}
+            onClick={onOpen}
+            aria-haspopup="dialog"
+          >
+            {listing.title}
+          </UnstyledButton>
+        </Title>
+        <KeyFacts listing={listing} />
+        <Text size="sm" c="dimmed">
+          <FormattedMessage
+            id="viewings.savedBy2"
+            values={{ value0: savedBy }}
+          />
+        </Text>
+      </Stack>
+      <Group gap="xs">
+        <CalendarButton listing={listing} viewing={viewing} />
+        <Button
+          size="xs"
+          variant="default"
+          onClick={onOpen}
+          aria-haspopup="dialog"
+        >
+          <FormattedMessage id="listings.details.details" />
+        </Button>
+        <ListingCardMenu listing={listing} onSeeOnMap={onSeeOnMap} />
+      </Group>
+    </Box>
   );
 }

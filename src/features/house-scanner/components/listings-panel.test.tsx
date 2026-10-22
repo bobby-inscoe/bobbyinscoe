@@ -53,7 +53,6 @@ function panelProps(onHideMany: PanelProps['onHideMany']): PanelProps {
     onUndoHide: async () => true,
     hideBusy: false,
     hideError: '',
-    hideMessage: '',
     undoHideCount: 0,
     canHide: true,
     selecting: true,

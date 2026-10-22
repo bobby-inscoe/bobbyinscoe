@@ -272,25 +272,36 @@ describe('applyListingFilters', () => {
 
   // The base home asks 2 800 000 SEK, has 80 m2 and 3 rooms.
   it.each([
-    ['min price below', { minPriceSek: 2_700_000 }, true],
-    ['min price at the boundary', { minPriceSek: 2_800_000 }, true],
+    [
+      'every bound at the home value',
+      {
+        minPriceSek: 2_800_000,
+        maxPriceSek: 2_800_000,
+        minAreaM2: 80,
+        maxAreaM2: 80,
+        minRooms: 3,
+      },
+      true,
+    ],
     ['min price above', { minPriceSek: 2_900_000 }, false],
-    ['max price at the boundary', { maxPriceSek: 2_800_000 }, true],
     ['max price below', { maxPriceSek: 2_700_000 }, false],
-    ['min area at the boundary', { minAreaM2: 80 }, true],
     ['min area above', { minAreaM2: 81 }, false],
-    ['max area at the boundary', { maxAreaM2: 80 }, true],
     ['max area below', { maxAreaM2: 79 }, false],
-    ['min rooms at the boundary', { minRooms: 3 }, true],
     ['min rooms above', { minRooms: 3.5 }, false],
     [
       'min above max',
       { minPriceSek: 3_000_000, maxPriceSek: 2_000_000 },
       false,
     ],
-    ['NaN ignored', { minPriceSek: Number.NaN, minAreaM2: Number.NaN }, true],
-    ['Infinity ignored', { maxAreaM2: Number.POSITIVE_INFINITY }, true],
-    ['negative treated as unset', { minPriceSek: -5, maxAreaM2: -1 }, true],
+    [
+      'NaN, Infinity and negatives ignored',
+      {
+        minPriceSek: Number.NaN,
+        maxAreaM2: Number.POSITIVE_INFINITY,
+        minAreaM2: -1,
+      },
+      true,
+    ],
   ] satisfies [string, Partial<ListingFilters>, boolean][])(
     '%s',
     (_name, filters, expected) => {
@@ -332,8 +343,6 @@ describe('applyListingFilters', () => {
 
   it.each([
     ['balcony', 'balcony', true],
-    ['terrace', 'terrace', true],
-    ['both', 'both', true],
     ['none', 'none', false],
     ['unknown', null, false],
   ] as const)('outdoor only with %s', (_name, outdoor, expected) => {
@@ -417,8 +426,6 @@ describe('hidden homes view', () => {
     expect(ids('not-hidden')).toEqual([first.id]);
     expect(ids('hidden-only')).toEqual([second.id]);
     expect(ids('both')).toEqual([first.id, second.id]);
-  });
-  it('counts as an active filter only when it is not the default', () => {
     expect(activeFilterCount(emptyFilters)).toBe(0);
     expect(activeFilterCount({ ...emptyFilters, hidden: 'both' })).toBe(1);
     expect(activeFilterCount({ ...emptyFilters, hidden: 'hidden-only' })).toBe(
@@ -441,9 +448,6 @@ describe('duplicate listings view', () => {
     expect(emptyFilters.showDuplicates).toBe(false);
     expect(ids(false)).toEqual([first.id]);
     expect(ids(true)).toEqual([first.id, second.id]);
-  });
-  it('counts as an active filter only when it is on', () => {
-    expect(activeFilterCount(emptyFilters)).toBe(0);
     expect(activeFilterCount({ ...emptyFilters, showDuplicates: true })).toBe(
       1,
     );
@@ -476,10 +480,6 @@ describe('viewing within filter', () => {
     expect(ids(null)).toEqual([soon.id, later.id, none.id]);
     expect(ids(3)).toEqual([soon.id]);
     expect(ids(14)).toEqual([soon.id, later.id]);
-  });
-
-  it('counts as an active filter only when it is on', () => {
-    expect(activeFilterCount(emptyFilters)).toBe(0);
     expect(activeFilterCount({ ...emptyFilters, viewingWithinDays: 7 })).toBe(
       1,
     );

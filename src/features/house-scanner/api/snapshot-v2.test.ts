@@ -3,6 +3,9 @@ import {
   expandSnapshot,
   snapshotV2Schema,
 } from '@/features/house-scanner/api/snapshot-v2';
+import frozen from '@/features/house-scanner/api/snapshot-v2.fixture.json';
+import { syntheticV2 } from '@/features/house-scanner/api/snapshot-v2-fixtures';
+import { snapshotSchema } from '@/features/house-scanner/types/contracts';
 
 const HOUSE = '10000000-0000-4000-8000-000000000001';
 const USER = '20000000-0000-4000-8000-000000000001';
@@ -203,9 +206,61 @@ describe('snapshot v2 expansion', () => {
     expect(snapshot.notes).toBeUndefined();
   });
 
-  it('refuses values the snapshot schema refuses', () => {
-    const bad = structuredClone(response);
-    bad.listings[0].url = 'javascript:alert(1)';
-    expect(() => expandSnapshot(snapshotV2Schema.parse(bad))).toThrow();
+  it('refuses values the snapshot schema refuses, before expanding', () => {
+    const link = structuredClone(response);
+    link.listings[0].url = 'javascript:alert(1)';
+    expect(snapshotV2Schema.safeParse(link).success).toBe(false);
+    const tenure = structuredClone(response);
+    (tenure.listings[0].facts as Record<string, unknown>).tenure = 'leasehold';
+    expect(snapshotV2Schema.safeParse(tenure).success).toBe(false);
+  });
+
+  it.each([
+    [
+      'an area',
+      (reply: typeof response) => {
+        reply.neighborhoods = {} as typeof reply.neighborhoods;
+      },
+    ],
+    [
+      'a photo credit',
+      (reply: typeof response) => {
+        reply.sources = {} as typeof reply.sources;
+      },
+    ],
+    [
+      'a source link',
+      (reply: typeof response) => {
+        delete (reply.listings[1] as { url?: string }).url;
+      },
+    ],
+    [
+      'a photo expiry',
+      (reply: typeof response) => {
+        delete (reply.listings[2] as { photoExpiresAt?: string })
+          .photoExpiresAt;
+      },
+    ],
+  ])('refuses a home that refers to %s the reply lacks', (_label, change) => {
+    const lacking = structuredClone(response);
+    change(lacking);
+    expect(() => expandSnapshot(snapshotV2Schema.parse(lacking))).toThrow(
+      'does not carry',
+    );
+  });
+});
+
+describe('snapshot v2 on the demo household', () => {
+  const household = expandSnapshot(snapshotV2Schema.parse(syntheticV2()));
+
+  // The fixture is the expansion before the single validation pass, which parsed the result with snapshotSchema.
+  it('equals the earlier expansion and passes the snapshot schema', () => {
+    expect(household).toEqual(frozen);
+    expect(snapshotSchema.parse(household)).toEqual(household);
+  });
+
+  it('ignores keys the client does not know', () => {
+    expect(household).not.toHaveProperty('futureTopField');
+    expect(household.listings[0]).not.toHaveProperty('futureHomeField');
   });
 });

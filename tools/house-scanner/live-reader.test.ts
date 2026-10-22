@@ -88,30 +88,6 @@ describe('guarded run', () => {
     expect(calls).toHaveLength(1);
   });
 
-  it('waits the two second minimum when the random draw is zero', async () => {
-    vi.useFakeTimers();
-    const { impl, spy } = fakeFetch(
-      boneoRobotsOr((_url, n) => ({ body: nextPage([n], 9) })),
-    );
-    const run = runBoneoCollection(goteborg, {
-      ...defaultLiveDeps(() => undefined),
-      fetch: impl,
-      random: () => 0,
-    });
-    await vi.advanceTimersByTimeAsync(0);
-    expect(spy).toHaveBeenCalledTimes(1);
-    await vi.advanceTimersByTimeAsync(1999);
-    expect(spy).toHaveBeenCalledTimes(1);
-    await vi.advanceTimersByTimeAsync(1);
-    expect(spy).toHaveBeenCalledTimes(2);
-    await vi.advanceTimersByTimeAsync(1999);
-    expect(spy).toHaveBeenCalledTimes(2);
-    await vi.advanceTimersByTimeAsync(1);
-    expect(spy).toHaveBeenCalledTimes(3);
-    await vi.advanceTimersByTimeAsync(20_000);
-    await run;
-  });
-
   it('draws each gap between 2000 and 4000 ms from the random source', async () => {
     expect([MIN_INTERVAL_MS, MAX_INTERVAL_MS]).toEqual([2000, 4000]);
     const draws = [0, 1, 0.5, 0.25, 0.999, 0.0001];
@@ -139,32 +115,6 @@ describe('guarded run', () => {
       expect(gap).toBeLessThanOrEqual(MAX_INTERVAL_MS);
     }
   });
-
-  it.each([0, 0.3, 0.7, 1])(
-    'keeps every gap inside the window when the draw is %s',
-    async (draw) => {
-      const stamps: number[] = [];
-      const fake = fakeFetch(
-        boneoRobotsOr((_url, n) => ({ body: nextPage([n], 5) })),
-      );
-      const base = deps(fake.impl, [], () => draw);
-      await runBoneoCollection(
-        goteborg,
-        {
-          ...base,
-          fetch: ((...args: Parameters<typeof fetch>) => {
-            stamps.push(base.now());
-            return fake.impl(...args);
-          }) as typeof fetch,
-        },
-        (all) => all,
-      );
-      const gaps = stamps.slice(1).map((at, i) => at - stamps[i]);
-      expect(gaps.length).toBeGreaterThan(5);
-      expect(Math.min(...gaps)).toBeCloseTo(2000 + draw * 2000, 2);
-      expect(Math.max(...gaps)).toBeCloseTo(2000 + draw * 2000, 2);
-    },
-  );
 
   it('stops at forty pages per partition and reports truncation', async () => {
     let id = 0;

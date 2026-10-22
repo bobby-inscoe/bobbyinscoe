@@ -7,13 +7,13 @@ import {
   emitAuth,
   fixtureSnapshot,
   HOUSEHOLD_ID,
-  missing,
   OTHER_HOUSEHOLD_ID,
   OTHER_USER_ID,
   type Reply,
   reply,
   resetSdk,
   sdk,
+  startReply,
   USER_ID,
 } from '@/features/house-scanner/api/session-test-helpers';
 import { useHouseholdSession } from '@/features/house-scanner/hooks/use-household-session';
@@ -62,8 +62,8 @@ describe('House Scanner session notes', () => {
   it('reads notes from the snapshot and saves them for the active household', async () => {
     const defaults = sdk.rpc.getMockImplementation();
     sdk.rpc.mockImplementation(async (name, args) => {
-      if (name === 'hs_snapshot_neighborhoods')
-        return reply({
+      if (name === 'hs_household_start')
+        return startReply({
           ...fixtureSnapshot(),
           notes: savedNotes.map((note) => ({ ...note, listingId })),
         });
@@ -110,32 +110,24 @@ describe('House Scanner session notes', () => {
       `resolves null and leaves the session alone after %s`,
       async (_label, change) => {
         const pending = deferred<Reply>();
-        const second = fixtureSnapshot();
-        second.householdId = OTHER_HOUSEHOLD_ID;
-        for (const member of second.members)
-          member.householdId = OTHER_HOUSEHOLD_ID;
-        for (const profile of second.profiles)
-          profile.householdId = OTHER_HOUSEHOLD_ID;
-        for (const listing of second.listings)
-          listing.householdId = OTHER_HOUSEHOLD_ID;
-        for (const favorite of second.favorites)
-          favorite.householdId = OTHER_HOUSEHOLD_ID;
+        const second = {
+          ...fixtureSnapshot(),
+          householdId: OTHER_HOUSEHOLD_ID,
+        };
+        const both = [
+          fixtureSnapshot().members[0],
+          { ...fixtureSnapshot().members[0], householdId: OTHER_HOUSEHOLD_ID },
+        ];
         sdk.rpc.mockImplementation(async (name, args) => {
-          if (name === 'hs_memberships')
-            return reply([
-              fixtureSnapshot().members[0],
-              {
-                ...fixtureSnapshot().members[0],
-                householdId: OTHER_HOUSEHOLD_ID,
-              },
-            ]);
-          if (name === 'hs_snapshot_neighborhoods')
-            return 'p_household_id' in args &&
-              args.p_household_id === OTHER_HOUSEHOLD_ID
-              ? reply(second)
-              : reply(fixtureSnapshot());
-          if (name === 'hs_household_start' || name === 'hs_household_snapshot')
-            return missing();
+          if (name === 'hs_household_start')
+            return !('p_household_id' in args)
+              ? reply({ memberships: both, snapshot: null })
+              : startReply(
+                  args.p_household_id === OTHER_HOUSEHOLD_ID
+                    ? second
+                    : fixtureSnapshot(),
+                  both,
+                );
           return pending.promise;
         });
         const hook = renderHook(useHouseholdSession);
@@ -159,8 +151,7 @@ describe('House Scanner session notes', () => {
         await expect(outcome).resolves.toBeNull();
         expect(failures).not.toHaveBeenCalled();
         const calls = sdk.rpc.mock.calls.map(([name]) => name);
-        expect(calls).not.toContain('hs_snapshot_neighborhoods');
-        expect(calls).not.toContain('hs_memberships');
+        expect(calls).not.toContain('hs_household_snapshot');
       },
     );
   });
@@ -183,7 +174,6 @@ describe('House Scanner session notes', () => {
     expect(sdk.rpc.mock.calls.map(([name]) => name)).toEqual([
       'hs_save_note',
       'hs_household_snapshot',
-      'hs_snapshot_neighborhoods',
     ]);
   });
 

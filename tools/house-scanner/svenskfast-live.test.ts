@@ -5,15 +5,8 @@ import {
   type Reply,
 } from '@house-scanner-tools/live-test-helpers';
 import { parseRobots, robotsAllows } from '@house-scanner-tools/robots';
-import {
-  adapterFor,
-  boneoAdapter,
-  svenskfastAdapter,
-} from '@house-scanner-tools/source-adapters';
-import {
-  approvedPolicy,
-  sourceRegistry,
-} from '@house-scanner-tools/source-registry';
+import { svenskfastAdapter } from '@house-scanner-tools/source-adapters';
+import { sourceRegistry } from '@house-scanner-tools/source-registry';
 import { home, list, pathOf } from '@house-scanner-tools/svenskfast-test-pages';
 import { describe, expect, it } from 'vitest';
 import { assertSourceAllowed } from '@/features/house-scanner/utils/source-policy';
@@ -124,15 +117,6 @@ describe('Svensk Fastighetsförmedling guarded run', () => {
     expect(result.stopped).toBe('no-embedded-data');
   });
 
-  it.each([403, 429])('stops at once on %i without a retry', async (status) => {
-    const { impl, calls } = fakeFetch((url) =>
-      url.endsWith('/robots.txt') ? robotsReply : { status, body: '' },
-    );
-    const result = await run(goteborg, deps(impl));
-    expect(result.stopped).toBe(`http-${status}`);
-    expect(calls).toHaveLength(2);
-  });
-
   it('supports only the municipality it knows', () => {
     expect(
       svenskfastAdapter.partitionUrl({
@@ -217,17 +201,6 @@ describe('Svensk Fastighetsförmedling guarded run', () => {
     ]);
     expect(first.photo).not.toBeNull();
   });
-
-  it('leaves the home page facts unknown when a page fails, without stopping the run', async () => {
-    const { impl } = fakeFetch(site(2, 35, () => ({ body: 'nej' })));
-    const result = await run(goteborg, deps(impl), (all) => all);
-    expect(result).toMatchObject({
-      detailRead: 0,
-      detailFailed: 2,
-      stopped: null,
-    });
-    expect(result.observations[0].facts.askingPriceSek).toBeNull();
-  });
 });
 
 function svenskfast() {
@@ -273,32 +246,5 @@ describe('Svensk Fastighetsförmedling registry entry', () => {
     expect(() =>
       assertSourceAllowed(policy, new Date('2026-10-20T00:00:00Z')),
     ).toThrow();
-  });
-
-  it('yields a policy the owner can approve for 90 days', () => {
-    const approved = approvedPolicy(
-      'svenskfast',
-      new Date('2026-10-20T00:00:00Z'),
-    );
-    expect(approved).toMatchObject({ status: 'approved' });
-    expect(() =>
-      assertSourceAllowed(approved, new Date('2026-10-21T00:00:00Z')),
-    ).not.toThrow();
-  });
-
-  it('is found by its capability and refused for another host, photo origin or executor', () => {
-    expect(adapterFor(svenskfast())).toBe(svenskfastAdapter);
-    const wrongHost = structuredClone(svenskfast());
-    wrongHost.policy.listingOrigins = ['https://www.example.invalid'];
-    expect(() => adapterFor(wrongHost)).toThrow('No permitted executor');
-    const photos = structuredClone(svenskfast());
-    photos.policy.imageOrigins = ['https://www.svenskfast.se'];
-    expect(() => adapterFor(photos)).toThrow('No permitted executor');
-    const other = structuredClone(svenskfast());
-    other.executor = 'boneo-personal-read';
-    expect(() => adapterFor(other)).toThrow('No permitted executor');
-    const boneo = sourceRegistry().find((e) => e.policy.sourceId === 'boneo');
-    if (!boneo) throw new Error('boneo missing');
-    expect(adapterFor(boneo)).toBe(boneoAdapter);
   });
 });

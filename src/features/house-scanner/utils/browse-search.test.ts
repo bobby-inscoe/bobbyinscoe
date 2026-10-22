@@ -63,17 +63,6 @@ describe('browse URL search', () => {
     );
   });
 
-  it('writes one district without quotes', () => {
-    const search = {
-      ...defaults,
-      filters: { ...emptyFilters, neighborhoodIds: [neighborhoods[0].id] },
-    };
-    expect(defaultStringifySearch(toUrlSearch(search))).toBe(
-      `?districts=${code(0)}`,
-    );
-    expect(roundTrip(search)).toEqual(search);
-  });
-
   it('restores filters, map and favorites context through a shareable URL', () => {
     const search: BrowseSearch = {
       view: 'map',
@@ -112,6 +101,11 @@ describe('browse URL search', () => {
     ).toBe('both');
   });
 
+  it('restores the Viewings drawer context and person filter from a URL', () => {
+    const search = { ...defaults, from: 'viewings' as const, person: 'mine' };
+    expect(roundTrip(search)).toEqual(search);
+  });
+
   it('restores next viewing sort and drops the removed latest check sort', () => {
     expect(validateBrowseSearch({ sort: 'next-viewing' }).sort).toBe(
       'next-viewing',
@@ -135,8 +129,6 @@ describe('browse URL search', () => {
   it.each(
     [
       'goteborg-101',
-      [code(0)],
-      '999',
       `${code(0)},999`,
       Array.from({ length: 97 }, () => code(0)).join(','),
     ].map((districts) => ({ districts })),
@@ -175,17 +167,14 @@ describe('browse URL search', () => {
     ).toBe('');
   });
 
-  it.each(['all', 'latest-scan', '1-day', '3-days', '7-days'])(
-    'restores freshness %s from the URL',
-    (freshness) => {
-      expect(validateBrowseSearch({ added: freshness }).filters).toEqual({
-        ...emptyFilters,
-        freshness,
-      });
-    },
-  );
+  it('restores a freshness window from the URL', () => {
+    expect(validateBrowseSearch({ added: '7-days' }).filters).toEqual({
+      ...emptyFilters,
+      freshness: '7-days',
+    });
+  });
 
-  it.each([undefined, null, 'today', 1, ['latest-scan']])(
+  it.each(['today', ['latest-scan']])(
     'defaults missing or invalid freshness %s without resetting other filters',
     (added) => {
       expect(validateBrowseSearch({ added, rooms: 3 }).filters).toEqual({

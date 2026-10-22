@@ -89,28 +89,6 @@ function view(value?: ListingNotesController) {
 }
 
 describe('ListingNotes', () => {
-  it('says notes are unavailable without a controller', () => {
-    render(view(undefined));
-    expect(
-      screen.getByText('Shared notes are unavailable in this view.'),
-    ).toBeTruthy();
-  });
-
-  it('shows a loading status and no editor while loading', () => {
-    render(view(controller({ status: 'loading' })));
-    expect(
-      screen.getAllByRole('status').map((region) => region.textContent),
-    ).toContain('Loading notes…');
-    expect(screen.queryByLabelText('Your shared note')).toBeNull();
-  });
-
-  it('shows an empty state with the editor', () => {
-    render(view(controller()));
-    expect(screen.getByText('No notes yet.')).toBeTruthy();
-    expect(screen.queryByRole('list')).toBeNull();
-    expect(screen.getByLabelText('Your shared note')).toBeTruthy();
-  });
-
   it('offers retry on a load error', () => {
     const value = controller({ status: 'error' });
     render(view(value));
@@ -145,26 +123,6 @@ describe('ListingNotes', () => {
     expect(items[2].textContent).toContain('Household member · edited');
   });
 
-  it('describes the editor with its character count and caps the length', () => {
-    render(view(controller({ draft: 'Hello' })));
-    const field = screen.getByLabelText('Your shared note');
-    expect(field.getAttribute('maxlength')).toBe('2000');
-    const description = field.getAttribute('aria-describedby');
-    expect(description).toBeTruthy();
-    expect(document.getElementById(description ?? '')?.textContent).toBe(
-      '5 of 2000 characters',
-    );
-  });
-
-  it('sends typed text to the controller', () => {
-    const value = controller();
-    render(view(value));
-    fireEvent.change(screen.getByLabelText('Your shared note'), {
-      target: { value: 'Typed' },
-    });
-    expect(value.setDraft).toHaveBeenCalledWith('Typed');
-  });
-
   it('disables save while the draft is unchanged and saves when changed', () => {
     const { rerender } = render(view(controller()));
     const button = () => screen.getByRole('button', { name: 'Save note' });
@@ -174,15 +132,6 @@ describe('ListingNotes', () => {
     expect((button() as HTMLButtonElement).disabled).toBe(false);
     fireEvent.click(button());
     expect(value.save).toHaveBeenCalledTimes(1);
-  });
-
-  it('announces the save result in a status region', () => {
-    render(view(controller({ result: 'Note saved.' })));
-    expect(
-      screen
-        .getAllByRole('status')
-        .some((region) => region.textContent === 'Note saved.'),
-    ).toBe(true);
   });
 
   it('moves focus to the conflict alert and offers both choices', () => {

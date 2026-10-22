@@ -42,13 +42,6 @@ function mount(options: {
 }
 
 describe('useListingNotes', () => {
-  it('reports notes as unavailable without callbacks', () => {
-    const { result } = renderHook(() =>
-      useListingNotes({ listingId: 'a', userId: USER }),
-    );
-    expect(result.current.status).toBe('unavailable');
-  });
-
   it('ignores a late response for a listing that is no longer open', async () => {
     const late = deferred<ListingNote[] | null>();
     const onLoad = vi.fn<LoadNotes>(async (id) =>

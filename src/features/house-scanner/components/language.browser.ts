@@ -11,7 +11,7 @@ test.beforeEach(async ({ context }) => {
   });
 });
 
-test('language persists before sign-in and changes retained UI state and feedback', async ({
+test('language persists before sign-in and changes retained UI state', async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -41,7 +41,7 @@ test('language persists before sign-in and changes retained UI state and feedbac
     .getByRole('button', { name: 'Spara favorit', exact: true })
     .click();
   await expect(
-    page.getByText('Favoriten har sparats.', { exact: true }).first(),
+    card.getByRole('button', { name: 'Ta bort min favorit', exact: true }),
   ).toBeVisible();
   await page
     .getByRole('searchbox', { name: 'Sök på rubrik', exact: true })
@@ -49,9 +49,7 @@ test('language persists before sign-in and changes retained UI state and feedbac
   const before = page.url();
   await page.getByRole('combobox', { name: 'Språk', exact: true }).click();
   await page.getByRole('option', { name: 'English', exact: true }).click();
-  await expect(
-    page.getByText('Favorite saved.', { exact: true }).first(),
-  ).toBeVisible();
+
   await expect(
     page.getByRole('searchbox', { name: 'Search by title', exact: true }),
   ).toHaveValue('Example');

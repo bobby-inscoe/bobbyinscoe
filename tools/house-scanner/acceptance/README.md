@@ -42,13 +42,13 @@ The table and the report show labels such as "user A" and "household B", statuse
 |---|---|
 | 0 setup | Real password sign-in works; each user has exactly the seeded household; each household has a listing. |
 | 1 anon | The publishable key alone cannot run any public `hs_*` function, and the `hs` schema and a plain table read are refused. |
-| 2 user A | `hs_memberships` returns exactly household A and `hs_snapshot` passes the app's `snapshotSchema`, with every row in household A. |
-| 3 cross-household | User B is refused for snapshot, notes, favorite and note save in household A, gets nothing for A's listing through household B, and no identifier of A appears in B's responses. |
+| 2 user A | `hs_memberships` returns exactly household A and `hs_household_snapshot` passes the app's own parser, for household A. |
+| 3 cross-household | User B is refused for snapshot, favorite and note save in household A, cannot write to A's listing through household B, and no identifier of A appears in B's responses or own snapshot. |
 | 4 round trip | Favorite on and off, and note save at revision 0 then 1, persist and show in the snapshot. |
 | 4b stale shape | A stale `hs_save_note` returns code `40001`, which `household-client.ts` turns into the note conflict path. The status, code and message are recorded as the real shape. |
 | 5 concurrent | Two sessions of user A saving the same revision at once give one winner and one `40001`, and the final revision matches the winner. One attempt is evidence, not proof. |
 | 6 privileged | A signed-in member cannot run the ingest functions or any `admin_*` function, and cannot read `hs.admin_log`. |
-| 7 deactivated | Only with A2 and `--a2-deactivated`: A2 is refused for snapshot, notes, favorite and note save. |
+| 7 deactivated | Only with A2 and `--a2-deactivated`: A2 is refused for snapshot, favorite and note save. |
 | 8 cleanup | The favorite is removed and the note body cleared. |
 
 A denial counts only when the request is refused before a function body runs (`permission denied`, an unexposed schema, an unknown function). A function that ran and raised its own error is reported as NOT BLOCKED, because it means the grant exists.

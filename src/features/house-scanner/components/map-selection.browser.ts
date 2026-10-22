@@ -77,7 +77,6 @@ test('map capture reviews exact homes, protects favorites, hides and undoes the 
   await expect(
     page.getByRole('button', { name: /^Example balcony home:/ }),
   ).toBeVisible();
-  await expect(page.getByText('1 home hidden.', { exact: true })).toBeVisible();
   await page
     .getByRole('button', { name: 'Undo hide (1)', exact: true })
     .click();

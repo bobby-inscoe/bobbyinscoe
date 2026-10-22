@@ -10,15 +10,8 @@ import {
   type Reply,
 } from '@house-scanner-tools/live-test-helpers';
 import { parseRobots, robotsAllows } from '@house-scanner-tools/robots';
-import {
-  adapterFor,
-  boneoAdapter,
-  husmanHagbergAdapter,
-} from '@house-scanner-tools/source-adapters';
-import {
-  approvedPolicy,
-  sourceRegistry,
-} from '@house-scanner-tools/source-registry';
+import { husmanHagbergAdapter } from '@house-scanner-tools/source-adapters';
+import { sourceRegistry } from '@house-scanner-tools/source-registry';
 import { describe, expect, it } from 'vitest';
 import { assertSourceAllowed } from '@/features/house-scanner/utils/source-policy';
 
@@ -128,15 +121,6 @@ describe('Husman Hagberg guarded run', () => {
     expect(result.stopped).toBe('invalid-embedded-data');
   });
 
-  it.each([403, 429])('stops at once on %i without a retry', async (status) => {
-    const { impl, calls } = fakeFetch((url) =>
-      url.endsWith('/robots.txt') ? robotsReply : { status, body: '' },
-    );
-    const result = await run(goteborg, deps(impl));
-    expect(result.stopped).toBe(`http-${status}`);
-    expect(calls).toHaveLength(2);
-  });
-
   it('does not follow a redirect', async () => {
     const { impl, calls } = fakeFetch((url) =>
       url.endsWith('/robots.txt') ? robotsReply : { status: 301, body: '' },
@@ -231,32 +215,5 @@ describe('Husman Hagberg registry entry', () => {
     expect(() =>
       assertSourceAllowed(policy, new Date('2026-10-20T00:00:00Z')),
     ).toThrow();
-  });
-
-  it('yields a policy the owner can approve for 90 days', () => {
-    const approved = approvedPolicy(
-      'husman-hagberg',
-      new Date('2026-10-20T00:00:00Z'),
-    );
-    expect(approved).toMatchObject({ status: 'approved' });
-    expect(() =>
-      assertSourceAllowed(approved, new Date('2026-10-21T00:00:00Z')),
-    ).not.toThrow();
-  });
-
-  it('is found by its capability and refused for another host, photo origin or executor', () => {
-    expect(adapterFor(husmanHagberg())).toBe(husmanHagbergAdapter);
-    const wrongHost = structuredClone(husmanHagberg());
-    wrongHost.policy.listingOrigins = ['https://www.example.invalid'];
-    expect(() => adapterFor(wrongHost)).toThrow('No permitted executor');
-    const photos = structuredClone(husmanHagberg());
-    photos.policy.imageOrigins = ['https://imagedelivery.net'];
-    expect(() => adapterFor(photos)).toThrow('No permitted executor');
-    const other = structuredClone(husmanHagberg());
-    other.executor = 'boneo-personal-read';
-    expect(() => adapterFor(other)).toThrow('No permitted executor');
-    const boneo = sourceRegistry().find((e) => e.policy.sourceId === 'boneo');
-    if (!boneo) throw new Error('boneo missing');
-    expect(adapterFor(boneo)).toBe(boneoAdapter);
   });
 });

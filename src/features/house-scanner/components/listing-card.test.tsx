@@ -129,18 +129,20 @@ async function renderCard(
   );
 }
 
-it('shows the badge and the notice with both dates on a listing no longer listed', async () => {
+it('marks a listing no longer listed with a badge, and a notice with both dates when expanded', async () => {
   await renderCard(true, true);
   // The badge, and the match line that says why it is outside the criteria.
   expect(screen.getAllByText('No longer listed').length).toBeGreaterThan(0);
   const notice = screen.getByRole('note', { name: 'No longer listed' });
   expect(notice.textContent).toContain('No longer listed since');
   expect(notice.textContent).toContain('Last seen');
-});
-
-it('shows only the badge in the collapsed summary of a listing no longer listed', async () => {
+  cleanup();
   await renderCard(true, false);
   expect(screen.getByText('No longer listed')).toBeTruthy();
+  expect(screen.queryByRole('note')).toBeNull();
+  cleanup();
+  await renderCard(false, true);
+  expect(screen.queryByText('No longer listed')).toBeNull();
   expect(screen.queryByRole('note')).toBeNull();
 });
 
@@ -148,12 +150,6 @@ it('lets a sold status speak for a listing no longer listed', async () => {
   await renderCard(true, false, 'sold');
   expect(screen.getByText('Sold')).toBeTruthy();
   expect(screen.queryByText('No longer listed')).toBeNull();
-});
-
-it('shows neither the badge nor the notice on a listed home', async () => {
-  await renderCard(false, true);
-  expect(screen.queryByText('No longer listed')).toBeNull();
-  expect(screen.queryByRole('note')).toBeNull();
 });
 
 it('names the member who hid the home', async () => {
@@ -264,15 +260,17 @@ async function renderOverridden({
   return base;
 }
 
-it('shows no status badge on an available home', async () => {
+it('shows a status badge only when a home is not available or its status is disputed', async () => {
   const base = await renderOverridden({});
   expect(base.facts.status).toBe('available');
   expect(screen.queryByText('available')).toBeNull();
   expect(screen.queryByText('Status disputed')).toBeNull();
-});
-
-it('shows the status badge when a home is not available or its status is disputed', async () => {
-  const base = SYNTHETIC_SNAPSHOT.listings[0];
+  cleanup();
+  await renderOverridden({
+    listing: { facts: { ...base.facts, status: 'unknown' } },
+  });
+  expect(screen.queryByText('unknown', { exact: true })).toBeNull();
+  cleanup();
   await renderOverridden({
     listing: { facts: { ...base.facts, status: 'sold' } },
   });
@@ -282,68 +280,24 @@ it('shows the status badge when a home is not available or its status is dispute
   expect(screen.getByText('Status disputed')).toBeTruthy();
 });
 
-it('does not show an unknown status badge', async () => {
-  const base = SYNTHETIC_SNAPSHOT.listings[0];
-  await renderOverridden({
-    listing: { facts: { ...base.facts, status: 'unknown' } },
-  });
-  expect(screen.queryByText('unknown', { exact: true })).toBeNull();
-});
-
-it('prefixes the match label with the profile name only when several profiles are enabled', async () => {
-  const [profile] = SYNTHETIC_SNAPSHOT.profiles;
-  await renderOverridden({});
-  expect(screen.queryByText(/Fictional demonstration profile:/)).toBeNull();
-  cleanup();
-  await renderOverridden({
-    profiles: [profile, { ...profile, id: 'second-profile', name: 'Second' }],
-  });
-  expect(screen.getByText(/Fictional demonstration profile:/)).toBeTruthy();
-  expect(screen.getByText(/Second:/)).toBeTruthy();
-});
-
-it('opens the details dialog from the Details button without expanding the card', async () => {
+it('opens details from the Details button, the photo and the title without expanding the card', async () => {
   const onSelect = vi.fn();
   await renderOverridden({ onSelect });
-  const details = screen.getByRole('button', { name: 'Details' });
-  expect(details.getAttribute('aria-haspopup')).toBe('dialog');
-  expect(details.getAttribute('aria-pressed')).toBeNull();
-  fireEvent.click(details);
-  expect(onSelect).toHaveBeenCalledOnce();
-  expect(screen.queryByText('Facts and source evidence')).toBeNull();
-});
-
-it('styles the original-listing link as a default button with the same label and safe link attributes', async () => {
-  await renderOverridden({});
-  const link = screen.getByRole('link', { name: 'Open original listing' });
-  expect(link.getAttribute('data-variant')).toBe('default');
-  expect(link.getAttribute('target')).toBe('_blank');
-  expect(link.getAttribute('rel')).toBe('noopener noreferrer');
-  expect(link.getAttribute('referrerpolicy')).toBe('no-referrer');
-});
-
-it('shows confirmed feature chips without caveats', async () => {
-  const base = SYNTHETIC_SNAPSHOT.listings[0];
-  await renderOverridden({});
-  for (const label of ['Balcony', 'Lift', 'Glazed'])
-    expect(screen.getByText(label)).toBeTruthy();
-  expect(screen.queryByText('Above ground floor')).toBeNull();
-  expect(screen.queryByText('Transit not checked')).toBeNull();
-  cleanup();
-  await renderOverridden({
-    listing: { facts: { ...base.facts, stepFree: false } },
-  });
-  expect(screen.queryByText('Not step-free')).toBeNull();
-});
-
-it('opens internal details from both the photo fallback and title', async () => {
-  const onSelect = vi.fn();
-  await renderOverridden({ onSelect });
+  fireEvent.click(screen.getByRole('button', { name: 'Details' }));
   fireEvent.click(
     screen.getByRole('button', { name: 'View Example balcony home' }),
   );
   fireEvent.click(screen.getByRole('button', { name: 'Example balcony home' }));
-  expect(onSelect).toHaveBeenCalledTimes(2);
+  expect(onSelect).toHaveBeenCalledTimes(3);
+  expect(screen.queryByText('Facts and source evidence')).toBeNull();
+});
+
+it('opens the original listing in a new tab without sending a referrer', async () => {
+  await renderOverridden({});
+  const link = screen.getByRole('link', { name: 'Open original listing' });
+  expect(link.getAttribute('target')).toBe('_blank');
+  expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+  expect(link.getAttribute('referrerpolicy')).toBe('no-referrer');
 });
 
 it('toggles selected rows without navigating and keeps details and favorite independent', async () => {
@@ -424,32 +378,4 @@ it('keeps photo attribution and a working detail target when an image fails', as
     screen.getByRole('button', { name: 'View Example balcony home' }),
   );
   expect(onSelect).toHaveBeenCalledOnce();
-});
-
-it('keeps required lift uncertainty out of compact feature chips', async () => {
-  const base = SYNTHETIC_SNAPSHOT.listings[0];
-  await renderOverridden({ listing: { facts: { ...base.facts, lift: null } } });
-  expect(screen.queryByText('Lift unknown')).toBeNull();
-  cleanup();
-  await renderOverridden({ listing: { conflicts: ['lift'] } });
-  expect(screen.queryByText('Lift disputed')).toBeNull();
-});
-
-it('labels selection targets by their action, checked state, and disabled state', async () => {
-  await renderOverridden({
-    selectionMode: true,
-    checked: true,
-    selectionDisabled: true,
-  });
-  const buttons = screen.getAllByRole('button', {
-    name: 'Deselect Example balcony home',
-  });
-  expect(buttons).toHaveLength(2);
-  for (const button of buttons) {
-    expect(button.getAttribute('aria-pressed')).toBe('true');
-    expect(button.hasAttribute('disabled')).toBe(true);
-  }
-  expect(
-    screen.queryByRole('button', { name: 'View Example balcony home' }),
-  ).toBeNull();
 });

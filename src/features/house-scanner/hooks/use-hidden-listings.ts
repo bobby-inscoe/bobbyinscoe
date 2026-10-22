@@ -44,19 +44,15 @@ export function useHiddenListings({
 }: UseHiddenListingsOptions) {
   // Hides the member just asked for, shown at once while the write and the snapshot reload (~1 s) finish.
   const [optimistic, setOptimistic] = useState<Map<string, boolean>>(new Map());
-  // The household's hides; an older database sends only this member's ids.
+  // The household's hides.
   const hidden = useMemo(() => {
-    const ids = new Set(
-      snapshot.hides?.map((hide) => hide.listingId) ??
-        snapshot.hiddenListingIds ??
-        [],
-    );
+    const ids = new Set(snapshot.hides?.map((hide) => hide.listingId) ?? []);
     for (const [id, hide] of optimistic) {
       if (hide) ids.add(id);
       else ids.delete(id);
     }
     return ids;
-  }, [snapshot.hides, snapshot.hiddenListingIds, optimistic]);
+  }, [snapshot.hides, optimistic]);
   // The session hands out a new action on every render; callers keep stable functions.
   const action = useRef(onSetHidden);
   action.current = onSetHidden;

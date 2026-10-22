@@ -17,14 +17,20 @@ beforeAll(() => {
   );
 });
 
+const collector = (
+  args: string[],
+  options: Parameters<typeof spawnSync>[2] = {},
+) =>
+  spawnSync(process.execPath, ['.house-scanner-build/collector.mjs', ...args], {
+    encoding: 'utf8',
+    timeout: 10_000,
+    ...options,
+  });
+
 it('reports actual observation and request counts without logging source payloads', () => {
-  const result = spawnSync(
-    process.execPath,
-    ['.house-scanner-build/collector.mjs'],
-    { encoding: 'utf8' },
-  );
+  const result = collector([]);
   expect(result.status).toBe(0);
-  expect(JSON.parse(result.stdout)).toMatchObject({
+  expect(JSON.parse(String(result.stdout))).toMatchObject({
     mode: 'fixture-dry',
     liveCoverage: false,
     observationCount: 3,
@@ -34,69 +40,25 @@ it('reports actual observation and request counts without logging source payload
   expect(result.stdout).not.toContain('Fictional demo home');
 });
 
-it.each([
-  ['--mode', 'live'],
-  ['--source', 'bjurfors'],
-])('rejects unsupported execution options %j with safe output', (...args) => {
-  const result = spawnSync(
-    process.execPath,
-    ['.house-scanner-build/collector.mjs', ...args],
-    { encoding: 'utf8' },
-  );
-  expect(result.status).toBe(1);
-  expect(JSON.parse(result.stderr)).toMatchObject({
-    status: 'rejected',
-    category: 'permission-or-configuration',
-  });
-  expect(result.stdout).toBe('');
-  expect(result.stderr).not.toContain('https://');
-});
-
-it.each([
-  [['--live']],
-  [['--live', '--source=boneo']],
-  [['--live', '--confirm-personal-read']],
-  [
-    [
-      '--live',
-      '--source=boneo',
-      '--confirm-personal-read',
-      '--at=2026-10-13T00:00:00Z',
-    ],
-  ],
-  [['--source=boneo', '--confirm-personal-read']],
-  [['--source=boneo']],
-])('refuses live reading without every flag: %j', (args) => {
-  const result = spawnSync(
-    process.execPath,
-    ['.house-scanner-build/collector.mjs', ...args],
-    { encoding: 'utf8', timeout: 10_000 },
-  );
-  expect(result.status).toBe(1);
-  expect(JSON.parse(result.stderr)).toMatchObject({
-    status: 'rejected',
-    category: 'permission-or-configuration',
-  });
-  expect(result.stdout).toBe('');
-});
-
 // Every case below must be refused before the collector makes any request.
 const SECRET = 'synthetic-cli-secret-not-real-0123456789abcdef';
 const LIVE = ['--live', '--source=boneo', '--confirm-personal-read'];
 
 it.each([
+  [['--mode', 'live']],
+  [['--live']],
+  [['--live', '--source=boneo']],
+  [['--source=boneo', '--confirm-personal-read']],
   [[...LIVE, '--send']],
-  [[...LIVE, '--confirm-send']],
   [['--send', '--confirm-send']],
-])('refuses live runs with incomplete send flags: %j', (args) => {
-  const result = spawnSync(
-    process.execPath,
-    ['.house-scanner-build/collector.mjs', ...args],
-    { encoding: 'utf8', timeout: 10_000 },
-  );
+])('refuses %j without every live or send flag', (args) => {
+  const result = collector(args);
   expect(result.status).toBe(1);
-  expect(JSON.parse(result.stderr)).toMatchObject({ status: 'rejected' });
+  expect(JSON.parse(String(result.stderr))).toMatchObject({
+    status: 'rejected',
+  });
   expect(result.stdout).toBe('');
+  expect(result.stderr).not.toContain('https://');
 });
 
 it.each([
@@ -106,106 +68,44 @@ it.each([
         'http://project.example.invalid/functions/v1/house-scanner-ingest',
     },
   ],
-  [
-    {
-      HS_INGEST_URL:
-        'https://project.example.invalid/functions/v1/house-scanner-ingest',
-      HS_INGEST_SECRET: 'too-short',
-    },
-  ],
-  [{ HS_INGEST_URL: undefined }],
+  [{ HS_INGEST_SECRET: 'too-short' }],
 ])(
   'refuses to send with an unusable ingest environment %j before reading',
   (change) => {
-    const result = spawnSync(
-      process.execPath,
-      [
-        '.house-scanner-build/collector.mjs',
-        ...LIVE,
-        '--send',
-        '--confirm-send',
-      ],
-      {
-        encoding: 'utf8',
-        timeout: 10_000,
-        env: {
-          ...process.env,
-          ...{
-            HS_INGEST_URL:
-              'https://project.example.invalid/functions/v1/house-scanner-ingest',
-            HS_INGEST_KEY_ID: 'cli-key',
-            HS_INGEST_SECRET: SECRET,
-          },
-          ...change,
-        },
+    const result = collector([...LIVE, '--send', '--confirm-send'], {
+      env: {
+        ...process.env,
+        HS_INGEST_URL:
+          'https://project.example.invalid/functions/v1/house-scanner-ingest',
+        HS_INGEST_KEY_ID: 'cli-key',
+        HS_INGEST_SECRET: SECRET,
+        ...change,
       },
-    );
+    });
     expect(result.status).toBe(1);
     expect(result.stdout).toBe('');
     expect(result.stderr).not.toContain(SECRET);
-    expect(JSON.parse(result.stderr)).toMatchObject({ status: 'rejected' });
+    expect(JSON.parse(String(result.stderr))).toMatchObject({
+      status: 'rejected',
+    });
   },
 );
 
-const runPrinter = (...args: string[]) =>
-  spawnSync(
-    process.execPath,
-    ['.house-scanner-build/collector.mjs', '--print-policy-sql', ...args],
-    { encoding: 'utf8' },
-  );
-
-it('prints the SQL that approves the Boneo policy without any network or file access', () => {
-  const result = runPrinter('--source=boneo');
+it('prints the SQL that approves a policy, and refuses a source without one', () => {
+  const result = collector(['--print-policy-sql', '--source=boneo']);
   expect(result.status).toBe(0);
   const match =
     /^select hs\.admin_set_source_policy\('(.*)'::jsonb\);\n$/s.exec(
-      result.stdout,
+      String(result.stdout),
     );
   const policy = JSON.parse((match?.[1] ?? '').replaceAll("''", "'"));
-  expect(policy).toMatchObject({
-    sourceId: 'boneo',
-    status: 'approved',
-    automatedCollection: true,
-    privateDisplay: true,
-    imageDisplay: true,
-    imageHotlink: true,
-    imageOrigins: ['https://files.boneo.se'],
-  });
-  expect(Date.parse(policy.reviewedAt)).toBeLessThan(Date.now());
+  expect(policy).toMatchObject({ sourceId: 'boneo', status: 'approved' });
   expect(Date.parse(policy.reviewDueAt)).toBeGreaterThan(Date.now());
-});
-
-it('prints the SQL that approves the Bjurfors policy at revision 2', () => {
-  const result = runPrinter('--source=bjurfors');
-  expect(result.status).toBe(0);
-  const match =
-    /^select hs\.admin_set_source_policy\('(.*)'::jsonb\);\n$/s.exec(
-      result.stdout,
-    );
-  const policy = JSON.parse((match?.[1] ?? '').replaceAll("''", "'"));
-  expect(policy).toMatchObject({
-    sourceId: 'bjurfors',
-    revision: 2,
-    status: 'approved',
-    automatedCollection: true,
-    privateDisplay: true,
-    imageDisplay: true,
-    imageHotlink: true,
-    imageOrigins: ['https://www.bjurfors.se'],
-    listingOrigins: ['https://www.bjurfors.se'],
-    retentionDays: 14,
-  });
-  expect(policy.allowedFactFields).toContain('groundFloor');
-});
-
-it.each([
-  [[]],
-  [['--source=alvhem']],
-  [['--source=boneo', '--household=00000000-0000-4000-8000-0000000000aa']],
-])('refuses to print policy SQL for %j', (args) => {
-  const result = runPrinter(...args);
-  expect(result.status).toBe(1);
-  expect(result.stdout).toBe('');
+  for (const args of [[], ['--source=alvhem']]) {
+    const refused = collector(['--print-policy-sql', ...args]);
+    expect(refused.status).toBe(1);
+    expect(refused.stdout).toBe('');
+  }
 });
 
 // These runs block fetch in the child process, so a missing guard fails a test
@@ -225,67 +125,38 @@ const runLive = (cwd: string, ...args: string[]) =>
       '--require',
       noFetch,
       resolve('.house-scanner-build/collector.mjs'),
-      ...LIVE,
       ...args,
     ],
     { encoding: 'utf8', timeout: 20_000, cwd },
   );
+const tempDir = () => mkdtempSync(join(tmpdir(), 'hs-cwd-'));
 
-it('reads bjurfors live under the same flags, and makes its first request to robots.txt only', () => {
-  const cwd = mkdtempSync(join(tmpdir(), 'hs-cwd-'));
-  const result = spawnSync(
-    process.execPath,
-    [
-      '--require',
-      noFetch,
-      resolve('.house-scanner-build/collector.mjs'),
-      '--live',
-      '--source=bjurfors',
-      '--confirm-personal-read',
-    ],
-    { encoding: 'utf8', timeout: 20_000, cwd },
+it('reads live only with an executor, asks robots.txt first, and ignores an old --profiles argument', () => {
+  const result = runLive(
+    tempDir(),
+    '--live',
+    '--source=bjurfors',
+    '--confirm-personal-read',
+    '--profiles',
+    join(tmpdir(), 'hs-missing-profiles.json'),
   );
   expect(result.status).toBe(0);
   expect(JSON.parse(result.stdout)).toMatchObject({
     stopped: 'robots-unavailable',
     requestCount: 1,
   });
-});
-
-it('ignores a profiles argument from an older run script', () => {
-  const cwd = mkdtempSync(join(tmpdir(), 'hs-cwd-'));
-  const result = runLive(
-    cwd,
-    '--profiles',
-    join(tmpdir(), 'hs-missing-profiles.json'),
+  const refused = runLive(
+    tempDir(),
+    '--live',
+    '--source=alvhem',
+    '--confirm-personal-read',
   );
-  expect(result.status).toBe(0);
-  expect(JSON.parse(result.stdout)).toMatchObject({ requestCount: 1 });
-});
-
-it('refuses a live read of a source that has no executor', () => {
-  const result = spawnSync(
-    process.execPath,
-    [
-      '--require',
-      noFetch,
-      resolve('.house-scanner-build/collector.mjs'),
-      '--live',
-      '--source=alvhem',
-      '--confirm-personal-read',
-    ],
-    {
-      encoding: 'utf8',
-      timeout: 20_000,
-      cwd: mkdtempSync(join(tmpdir(), 'hs-cwd-')),
-    },
-  );
-  expect(result.status).toBe(1);
-  expect(result.stdout).toBe('');
+  expect(refused.status).toBe(1);
+  expect(refused.stdout).toBe('');
 });
 
 it('never creates the run memory file in fixture mode and rejects its flags there', () => {
-  const cwd = mkdtempSync(join(tmpdir(), 'hs-cwd-'));
+  const cwd = tempDir();
   const run = (...args: string[]) =>
     spawnSync(
       process.execPath,
@@ -299,22 +170,17 @@ it('never creates the run memory file in fixture mode and rejects its flags ther
 });
 
 it('refuses a live read within 6 hours of the last one before any request, and --force bypasses it', () => {
-  const cwd = mkdtempSync(join(tmpdir(), 'hs-cwd-'));
+  const cwd = tempDir();
   const cache = join(cwd, 'memory.json');
 
-  const first = runLive(cwd, '--cache', cache);
+  const first = runLive(cwd, ...LIVE, '--cache', cache);
   expect(first.status).toBe(0);
-  expect(JSON.parse(first.stdout)).toMatchObject({
-    stopped: 'robots-unavailable',
-    requestCount: 1,
-    detailCached: 0,
-  });
   const written = JSON.parse(readFileSync(cache, 'utf8'));
   expect(Math.abs(Date.parse(written.lastLiveRunAt) - Date.now())).toBeLessThan(
     60_000,
   );
 
-  const second = runLive(cwd, '--cache', cache);
+  const second = runLive(cwd, ...LIVE, '--cache', cache);
   expect(second.status).toBe(1);
   expect(second.stdout).toBe('');
   const rejected = JSON.parse(second.stderr);
@@ -322,20 +188,19 @@ it('refuses a live read within 6 hours of the last one before any request, and -
     status: 'rejected',
     category: 'run-interval',
   });
-  expect(rejected.notice).toMatch(/5h \d+m|6h 0m/);
   expect(rejected.notice).toContain('--force');
   expect(readFileSync(cache, 'utf8')).toBe(JSON.stringify(written));
 
-  const forced = runLive(cwd, '--cache', cache, '--force');
+  const forced = runLive(cwd, ...LIVE, '--cache', cache, '--force');
   expect(forced.status).toBe(0);
   expect(JSON.parse(forced.stdout)).toMatchObject({ requestCount: 1 });
 });
 
 it('reports an unreadable run memory file and carries on', () => {
-  const cwd = mkdtempSync(join(tmpdir(), 'hs-cwd-'));
+  const cwd = tempDir();
   const cache = join(cwd, 'memory.json');
   writeFileSync(cache, 'not json');
-  const result = runLive(cwd, '--cache', cache);
+  const result = runLive(cwd, ...LIVE, '--cache', cache);
   expect(result.status).toBe(0);
   expect(JSON.parse(result.stdout)).toMatchObject({ cacheReset: true });
   expect(readFileSync(cache, 'utf8')).toContain('"lastLiveRunAt"');

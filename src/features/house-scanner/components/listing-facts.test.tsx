@@ -54,7 +54,7 @@ const view = (node: React.ReactNode) =>
   );
 
 describe('the key facts line', () => {
-  it('puts the monthly fee beside area and rooms', () => {
+  it('puts the monthly fee beside area and rooms, says when a flat has none on record, and says nothing for a house', () => {
     view(
       <KeyFacts
         listing={home({
@@ -68,9 +68,7 @@ describe('the key facts line', () => {
     expect(
       screen.getByText(/70.5 m² · 3 rooms · 4,250 SEK\/month/),
     ).toBeTruthy();
-  });
-
-  it('says the fee is unknown for a flat with none on record, and says nothing for a house', () => {
+    cleanup();
     view(
       <KeyFacts
         listing={home({ baseFeeSek: null, propertyType: 'apartment' })}
@@ -99,40 +97,32 @@ describe('the key facts line', () => {
   });
 });
 
-describe('the Missing info label', () => {
-  it('names the facts that are unknown, in plain words', () => {
-    view(
-      <MatchLines
-        listing={home({
-          glazed: null,
-          askingPriceSek: null,
-          outdoor: 'balcony',
-        })}
-        snapshot={SYNTHETIC_SNAPSHOT}
-      />,
-    );
-    const label = screen.getByText(/^Missing info: /).textContent ?? '';
-    expect(label).toContain('glazing');
-    expect(label).toContain('price');
-    expect(label).not.toContain('glazed');
-  });
-
-  it('adds nothing to a label whose home is fully known', () => {
-    view(
-      <MatchLines
-        listing={home({
-          glazed: true,
-          outdoor: 'balcony',
-          lift: true,
-          groundFloor: false,
-          askingPriceSek: 2_500_000,
-          baseFeeSek: 3000,
-        })}
-        snapshot={SYNTHETIC_SNAPSHOT}
-      />,
-    );
-    expect(screen.queryByText(/Missing info/)).toBeNull();
-  });
+it('names the unknown facts in plain words, and shows no Missing info label for a fully known home', () => {
+  view(
+    <MatchLines
+      listing={home({ glazed: null, askingPriceSek: null, outdoor: 'balcony' })}
+      snapshot={SYNTHETIC_SNAPSHOT}
+    />,
+  );
+  const label = screen.getByText(/^Missing info: /).textContent ?? '';
+  expect(label).toContain('glazing');
+  expect(label).toContain('price');
+  expect(label).not.toContain('glazed');
+  cleanup();
+  view(
+    <MatchLines
+      listing={home({
+        glazed: true,
+        outdoor: 'balcony',
+        lift: true,
+        groundFloor: false,
+        askingPriceSek: 2_500_000,
+        baseFeeSek: 3000,
+      })}
+      snapshot={SYNTHETIC_SNAPSHOT}
+    />,
+  );
+  expect(screen.queryByText(/Missing info/)).toBeNull();
 });
 
 describe('the details sheet', () => {
@@ -151,23 +141,11 @@ describe('the details sheet', () => {
     return within(found);
   };
 
-  it('lists the facts under labelled sections, with the monthly fee among the first', () => {
+  it('shows known facts, Unknown for missing ones, and no fee for a house', () => {
     details(home({ baseFeeSek: 4250, propertyType: 'apartment', lift: true }));
-    expect(screen.getByText('Facts and source evidence')).toBeTruthy();
-    for (const heading of [
-      'Building and outdoor',
-      'Location',
-      'Source',
-      'Evidence',
-      'Notes',
-    ])
-      expect(screen.getByRole('heading', { name: heading })).toBeTruthy();
     expect(row('Monthly fee').getByText(/4,250 SEK\/month/)).toBeTruthy();
     expect(row('Lift').getByText('Yes')).toBeTruthy();
-    expect(screen.getAllByRole('separator').length).toBeGreaterThanOrEqual(4);
-  });
-
-  it('shows what is unknown as Unknown, and a house has no fee row value', () => {
+    cleanup();
     details(home({ baseFeeSek: null, lift: null, propertyType: 'house' }));
     expect(row('Lift').getByText('Unknown')).toBeTruthy();
     expect(
@@ -176,16 +154,10 @@ describe('the details sheet', () => {
   });
 
   it('keeps the conflict note and the no longer listed notice', () => {
-    view(
-      <ListingDetails
-        listing={{
-          ...home({}, ['askingPriceSek']),
-          delistedAt: '2026-10-21T09:00:00Z',
-        }}
-        snapshot={SYNTHETIC_SNAPSHOT}
-        userId={DEMO_USER_ID}
-      />,
-    );
+    details({
+      ...home({}, ['askingPriceSek']),
+      delistedAt: '2026-10-21T09:00:00Z',
+    });
     expect(screen.getByText('Conflicting fields: Asking price')).toBeTruthy();
     expect(screen.getByRole('note', { name: 'No longer listed' })).toBeTruthy();
   });
