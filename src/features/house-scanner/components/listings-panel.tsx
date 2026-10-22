@@ -525,50 +525,53 @@ export function ListingsPanel({
                 ]}
               />
             )}
-            <Select
-              label="Sort"
-              aria-label="Sort homes"
-              value={sort}
-              onChange={(value) =>
-                onSortChange((value as ListingSort) ?? 'newest')
-              }
-              data={[
-                { value: 'newest', label: 'Newest' },
-                { value: 'oldest', label: 'Oldest' },
-                { value: 'next-viewing', label: 'Next viewing' },
-                { value: 'alphabetical', label: 'Alphabetical' },
-                { value: 'price-asc', label: 'Price: low to high' },
-                { value: 'price-desc', label: 'Price: high to low' },
-              ]}
-              w={{ base: 140, sm: 180 }}
-            />
-            <TextInput
-              type="search"
-              label="Search by title"
-              placeholder="Street or listing title"
-              value={filters.titleQuery}
-              maxLength={128}
-              onChange={(event) =>
-                onFiltersChange({
-                  ...filters,
-                  titleQuery: event.currentTarget.value,
-                })
-              }
-              w={{ base: 180, sm: 220 }}
-              maw="100%"
-            />
-            <Button
-              variant="default"
-              aria-expanded={filtersOpen}
-              aria-controls="listing-filters"
-              onClick={() => {
-                setDraft(filters);
-                onFiltersOpenChange(true);
-              }}
-            >
-              Filters{filtersActive > 0 ? ` (${filtersActive})` : ''}
-            </Button>
+            <div className={classes.toolbarSortControls}>
+              <Select
+                label="Sort"
+                aria-label="Sort homes"
+                value={sort}
+                onChange={(value) =>
+                  onSortChange((value as ListingSort) ?? 'newest')
+                }
+                data={[
+                  { value: 'newest', label: 'Newest' },
+                  { value: 'oldest', label: 'Oldest' },
+                  { value: 'next-viewing', label: 'Next viewing' },
+                  { value: 'alphabetical', label: 'Alphabetical' },
+                  { value: 'price-asc', label: 'Price: low to high' },
+                  { value: 'price-desc', label: 'Price: high to low' },
+                ]}
+                w={{ base: 140, sm: 180 }}
+              />
+              <Button
+                variant="default"
+                aria-expanded={filtersOpen}
+                aria-controls="listing-filters"
+                onClick={() => {
+                  setDraft(filters);
+                  onFiltersOpenChange(true);
+                }}
+              >
+                Filters{filtersActive > 0 ? ` (${filtersActive})` : ''}
+              </Button>
+            </div>
           </Flex>
+          <TextInput
+            type="search"
+            label="Search by title"
+            placeholder="Street or listing title"
+            value={filters.titleQuery}
+            maxLength={128}
+            onChange={(event) =>
+              onFiltersChange({
+                ...filters,
+                titleQuery: event.currentTarget.value,
+              })
+            }
+            className={classes.toolbarSearch}
+            w={{ base: '100%', sm: 220 }}
+            maw="100%"
+          />
           <Group
             gap="sm"
             justify="space-between"
