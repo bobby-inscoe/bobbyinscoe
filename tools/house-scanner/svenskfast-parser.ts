@@ -41,6 +41,11 @@ const LISTING_PATH =
 // The photo address the pages give, hotlinked as it is. The site's own addresses contain a literal "...".
 const IMAGE =
   /^https:\/\/i\.sfcdn\.se\/Resurs\/Image\/\d{3,9}\/(?:Small|Medium|Large)\/\d{10,20}\/[A-Za-z0-9_.-]{10,200}\.jpg$/;
+/** An image's place on the image host past `/Resurs/Image/`'s size: "<id>/<stamp>/<name>.jpg". */
+export const SVENSKFAST_IMAGE_KEY =
+  /^\d{3,9}\/\d{10,20}\/[A-Za-z0-9_.-]{10,200}\.jpg$/;
+const KEY_OF_IMAGE =
+  /^https:\/\/i\.sfcdn\.se\/Resurs\/Image\/(\d{3,9})\/(?:Small|Medium|Large)\/(.+)$/;
 // The daily run refreshes the photo, so a week is ample before the app stops showing it.
 const PHOTO_VALID_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -317,6 +322,23 @@ function viewingsFrom(html: string, now: Date) {
   return finishViewings(found, now);
 }
 
+/** Up to four distinct collage photos in page order, as keys. The page labels no floor plan, so none is read. */
+function photoKeysOf(html: string): string[] {
+  const start = html.indexOf('id="collageWrapper"');
+  if (start < 0) return [];
+  const keys = new Set<string>();
+  for (const tag of html
+    .slice(start)
+    .matchAll(/<img\b[^>]*\bclass="lazy-image"[^>]*>/g)) {
+    const src = /\bdata-src(?:medium|large|small)="([^"]*)"/.exec(tag[0])?.[1];
+    const match = src === undefined ? null : KEY_OF_IMAGE.exec(decode(src));
+    const key = match === null ? '' : `${match[1]}/${match[2]}`;
+    if (SVENSKFAST_IMAGE_KEY.test(key)) keys.add(key);
+    if (keys.size === 4) break;
+  }
+  return [...keys];
+}
+
 export type SvenskfastDetailRead =
   | { kind: 'detail'; facts: DetailFacts }
   | { kind: 'failed'; reason: PageFailure };
@@ -369,5 +391,7 @@ export function readSvenskfastDetailPage(
   };
   const viewings = viewingsFrom(html, now);
   if (viewings) facts.viewings = viewings;
+  const photoKeys = photoKeysOf(html);
+  if (photoKeys.length > 0) facts.photoKeys = photoKeys;
   return { kind: 'detail', facts };
 }

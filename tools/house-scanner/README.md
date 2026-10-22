@@ -149,6 +149,8 @@ Tests use answers authored in `husman-hagberg-test-pages.ts` (fictional streets 
 - A first run is about 18 list pages plus up to 150 home pages of about 300 kB, two to four seconds apart: roughly ten minutes.
 - Operator steps as for the others: `--print-policy-sql --source=svenskfast`, then a credential for this source.
 
+The home page's `#collageWrapper` `img.lazy-image` elements give up to four distinct photos in page order, kept as `<id>/<stamp>/<name>.jpg` (the part after `/Resurs/Image/<id>/<size>/`) and rebuilt at `Large`, the size the list card uses. No floor plan is read: the page labels none.
+
 Tests use pages authored in `svenskfast-test-pages.ts` (fictional streets and values in the same shape); the parsers were also run once against saved real pages, which are not kept in the repository.
 
 ### Images and floor plans

@@ -56,6 +56,7 @@ import {
 import {
   readSvenskfastDetailPage,
   readSvenskfastSearchPage,
+  SVENSKFAST_IMAGE_KEY,
 } from '@house-scanner-tools/svenskfast-parser';
 
 // Path segments proven from one public Goteborg district URL. The municipality
@@ -360,6 +361,20 @@ export const svenskfastAdapter: SourceAdapter = {
     return path === undefined
       ? { unsupported: 'municipality-path-unproven' }
       : `${SVENSKFAST_ORIGIN}/bostad/vastra-gotaland/${path}/`;
+  },
+  imagesFor(facts, observedAt) {
+    // Large, like the list card's photo.
+    return imagesOf(
+      (facts.photoKeys ?? [])
+        .filter((key) => SVENSKFAST_IMAGE_KEY.test(key))
+        .map((key) => {
+          const [id, ...rest] = key.split('/');
+          return `${SVENSKFAST_IMAGE_ORIGIN}/Resurs/Image/${id}/Large/${rest.join('/')}`;
+        }),
+      undefined,
+      'Svensk Fastighetsförmedling',
+      observedAt,
+    );
   },
   pageUrl: (base, page) => `${base}?p=${page}`,
   readSearchPage: readSvenskfastSearchPage,
