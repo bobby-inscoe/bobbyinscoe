@@ -12,6 +12,7 @@ import {
   deleteManual,
   householdAccess,
   householdSnapshot,
+  householdStart,
   invokeInvite,
   leaveHousehold,
   makeOwner,
@@ -187,9 +188,11 @@ export function useHouseholdSession() {
           : { status: 'loading' },
       );
     try {
-      const { data, error } = await client.auth.getUser();
+      // The stored session, refreshed when it has expired. Every request checks the token on the server.
+      const { data, error } = await client.auth.getSession();
       if (!mounted.current || ticket !== generation.current) return;
-      if (error || !data.user) {
+      const user = data.session?.user;
+      if (error || !user) {
         sessionGeneration.current += 1;
         userId.current = null;
         householdId.current = null;
@@ -198,7 +201,7 @@ export function useHouseholdSession() {
           setState({ status: 'signed-out' });
         return;
       }
-      if (userId.current && userId.current !== data.user.id) {
+      if (userId.current && userId.current !== user.id) {
         sessionGeneration.current += 1;
         signedOut.current = true;
         householdId.current = null;
@@ -212,10 +215,16 @@ export function useHouseholdSession() {
           fail('Session changed. Sign out and try again.');
         return;
       }
-      userId.current = data.user.id;
-      const own = await memberships(client);
+      userId.current = user.id;
+      reading.current += 1;
+      const start = await householdStart(client, householdId.current).finally(
+        () => {
+          reading.current -= 1;
+        },
+      );
+      const own = start?.memberships ?? (await memberships(client));
       if (!mounted.current || ticket !== generation.current) return;
-      if (own.some((member) => member.userId !== data.user.id))
+      if (own.some((member) => member.userId !== user.id))
         throw new Error('Membership belongs to another account.');
       if (own.length === 0) {
         householdId.current = null;
@@ -236,8 +245,9 @@ export function useHouseholdSession() {
       const snapshot = await householdSnapshot(
         client,
         selected,
-        data.user.id,
+        user.id,
         own,
+        start?.snapshot ?? undefined,
       ).finally(() => {
         reading.current -= 1;
       });
@@ -248,10 +258,10 @@ export function useHouseholdSession() {
         // An unchanged load keeps the old object, so the workspace does not re-render every card.
         setState((previous) =>
           previous.status === 'authenticated' &&
-          previous.userId === data.user.id &&
+          previous.userId === user.id &&
           JSON.stringify(previous.snapshot) === JSON.stringify(snapshot)
             ? previous
-            : { status: 'authenticated', snapshot, userId: data.user.id },
+            : { status: 'authenticated', snapshot, userId: user.id },
         );
       }
     } catch {
@@ -259,7 +269,7 @@ export function useHouseholdSession() {
         fail('Could not load your household. Retry or sign out.');
     }
   }, [client, fail, forget]);
-  // The full load: who is signed in, which households, then the snapshot. It runs once per session
+  // The full load: who is signed in, then the households and the snapshot in one request. It runs once per session
   // and when the member asks again. A caller that finds one running waits for it instead.
   const refresh = useCallback(() => {
     const run = load();

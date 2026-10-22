@@ -7,6 +7,7 @@ import {
   createHouseholdClient,
   deleteManual,
   householdSnapshot,
+  householdStart,
   memberships,
   privateBackendSettings,
   saveNote,
@@ -30,6 +31,7 @@ import {
   sdkStorage,
   sdkStorageKey,
   USER_ID,
+  v2Snapshot,
 } from '@/features/house-scanner/api/session-test-helpers';
 import {
   NO_MANUAL_FACTS,
@@ -163,37 +165,6 @@ describe('House Scanner RPC boundaries', () => {
       p_household_id: HOUSEHOLD_ID,
     });
   });
-  // A v2 snapshot with one source home, as hs_household_snapshot sends it.
-  const v2Snapshot = () => {
-    const member = fixtureSnapshot().members.find(
-      (entry) => entry.userId === USER_ID,
-    );
-    return {
-      contractVersion: 2,
-      householdId: HOUSEHOLD_ID,
-      edition: null,
-      members: [
-        { userId: USER_ID, displayName: member?.displayName, role: 'owner' },
-      ],
-      profiles: [],
-      sources: {},
-      neighborhoods: {},
-      listings: [
-        {
-          id: '30000000-0000-4000-8000-000000000001',
-          sourceId: 'alpha',
-          title: 'Read model home',
-          url: 'https://example.invalid/home',
-          facts: { rooms: 2 },
-          observedAt: '2026-10-22T10:00:00+00:00',
-          lastCheckedAt: '2026-10-22T10:00:00+00:00',
-        },
-      ],
-      favorites: [],
-      hides: [],
-      notes: [],
-    };
-  };
   it('reads the household snapshot from the read model when it is installed', async () => {
     sdk.rpc
       .mockResolvedValueOnce(reply([fixtureSnapshot().members[0]]))
@@ -225,6 +196,54 @@ describe('House Scanner RPC boundaries', () => {
       'hs_household_snapshot',
       'hs_snapshot_neighborhoods',
     ]);
+  });
+  it('asks for the memberships and the snapshot in one request', async () => {
+    const own = [fixtureSnapshot().members[0]];
+    sdk.rpc.mockResolvedValueOnce(
+      reply({ memberships: own, snapshot: v2Snapshot() }),
+    );
+    await expect(householdStart(client(), null)).resolves.toEqual({
+      memberships: own,
+      snapshot: v2Snapshot(),
+    });
+    expect(sdk.rpc).toHaveBeenLastCalledWith('hs_household_start', {});
+    sdk.rpc.mockResolvedValueOnce(reply({ memberships: own, snapshot: null }));
+    await householdStart(client(), HOUSEHOLD_ID);
+    expect(sdk.rpc).toHaveBeenLastCalledWith('hs_household_start', {
+      p_household_id: HOUSEHOLD_ID,
+    });
+  });
+  it.each([
+    ['missing', missing()],
+    ['unreadable', reply([fixtureSnapshot().members[0]])],
+  ])(
+    'leaves the caller to ask separately when the start request is %s',
+    async (_label, answer) => {
+      sdk.rpc.mockResolvedValueOnce(answer);
+      await expect(householdStart(client(), null)).resolves.toBeNull();
+    },
+  );
+  it('reports a failed start request', async () => {
+    sdk.rpc.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'synthetic confidential database detail' },
+    });
+    await expect(householdStart(client(), null)).rejects.toThrow(
+      'The household request failed. Reload and try again.',
+    );
+  });
+  it('reads no snapshot when the start request already sent it', async () => {
+    const snapshot = await householdSnapshot(
+      client(),
+      HOUSEHOLD_ID,
+      USER_ID,
+      [fixtureSnapshot().members[0]],
+      v2Snapshot(),
+    );
+    expect(snapshot.listings).toEqual([
+      expect.objectContaining({ title: 'Read model home' }),
+    ]);
+    expect(sdk.rpc).not.toHaveBeenCalled();
   });
   it('saves favorites in one request of at most 500 listings', async () => {
     const [first, second] = fixtureSnapshot().listings;

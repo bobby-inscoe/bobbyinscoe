@@ -268,8 +268,8 @@ describe('household settings actions', () => {
   });
 
   it('has no settings actions before sign-in', () => {
-    sdk.auth.getUser.mockResolvedValue({
-      data: { user: null },
+    sdk.auth.getSession.mockResolvedValue({
+      data: { session: null },
       error: null,
     });
     const hook = renderHook(useHouseholdSession);

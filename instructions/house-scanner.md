@@ -20,7 +20,9 @@ redirects them. Add `/shellter/...` to those URLs before pointing Auth at the ne
   fields, the migration, then the policy revisions or collector change that switch a feature on. Never switch on first.
   The app reads the household from `hs_household_snapshot`, whose reader drops keys it does not know, so a field added
   there can ship before the app reads it; removing or retyping one still needs the app first. The app falls back to
-  `hs_snapshot_neighborhoods` when that function is missing or its response cannot be read.
+  `hs_snapshot_neighborhoods` when that function is missing or its response cannot be read. A load opens with
+  `hs_household_start`, which returns the memberships and that same snapshot in one request; without it the app asks
+  `hs_memberships` and then the snapshot.
 - That snapshot reads a read model kept by triggers: `hs.listing_cards` (one policy-filtered card per listing) and
   `hs.household_listings` (the homes each household could see, and why). After any migration or data repair that
   touches listings, policies, profiles, favorites, notes or hides, `select * from hs.card_drift()` and

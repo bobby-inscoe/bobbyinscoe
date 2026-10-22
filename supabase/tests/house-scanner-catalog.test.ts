@@ -2719,6 +2719,79 @@ describe('household snapshot v2', () => {
   }, 300_000);
 });
 
+describe('household start', () => {
+  const START = '20261022124605_house_scanner_household_start';
+  const start = (user: string | null, household?: string) =>
+    as(user ? 'authenticated' : 'anon', user, () =>
+      household
+        ? rpc('select public.hs_household_start($1) as value', [household])
+        : rpc('select public.hs_household_start() as value'),
+    );
+
+  it('rolls back to exactly the earlier schema and applies again', async () => {
+    const database = await migratedThrough(START);
+    try {
+      const migrated = await fingerprint(database);
+      await database.exec(await rollback(START));
+      const earlier = await migratedThrough(SNAPSHOT_V2);
+      try {
+        expect(await fingerprint(database)).toEqual(await fingerprint(earlier));
+      } finally {
+        await earlier.close();
+      }
+      await database.exec(await migration(`${START}.sql`));
+      expect(await fingerprint(database)).toEqual(migrated);
+      expect(
+        migrated.filter((line) =>
+          line.startsWith('fn public.hs_household_start('),
+        ),
+      ).toEqual([expect.stringMatching(/anon=false auth=true svc=false$/)]);
+    } finally {
+      await database.close();
+    }
+  });
+
+  it('returns the memberships and the only household’s snapshot in one call', async () => {
+    const [own, v2] = await as('authenticated', OWNER_A, async () => [
+      await rpc('select public.hs_memberships() as value'),
+      await rpc('select public.hs_household_snapshot($1) as value', [HOUSE_A]),
+    ]);
+    expect(await start(OWNER_A)).toEqual({ memberships: own, snapshot: v2 });
+    expect(await start(OWNER_A, HOUSE_A)).toEqual({
+      memberships: own,
+      snapshot: v2,
+    });
+  });
+
+  it('waits for a choice when the caller has several households, and reads the one named', async () => {
+    const other = randomUUID();
+    await db.exec('begin');
+    try {
+      await db.query(
+        "insert into hs.households(id,name) values($1,'Visited household')",
+        [other],
+      );
+      await db.query(
+        "insert into hs.members(household_id,user_id,display_name,role) values($1,$2,'Visiting member','member')",
+        [other, OWNER_A],
+      );
+      const none = (await start(OWNER_A)) as { memberships: unknown[] };
+      expect(none).toMatchObject({ snapshot: null });
+      expect(none.memberships).toHaveLength(2);
+      expect(await start(OWNER_A, other)).toMatchObject({
+        snapshot: { householdId: other },
+      });
+    } finally {
+      await db.exec('rollback');
+    }
+  });
+
+  it('sends no snapshot of a household the caller does not belong to', async () => {
+    expect(await start(OWNER_B, HOUSE_A)).toMatchObject({ snapshot: null });
+    await expect(start(null)).rejects.toThrow('permission denied');
+  });
+});
+
 describe('catalog administration and grants', () => {
   it('sets source policies and issues and revokes credentials without a household', async () => {
     const created = await rpc(

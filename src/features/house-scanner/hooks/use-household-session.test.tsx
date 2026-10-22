@@ -8,6 +8,7 @@ import {
   emitAuth,
   fixtureSnapshot,
   HOUSEHOLD_ID,
+  missing,
   OTHER_HOUSEHOLD_ID,
   OTHER_USER_ID,
   reply,
@@ -54,7 +55,7 @@ describe('House Scanner session privacy', () => {
     });
     const hook = renderHook(useHouseholdSession);
     expect(hook.result.current.state.status).toBe('error');
-    expect(sdk.auth.getUser).not.toHaveBeenCalled();
+    expect(sdk.auth.getSession).not.toHaveBeenCalled();
   });
   it('loads the authenticated snapshot without persisting it', async () => {
     const hook = await authenticated();
@@ -69,7 +70,7 @@ describe('House Scanner session privacy', () => {
     const hook = await authenticated();
     const previous = hook.result.current.state;
     const pending = deferred<ReturnType<typeof userReply>>();
-    sdk.auth.getUser.mockReturnValueOnce(pending.promise);
+    sdk.auth.getSession.mockReturnValueOnce(pending.promise);
     let refresh!: Promise<void>;
     act(() => {
       refresh = hook.result.current.refresh();
@@ -83,7 +84,7 @@ describe('House Scanner session privacy', () => {
   });
   it('clears private state when membership is revoked', async () => {
     const hook = await authenticated();
-    sdk.rpc.mockResolvedValueOnce(reply([]));
+    sdk.rpc.mockResolvedValueOnce(reply({ memberships: [], snapshot: null }));
     await act(() => hook.result.current.refresh());
     expect(hook.result.current.state).toEqual({ status: 'nonmember' });
     await expect(
@@ -123,13 +124,13 @@ describe('House Scanner session privacy', () => {
       'Example balcony home',
     );
   });
-  it.each(['getUser', 'memberships', 'snapshot'])(
+  it.each(['getSession', 'memberships', 'snapshot'])(
     'ignores a stale %s response after sign-out',
     async (stage) => {
       const pendingUser = deferred<ReturnType<typeof userReply>>();
       const pendingRpc = deferred<ReturnType<typeof reply>>();
-      if (stage === 'getUser')
-        sdk.auth.getUser.mockReturnValueOnce(pendingUser.promise);
+      if (stage === 'getSession')
+        sdk.auth.getSession.mockReturnValueOnce(pendingUser.promise);
       else
         sdk.rpc.mockImplementation(async (name) => {
           if (
@@ -143,7 +144,7 @@ describe('House Scanner session privacy', () => {
       act(() => emitAuth('INITIAL_SESSION'));
       await waitFor(() =>
         expect(
-          stage === 'getUser' ? sdk.auth.getUser : sdk.rpc,
+          stage === 'getSession' ? sdk.auth.getSession : sdk.rpc,
         ).toHaveBeenCalled(),
       );
       if (stage === 'snapshot')
@@ -177,7 +178,7 @@ describe('House Scanner session privacy', () => {
       older = hook.result.current.refresh();
     });
     await settle();
-    sdk.rpc.mockResolvedValueOnce(reply([]));
+    sdk.rpc.mockResolvedValueOnce(reply({ memberships: [], snapshot: null }));
     await act(() => hook.result.current.refresh());
     await act(async () => {
       pending.resolve(reply([fixtureSnapshot().members[0]]));
@@ -283,11 +284,11 @@ describe('House Scanner session privacy', () => {
   });
   it('ignores a stale user lookup when auth changes before the first lookup finishes', async () => {
     const pending = deferred<ReturnType<typeof userReply>>();
-    sdk.auth.getUser.mockReturnValueOnce(pending.promise);
+    sdk.auth.getSession.mockReturnValueOnce(pending.promise);
     const hook = renderHook(useHouseholdSession);
     act(() => emitAuth('INITIAL_SESSION'));
-    await waitFor(() => expect(sdk.auth.getUser).toHaveBeenCalledTimes(1));
-    sdk.auth.getUser.mockResolvedValue(userReply(OTHER_USER_ID));
+    await waitFor(() => expect(sdk.auth.getSession).toHaveBeenCalledTimes(1));
+    sdk.auth.getSession.mockResolvedValue(userReply(OTHER_USER_ID));
     sdk.rpc.mockImplementation(async (name) =>
       reply(
         name === 'hs_memberships'
@@ -373,7 +374,7 @@ describe('House Scanner session privacy', () => {
     const hook = await authenticated();
     const previous = hook.result.current.state;
     const pending = deferred<ReturnType<typeof userReply>>();
-    sdk.auth.getUser.mockReturnValueOnce(pending.promise);
+    sdk.auth.getSession.mockReturnValueOnce(pending.promise);
     act(() => emitAuth('TOKEN_REFRESHED'));
     await settle();
     expect(hook.result.current.state).toBe(previous);
@@ -399,7 +400,7 @@ describe('House Scanner session privacy', () => {
   it('invalidates retained mutation callbacks when authentication expires', async () => {
     const hook = await authenticated();
     const staleSave = hook.result.current.onSaveFavorite;
-    sdk.auth.getUser.mockResolvedValueOnce(userReply(null));
+    sdk.auth.getSession.mockResolvedValueOnce(userReply(null));
     await act(() => hook.result.current.refresh());
     sdk.rpc.mockClear();
     await expect(staleSave(fixtureSnapshot().listings[0].id)).rejects.toThrow(
@@ -423,6 +424,7 @@ describe('House Scanner session privacy', () => {
     sdk.rpc.mockImplementation(async (name, args) => {
       if (name === 'hs_memberships')
         return reply([first.members[0], second.members[0]]);
+      if (name === 'hs_household_start') return missing();
       return 'p_household_id' in args &&
         args.p_household_id === OTHER_HOUSEHOLD_ID
         ? reply(second)
@@ -457,7 +459,7 @@ describe('House Scanner session privacy', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
       await authenticated();
-      sdk.auth.getUser.mockClear();
+      sdk.auth.getSession.mockClear();
       sdk.rpc.mockClear();
       await act(async () => {
         vi.advanceTimersByTime(5 * 60_000);
@@ -465,7 +467,7 @@ describe('House Scanner session privacy', () => {
     } finally {
       vi.useRealTimers();
     }
-    expect(sdk.auth.getUser).not.toHaveBeenCalled();
+    expect(sdk.auth.getSession).not.toHaveBeenCalled();
     expect(sdk.rpc).not.toHaveBeenCalled();
   });
   it('asks for memberships once per refresh and keeps an unchanged snapshot object', async () => {
@@ -564,12 +566,12 @@ describe('House Scanner session privacy', () => {
     await waitFor(() =>
       expect(hook.result.current.state.status).toBe('authenticated'),
     );
-    sdk.auth.getUser.mockClear();
+    sdk.auth.getSession.mockClear();
     await act(async () => {
       pending.resolve(reply({ ok: true }));
       await mutation;
     });
-    expect(sdk.auth.getUser).not.toHaveBeenCalled();
+    expect(sdk.auth.getSession).not.toHaveBeenCalled();
   });
   it('invalidates retained mutation callbacks after a failed private refresh', async () => {
     const hook = await authenticated();
@@ -589,7 +591,7 @@ describe('House Scanner session privacy', () => {
 
 it('offers recovery when a refresh detects a changed identity and SDK sign-out returns an error', async () => {
   const hook = await authenticated();
-  sdk.auth.getUser.mockResolvedValueOnce(userReply(OTHER_USER_ID));
+  sdk.auth.getSession.mockResolvedValueOnce(userReply(OTHER_USER_ID));
   sdk.auth.signOut.mockResolvedValueOnce({
     error: { message: 'Synthetic SDK sign-out failure' },
   });
