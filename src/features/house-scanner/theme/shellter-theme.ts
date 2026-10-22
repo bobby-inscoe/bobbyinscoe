@@ -4,9 +4,12 @@ import {
   Button,
   CloseButton,
   createTheme,
+  getSize,
   Input,
+  MultiSelect,
   NumberInput,
   Paper,
+  Pill,
   Portal,
 } from '@mantine/core';
 import classes from '@/features/house-scanner/theme/shellter.module.css';
@@ -54,6 +57,18 @@ export const shellterTheme = createTheme({
     }),
     CloseButton: CloseButton.extend({
       classNames: { root: classes.touchSquare },
+    }),
+    Pill: Pill.extend({
+      classNames: { root: classes.selectedPill, remove: classes.pillRemove },
+      vars: (_theme, _props, { size }) => ({
+        root: {
+          '--pill-height': `var(--shellter-pill-height, ${getSize(size ?? 'sm', 'pill-height')})`,
+          '--pill-fz': `var(--shellter-pill-font-size, ${getSize(size ?? 'sm', 'pill-fz')})`,
+        },
+      }),
+    }),
+    MultiSelect: MultiSelect.extend({
+      classNames: { input: classes.multiSelectInput },
     }),
     NumberInput: NumberInput.extend({
       classNames: { controls: classes.touchControls },

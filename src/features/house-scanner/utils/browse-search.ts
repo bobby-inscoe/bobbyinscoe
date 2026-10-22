@@ -34,7 +34,10 @@ const urlSchema = z.object({
   select: flag,
   filterOpen: flag,
   person: z.string().min(1).max(128).catch('everyone'),
-  section: z.enum(sections).catch('all'),
+  section: z
+    .enum(sections)
+    .catch('all')
+    .transform((section) => (section === 'exceptions' ? 'all' : section)),
   from: z.enum(['listings', 'favorites', 'viewings']).catch('listings'),
   q: z
     .union([z.string(), z.number()])
@@ -46,6 +49,7 @@ const urlSchema = z.object({
   minArea: number,
   maxArea: number,
   rooms: number,
+  maxRooms: number,
   sites: list.pipe(z.array(z.string().max(253)).max(32)).catch([]),
   added: z
     .enum(['all', 'latest-scan', '1-day', '3-days', '7-days'])
@@ -101,6 +105,7 @@ export function validateBrowseSearch(
       minAreaM2: url.minArea,
       maxAreaM2: url.maxArea,
       minRooms: url.rooms,
+      maxRooms: url.maxRooms,
       hosts: url.sites,
       freshness: url.added,
       neighborhoodIds: [...new Set(url.districts)].map(
@@ -140,6 +145,7 @@ function encode({ filters, ...search }: BrowseSearch): BrowseUrlSearch {
     minArea: filters.minAreaM2,
     maxArea: filters.maxAreaM2,
     rooms: filters.minRooms,
+    maxRooms: filters.maxRooms,
     sites: filters.hosts.join(','),
     added: filters.freshness,
     // A lone code as a number keeps the router from quoting it: districts=101.

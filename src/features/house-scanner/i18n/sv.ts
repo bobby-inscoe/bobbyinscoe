@@ -3,12 +3,35 @@ import type { Translations } from '@/features/house-scanner/i18n/types/translati
 export const sv = {
   settings: {
     criteria: {
+      preferredBudgetDescription:
+        'Bostäder med ett pris upp till detta belopp visas under Inom budget.',
+      maximumBudgetDescription:
+        'Bostäder med ett känt utgångspris över detta belopp visas inte.',
+      apartmentRulesDescription:
+        'Bostäder som bekräftat inte uppfyller kraven visas inte. Okända eller motstridiga uppgifter visas under Saknade uppgifter.',
+      monthlyFeeLabel: 'Riktvärde för månadsavgift (SEK)',
+      monthlyFeeDescription:
+        'Visar en kostnadsvarning över detta belopp. Bostäder filtreras inte bort.',
+      searchLocation: 'Sökområde',
+      searchLocationDescription:
+        'Välj en hel kommun eller en knutpunkt i den. För knutpunkter används radien nedan; för hela kommuner används kommungränsen. Just nu finns täckning endast i Göteborg.',
+      currentSavedSearch: 'Nuvarande sparade sökning',
+      wholeCity: '{city} (hela kommunen)',
+      savedPoint: 'Sparad punkt ({latitude}, {longitude})',
+      legacySearchDescription:
+        'Din sparade sökning omfattar {cities} eller bostäder inom {radius} från den sparade punkten. Den ändras inte förrän du väljer ett sökområde.',
+      budgetHelp:
+        'Önskad budget grupperar träffarna. Maxbudget filtrerar bort bostäder med ett högre känt utgångspris. Okända eller motstridiga uppgifter visas under Saknade uppgifter.',
+      locationHelp:
+        'Välj en hel kommun eller en radie runt en knutpunkt. Detta filtrerar sparade annonser och utökar inte mäklartäckningen.',
+      roomsHeading: 'Rum',
+      maximumRooms: 'Högsta antal rum',
       shellterFollowsApartmentsForSaleInGoteborg:
         'Shellter visar lägenheter till salu i Göteborg.',
       theSettingsBelowAreYourDefaultFilterForThe:
         'Inställningarna nedan är ditt standardfilter för fliken Bostäder. Anpassa budget, storlek, antal rum, egenskaper och områden efter det du söker.',
       filtersOnTheListingsTabAreYoursAloneAnd:
-        'Filtren på fliken Bostäder gäller bara dig och återställs när du laddar om. Bara ägare kan ändra standardinställningarna.',
+        'Filtren på fliken Bostäder gäller bara dig och sparas i sidans webbadress, även när du laddar om. När du rensar dem behålls hushållets grundinställningar. Endast ägare kan ändra grundinställningarna.',
       howDoesThisWork: 'Hur fungerar det?',
       aboutShellter: 'Om Shellter',
       comingSoon: '{value0} (kommer snart)',
@@ -17,7 +40,7 @@ export const sv = {
         'Profilen har sparats. Sparade bostäder bedöms på nytt utifrån kriterierna. Insamlingens omfattning ändras inte.',
       enabledSearchProfile: 'Aktiv sökprofil',
       preferredBudgetSEK: 'Önskad budget (SEK)',
-      stretchBudgetSEK: 'Övre budgetgräns (SEK)',
+      stretchBudgetSEK: 'Maxbudget (SEK)',
       minimumLivingArea: 'Minsta boarea',
       minimumLivingAreaM: 'Minsta boarea (m²)',
       maximumLivingArea: 'Största boarea',
@@ -26,7 +49,7 @@ export const sv = {
       minimumRooms: 'Minsta antal rum',
       apartmentRules: 'Lägenhetskrav',
       excludeConfirmedGroundFloorApartments:
-        'Uteslut lägenheter som bekräftats ligga på bottenvåningen',
+        'Uteslut lägenheter på bottenvåningen',
       requireALift: 'Kräv hiss',
       requireABalconyOrTerrace: 'Kräv balkong eller terrass',
       preferGlazedOutdoorSpaceExceptionsStayVisible:
@@ -417,13 +440,12 @@ export const sv = {
       status: 'status',
       location: 'läge',
       withinBudget: 'Inom budget',
-      stretchBudget: 'Övre budget',
+      stretchBudget: 'Över önskad budget',
       closeToYourCriteria: 'Nära dina kriterier',
       missingInfo: 'Uppgifter saknas',
       outsideCurrentCriteria: 'Utanför aktuella kriterier',
       atOrUnderYourPreferredPrice: 'högst ditt önskade pris.',
-      overItWithinYourStretchLimit:
-        'över önskat pris, inom din övre budgetgräns.',
+      overItWithinYourStretchLimit: 'över önskad budget, men högst maxbudget.',
       missesOneRuleThatCanBend: 'uppfyller inte ett krav som kan justeras.',
       factsAreUnknownSoItCanTBeJudged:
         'uppgifter saknas, så en bedömning kan inte göras.',
@@ -439,7 +461,7 @@ export const sv = {
       livingAreaOutsideProfile: 'Boarean ligger utanför profilen',
       tooFewRooms: 'För få rum',
       outsideGeographicScope: 'Utanför sökområdet',
-      aboveProfileStretchBudget: 'Över profilens övre budgetgräns',
+      aboveProfileStretchBudget: 'Över maxbudget',
       groundFloorApartment: 'Lägenhet på bottenvåningen',
       apartmentWithoutALift: 'Lägenhet utan hiss',
       liftDoesNotServeTheHome: 'Hissen når inte bostaden',
@@ -457,7 +479,7 @@ export const sv = {
       noLongerListed: 'Annonsen finns inte kvar',
       detailsNeedConfirmation: 'Uppgifterna behöver bekräftas',
       withinPreferredBudget: 'Inom önskad budget',
-      withinStretchBudget: 'Inom övre budgetgräns',
+      withinStretchBudget: 'Över önskad budget, inom maxbudget',
       livingAreaAndRoomsMeetProfile: 'Boarea och antal rum uppfyller profilen',
       unknownOrDisputed: 'Okänt eller motstridigt: {label}',
     },
@@ -780,7 +802,7 @@ export const sv = {
     maximumAreaMustCoverMinimumArea:
       'Största boarean måste vara minst lika stor som minsta boarean.',
     stretchPriceMustCoverPreferredPrice:
-      'Övre budgetgränsen måste vara minst lika hög som den önskade budgeten.',
+      'Maxbudget måste vara minst lika stor som önskad budget.',
     tradeOffJourneyMustCoverPreferredJourney:
       'Den längre restiden måste vara minst lika lång som den önskade restiden.',
     photoLinksMustStartWithHttps: 'Bildlänkar måste börja med https://.',

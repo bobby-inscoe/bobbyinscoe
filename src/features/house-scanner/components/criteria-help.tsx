@@ -9,6 +9,8 @@ const ABOUT = (intl: IntlShape) => [
   intl.formatMessage({
     id: 'settings.criteria.theSettingsBelowAreYourDefaultFilterForThe',
   }),
+  intl.formatMessage({ id: 'settings.criteria.budgetHelp' }),
+  intl.formatMessage({ id: 'settings.criteria.locationHelp' }),
   intl.formatMessage({
     id: 'settings.criteria.filtersOnTheListingsTabAreYoursAloneAnd',
   }),

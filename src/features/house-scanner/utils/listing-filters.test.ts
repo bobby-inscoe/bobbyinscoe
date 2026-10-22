@@ -280,6 +280,7 @@ describe('applyListingFilters', () => {
         minAreaM2: 80,
         maxAreaM2: 80,
         minRooms: 3,
+        maxRooms: 3,
       },
       true,
     ],
@@ -288,6 +289,7 @@ describe('applyListingFilters', () => {
     ['min area above', { minAreaM2: 81 }, false],
     ['max area below', { maxAreaM2: 79 }, false],
     ['min rooms above', { minRooms: 3.5 }, false],
+    ['max rooms below', { maxRooms: 2.5 }, false],
     [
       'min above max',
       { minPriceSek: 3_000_000, maxPriceSek: 2_000_000 },
@@ -312,7 +314,7 @@ describe('applyListingFilters', () => {
   it.each([
     ['price', { askingPriceSek: null }, { minPriceSek: 1_000_000 }],
     ['area', { livingAreaM2: null }, { minAreaM2: 50 }],
-    ['rooms', { rooms: null }, { minRooms: 2 }],
+    ['rooms', { rooms: null }, { minRooms: 2, maxRooms: 4 }],
   ] satisfies [string, Partial<Listing['facts']>, Partial<ListingFilters>][])(
     'unknown %s follows includeUnknown',
     (_name, facts, filters) => {

@@ -374,10 +374,39 @@ describe('create-household links', () => {
         created,
         state.profiles[0].id,
         'Main profile',
-        JSON.stringify({ ...state.profiles[0].criteria, minAreaM2: 80 }),
+        JSON.stringify({
+          ...state.profiles[0].criteria,
+          minAreaM2: 80,
+          geography: {
+            ...state.profiles[0].criteria.geography,
+            mode: 'radius',
+            radiusKm: 1,
+          },
+        }),
       ],
     );
-    expect((await snapshot(created, NEWCOMER)).listings).toEqual([]);
+    const saved = await snapshot(created, NEWCOMER);
+    expect(saved.listings).toEqual([]);
+    expect(saved.profiles[0].criteria.geography).toMatchObject({
+      mode: 'radius',
+      radiusKm: 1,
+    });
+    for (const [mode, expected] of [
+      ['municipalities', true],
+      ['other', false],
+      [null, false],
+    ] as const) {
+      const criteria = {
+        ...saved.profiles[0].criteria,
+        geography: { ...saved.profiles[0].criteria.geography, mode },
+      };
+      expect(
+        await value('select hs.valid_criteria($1::jsonb) as value', [
+          JSON.stringify(criteria),
+        ]),
+      ).toBe(expected);
+      expect(criteriaSchema.safeParse(criteria).success).toBe(expected);
+    }
   });
 
   it('accepts an unbound link for a signed-in account, but never an unconfirmed one', async () => {
@@ -632,6 +661,63 @@ describe('leaving and member management', () => {
 });
 
 describe('onboarding grants and rollback', () => {
+  it('rolls location validation back without silently discarding saved modes', async () => {
+    const isolated = await db.clone();
+    const read = (folder: string) =>
+      readFile(
+        new URL(
+          `../${folder}/20261022171317_house_scanner_location_mode${folder === 'rollbacks' ? '_down' : ''}.sql`,
+          import.meta.url,
+        ),
+        'utf8',
+      );
+    try {
+      const legacy = await value('select hs.starter_criteria() as value');
+      const withMode = {
+        ...criteriaSchema.parse(legacy),
+        geography: {
+          ...criteriaSchema.parse(legacy).geography,
+          mode: 'radius',
+        },
+      };
+      const down = await read('rollbacks');
+      await expect(isolated.exec(down)).rejects.toThrow(
+        'Restore profiles to legacy location criteria',
+      );
+      await isolated.exec(
+        "update hs.profiles set criteria=criteria #- '{geography,mode}' where criteria->'geography' ? 'mode'",
+      );
+      await isolated.exec(down);
+      expect(
+        (
+          await isolated.query<{ valid: boolean }>(
+            'select hs.valid_criteria($1::jsonb) as valid',
+            [JSON.stringify(withMode)],
+          )
+        ).rows[0].valid,
+      ).toBe(false);
+      expect(
+        (
+          await isolated.query<{ valid: boolean }>(
+            'select hs.valid_criteria($1::jsonb) as valid',
+            [JSON.stringify(legacy)],
+          )
+        ).rows[0].valid,
+      ).toBe(true);
+      await isolated.exec(await read('migrations'));
+      expect(
+        (
+          await isolated.query<{ valid: boolean }>(
+            'select hs.valid_criteria($1::jsonb) as valid',
+            [JSON.stringify(withMode)],
+          )
+        ).rows[0].valid,
+      ).toBe(true);
+    } finally {
+      await isolated.close();
+    }
+  });
+
   it('keeps the invitations table private', async () => {
     await expect(
       as('authenticated', OWNER_A, () =>

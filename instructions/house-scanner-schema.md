@@ -1,7 +1,7 @@
 # House Scanner schema
 
 The `hs` schema as the migrations in `supabase/migrations` build it, through
-`20261022143306_house_scanner_drop_old_snapshot.sql`. Read this before changing a table, a trigger or a `public.hs_*`
+`20261022171317_house_scanner_location_mode.sql`. Read this before changing a table, a trigger or a `public.hs_*`
 function, and update it in the same change. `instructions/house-scanner.md` has the operating rules.
 
 - `hs` is not exposed through the API. Row-level security is on for every table, with no policies. The app, the
@@ -14,6 +14,14 @@ function, and update it in the same change. `instructions/house-scanner.md` has 
   on a PGlite database built from all migrations (as the tests in `supabase/tests` do) or on hosted.
 
 ## Areas
+
+`profiles.criteria.geography.mode` is optional: `municipalities` matches the
+selected municipality names; `radius` matches the saved center and radius.
+Missing mode keeps the earlier municipality-or-radius behavior. The client
+applies geography; the database still returns candidates using its hard rules.
+`hs.valid_criteria` validates the optional mode before applying the existing
+strict checks. The migration changes no profile values or grants. Deploy the
+client before allowing profiles to save the new field.
 
 | Area | Tables | Written by | Read by |
 | --- | --- | --- | --- |

@@ -14,7 +14,7 @@ import { ProfileEditor } from '@/features/house-scanner/components/profile-edito
 import { catalogs } from '@/features/house-scanner/i18n/catalogs';
 import { SYNTHETIC_SNAPSHOT } from '@/features/house-scanner/mock/synthetic-household';
 import type { SearchProfile } from '@/features/house-scanner/types/contracts';
-import { BRUNNSPARKEN } from '@/features/house-scanner/utils/criteria-options';
+import { SEARCH_HUBS } from '@/features/house-scanner/utils/criteria-options';
 
 beforeEach(() => {
   vi.stubGlobal(
@@ -91,11 +91,13 @@ it('saves untouched criteria as they were, including values the form cannot show
     geography: { ...demo.criteria.geography, center: [11.97, 57.71] },
   });
   const onSave = show(profile);
+  expect(screen.queryByRole('checkbox', { name: /glazed/i })).toBeNull();
   expect(
     screen.getByRole('combobox', { name: 'Minimum living area (m²)' }),
   ).toHaveProperty('value', '57 m²');
   expect(
-    screen.getAllByText('Example municipality (not supported)').length,
+    screen.getAllByText(/Your saved search includes Example municipality/)
+      .length,
   ).toBeGreaterThan(0);
   expect(await save(onSave)).toEqual({
     ...profile.criteria,
@@ -103,13 +105,15 @@ it('saves untouched criteria as they were, including values the form cannot show
   });
 });
 
-it('saves a chosen size, room count, radius, place and source, and "No maximum" as no limit', async () => {
+it('saves a hub, small radius, size, rooms and source, retaining the radius when switching locations', async () => {
   const onSave = show(profileWith({ sourceIds: ['boneo'] }));
   await choose('Minimum living area (m²)', '80 m²');
   await choose('Maximum living area (m²)', 'No maximum');
   await choose('Minimum rooms', '2.5 rooms');
-  await choose('Radius', '30 km');
-  await choose('Places to search', 'Göteborg');
+  await choose('Search location', 'Centralstationen');
+  await choose('Radius', '2 km');
+  await choose('Search location', 'Göteborg (whole city)');
+  await choose('Search location', 'Centralstationen');
   await choose('Sources', 'Lundin');
   expect(await save(onSave)).toMatchObject({
     minAreaM2: 80,
@@ -117,24 +121,26 @@ it('saves a chosen size, room count, radius, place and source, and "No maximum" 
     minRooms: 2.5,
     sourceIds: ['boneo', 'lundin'],
     geography: {
-      radiusKm: 30,
-      municipalities: ['Example municipality', 'Göteborg'],
+      mode: 'radius',
+      radiusKm: 2,
+      center: [...SEARCH_HUBS[1].center],
+      municipalities: ['Göteborg'],
     },
   });
 });
 
-it('names the centre point instead of showing raw coordinates, and can set Brunnsparken', async () => {
+it('saves a whole-city choice without replacing inactive coordinates', async () => {
   const onSave = show(
     profileWith({
       geography: { ...demo.criteria.geography, center: [12.5, 58.2] },
     }),
   );
-  expect(screen.getByRole('combobox', { name: 'Search from' })).toHaveProperty(
-    'value',
-    'Current point (58.200, 12.500)',
-  );
-  await choose('Search from', 'Brunnsparken, central Göteborg');
-  expect((await save(onSave)).geography.center).toEqual([...BRUNNSPARKEN]);
+  await choose('Search location', 'Göteborg (whole city)');
+  expect((await save(onSave)).geography).toMatchObject({
+    mode: 'municipalities',
+    municipalities: ['Göteborg'],
+    center: [12.5, 58.2],
+  });
 });
 
 it('disables every dropdown for someone who is not an owner', () => {
@@ -143,9 +149,8 @@ it('disables every dropdown for someone who is not an owner', () => {
     'Minimum living area (m²)',
     'Maximum living area (m²)',
     'Minimum rooms',
-    'Radius',
-    'Search from',
-    'Places to search',
+    'Search location',
+    'Sources',
   ])
     expect(screen.getByRole('combobox', { name })).toHaveProperty(
       'disabled',

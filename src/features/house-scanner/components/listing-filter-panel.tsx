@@ -223,18 +223,31 @@ export function ListingFilterPanel({
               />
             </>,
           )}
-          <Stack gap={4} flex="1 1 15rem">
-            <NumberSelect
-              label={intl.formatMessage({
-                id: 'listings.filters.minimumRooms',
-              })}
-              value={filters.minRooms}
-              onChange={(minRooms) => onChange({ ...filters, minRooms })}
-              options={ROOM_OPTIONS}
-              format={(value) => formatRooms(value, intl)}
-              anyLabel={intl.formatMessage({ id: 'listings.filters.any' })}
-            />
-          </Stack>
+          {pair(
+            intl.formatMessage({ id: 'settings.criteria.roomsHeading' }),
+            <>
+              <NumberSelect
+                ariaLabel={intl.formatMessage({
+                  id: 'settings.criteria.minimumRooms',
+                })}
+                value={filters.minRooms}
+                onChange={(minRooms) => onChange({ ...filters, minRooms })}
+                options={ROOM_OPTIONS}
+                format={(value) => formatRooms(value, intl)}
+                anyLabel={intl.formatMessage({ id: 'listings.filters.noMin' })}
+              />
+              <NumberSelect
+                ariaLabel={intl.formatMessage({
+                  id: 'settings.criteria.maximumRooms',
+                })}
+                value={filters.maxRooms}
+                onChange={(maxRooms) => onChange({ ...filters, maxRooms })}
+                options={ROOM_OPTIONS}
+                format={(value) => formatRooms(value, intl)}
+                anyLabel={intl.formatMessage({ id: 'listings.filters.noMax' })}
+              />
+            </>,
+          )}
           <Select
             label={intl.formatMessage({ id: 'listings.filters.viewingWithin' })}
             value={

@@ -95,13 +95,27 @@ describe('buyer matching under incomplete evidence', () => {
       ).section,
     ).toBe('preferred');
   });
-  it('retains terrace exceptions and stretch boundaries', () => {
-    expect(
-      matchListing(
-        home({ glazed: false, outdoor: 'terrace', largePrivateTerrace: true }),
-        criteria,
-      ).section,
-    ).toBe('exceptions');
+  it.each([true, false, null])(
+    'ignores glazing %s even when a saved profile prefers it',
+    (glazed) => {
+      const listing = home({ glazed, outdoor: 'balcony' });
+      const withoutPreference = matchListing(listing, {
+        ...criteria,
+        preferGlazing: false,
+      });
+      expect(withoutPreference.section).toBe('preferred');
+      expect(
+        matchListing(listing, { ...criteria, preferGlazing: true }),
+      ).toEqual(withoutPreference);
+      expect(
+        matchListing(
+          { ...listing, conflicts: ['glazed'] },
+          { ...criteria, preferGlazing: true },
+        ),
+      ).toEqual(withoutPreference);
+    },
+  );
+  it('retains stretch boundaries', () => {
     expect(
       matchListing(
         home({ askingPriceSek: criteria.preferredPriceSek }),
@@ -164,6 +178,46 @@ describe('buyer matching under incomplete evidence', () => {
     ]);
     expect(result.section).toBe('preferred');
   });
+
+  it.each([
+    ['municipalities', 'Example municipality', 1, 0.02, 'preferred'],
+    ['municipalities', 'Other', 1, 0, 'outside'],
+    ['radius', 'Example municipality', 1, 0.0091, 'outside'],
+    ['radius', 'Other', 1, 0.0089, 'preferred'],
+    ['radius', 'Other', 2, 0.0091, 'preferred'],
+    ['radius', 'Example municipality', 1, null, 'needs-details'],
+    ['municipalities', null, 1, 0, 'needs-details'],
+  ] as const)(
+    'applies %s scope for %s at %s km and longitude %s',
+    (mode, municipality, radiusKm, longitude, section) => {
+      const listing = home(
+        { municipality },
+        {
+          coordinates:
+            longitude === null
+              ? null
+              : {
+                  longitude,
+                  latitude: 0,
+                  precision: 'building',
+                  source: 'Synthetic',
+                  observedAt: original.observedAt,
+                },
+        },
+      );
+      expect(
+        matchListing(listing, {
+          ...criteria,
+          geography: {
+            mode,
+            municipalities: ['Example municipality'],
+            center: [0, 0],
+            radiusKm,
+          },
+        }).section,
+      ).toBe(section);
+    },
+  );
 });
 
 describe('reason chips', () => {

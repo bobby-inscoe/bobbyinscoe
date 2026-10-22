@@ -17,6 +17,7 @@ export interface ListingFilters {
   minAreaM2: number | null;
   maxAreaM2: number | null;
   minRooms: number | null;
+  maxRooms: number | null;
   // Empty means every source.
   hosts: string[];
   freshness: Freshness;
@@ -44,6 +45,7 @@ export const emptyFilters: ListingFilters = {
   minAreaM2: null,
   maxAreaM2: null,
   minRooms: null,
+  maxRooms: null,
   hosts: [],
   freshness: 'all',
   neighborhoodIds: [],
@@ -77,7 +79,7 @@ export function activeFilterCount(filters: ListingFilters): number {
     filters.titleQuery.trim().length > 0,
     clean(filters.minPriceSek) !== null || clean(filters.maxPriceSek) !== null,
     clean(filters.minAreaM2) !== null || clean(filters.maxAreaM2) !== null,
-    clean(filters.minRooms) !== null,
+    clean(filters.minRooms) !== null || clean(filters.maxRooms) !== null,
     filters.hosts.length > 0,
     filters.freshness !== 'all',
     filters.neighborhoodIds.length > 0,
@@ -105,6 +107,7 @@ export function applyListingFilters(
   const minArea = clean(filters.minAreaM2);
   const maxArea = clean(filters.maxAreaM2);
   const minRooms = clean(filters.minRooms);
+  const maxRooms = clean(filters.maxRooms);
   const titleQuery = filters.titleQuery.trim();
   const freshnessDays = {
     all: null,
@@ -143,7 +146,7 @@ export function applyListingFilters(
         conflicts.includes('askingPriceSek'),
       ) &&
       inRange(facts.livingAreaM2, minArea, maxArea) &&
-      inRange(facts.rooms, minRooms, null) &&
+      inRange(facts.rooms, minRooms, maxRooms) &&
       (filters.hosts.length === 0 ||
         filters.hosts.includes(listingHost(listing))) &&
       (filters.neighborhoodIds.length === 0 ||

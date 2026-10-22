@@ -48,9 +48,11 @@ export const criteriaSchema = z
     excludeGroundFloor: z.boolean(),
     requireLift: z.boolean(),
     requireOutdoor: z.boolean(),
+    // Retained for saved-profile compatibility; glazing no longer affects matching.
     preferGlazing: z.boolean(),
     feeReferenceSek: money,
     geography: z.strictObject({
+      mode: z.enum(['municipalities', 'radius']).optional(),
       municipalities: z.array(z.string().min(1).max(100)).min(1).max(100),
       center: z.tuple([
         z.number().min(-180).max(180),

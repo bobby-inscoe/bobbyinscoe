@@ -1,5 +1,20 @@
 export interface SettingsTranslations {
   criteria: {
+    preferredBudgetDescription: string;
+    maximumBudgetDescription: string;
+    apartmentRulesDescription: string;
+    monthlyFeeLabel: string;
+    monthlyFeeDescription: string;
+    searchLocation: string;
+    searchLocationDescription: string;
+    currentSavedSearch: string;
+    wholeCity: string;
+    savedPoint: string;
+    legacySearchDescription: string;
+    budgetHelp: string;
+    locationHelp: string;
+    roomsHeading: string;
+    maximumRooms: string;
     shellterFollowsApartmentsForSaleInGoteborg: string;
     theSettingsBelowAreYourDefaultFilterForThe: string;
     filtersOnTheListingsTabAreYoursAloneAnd: string;

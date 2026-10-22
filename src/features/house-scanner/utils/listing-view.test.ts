@@ -46,9 +46,9 @@ describe('scopeListings on the Listings tab', () => {
 
   it.each([
     ['preferred', [balcony.title, detached.title, older.title]],
-    ['exceptions', [terrace.title]],
+    ['exceptions', []],
     ['needs-details', [needsDetails.title]],
-    ['stretch', []],
+    ['stretch', [terrace.title]],
     ['manual', []],
   ] as const)('narrows to the %s section', (section, expected) => {
     expect(

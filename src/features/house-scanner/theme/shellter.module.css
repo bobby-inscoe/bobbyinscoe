@@ -1136,7 +1136,24 @@
 }
 
 /* Fingers need 44 px. The theme puts these on Shellter's buttons, icons, close buttons, and inputs; last in the file so they win ties. */
+.multiSelectInput {
+  display: flex;
+  align-items: center;
+}
+
+.pillRemove > svg {
+  width: 0.85em;
+  height: 0.85em;
+}
+
 @media (pointer: coarse) {
+  .selectedPill {
+    --shellter-pill-height: 44px;
+    --shellter-pill-font-size: 14px;
+  }
+  .pillRemove.touchSquare {
+    font-size: inherit;
+  }
   .touchTarget {
     min-height: 44px;
     font-size: 16px;

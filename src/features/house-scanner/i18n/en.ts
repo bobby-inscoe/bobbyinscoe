@@ -3,12 +3,35 @@ import type { Translations } from '@/features/house-scanner/i18n/types/translati
 export const en = {
   settings: {
     criteria: {
+      preferredBudgetDescription:
+        'Homes at or below this price are grouped as Within budget.',
+      maximumBudgetDescription:
+        'Homes with a known asking price above this amount are excluded.',
+      apartmentRulesDescription:
+        'Known mismatches are excluded. Unknown or disputed facts stay under Missing info.',
+      monthlyFeeLabel: 'Monthly fee reference (SEK)',
+      monthlyFeeDescription:
+        'Adds a cost warning above this amount. It does not exclude homes.',
+      searchLocation: 'Search location',
+      searchLocationDescription:
+        'Choose a whole city or a hub within it. Hubs use the radius below; whole cities use the municipality boundary. Coverage is currently limited to Göteborg.',
+      currentSavedSearch: 'Current saved search',
+      wholeCity: '{city} (whole city)',
+      savedPoint: 'Saved point ({latitude}, {longitude})',
+      legacySearchDescription:
+        'Your saved search includes {cities} or homes within {radius} of its saved point. It stays unchanged until you choose a location.',
+      budgetHelp:
+        'Preferred budget groups matches; maximum budget excludes homes with a higher known asking price. Unknown or disputed details stay under Missing info.',
+      locationHelp:
+        'Choose whole municipalities or a radius around a hub. This filters stored listings; it does not expand broker coverage.',
+      roomsHeading: 'Rooms',
+      maximumRooms: 'Maximum rooms',
       shellterFollowsApartmentsForSaleInGoteborg:
         'Shellter follows apartments for sale in Göteborg.',
       theSettingsBelowAreYourDefaultFilterForThe:
         'The settings below are your default filter for the Listings tab. Adjust budget, size, rooms, features and areas to fit what you are looking for.',
       filtersOnTheListingsTabAreYoursAloneAnd:
-        'Filters on the Listings tab are yours alone and reset when you reload. Only owners can change these defaults.',
+        'Filters on the Listings tab are yours alone and stay in the page URL, including after a reload. Clearing them keeps the shared defaults. Only owners can change these defaults.',
       howDoesThisWork: 'How does this work?',
       aboutShellter: 'About Shellter',
       comingSoon: '{value0} (coming soon)',
@@ -17,7 +40,7 @@ export const en = {
         'Profile saved. Stored homes are re-evaluated against the saved criteria. Collection coverage is unchanged.',
       enabledSearchProfile: 'Enabled search profile',
       preferredBudgetSEK: 'Preferred budget (SEK)',
-      stretchBudgetSEK: 'Stretch budget (SEK)',
+      stretchBudgetSEK: 'Maximum budget (SEK)',
       minimumLivingArea: 'Minimum living area',
       minimumLivingAreaM: 'Minimum living area (m²)',
       maximumLivingArea: 'Maximum living area',
@@ -25,8 +48,7 @@ export const en = {
       noMaximum: 'No maximum',
       minimumRooms: 'Minimum rooms',
       apartmentRules: 'Apartment rules',
-      excludeConfirmedGroundFloorApartments:
-        'Exclude confirmed ground-floor apartments',
+      excludeConfirmedGroundFloorApartments: 'Exclude ground floor apartments',
       requireALift: 'Require a lift',
       requireABalconyOrTerrace: 'Require a balcony or terrace',
       preferGlazedOutdoorSpaceExceptionsStayVisible:
@@ -414,12 +436,13 @@ export const en = {
       status: 'status',
       location: 'location',
       withinBudget: 'Within budget',
-      stretchBudget: 'Stretch budget',
+      stretchBudget: 'Above preferred budget',
       closeToYourCriteria: 'Close to your criteria',
       missingInfo: 'Missing info',
       outsideCurrentCriteria: 'Outside current criteria',
       atOrUnderYourPreferredPrice: 'at or under your preferred price.',
-      overItWithinYourStretchLimit: 'over it, within your stretch limit.',
+      overItWithinYourStretchLimit:
+        'over your preferred price, at or below your maximum budget.',
       missesOneRuleThatCanBend: 'misses one rule that can bend.',
       factsAreUnknownSoItCanTBeJudged:
         'facts are unknown, so it can’t be judged.',
@@ -435,7 +458,7 @@ export const en = {
       livingAreaOutsideProfile: 'Living area outside profile',
       tooFewRooms: 'Too few rooms',
       outsideGeographicScope: 'Outside geographic scope',
-      aboveProfileStretchBudget: 'Above profile stretch budget',
+      aboveProfileStretchBudget: 'Above maximum budget',
       groundFloorApartment: 'Ground-floor apartment',
       apartmentWithoutALift: 'Apartment without a lift',
       liftDoesNotServeTheHome: 'Lift does not serve the home',
@@ -453,7 +476,7 @@ export const en = {
       noLongerListed: 'No longer listed',
       detailsNeedConfirmation: 'Details need confirmation',
       withinPreferredBudget: 'Within preferred budget',
-      withinStretchBudget: 'Within stretch budget',
+      withinStretchBudget: 'Above preferred budget, within maximum budget',
       livingAreaAndRoomsMeetProfile: 'Living area and rooms meet profile',
       unknownOrDisputed: 'Unknown or disputed: {label}',
     },
@@ -772,7 +795,7 @@ export const en = {
       'Use an HTTP(S) link without credentials.',
     maximumAreaMustCoverMinimumArea: 'Maximum area must cover minimum area.',
     stretchPriceMustCoverPreferredPrice:
-      'Stretch price must cover preferred price.',
+      'Maximum budget must be at least the preferred budget.',
     tradeOffJourneyMustCoverPreferredJourney:
       'Trade-off journey must cover preferred journey.',
     photoLinksMustStartWithHttps: 'Photo links must start with https://.',

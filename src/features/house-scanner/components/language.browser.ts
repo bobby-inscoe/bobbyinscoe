@@ -61,6 +61,38 @@ test('language persists before sign-in and changes retained UI state', async ({
     await page.evaluate(() => localStorage.getItem('shellter.language')),
   ).toBe('en');
   expect(errors).toEqual([]);
+
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await page.getByRole('menuitem', { name: /^Settings/ }).click();
+  await page
+    .getByRole('combobox', { name: 'Search location', exact: true })
+    .click();
+  await page
+    .getByRole('option', { name: 'Centralstationen', exact: true })
+    .click();
+  await page.getByRole('combobox', { name: 'Radius', exact: true }).click();
+  await page.getByRole('option', { name: '2 km', exact: true }).click();
+  await page
+    .getByRole('textbox', { name: 'Maximum budget (SEK)' })
+    .fill('3600000');
+  await page.getByRole('combobox', { name: 'Language', exact: true }).click();
+  await page.getByRole('option', { name: 'Svenska', exact: true }).click();
+  await expect(
+    page.getByRole('combobox', { name: 'Sökområde', exact: true }),
+  ).toHaveValue('Centralstationen');
+  await expect(
+    page.getByRole('textbox', { name: 'Maxbudget (SEK)' }),
+  ).toHaveValue('3 600 000');
+  await page.getByRole('combobox', { name: 'Sökområde', exact: true }).click();
+  await page
+    .getByRole('option', { name: 'Göteborg (hela kommunen)', exact: true })
+    .click();
+  await page.getByRole('combobox', { name: 'Språk', exact: true }).click();
+  await page.getByRole('option', { name: 'English', exact: true }).click();
+  await expect(
+    page.getByRole('combobox', { name: 'Search location', exact: true }),
+  ).toHaveValue('Göteborg (whole city)');
+  expect(errors).toEqual([]);
 });
 
 test('Swedish fits a narrow screen and leaving Shellter restores the document language', async ({
