@@ -1,0 +1,503 @@
+{
+  "contractVersion": 1,
+  "householdId": "00000000-0000-4000-8000-000000000001",
+  "edition": {
+    "id": "00000000-0000-4000-8000-000000000004",
+    "publishedAt": "2026-10-12T10:00:00Z",
+    "coverage": "synthetic",
+    "sourceSummary": "Fictional examples. No live sources or verified coverage."
+  },
+  "members": [
+    {
+      "householdId": "00000000-0000-4000-8000-000000000001",
+      "userId": "00000000-0000-4000-8000-000000000002",
+      "displayName": "Demo Alex",
+      "role": "owner"
+    },
+    {
+      "householdId": "00000000-0000-4000-8000-000000000001",
+      "userId": "00000000-0000-4000-8000-000000000003",
+      "displayName": "Demo Morgan",
+      "role": "member"
+    }
+  ],
+  "profiles": [
+    {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "householdId": "00000000-0000-4000-8000-000000000001",
+      "revision": 1,
+      "name": "Fictional demonstration profile",
+      "enabled": true,
+      "criteria": {
+        "minAreaM2": 60,
+        "maxAreaM2": 100,
+        "minRooms": 2,
+        "preferredPriceSek": 3000000,
+        "stretchPriceSek": 3500000,
+        "propertyTypes": ["apartment", "house"],
+        "excludeGroundFloor": true,
+        "requireLift": true,
+        "requireOutdoor": true,
+        "preferGlazing": true,
+        "feeReferenceSek": 5000,
+        "geography": {
+          "municipalities": ["Example municipality"],
+          "center": [11.97, 57.71],
+          "radiusKm": 20
+        },
+        "nature": {
+          "preferImmediateGreenery": true,
+          "preferredWalkMinutes": 15
+        },
+        "transit": {
+          "preferredWalkMinutes": 10,
+          "preferredJourneyMinutes": 30,
+          "tradeoffJourneyMinutes": 45
+        }
+      },
+      "editedBy": "00000000-0000-4000-8000-000000000002",
+      "editedAt": "2026-10-12T10:00:00Z"
+    }
+  ],
+  "listings": [
+    {
+      "id": "00000000-0000-4000-8000-000000000010",
+      "householdId": "00000000-0000-4000-8000-000000000001",
+      "origin": "source",
+      "sourceId": "demo",
+      "title": "Example balcony home",
+      "sourceUrls": [
+        "https://example.invalid/homes/00000000-0000-4000-8000-000000000010"
+      ],
+      "facts": {
+        "propertyType": "apartment",
+        "tenure": "cooperative",
+        "purchase": true,
+        "livingAreaM2": 80,
+        "secondaryAreaM2": null,
+        "rooms": 3,
+        "askingPriceSek": 2800000,
+        "groundFloor": false,
+        "lift": true,
+        "liftServesHome": true,
+        "stepFree": null,
+        "outdoor": "balcony",
+        "glazed": true,
+        "largePrivateTerrace": null,
+        "municipality": "Example municipality",
+        "baseFeeSek": 4000,
+        "mandatoryMonthlySek": null,
+        "status": "available"
+      },
+      "conflicts": [],
+      "coordinates": {
+        "longitude": 11.97,
+        "latitude": 57.71,
+        "precision": "building",
+        "source": "Fictional demo pin",
+        "observedAt": "2026-10-12T10:00:00Z"
+      },
+      "evidence": [],
+      "photo": {
+        "url": "https://example.invalid/0.jpg",
+        "attribution": "Demo broker",
+        "rightsBasis": "Fictional permission",
+        "expiresAt": "2027-10-12T10:00:00Z",
+        "observedAt": "2026-10-12T10:00:00Z",
+        "displayAllowed": true,
+        "hotlinkAllowed": true
+      },
+      "previousAskingPriceSek": 2900000,
+      "observedAt": "2026-10-12T10:00:00Z",
+      "addedBy": null,
+      "userTags": [],
+      "neighborhood": {
+        "id": "goteborg-102",
+        "name": "Sanna",
+        "method": "polygon",
+        "datasetVersion": "goteborg-primary-areas-2025"
+      },
+      "neighborhoodCandidates": [
+        {
+          "id": "goteborg-102",
+          "name": "Sanna",
+          "method": "polygon",
+          "datasetVersion": "goteborg-primary-areas-2025"
+        }
+      ],
+      "neighborhoodRadiusM": 0,
+      "firstSeenAt": "2026-10-12T10:00:00Z",
+      "lastChangedAt": "2026-10-12T10:00:00Z",
+      "lastCheckedAt": "2026-10-12T10:00:00Z",
+      "isNew": true,
+      "viewings": [
+        {
+          "startsAt": "2027-10-12T10:00:00Z",
+          "endsAt": null
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000011",
+      "householdId": "00000000-0000-4000-8000-000000000001",
+      "origin": "source",
+      "sourceId": "demo",
+      "title": "Example terrace home",
+      "sourceUrls": [
+        "https://example.invalid/homes/00000000-0000-4000-8000-000000000011"
+      ],
+      "facts": {
+        "propertyType": "apartment",
+        "tenure": "cooperative",
+        "purchase": true,
+        "livingAreaM2": 80,
+        "secondaryAreaM2": null,
+        "rooms": 3,
+        "askingPriceSek": 3200000,
+        "groundFloor": false,
+        "lift": true,
+        "liftServesHome": true,
+        "stepFree": null,
+        "outdoor": "terrace",
+        "glazed": false,
+        "largePrivateTerrace": true,
+        "municipality": "Example municipality",
+        "baseFeeSek": 4000,
+        "mandatoryMonthlySek": null,
+        "status": "available"
+      },
+      "conflicts": ["rooms"],
+      "coordinates": {
+        "longitude": 11.975,
+        "latitude": 57.714,
+        "precision": "approximate_area",
+        "source": "Fictional demo area",
+        "observedAt": "2026-10-12T10:00:00Z"
+      },
+      "evidence": [
+        {
+          "id": "00000000-0000-4000-8000-000000000030",
+          "kind": "measurement",
+          "subject": "transit",
+          "summary": "Fictional tram stop distance.",
+          "sourceUrl": null,
+          "observedAt": "2026-10-12T10:00:00Z",
+          "datasetVersion": null,
+          "method": "straight line",
+          "value": 320,
+          "unit": "metres_straight_line"
+        }
+      ],
+      "photo": {
+        "url": "https://example.invalid/1.jpg",
+        "attribution": "Other broker",
+        "rightsBasis": "Other permission",
+        "expiresAt": "2027-10-12T10:00:00Z",
+        "observedAt": "2026-10-12T10:00:00Z",
+        "displayAllowed": true,
+        "hotlinkAllowed": true
+      },
+      "previousAskingPriceSek": null,
+      "observedAt": "2026-10-12T10:00:00Z",
+      "addedBy": null,
+      "userTags": [],
+      "firstSeenAt": null,
+      "lastChangedAt": null,
+      "lastCheckedAt": "2026-10-12T10:00:00Z",
+      "isNew": false
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000012",
+      "householdId": "00000000-0000-4000-8000-000000000001",
+      "origin": "source",
+      "sourceId": "demo",
+      "title": "Example home needing details",
+      "sourceUrls": [
+        "https://example.invalid/homes/00000000-0000-4000-8000-000000000012"
+      ],
+      "facts": {
+        "propertyType": "apartment",
+        "tenure": "cooperative",
+        "purchase": true,
+        "livingAreaM2": 80,
+        "secondaryAreaM2": null,
+        "rooms": 3,
+        "askingPriceSek": null,
+        "groundFloor": false,
+        "lift": null,
+        "liftServesHome": true,
+        "stepFree": null,
+        "outdoor": "balcony",
+        "glazed": null,
+        "largePrivateTerrace": null,
+        "municipality": "Example municipality",
+        "baseFeeSek": 4000,
+        "mandatoryMonthlySek": null,
+        "status": "available"
+      },
+      "conflicts": [],
+      "coordinates": null,
+      "evidence": [],
+      "photo": null,
+      "previousAskingPriceSek": null,
+      "observedAt": "2026-10-12T10:00:00Z",
+      "addedBy": null,
+      "userTags": [],
+      "neighborhoodCandidates": [],
+      "neighborhoodRadiusM": 250,
+      "firstSeenAt": null,
+      "lastChangedAt": null,
+      "lastCheckedAt": "2026-10-12T10:00:00Z",
+      "isNew": false
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000013",
+      "householdId": "00000000-0000-4000-8000-000000000001",
+      "origin": "source",
+      "sourceId": "demo",
+      "title": "Example detached home",
+      "sourceUrls": [
+        "https://example.invalid/homes/00000000-0000-4000-8000-000000000013"
+      ],
+      "facts": {
+        "propertyType": "house",
+        "tenure": "ownership",
+        "purchase": true,
+        "livingAreaM2": 95,
+        "secondaryAreaM2": null,
+        "rooms": 3,
+        "askingPriceSek": 2800000,
+        "groundFloor": false,
+        "lift": false,
+        "liftServesHome": true,
+        "stepFree": null,
+        "outdoor": "none",
+        "glazed": null,
+        "largePrivateTerrace": null,
+        "municipality": "Example municipality",
+        "baseFeeSek": null,
+        "mandatoryMonthlySek": null,
+        "status": "available"
+      },
+      "conflicts": [],
+      "coordinates": {
+        "longitude": 11.97005,
+        "latitude": 57.71005,
+        "precision": "building",
+        "source": "Fictional demo pin",
+        "observedAt": "2026-10-12T10:00:00Z"
+      },
+      "evidence": [],
+      "photo": null,
+      "previousAskingPriceSek": null,
+      "observedAt": "2026-10-12T10:00:00Z",
+      "addedBy": null,
+      "userTags": [],
+      "neighborhood": {
+        "id": "goteborg-101",
+        "name": "Kungsladugård",
+        "method": "polygon",
+        "datasetVersion": "goteborg-primary-areas-2025"
+      },
+      "neighborhoodCandidates": [
+        {
+          "id": "goteborg-101",
+          "name": "Kungsladugård",
+          "method": "polygon",
+          "datasetVersion": "goteborg-primary-areas-2025"
+        }
+      ],
+      "neighborhoodRadiusM": 0,
+      "firstSeenAt": null,
+      "lastChangedAt": null,
+      "lastCheckedAt": "2026-10-12T10:00:00Z",
+      "delistedAt": "2026-10-12T10:00:00Z",
+      "isNew": false
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000014",
+      "householdId": "00000000-0000-4000-8000-000000000001",
+      "origin": "source",
+      "sourceId": "demo",
+      "title": "Example older listing",
+      "sourceUrls": [
+        "https://example.invalid/homes/00000000-0000-4000-8000-000000000014"
+      ],
+      "facts": {
+        "propertyType": "apartment",
+        "tenure": "cooperative",
+        "purchase": true,
+        "livingAreaM2": 80,
+        "secondaryAreaM2": null,
+        "rooms": 3,
+        "askingPriceSek": 2600000,
+        "groundFloor": false,
+        "lift": true,
+        "liftServesHome": true,
+        "stepFree": null,
+        "outdoor": "balcony",
+        "glazed": true,
+        "largePrivateTerrace": null,
+        "municipality": "Example municipality",
+        "baseFeeSek": 4000,
+        "mandatoryMonthlySek": null,
+        "status": "available"
+      },
+      "conflicts": [],
+      "coordinates": null,
+      "evidence": [],
+      "photo": null,
+      "previousAskingPriceSek": null,
+      "observedAt": "2026-10-05T10:00:00Z",
+      "addedBy": null,
+      "userTags": [],
+      "firstSeenAt": null,
+      "lastChangedAt": null,
+      "lastCheckedAt": "2026-10-05T10:00:00Z",
+      "isNew": false
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000020",
+      "householdId": "00000000-0000-4000-8000-000000000001",
+      "origin": "manual",
+      "title": "Example bookmarked home",
+      "sourceUrls": ["https://example.invalid/bookmark"],
+      "facts": {
+        "propertyType": null,
+        "tenure": "unknown",
+        "purchase": null,
+        "livingAreaM2": null,
+        "secondaryAreaM2": null,
+        "rooms": 3,
+        "askingPriceSek": null,
+        "groundFloor": null,
+        "lift": null,
+        "liftServesHome": null,
+        "stepFree": null,
+        "outdoor": "balcony",
+        "glazed": null,
+        "largePrivateTerrace": null,
+        "municipality": null,
+        "baseFeeSek": null,
+        "mandatoryMonthlySek": null,
+        "status": "unknown"
+      },
+      "conflicts": [],
+      "coordinates": null,
+      "evidence": [],
+      "photo": {
+        "url": "https://example.invalid/m1.jpg",
+        "attribution": "Added by a household member",
+        "rightsBasis": "Linked by a household member, not stored.",
+        "expiresAt": "2027-10-12T10:00:00Z",
+        "observedAt": "2026-10-12T10:00:00Z",
+        "displayAllowed": true,
+        "hotlinkAllowed": true
+      },
+      "photos": [
+        {
+          "url": "https://example.invalid/m1.jpg",
+          "attribution": "Added by a household member",
+          "rightsBasis": "Linked by a household member, not stored.",
+          "expiresAt": "2027-10-12T10:00:00Z",
+          "observedAt": "2026-10-12T10:00:00Z",
+          "displayAllowed": true,
+          "hotlinkAllowed": true
+        },
+        {
+          "url": "https://example.invalid/m2.jpg",
+          "attribution": "Added by a household member",
+          "rightsBasis": "Linked by a household member, not stored.",
+          "expiresAt": "2027-10-12T10:00:00Z",
+          "observedAt": "2026-10-12T10:00:00Z",
+          "displayAllowed": true,
+          "hotlinkAllowed": true
+        }
+      ],
+      "previousAskingPriceSek": null,
+      "observedAt": "2026-10-12T10:00:00Z",
+      "addedBy": "00000000-0000-4000-8000-000000000002",
+      "userTags": ["garden"],
+      "firstSeenAt": null,
+      "lastChangedAt": null,
+      "lastCheckedAt": "2026-10-12T10:00:00Z",
+      "isNew": false
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000021",
+      "householdId": "00000000-0000-4000-8000-000000000001",
+      "origin": "manual",
+      "title": "Example bare bookmark",
+      "sourceUrls": ["https://example.invalid/bare"],
+      "facts": {
+        "propertyType": null,
+        "tenure": "unknown",
+        "purchase": null,
+        "livingAreaM2": null,
+        "secondaryAreaM2": null,
+        "rooms": null,
+        "askingPriceSek": null,
+        "groundFloor": null,
+        "lift": null,
+        "liftServesHome": null,
+        "stepFree": null,
+        "outdoor": null,
+        "glazed": null,
+        "largePrivateTerrace": null,
+        "municipality": null,
+        "baseFeeSek": null,
+        "mandatoryMonthlySek": null,
+        "status": "unknown"
+      },
+      "conflicts": [],
+      "coordinates": null,
+      "evidence": [],
+      "photo": null,
+      "photos": [],
+      "previousAskingPriceSek": null,
+      "observedAt": "2026-10-12T10:00:00Z",
+      "addedBy": null,
+      "userTags": [],
+      "firstSeenAt": null,
+      "lastChangedAt": null,
+      "lastCheckedAt": "2026-10-12T10:00:00Z",
+      "isNew": false
+    }
+  ],
+  "favorites": [
+    {
+      "householdId": "00000000-0000-4000-8000-000000000001",
+      "listingId": "00000000-0000-4000-8000-000000000010",
+      "userId": "00000000-0000-4000-8000-000000000003",
+      "savedAt": "2026-10-12T10:00:00Z"
+    },
+    {
+      "householdId": "00000000-0000-4000-8000-000000000001",
+      "listingId": "00000000-0000-4000-8000-000000000014",
+      "userId": "00000000-0000-4000-8000-000000000002",
+      "savedAt": "2026-10-04T10:00:00Z"
+    },
+    {
+      "householdId": "00000000-0000-4000-8000-000000000001",
+      "listingId": "00000000-0000-4000-8000-000000000020",
+      "userId": "00000000-0000-4000-8000-000000000003",
+      "savedAt": "2026-10-12T10:00:00Z"
+    }
+  ],
+  "hides": [
+    {
+      "listingId": "00000000-0000-4000-8000-000000000012",
+      "userId": "00000000-0000-4000-8000-000000000002",
+      "hiddenAt": "2026-10-12T10:00:00Z"
+    }
+  ],
+  "notes": [
+    {
+      "listingId": "00000000-0000-4000-8000-000000000010",
+      "userId": "00000000-0000-4000-8000-000000000003",
+      "body": "Fictional note.",
+      "revision": 1,
+      "editedAt": "2026-10-12T10:00:00Z"
+    }
+  ]
+}
