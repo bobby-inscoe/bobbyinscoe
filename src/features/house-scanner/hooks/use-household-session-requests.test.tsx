@@ -6,11 +6,14 @@ import {
   deferred,
   emitAuth,
   fixtureSnapshot,
+  HOUSEHOLD_ID,
   missing,
+  OTHER_HOUSEHOLD_ID,
   reply,
   resetSdk,
   sdk,
   USER_ID,
+  v2Snapshot,
 } from '@/features/house-scanner/api/session-test-helpers';
 import { useHouseholdSession } from '@/features/house-scanner/hooks/use-household-session';
 
@@ -29,8 +32,10 @@ afterEach(cleanup);
 const names = () => sdk.rpc.mock.calls.map(([name]) => name);
 // One snapshot read: the read-model snapshot, which these tests leave uninstalled, then the previous one.
 const READ = ['hs_household_snapshot', 'hs_snapshot_neighborhoods'];
+// The start of a load: the one-request start, also left uninstalled, then the memberships.
+const START = ['hs_household_start', 'hs_memberships'];
 const requests = () => ({
-  users: sdk.auth.getUser.mock.calls.length,
+  users: sdk.auth.getSession.mock.calls.length,
   rpc: names(),
 });
 
@@ -78,6 +83,7 @@ describe('requests made by a signed-in session', () => {
     const id = fixtureSnapshot().listings[0].id;
     const pending = deferred<ReturnType<typeof reply>>();
     sdk.rpc
+      .mockImplementationOnce(async () => missing())
       .mockImplementationOnce(async () => reply([fixtureSnapshot().members[0]]))
       .mockImplementationOnce(async () => missing())
       .mockReturnValueOnce(pending.promise)
@@ -87,14 +93,14 @@ describe('requests made by a signed-in session', () => {
     act(() => {
       refresh = hook.result.current.refresh();
     });
-    await waitFor(() => expect(names().length).toBe(before + 3));
+    await waitFor(() => expect(names().length).toBe(before + 4));
     await act(() => hook.result.current.onSetHidden([id], true));
     await act(async () => {
       pending.resolve(reply(fixtureSnapshot()));
       await refresh;
     });
     expect(names().slice(before)).toEqual([
-      'hs_memberships',
+      ...START,
       ...READ,
       'hs_set_hidden',
       ...READ,
@@ -132,8 +138,51 @@ describe('requests made by a signed-in session', () => {
     await settle();
     expect(requests()).toEqual({
       users: 1,
-      rpc: ['hs_memberships', ...READ],
+      rpc: [...START, ...READ],
     });
+  });
+
+  it('opens the household with one request when the server sends memberships and snapshot together', async () => {
+    sdk.rpc.mockImplementation(async (name) =>
+      name === 'hs_household_start'
+        ? reply({
+            memberships: [fixtureSnapshot().members[0]],
+            snapshot: v2Snapshot(),
+          })
+        : reply({ ok: true }),
+    );
+    const hook = await authenticated();
+    expect(requests()).toEqual({ users: 1, rpc: ['hs_household_start'] });
+    const state = hook.result.current.state;
+    expect(state.status === 'authenticated' && state.snapshot.listings).toEqual(
+      [expect.objectContaining({ title: 'Read model home' })],
+    );
+  });
+
+  it('asks for the household the member chooses with one request', async () => {
+    const own = [
+      fixtureSnapshot().members[0],
+      { ...fixtureSnapshot().members[0], householdId: OTHER_HOUSEHOLD_ID },
+    ];
+    sdk.rpc.mockImplementation(async (name, args) =>
+      name === 'hs_household_start'
+        ? reply({
+            memberships: own,
+            snapshot: 'p_household_id' in args ? v2Snapshot() : null,
+          })
+        : reply({ ok: true }),
+    );
+    const hook = renderHook(useHouseholdSession);
+    act(() => emitAuth('INITIAL_SESSION'));
+    await waitFor(() =>
+      expect(hook.result.current.state.status).toBe('choose-household'),
+    );
+    await act(() => hook.result.current.selectHousehold(HOUSEHOLD_ID));
+    expect(hook.result.current.state.status).toBe('authenticated');
+    expect(sdk.rpc.mock.calls).toEqual([
+      ['hs_household_start', {}],
+      ['hs_household_start', { p_household_id: HOUSEHOLD_ID }],
+    ]);
   });
 
   it('asks for nothing when the SDK repeats SIGNED_IN, TOKEN_REFRESHED or INITIAL_SESSION', async () => {
@@ -194,7 +243,7 @@ describe('requests made by a signed-in session', () => {
     expect(hook.result.current.state.status).toBe('authenticated');
     expect(requests()).toEqual({
       users: 1,
-      rpc: ['hs_memberships', ...READ],
+      rpc: [...START, ...READ],
     });
   });
 
@@ -231,7 +280,7 @@ describe('requests made by a signed-in session', () => {
     ]);
     const hook = await authenticated();
     const before = hook.result.current.state;
-    const users = sdk.auth.getUser.mock.calls.length;
+    const users = sdk.auth.getSession.mock.calls.length;
     sdk.rpc.mockClear();
     sdk.rpc
       .mockResolvedValueOnce({
@@ -248,7 +297,7 @@ describe('requests made by a signed-in session', () => {
     });
     expect(hook.result.current.state).toEqual(before);
     expect(sdk.rpc.mock.calls).toEqual([save, ...read]);
-    expect(sdk.auth.getUser).toHaveBeenCalledTimes(users);
+    expect(sdk.auth.getSession).toHaveBeenCalledTimes(users);
 
     sdk.rpc.mockClear();
     sdk.rpc
@@ -261,7 +310,7 @@ describe('requests made by a signed-in session', () => {
       ).resolves.toBeUndefined();
     });
     expect(sdk.rpc.mock.calls).toEqual([save, ...read]);
-    expect(sdk.auth.getUser).toHaveBeenCalledTimes(users);
+    expect(sdk.auth.getSession).toHaveBeenCalledTimes(users);
     expect(hook.result.current.state).toEqual({
       status: 'authenticated',
       userId: USER_ID,
@@ -274,7 +323,7 @@ describe('requests made by a signed-in session', () => {
     const snapshot = fixtureSnapshot();
     const [first, second] = snapshot.listings;
     const pending = deferred<ReturnType<typeof reply>>();
-    const users = sdk.auth.getUser.mock.calls.length;
+    const users = sdk.auth.getSession.mock.calls.length;
     sdk.rpc.mockClear();
     sdk.rpc.mockReturnValueOnce(pending.promise);
     let saving!: Promise<void>;
@@ -301,7 +350,7 @@ describe('requests made by a signed-in session', () => {
     });
     await settle();
     expect(sdk.rpc.mock.calls).toEqual(firstRequest);
-    expect(sdk.auth.getUser).toHaveBeenCalledTimes(users);
+    expect(sdk.auth.getSession).toHaveBeenCalledTimes(users);
     expect(hook.result.current.state).toEqual({ status: 'signed-out' });
   });
 
@@ -310,7 +359,7 @@ describe('requests made by a signed-in session', () => {
     const [listing] = fixtureSnapshot().listings;
     const before = requests();
     await act(() => hook.result.current.onDeleteManual(listing.id));
-    expect(sdk.auth.getUser.mock.calls.length).toBe(before.users);
+    expect(sdk.auth.getSession.mock.calls.length).toBe(before.users);
     expect(names().slice(before.rpc.length)).toEqual([
       'hs_delete_manual',
       ...READ,

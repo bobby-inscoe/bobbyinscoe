@@ -134,7 +134,8 @@ describe('House Scanner session notes', () => {
               args.p_household_id === OTHER_HOUSEHOLD_ID
               ? reply(second)
               : reply(fixtureSnapshot());
-          if (name === 'hs_household_snapshot') return missing();
+          if (name === 'hs_household_start' || name === 'hs_household_snapshot')
+            return missing();
           return pending.promise;
         });
         const hook = renderHook(useHouseholdSession);

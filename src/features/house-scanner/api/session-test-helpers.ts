@@ -23,7 +23,7 @@ export type Reply = {
   error: { message: string; code?: string } | null;
 };
 type UserReply = {
-  data: { user: { id: string } | null };
+  data: { session: { user: { id: string } } | null };
   error: { message: string } | null;
 };
 type AuthStorage = {
@@ -34,7 +34,7 @@ type AuthStorage = {
 let listener: AuthListener | null = null;
 export const sdk = {
   auth: {
-    getUser: vi.fn<() => Promise<UserReply>>(),
+    getSession: vi.fn<() => Promise<UserReply>>(),
     onAuthStateChange: vi.fn((callback: AuthListener) => {
       listener = callback;
       return { data: { subscription: { unsubscribe: vi.fn() } } };
@@ -85,8 +85,39 @@ export function fixtureSnapshot(): Snapshot {
   for (const listing of snapshot.listings) listing.origin = 'manual';
   return snapshot;
 }
+// A v2 snapshot with one source home, as hs_household_snapshot sends it.
+export function v2Snapshot() {
+  const member = fixtureSnapshot().members.find(
+    (entry) => entry.userId === USER_ID,
+  );
+  return {
+    contractVersion: 2,
+    householdId: HOUSEHOLD_ID,
+    edition: null,
+    members: [
+      { userId: USER_ID, displayName: member?.displayName, role: 'owner' },
+    ],
+    profiles: [],
+    sources: {},
+    neighborhoods: {},
+    listings: [
+      {
+        id: '30000000-0000-4000-8000-000000000001',
+        sourceId: 'alpha',
+        title: 'Read model home',
+        url: 'https://example.invalid/home',
+        facts: { rooms: 2 },
+        observedAt: '2026-10-22T10:00:00+00:00',
+        lastCheckedAt: '2026-10-22T10:00:00+00:00',
+      },
+    ],
+    favorites: [],
+    hides: [],
+    notes: [],
+  };
+}
 export function userReply(id: string | null = USER_ID): UserReply {
-  return { data: { user: id ? { id } : null }, error: null };
+  return { data: { session: id ? { user: { id } } : null }, error: null };
 }
 export function reply(data: unknown): Reply {
   return { data, error: null };
@@ -121,7 +152,7 @@ export function resetSdk() {
     'VITE_HOUSE_SCANNER_SUPABASE_PUBLISHABLE_KEY',
     'sb_publishable_synthetic_test_only_12345',
   );
-  sdk.auth.getUser.mockReset().mockResolvedValue(userReply());
+  sdk.auth.getSession.mockReset().mockResolvedValue(userReply());
   sdk.auth.signOut.mockReset().mockResolvedValue({ error: null });
   sdk.auth.signInWithPassword.mockClear();
   sdk.auth.setSession.mockClear();
@@ -130,8 +161,9 @@ export function resetSdk() {
   sdk.functions.invoke.mockClear();
   sdk.rpc.mockReset().mockImplementation(async (name) => {
     if (name === 'hs_memberships') return reply([fixtureSnapshot().members[0]]);
-    // Most suites test the session on the previous snapshot, which the client reads when this one is missing.
-    if (name === 'hs_household_snapshot') return missing();
+    // Most suites test the session on the previous requests, which the client makes when these are missing.
+    if (name === 'hs_household_start' || name === 'hs_household_snapshot')
+      return missing();
     if (name === 'hs_snapshot' || name === 'hs_snapshot_neighborhoods')
       return reply(fixtureSnapshot());
     return reply({ ok: true });
