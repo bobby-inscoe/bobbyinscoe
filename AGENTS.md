@@ -31,7 +31,8 @@ destructive data changes, and force pushes tied to explicit authorization.
 - Use the existing route, UI, test, and import patterns before introducing a
   new one. Share code only when the shared concept is real and stable.
 - For House Scanner app, collector, database, or hosted data work, also read
-  `instructions/house-scanner.md` and the relevant README or migration.
+  `instructions/house-scanner.md` and the relevant README or migration. For
+  schema work, start from `instructions/house-scanner-schema.md`.
 - Keep private household data, credentials, and local planning notes out of
   tracked specs and commits.
 
