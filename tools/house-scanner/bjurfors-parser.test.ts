@@ -269,11 +269,48 @@ describe('Bjurfors listing page', () => {
         rooms: 2,
         latitude: 57.7,
         longitude: 11.9,
+        // The home's own photos only: the robots-disallowed one, the agent portrait and area pictures are left out.
+        photoKeys: [
+          [1, 1],
+          [2, 2],
+          [3, 4],
+          [4, 5],
+        ].map(
+          ([n, v]) =>
+            `/contentassets/00000000000000000000000000000001/fixturebild${n}.jpg?v=100000000${v}`,
+        ),
+        planKey:
+          '/contentassets/00000000000000000000000000000001/fixtureplan.jpg',
       },
     });
     const text = JSON.stringify(read);
     for (const value of ['beskrivning', 'Syntetisk', 'example.invalid'])
       expect(text).not.toContain(value);
+  });
+
+  it('takes the uncaptioned photos before the first captioned image, and only valid keys', () => {
+    const path = (name: string) =>
+      `/contentassets/${'a'.repeat(32)}/${name}.jpg?v=1`;
+    const image = (name: string, caption: string | null = null) => ({
+      caption,
+      urls: {
+        Full: `/cdn-cgi/image/format=auto,fit=scale-down,quality=90${path(name)}`,
+      },
+    });
+    const gallery = {
+      allImages: [
+        image('hem1'),
+        image('hem2'),
+        image('maklare', 'Namn'),
+        image('omrade'),
+      ],
+      floorPlans: [{ originalUrl: '/contentassets/x/plan.pdf' }],
+    };
+    const read = facts(
+      `${detailPage([])}<div data-modaldata='${JSON.stringify(gallery)}'></div>`,
+    );
+    expect(read.photoKeys).toEqual([path('hem1'), path('hem2')]);
+    expect(read).not.toHaveProperty('planKey');
   });
 
   it('leaves missing and non-numeric values unknown, never zero or none', () => {

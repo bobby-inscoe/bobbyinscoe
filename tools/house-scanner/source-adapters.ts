@@ -1,4 +1,5 @@
 import {
+  BJURFORS_IMAGE_KEY,
   readBjurforsDetailPage,
   readBjurforsSearchPage,
 } from '@house-scanner-tools/bjurfors-parser';
@@ -123,6 +124,10 @@ export const boneoAdapter: SourceAdapter = {
 const BJURFORS_PATHS: Record<string, string> = {
   göteborg: 'vastra-gotaland/goteborg',
 };
+// The site's own resizer sizes: its landscape gallery size (MatrixLandscape) and its whole-image list size for a plan.
+const BJURFORS_PHOTO_SIZE =
+  'format=auto,fit=crop,width=658,height=480,quality=90';
+const BJURFORS_PLAN_SIZE = 'format=auto,fit=scale-down,width=1265,quality=90';
 
 export const bjurforsAdapter: SourceAdapter = {
   sourceId: BJURFORS_SOURCE_ID,
@@ -144,6 +149,21 @@ export const bjurforsAdapter: SourceAdapter = {
     return path === undefined
       ? { unsupported: 'municipality-path-unproven' }
       : `${BJURFORS_ORIGIN}/sv/tillsalu/${path}`;
+  },
+  imagesFor(facts, observedAt) {
+    const url = (key: string, size: string) =>
+      `${BJURFORS_ORIGIN}/cdn-cgi/image/${size}${key}`;
+    const plan = facts.planKey;
+    return imagesOf(
+      (facts.photoKeys ?? [])
+        .filter((key) => BJURFORS_IMAGE_KEY.test(key))
+        .map((key) => url(key, BJURFORS_PHOTO_SIZE)),
+      plan !== undefined && BJURFORS_IMAGE_KEY.test(plan)
+        ? url(plan, BJURFORS_PLAN_SIZE)
+        : undefined,
+      'Bjurfors',
+      observedAt,
+    );
   },
   readSearchPage: readBjurforsSearchPage,
   readDetailPage: readBjurforsDetailPage,

@@ -397,6 +397,27 @@ describe('Bjurfors run memory', () => {
       detailFailed: 0,
     });
     expect(two.observations).toEqual(one.observations);
+    // The gallery comes back from memory too, rebuilt through the site's resizer.
+    const at = (size: string, name: string) =>
+      `https://www.bjurfors.se/cdn-cgi/image/${size}/contentassets/00000000000000000000000000000001/${name}`;
+    const photo = 'format=auto,fit=crop,width=658,height=480,quality=90';
+    expect(
+      two.observations.find((o) => o.title === 'Exempelgatan 1'),
+    ).toMatchObject({
+      photo: { url: at(photo, 'fixturebild1.jpg?v=1000000001') },
+      morePhotos: [
+        { url: at(photo, 'fixturebild2.jpg?v=1000000002') },
+        { url: at(photo, 'fixturebild3.jpg?v=1000000004') },
+        { url: at(photo, 'fixturebild4.jpg?v=1000000005') },
+      ],
+      floorPlan: {
+        url: at(
+          'format=auto,fit=scale-down,width=1265,quality=90',
+          'fixtureplan.jpg',
+        ),
+        attribution: 'Bjurfors',
+      },
+    });
   });
 
   it('writes ids, small enums and numbers only', async () => {
@@ -427,6 +448,8 @@ describe('Bjurfors run memory', () => {
           'livingAreaM2',
           'longitude',
           'outdoor',
+          'photoKeys',
+          'planKey',
           'propertyType',
           'readAt',
           'rooms',
