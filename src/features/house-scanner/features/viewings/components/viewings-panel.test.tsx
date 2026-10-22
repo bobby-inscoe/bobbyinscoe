@@ -10,7 +10,7 @@ import {
 } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { ViewingsPanel } from '@/features/house-scanner/components/viewings-panel';
+import { ViewingsPanel } from '@/features/house-scanner/features/viewings/components/viewings-panel';
 import { catalogs } from '@/features/house-scanner/i18n/catalogs';
 import {
   DEMO_OTHER_USER_ID,

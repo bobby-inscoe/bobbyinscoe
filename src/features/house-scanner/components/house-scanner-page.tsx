@@ -11,10 +11,10 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { HouseScannerAccess } from '@/features/house-scanner/components/house-scanner-access';
 import { HouseholdWorkspace } from '@/features/house-scanner/components/household-workspace';
 import { LanguageSelect } from '@/features/house-scanner/components/language-select';
 import { SyntheticWorkspace } from '@/features/house-scanner/components/synthetic-workspace';
+import { HouseScannerAccess } from '@/features/house-scanner/features/access/components/house-scanner-access';
 import { ShellterLanguageProvider } from '@/features/house-scanner/i18n/language-provider';
 import {
   classes,

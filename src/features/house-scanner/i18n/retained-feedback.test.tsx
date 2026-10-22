@@ -9,7 +9,7 @@ import {
 } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { SignInForm } from '@/features/house-scanner/components/sign-in-form';
+import { SignInForm } from '@/features/house-scanner/features/access/components/sign-in-form';
 import { catalogs } from '@/features/house-scanner/i18n/catalogs';
 
 beforeEach(() => {

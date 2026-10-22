@@ -3,7 +3,7 @@ import { MantineProvider } from '@mantine/core';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { MapSelectionReview } from '@/features/house-scanner/components/map-selection-review';
+import { MapSelectionReview } from '@/features/house-scanner/features/listings/features/map/components/map-selection-review';
 import { catalogs } from '@/features/house-scanner/i18n/catalogs';
 import { SYNTHETIC_SNAPSHOT } from '@/features/house-scanner/mock/synthetic-household';
 

@@ -10,7 +10,7 @@ import {
 } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { ProfileEditor } from '@/features/house-scanner/components/profile-editor';
+import { ProfileEditor } from '@/features/house-scanner/features/settings/features/criteria/components/profile-editor';
 import { catalogs } from '@/features/house-scanner/i18n/catalogs';
 import { SYNTHETIC_SNAPSHOT } from '@/features/house-scanner/mock/synthetic-household';
 import type { SearchProfile } from '@/features/house-scanner/types/contracts';

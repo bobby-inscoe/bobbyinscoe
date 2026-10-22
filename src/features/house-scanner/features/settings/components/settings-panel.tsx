@@ -1,8 +1,8 @@
 import { Flex, Paper, Stack, Text, Title } from '@mantine/core';
 import { FormattedMessage } from 'react-intl';
-import { CriteriaHelp } from '@/features/house-scanner/components/criteria-help';
-import { HouseholdAccessPanel } from '@/features/house-scanner/components/household-access-panel';
-import { ProfileEditor } from '@/features/house-scanner/components/profile-editor';
+import { CriteriaHelp } from '@/features/house-scanner/features/settings/features/criteria/components/criteria-help';
+import { ProfileEditor } from '@/features/house-scanner/features/settings/features/criteria/components/profile-editor';
+import { HouseholdAccessPanel } from '@/features/house-scanner/features/settings/features/household/components/household-access-panel';
 import type { Snapshot } from '@/features/house-scanner/types/contracts';
 import type {
   HouseholdAccessActions,

@@ -30,15 +30,18 @@ import {
   useState,
 } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
-import type { MapCameraState } from '@/features/house-scanner/components/household-map';
 import { LanguageSelect } from '@/features/house-scanner/components/language-select';
 import { ListingCard } from '@/features/house-scanner/components/listing-card';
 import { ListingDrawer } from '@/features/house-scanner/components/listing-drawer';
-import { ListingFilterPanel } from '@/features/house-scanner/components/listing-filter-panel';
-import { MapSelectionReview } from '@/features/house-scanner/components/map-selection-review';
-import { MapStackSelection } from '@/features/house-scanner/components/map-stack-selection';
-import { PinCard } from '@/features/house-scanner/components/pin-card';
-import { ScrollToTop } from '@/features/house-scanner/components/scroll-to-top';
+import { ListingFilterPanel } from '@/features/house-scanner/features/listings/components/listing-filter-panel';
+import { ScrollToTop } from '@/features/house-scanner/features/listings/features/list/components/scroll-to-top';
+import { useListBatching } from '@/features/house-scanner/features/listings/features/list/hooks/use-list-batching';
+import type { ListingSort } from '@/features/house-scanner/features/listings/features/list/utils/listing-sort';
+import type { MapCameraState } from '@/features/house-scanner/features/listings/features/map/components/household-map';
+import { MapSelectionReview } from '@/features/house-scanner/features/listings/features/map/components/map-selection-review';
+import { MapStackSelection } from '@/features/house-scanner/features/listings/features/map/components/map-stack-selection';
+import { PinCard } from '@/features/house-scanner/features/listings/features/map/components/pin-card';
+import { reviewMapSelection } from '@/features/house-scanner/features/listings/features/map/utils/map-selection';
 import type { ListingNotesController } from '@/features/house-scanner/hooks/use-listing-notes';
 import {
   type Feedback,
@@ -58,23 +61,16 @@ import {
 } from '@/features/house-scanner/utils/listing-filters';
 import { listingNeighborhoods } from '@/features/house-scanner/utils/listing-neighborhoods';
 import { hasPin } from '@/features/house-scanner/utils/listing-position';
-import {
-  type ListingSort,
-  sortListings,
-} from '@/features/house-scanner/utils/listing-sort';
 import { mapPoints } from '@/features/house-scanner/utils/listing-view';
-import { reviewMapSelection } from '@/features/house-scanner/utils/map-selection';
 import { MATCH_CHOICES } from '@/features/house-scanner/utils/match-listing';
 
 const LazyMap = lazy(() =>
-  import('@/features/house-scanner/components/household-map').then(
-    (module) => ({
-      default: module.HouseholdMap,
-    }),
-  ),
+  import(
+    '@/features/house-scanner/features/listings/features/map/components/household-map'
+  ).then((module) => ({
+    default: module.HouseholdMap,
+  })),
 );
-
-const LIST_BATCH_SIZE = 32;
 
 class MapLoadBoundary extends Component<
   { children: ReactNode },
@@ -242,12 +238,6 @@ export function ListingsPanel({
   }, [mobileMap]);
   const [draft, setDraft] = useState(filters);
   const [selection, setSelection] = useState<string[]>([]);
-  const [listRender, setListRender] = useState({
-    visible,
-    sort,
-    count: LIST_BATCH_SIZE,
-  });
-  const listEnd = useRef<HTMLDivElement>(null);
   const stackReturnFocus = useRef<HTMLElement | null>(null);
   const [stackReview, setStackReview] = useState<{
     tab: typeof tab;
@@ -330,28 +320,11 @@ export function ListingsPanel({
       ).length,
     [scoped, draft, hiddenIds, duplicateIds, tab],
   );
-  const ordered = useMemo(() => sortListings(visible, sort), [visible, sort]);
-  const renderedCount =
-    listRender.visible === visible && listRender.sort === sort
-      ? listRender.count
-      : LIST_BATCH_SIZE;
-  useEffect(() => {
-    if (view !== 'list' || renderedCount >= ordered.length || !listEnd.current)
-      return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting)
-          setListRender({
-            visible,
-            sort,
-            count: Math.min(renderedCount + LIST_BATCH_SIZE, ordered.length),
-          });
-      },
-      { rootMargin: '600px' },
-    );
-    observer.observe(listEnd.current);
-    return () => observer.disconnect();
-  }, [view, renderedCount, ordered.length, visible, sort]);
+  const { ordered, renderedCount, listEnd } = useListBatching(
+    visible,
+    sort,
+    view,
+  );
   const toggleSelection = useCallback(
     (id: string) => {
       if (batchBusy || !eligible.has(id)) return;

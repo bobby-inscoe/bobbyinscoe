@@ -15,8 +15,8 @@ import type {
   HouseholdAccess,
   InvitationPreview,
 } from '@/features/house-scanner/api/household-client';
-import { HouseholdAccessPanel } from '@/features/house-scanner/components/household-access-panel';
-import { InvitePanel } from '@/features/house-scanner/components/invite-panel';
+import { InvitePanel } from '@/features/house-scanner/features/access/components/invite-panel';
+import { HouseholdAccessPanel } from '@/features/house-scanner/features/settings/features/household/components/household-access-panel';
 import { catalogs } from '@/features/house-scanner/i18n/catalogs';
 import type { HouseholdAccessActions } from '@/features/house-scanner/types/household';
 

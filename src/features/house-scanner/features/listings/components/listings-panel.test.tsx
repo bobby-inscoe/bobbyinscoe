@@ -14,7 +14,7 @@ import {
   fixtureSnapshot,
   USER_ID,
 } from '@/features/house-scanner/api/session-test-helpers';
-import { ListingsPanel } from '@/features/house-scanner/components/listings-panel';
+import { ListingsPanel } from '@/features/house-scanner/features/listings/components/listings-panel';
 import { useListingNotes } from '@/features/house-scanner/hooks/use-listing-notes';
 import { ShellterLanguageProvider } from '@/features/house-scanner/i18n/language-provider';
 import { emptyFilters } from '@/features/house-scanner/utils/listing-filters';

@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
+import {
+  mapSelectionIds,
+  reviewMapSelection,
+} from '@/features/house-scanner/features/listings/features/map/utils/map-selection';
 import { SYNTHETIC_SNAPSHOT } from '@/features/house-scanner/mock/synthetic-household';
 import {
   type MapPoint,
   mapPoints,
 } from '@/features/house-scanner/utils/listing-view';
-import {
-  mapSelectionIds,
-  reviewMapSelection,
-} from '@/features/house-scanner/utils/map-selection';
 
 it('reviews only captured, still-visible, unhidden homes with confirmed positions', () => {
   const located = SYNTHETIC_SNAPSHOT.listings[0];

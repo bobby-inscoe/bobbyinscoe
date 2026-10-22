@@ -10,10 +10,10 @@ import {
 } from '@mantine/core';
 import { type ReactNode, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { InvitePanel } from '@/features/house-scanner/components/invite-panel';
-import { SetPasswordForm } from '@/features/house-scanner/components/set-password-form';
-import { SignInForm } from '@/features/house-scanner/components/sign-in-form';
-import { useHouseholdSession } from '@/features/house-scanner/hooks/use-household-session';
+import { InvitePanel } from '@/features/house-scanner/features/access/components/invite-panel';
+import { SetPasswordForm } from '@/features/house-scanner/features/access/components/set-password-form';
+import { SignInForm } from '@/features/house-scanner/features/access/components/sign-in-form';
+import { useHouseholdSession } from '@/features/house-scanner/features/access/hooks/use-household-session';
 import {
   errorFeedback,
   type Feedback,

@@ -17,7 +17,7 @@ import {
   USER_ID,
   userReply,
 } from '@/features/house-scanner/api/session-test-helpers';
-import { useHouseholdSession } from '@/features/house-scanner/hooks/use-household-session';
+import { useHouseholdSession } from '@/features/house-scanner/features/access/hooks/use-household-session';
 
 vi.mock('@supabase/supabase-js', async () => {
   const fake = await import(
