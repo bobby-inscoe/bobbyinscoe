@@ -62,7 +62,7 @@ describe('prepared run', () => {
       imageHotlink: true,
       imageOrigins: ['https://files.boneo.se'],
       retentionDays: 14,
-      revision: 5,
+      revision: 6,
       capabilities: {
         upcoming: false,
         unknownPrice: false,

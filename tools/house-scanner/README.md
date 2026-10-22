@@ -157,7 +157,7 @@ Tests use pages authored in `svenskfast-test-pages.ts` (fictional streets and va
 
 ### Images and floor plans
 
-Probed on 22 October 2026 with the owner's approval: one home per source, then one Lundin home page and one Husman Hagberg estate page. Answers were not kept. Every source keeps only its lead photo today.
+Probed on 22 October 2026 with the owner's approval: one home per source, then one Lundin home page and one Husman Hagberg estate page. Answers were not kept. Each source now sends up to four photos and, where the source labels one, the first floor plan; Svensk Fast sends photos only. The policies were revised for this (Boneo 6, Bjurfors, Erik Olsson and Stadshem 3, Lundin, Husman Hagberg and Svensk Fast 2), so the operator approves each again.
 
 - Erik Olsson: listing page `home.images[]`, plans flagged `is_floor_plan: true`.
 - Stadshem: record `images.other[]` (photos) and `images.floorPlans[]`, each with `sizes.thumbnail/medium/full` on `storage.googleapis.com`.

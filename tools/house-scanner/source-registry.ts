@@ -128,7 +128,8 @@ export function sourceRegistry(): SourceCapability[] {
         // Pending is not approved: the operator sets approval in the database.
         status: 'pending',
         // Revision 2 turned on hotlinked photos from the image host. Revision 3 adds outdoor and glazed. Revision 4 adds groundFloor.
-        revision: 5,
+        // Revision 6 shows up to four photos and the floor plan.
+        revision: 6,
         viewings: true,
         retentionDays: 14,
         listingOrigins: [BONEO_ORIGIN],
@@ -168,7 +169,7 @@ export function sourceRegistry(): SourceCapability[] {
             'The page query is accepted but page size and multi-page ordering are unproven. Coverage is never reported complete.',
             'Only apartment paths for Goteborg are supported. Houses and other municipalities are not covered.',
             'Outdoor, glazing and floor come from each kept listing page; glazing only from description wording. Only floor 2 or higher (or an explicit ground floor) is a fact; floor 1 stays unknown. Lift and build year are not collected.',
-            'Only the first photo is shown, hotlinked from the broker image host. Nothing is copied or stored.',
+            'Up to four photos and the first floor plan from the listing page are shown, hotlinked from the broker image host. Nothing is copied or stored.',
             'Listing identity and episode rules come from property_id and created_date and are unproven across relistings.',
             'Viewing times are the full list in the search data (group_viewings). The feed labels Stockholm wall-clock time with a Z, so the letter is dropped and the time read as Stockholm time; the same viewing on the Bjurfors page matched. A viewing can be cancelled between scans.',
             'Known listings cannot be refreshed outside discovery.',
@@ -183,7 +184,8 @@ export function sourceRegistry(): SourceCapability[] {
       policy: {
         ...common,
         sourceId: BJURFORS_SOURCE_ID,
-        revision: 2,
+        // Revision 3 shows up to four photos and the floor plan.
+        revision: 3,
         viewings: true,
         // Pending is not approved: the operator sets approval in the database.
         status: 'pending',
@@ -228,7 +230,7 @@ export function sourceRegistry(): SourceCapability[] {
             'Balcony is a fact only when the page says Ja. An absent or unticked box stays unknown. Lift is a fact only when the page says Ja. Only floor 2 or higher (or an explicit ground floor) is a floor fact.',
             'Coordinates come from the listing page and matched an independent geocoder within 12 m on four of four listings. Precision is address for a title with a house number.',
             'Upcoming status is inferred from the PreOrder availability value on one page and is unproven.',
-            'Only the first photo is shown, hotlinked from the broker host. It loaded without a referrer. Nothing is copied or stored.',
+            'Up to four home photos and the first floor plan from the listing page are shown, hotlinked from the broker host; area pictures and the agent portrait are left out. It loaded without a referrer. Nothing is copied or stored.',
             'Listing identity is the listing page path and the episode never changes, so a relisting of the same home is not told apart.',
             'Viewing times come from each home page, which is read again at most weekly, so a new viewing can appear late and a cancelled one can linger until then. Times are Stockholm time with no zone, converted here.',
             'Known listings cannot be refreshed outside discovery.',
@@ -243,7 +245,8 @@ export function sourceRegistry(): SourceCapability[] {
       policy: {
         ...common,
         sourceId: ERIK_OLSSON_SOURCE_ID,
-        revision: 2,
+        // Revision 3 shows up to four photos and the floor plan.
+        revision: 3,
         viewings: true,
         // Pending is not approved: the operator sets approval in the database.
         status: 'pending',
@@ -286,7 +289,7 @@ export function sourceRegistry(): SourceCapability[] {
             'Cards give type, area, rooms, fee and price. Balcony, patio, floor, lift, tenure, status and coordinates come from each kept home page, read up to the per-run cap.',
             'Balcony and patio are facts only when ticked; an unticked box stays unknown. Lift is a fact only when the page says yes. Only floor 2 or higher (or floor 0) is a floor fact. Glazing is not collected.',
             'Coordinates come from the broker and are used only when the address is not hidden. They are labelled address-level when the title has a house number; accuracy was not compared with an independent geocoder.',
-            "Only the first photo is shown, hotlinked from the broker's Cloudflare Images address (imagedelivery.net, shared by other sites, with no robots.txt). The thumbnail variant loaded as a JPEG of about 39 kB on one sample. Nothing is copied or stored.",
+            "Up to four photos and the first floor plan are shown, hotlinked from the broker's Cloudflare Images address (imagedelivery.net, shared by other sites, with no robots.txt). The thumbnail variant loaded as a JPEG of about 39 kB on one sample. Nothing is copied or stored.",
             'Listing identity is the numeric id at the end of the page path and the episode never changes, so a relisting of the same home is not told apart.',
             'Viewing times are only the next viewing shown on the search card, as Swedish text with no year; the year is worked out from the weekday and dates that do not fit are dropped.',
             'Known listings cannot be refreshed outside discovery.',
@@ -301,7 +304,8 @@ export function sourceRegistry(): SourceCapability[] {
       policy: {
         ...common,
         sourceId: STADSHEM_SOURCE_ID,
-        revision: 2,
+        // Revision 3 shows up to four photos and the floor plan.
+        revision: 3,
         viewings: true,
         // Pending is not approved: the operator sets approval in the database.
         status: 'pending',
@@ -342,7 +346,7 @@ export function sourceRegistry(): SourceCapability[] {
             'One answer held every home (94 on 17 October) and reports its page count, so a full read is detected. Only the two status filters were used and the result was not compared with an unfiltered read.',
             'Floor and lift come from each kept home record: floor 2 or higher, or floor 0, is a floor fact, and lift only when the record says yes. Balcony and glazing are not collected: there is no structured field.',
             'Coordinates come from the list and are labelled address-level when the title has a house number. They were not compared with an independent geocoder.',
-            'Only the primary photo is shown, hotlinked from Google Cloud Storage (storage.googleapis.com, shared by other sites). Nothing is copied or stored.',
+            'Up to four photos and the first floor plan from the per-home record are shown, hotlinked from Google Cloud Storage (storage.googleapis.com, shared by other sites). Nothing is copied or stored.',
             'Listing identity is the estate id and the episode never changes, so a relisting of the same home is not told apart.',
             'Viewing times are only the next viewing (nextViewing) in the list, in Stockholm time with no zone, converted here. Set on 39 of 94 homes on 17 October.',
             'Known listings cannot be refreshed outside discovery.',
@@ -467,6 +471,8 @@ export function sourceRegistry(): SourceCapability[] {
       policy: {
         ...common,
         sourceId: SVENSKFAST_SOURCE_ID,
+        // Revision 2 shows up to four photos.
+        revision: 2,
         viewings: true,
         // Pending is not approved: the operator sets approval in the database.
         status: 'pending',
@@ -508,7 +514,7 @@ export function sourceRegistry(): SourceCapability[] {
             'Floor 2 or higher, or floor 0, is a floor fact. Lift is a fact only when the page says yes. Balcony and glazing are not collected. A house has no tenure on the list.',
             'Viewing times are the rows of the home page, with a day, month and weekday but no year; the year is worked out from the weekday and dates that do not fit are dropped. The registration note is dropped.',
             'Coordinates come from the home page when it has them (comma decimals) and are labelled address-level when the title has a house number. Otherwise a position is estimated from the street address. Underhand homes show a street with no number.',
-            'Only the primary photo is shown, hotlinked from the broker image host (i.sfcdn.se). Its addresses contain a literal "..." and are used as given. Nothing is copied or stored.',
+            'Up to four photos from the home page are shown, hotlinked from the broker image host (i.sfcdn.se); the page names no floor plan. Its addresses contain a literal "..." and are used as given. Nothing is copied or stored.',
             'Listing identity is the numeric id at the end of the page path and the episode never changes, so a relisting of the same home is not told apart.',
             'Known listings cannot be refreshed outside discovery.',
           ],

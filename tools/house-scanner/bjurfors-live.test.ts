@@ -514,7 +514,7 @@ describe('Bjurfors registry entry and run', () => {
     expect(policy).toMatchObject({
       sourceId: 'bjurfors',
       status: 'pending',
-      revision: 2,
+      revision: 3,
       viewings: true,
       retentionDays: 14,
       automatedCollection: false,
@@ -543,7 +543,7 @@ describe('Bjurfors registry entry and run', () => {
     expect(approved).toMatchObject({
       sourceId: 'bjurfors',
       status: 'approved',
-      revision: 2,
+      revision: 3,
       automatedCollection: true,
       privateDisplay: true,
       imageOrigins: ['https://www.bjurfors.se'],
@@ -735,7 +735,7 @@ describe('floor rule through both readers', () => {
     },
   );
 
-  it('allows groundFloor in both source policies and revises Boneo to 5', () => {
+  it('allows groundFloor in both source policies and revises Boneo to 6', () => {
     for (const id of ['boneo', 'bjurfors']) {
       const entry = sourceRegistry().find((e) => e.policy.sourceId === id);
       expect(entry?.policy.allowedFactFields).toContain('groundFloor');
@@ -743,7 +743,7 @@ describe('floor rule through both readers', () => {
     expect(
       sourceRegistry().find((e) => e.policy.sourceId === 'boneo')?.policy
         .revision,
-    ).toBe(5);
+    ).toBe(6);
   });
 });
 
