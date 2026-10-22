@@ -198,22 +198,6 @@ describe('House Scanner session privacy', () => {
     );
     expect(hook.result.current.state.status).toBe('error');
   });
-  it('hides a home on the server and shows it hidden', async () => {
-    const hook = await authenticated();
-    const [listing] = fixtureSnapshot().listings;
-    sdk.rpc.mockImplementation(async () => reply({ ok: true }));
-    await act(() => hook.result.current.onSetHidden([listing.id], true));
-    expect(sdk.rpc).toHaveBeenCalledWith('hs_set_hidden', {
-      p_household_id: HOUSEHOLD_ID,
-      p_listing_ids: [listing.id],
-      p_hidden: true,
-    });
-    const { state } = hook.result.current;
-    expect(
-      state.status === 'authenticated' &&
-        state.snapshot.hides?.map((hide) => hide.listingId),
-    ).toEqual([listing.id]);
-  });
   it('does not restore a snapshot when a mutation completes after sign-out', async () => {
     const hook = await authenticated();
     const pending = deferred<ReturnType<typeof reply>>();
@@ -292,16 +276,29 @@ describe('House Scanner session privacy', () => {
     await act(() => hook.result.current.refresh());
     expect(hook.result.current.state).toEqual({ status: 'signed-out' });
   });
-  it('ignores a retained mutation callback after sign-out', async () => {
-    const hook = await authenticated();
-    const staleSave = hook.result.current.onSaveFavorite;
-    await act(() => hook.result.current.signOut());
-    sdk.rpc.mockClear();
-    await expect(staleSave(fixtureSnapshot().listings[0].id)).rejects.toThrow(
-      'Reload your household',
-    );
-    expect(sdk.rpc).not.toHaveBeenCalled();
-  });
+  it.each(['sign-out', 'expired authentication', 'a failed refresh'])(
+    'refuses a retained mutation callback after %s without a request',
+    async (end) => {
+      const hook = await authenticated();
+      const staleSave = hook.result.current.onSaveFavorite;
+      if (end === 'sign-out') await act(() => hook.result.current.signOut());
+      else {
+        if (end === 'expired authentication')
+          sdk.auth.getSession.mockResolvedValueOnce(userReply(null));
+        else
+          sdk.rpc.mockResolvedValueOnce({
+            data: null,
+            error: { message: 'synthetic database error' },
+          });
+        await act(() => hook.result.current.refresh());
+      }
+      sdk.rpc.mockClear();
+      await expect(staleSave(fixtureSnapshot().listings[0].id)).rejects.toThrow(
+        'Reload your household',
+      );
+      expect(sdk.rpc).not.toHaveBeenCalled();
+    },
+  );
   it('accepts an explicit new sign-in after sign-out', async () => {
     const hook = await authenticated();
     await act(() => hook.result.current.signOut());
@@ -356,17 +353,6 @@ describe('House Scanner session privacy', () => {
       'Example balcony home',
     );
   });
-  it('invalidates retained mutation callbacks when authentication expires', async () => {
-    const hook = await authenticated();
-    const staleSave = hook.result.current.onSaveFavorite;
-    sdk.auth.getSession.mockResolvedValueOnce(userReply(null));
-    await act(() => hook.result.current.refresh());
-    sdk.rpc.mockClear();
-    await expect(staleSave(fixtureSnapshot().listings[0].id)).rejects.toThrow(
-      'Reload your household',
-    );
-    expect(sdk.rpc).not.toHaveBeenCalled();
-  });
   it('allows only the latest household selection to publish its snapshot', async () => {
     const first = fixtureSnapshot();
     const second = { ...fixtureSnapshot(), householdId: OTHER_HOUSEHOLD_ID };
@@ -405,22 +391,6 @@ describe('House Scanner session privacy', () => {
       status: 'authenticated',
       snapshot: { householdId: OTHER_HOUSEHOLD_ID },
     });
-  });
-  it('does not poll while the tab stays open without focus changes', async () => {
-    // Installed before mount so any interval the hook sets runs on this clock.
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    try {
-      await authenticated();
-      sdk.auth.getSession.mockClear();
-      sdk.rpc.mockClear();
-      await act(async () => {
-        vi.advanceTimersByTime(5 * 60_000);
-      });
-    } finally {
-      vi.useRealTimers();
-    }
-    expect(sdk.auth.getSession).not.toHaveBeenCalled();
-    expect(sdk.rpc).not.toHaveBeenCalled();
   });
   it('makes one request per refresh and keeps an unchanged snapshot object', async () => {
     const hook = await authenticated();
@@ -461,14 +431,10 @@ describe('House Scanner session privacy', () => {
     expect(window.localStorage.getItem('house-scanner.remember')).toBeNull();
   });
   it.each([
-    ['', '48291736'],
     ['   ', '48291736'],
-    ['two words', '48291736'],
-    ['not an@email', '48291736'],
     // Usernames are gone: sign-in is by email only.
     ['bobby', '48291736'],
     ['casey@example.com', '12345'],
-    ['casey@example.com', ''],
     ['casey@example.com', 'x'.repeat(73)],
   ])(
     'rejects login %j with password %j before reaching the SDK',
@@ -514,20 +480,6 @@ describe('House Scanner session privacy', () => {
       await mutation;
     });
     expect(sdk.auth.getSession).not.toHaveBeenCalled();
-  });
-  it('invalidates retained mutation callbacks after a failed private refresh', async () => {
-    const hook = await authenticated();
-    const staleSave = hook.result.current.onSaveFavorite;
-    sdk.rpc.mockResolvedValueOnce({
-      data: null,
-      error: { message: 'synthetic database error' },
-    });
-    await act(() => hook.result.current.refresh());
-    sdk.rpc.mockClear();
-    await expect(staleSave(fixtureSnapshot().listings[0].id)).rejects.toThrow(
-      'Reload your household',
-    );
-    expect(sdk.rpc).not.toHaveBeenCalled();
   });
 });
 

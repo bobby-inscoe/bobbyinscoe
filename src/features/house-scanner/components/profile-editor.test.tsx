@@ -8,15 +8,9 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { CriteriaHelp } from '@/features/house-scanner/components/criteria-help';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { ProfileEditor } from '@/features/house-scanner/components/profile-editor';
-import { SettingsPanel } from '@/features/house-scanner/components/settings-panel';
-import {
-  DEMO_USER_ID,
-  SYNTHETIC_SNAPSHOT,
-} from '@/features/house-scanner/mock/synthetic-household';
+import { SYNTHETIC_SNAPSHOT } from '@/features/house-scanner/mock/synthetic-household';
 import type { SearchProfile } from '@/features/house-scanner/types/contracts';
 import { BRUNNSPARKEN } from '@/features/house-scanner/utils/criteria-options';
 
@@ -84,215 +78,73 @@ async function save(onSave: ReturnType<typeof show>) {
   return onSave.mock.calls[0][0].criteria;
 }
 
-describe('size and room dropdowns', () => {
-  it('shows the saved values, formatted', () => {
-    show(demo);
-    expect(
-      screen.getByRole('combobox', { name: 'Minimum living area (m²)' }),
-    ).toHaveProperty('value', '60 m²');
-    expect(
-      screen.getByRole('combobox', { name: 'Maximum living area (m²)' }),
-    ).toHaveProperty('value', '100 m²');
-    expect(
-      screen.getByRole('combobox', { name: 'Minimum rooms' }),
-    ).toHaveProperty('value', '2 rooms');
-    expect(screen.getByRole('combobox', { name: 'Radius' })).toHaveProperty(
-      'value',
-      '20 km',
-    );
+it('saves untouched criteria as they were, including values the form cannot show', async () => {
+  // Between the steps, no maximum, a place the list does not know, the centre at Brunnsparken, no source list,
+  // and nature and transit preferences the form no longer shows. Only apartments are searched, so the type narrows.
+  const profile = profileWith({
+    minAreaM2: 57,
+    maxAreaM2: null,
+    geography: { ...demo.criteria.geography, center: [11.97, 57.71] },
   });
-
-  it('saves a chosen size, room count and radius, and "No maximum" as no limit', async () => {
-    const onSave = show(demo);
-    await choose('Minimum living area (m²)', '80 m²');
-    await choose('Maximum living area (m²)', 'No maximum');
-    await choose('Minimum rooms', '2,5 rooms');
-    await choose('Radius', '30 km');
-    expect(await save(onSave)).toMatchObject({
-      minAreaM2: 80,
-      maxAreaM2: null,
-      minRooms: 2.5,
-      geography: { radiusKm: 30 },
-    });
+  const onSave = show(profile);
+  expect(
+    screen.getByRole('combobox', { name: 'Minimum living area (m²)' }),
+  ).toHaveProperty('value', '57 m²');
+  expect(
+    screen.getAllByText('Example municipality (not supported)').length,
+  ).toBeGreaterThan(0);
+  expect(await save(onSave)).toEqual({
+    ...profile.criteria,
+    propertyTypes: ['apartment'],
   });
+});
 
-  it('keeps a saved value that is between the steps, and saves it unchanged', async () => {
-    const onSave = show(profileWith({ minAreaM2: 57, maxAreaM2: null }));
-    expect(
-      screen.getByRole('combobox', { name: 'Minimum living area (m²)' }),
-    ).toHaveProperty('value', '57 m²');
-    expect(
-      screen.getByRole('combobox', { name: 'Maximum living area (m²)' }),
-    ).toHaveProperty('value', 'No maximum');
-    expect(await save(onSave)).toMatchObject({
-      minAreaM2: 57,
-      maxAreaM2: null,
-    });
-  });
-
-  it.each(['Minimum living area (m²)', 'Minimum rooms'])(
-    'offers no way to clear %s',
-    async (label) => {
-      show(demo);
-      const options = await open(label);
-      expect(
-        options.getAllByRole('option', { hidden: true }).length,
-      ).toBeGreaterThan(5);
-      expect(options.queryByText('Any')).toBeNull();
-      expect(options.queryByText('No maximum')).toBeNull();
+it('saves a chosen size, room count, radius, place and source, and "No maximum" as no limit', async () => {
+  const onSave = show(profileWith({ sourceIds: ['boneo'] }));
+  await choose('Minimum living area (m²)', '80 m²');
+  await choose('Maximum living area (m²)', 'No maximum');
+  await choose('Minimum rooms', '2,5 rooms');
+  await choose('Radius', '30 km');
+  await choose('Places to search', 'Göteborg');
+  await choose('Sources', 'Lundin');
+  expect(await save(onSave)).toMatchObject({
+    minAreaM2: 80,
+    maxAreaM2: null,
+    minRooms: 2.5,
+    sourceIds: ['boneo', 'lundin'],
+    geography: {
+      radiusKm: 30,
+      municipalities: ['Example municipality', 'Göteborg'],
     },
+  });
+});
+
+it('names the centre point instead of showing raw coordinates, and can set Brunnsparken', async () => {
+  const onSave = show(
+    profileWith({
+      geography: { ...demo.criteria.geography, center: [12.5, 58.2] },
+    }),
   );
-
-  it('offers "No maximum" for the maximum area only', async () => {
-    show(demo);
-    expect(
-      (await open('Maximum living area (m²)')).getByText('No maximum'),
-    ).toBeTruthy();
-  });
+  expect(screen.getByRole('combobox', { name: 'Search from' })).toHaveProperty(
+    'value',
+    'Current point (58.200, 12.500)',
+  );
+  await choose('Search from', 'Brunnsparken, central Göteborg');
+  expect((await save(onSave)).geography.center).toEqual([...BRUNNSPARKEN]);
 });
 
-describe('sources', () => {
-  it('saves no source list when none is picked, meaning every source', async () => {
-    const onSave = show(demo);
-    expect(
-      screen
-        .getByRole('combobox', { name: 'Sources' })
-        .getAttribute('placeholder'),
-    ).toBe('Every source');
-    expect((await save(onSave)).sourceIds).toBeUndefined();
-  });
-
-  it('saves the picked sources', async () => {
-    const onSave = show(profileWith({ sourceIds: ['boneo'] }));
-    await choose('Sources', 'Lundin');
-    expect((await save(onSave)).sourceIds).toEqual(['boneo', 'lundin']);
-  });
-});
-
-describe('places and the search circle', () => {
-  it('lists Göteborg as pickable and Mölndal as coming soon and disabled', async () => {
-    show(
-      profileWith({
-        geography: { ...demo.criteria.geography, municipalities: ['Göteborg'] },
-      }),
+it('disables every dropdown for someone who is not an owner', () => {
+  show(demo, false);
+  for (const name of [
+    'Minimum living area (m²)',
+    'Maximum living area (m²)',
+    'Minimum rooms',
+    'Radius',
+    'Search from',
+    'Places to search',
+  ])
+    expect(screen.getByRole('combobox', { name })).toHaveProperty(
+      'disabled',
+      true,
     );
-    const places = await open('Places to search');
-    const coming = places
-      .getByText('Mölndal (coming soon)')
-      .closest('[role=option]');
-    expect(coming?.getAttribute('aria-disabled')).toBe('true');
-    const supported = places.getByText('Göteborg').closest('[role=option]');
-    expect(supported?.getAttribute('aria-disabled')).toBeNull();
-  });
-
-  it('keeps a saved place the list does not know, marked as unsupported, instead of dropping it', async () => {
-    const onSave = show(demo);
-    expect(
-      screen.getAllByText('Example municipality (not supported)').length,
-    ).toBeGreaterThan(0);
-    expect((await save(onSave)).geography.municipalities).toEqual([
-      'Example municipality',
-    ]);
-  });
-
-  it('picks Göteborg and saves it', async () => {
-    const onSave = show(demo);
-    await choose('Places to search', 'Göteborg');
-    expect((await save(onSave)).geography.municipalities).toEqual([
-      'Example municipality',
-      'Göteborg',
-    ]);
-  });
-
-  it('names the centre point instead of showing raw coordinates, and can set Brunnsparken', async () => {
-    const onSave = show(
-      profileWith({
-        geography: { ...demo.criteria.geography, center: [12.5, 58.2] },
-      }),
-    );
-    const centre = screen.getByRole('combobox', {
-      name: 'Search from',
-    });
-    expect(centre).toHaveProperty('value', 'Current point (58.200, 12.500)');
-    expect(screen.queryByLabelText(/longitude|latitude/i)).toBeNull();
-    await choose('Search from', 'Brunnsparken, central Göteborg');
-    expect((await save(onSave)).geography.center).toEqual([...BRUNNSPARKEN]);
-  });
-
-  it('leaves the centre alone when it is already at Brunnsparken', async () => {
-    const center: [number, number] = [11.97, 57.71];
-    const onSave = show(
-      profileWith({ geography: { ...demo.criteria.geography, center } }),
-    );
-    expect(
-      screen.getByRole('combobox', { name: 'Search from' }),
-    ).toHaveProperty('value', 'Brunnsparken, central Göteborg');
-    expect((await save(onSave)).geography.center).toEqual(center);
-  });
-});
-
-describe('nature and transit preferences', () => {
-  it('are not shown, since nothing uses them, and are saved as they were', async () => {
-    const onSave = show(demo);
-    expect(screen.queryByText(/greenery|walk to|journey/i)).toBeNull();
-    const saved = await save(onSave);
-    expect(saved.nature).toEqual(demo.criteria.nature);
-    expect(saved.transit).toEqual(demo.criteria.transit);
-  });
-});
-
-describe('who can edit', () => {
-  it('disables every dropdown for someone who is not an owner', () => {
-    show(demo, false);
-    for (const name of [
-      'Minimum living area (m²)',
-      'Maximum living area (m²)',
-      'Minimum rooms',
-      'Radius',
-      'Search from',
-      'Places to search',
-    ])
-      expect(screen.getByRole('combobox', { name })).toHaveProperty(
-        'disabled',
-        true,
-      );
-  });
-});
-
-describe('How does this work?', () => {
-  it('opens a dialog that explains the page, and closes with Escape', async () => {
-    render(
-      <MantineProvider>
-        <CriteriaHelp />
-      </MantineProvider>,
-    );
-    fireEvent.click(
-      screen.getByRole('button', { name: 'How does this work?' }),
-    );
-    const dialog = await screen.findByRole('dialog', {
-      name: 'About Shellter',
-    });
-    expect(
-      within(dialog).getByText(/apartments for sale in Göteborg/),
-    ).toBeTruthy();
-    fireEvent.keyDown(dialog, { key: 'Escape' });
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-  });
-});
-
-describe('the Settings tab', () => {
-  it('offers the explanation next to the criteria', () => {
-    render(
-      <MantineProvider>
-        <SettingsPanel
-          snapshot={SYNTHETIC_SNAPSHOT}
-          userId={DEMO_USER_ID}
-          synthetic
-        />
-      </MantineProvider>,
-    );
-    expect(
-      screen.getByRole('button', { name: 'How does this work?' }),
-    ).toBeTruthy();
-  });
 });

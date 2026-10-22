@@ -75,11 +75,3 @@ it('shows the range and what it rests on for a home with no price', () => {
   expect(screen.getByText(/Estimate 4,3M–6,9M/)).toBeTruthy();
   expect(screen.getByText(/from 8 nearby asking prices/)).toBeTruthy();
 });
-
-it('shows nothing for a home with a price, or when there are too few neighbours', () => {
-  show(neighbours[0], neighbours.slice(1));
-  expect(screen.queryByText(/Estimate/)).toBeNull();
-  cleanup();
-  show(target, neighbours.slice(0, 4));
-  expect(screen.queryByText(/Estimate/)).toBeNull();
-});

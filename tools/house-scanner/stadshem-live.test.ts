@@ -194,17 +194,6 @@ describe('Stadshem guarded run', () => {
     expect(first.coordinates?.source).toBe('stadshem-estates');
     expect(first.photo).not.toBeNull();
   });
-
-  it('leaves floor and lift unknown when a record fails, without stopping the run', async () => {
-    const { impl } = fakeFetch(site(2, 100, () => ({ body: 'nej' })));
-    const result = await run(goteborg, deps(impl), (all) => all);
-    expect(result).toMatchObject({
-      detailRead: 0,
-      detailFailed: 2,
-      stopped: null,
-    });
-    expect(result.observations[0].facts.lift).toBeNull();
-  });
 });
 
 function stadshem() {

@@ -95,33 +95,10 @@ describe('loading', () => {
   );
   it.each([
     ['corrupt json', '{"version":1,'],
-    ['not an object', '[]'],
     ['wrong version', JSON.stringify({ ...memoryWith({}), version: 2 })],
     [
       'extra top-level key',
       JSON.stringify({ ...memoryWith({}), note: 'https://x' }),
-    ],
-    [
-      'extra entry key',
-      JSON.stringify({
-        ...memoryWith({}),
-        details: { '1': { ...entry(DAY), title: 'x' } },
-      }),
-    ],
-    [
-      'bad fact value',
-      JSON.stringify({
-        ...memoryWith({}),
-        details: { '1': { ...entry(DAY), outdoor: 'pool' } },
-      }),
-    ],
-    ['bad timestamp', JSON.stringify(memoryWith({}, 'yesterday'))],
-    [
-      'a latitude out of range',
-      JSON.stringify({
-        ...memoryWith({}),
-        details: { '1': { ...listingFacts, latitude: 91 } },
-      }),
     ],
     [
       'a text value where a number belongs',

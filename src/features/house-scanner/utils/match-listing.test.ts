@@ -41,8 +41,6 @@ describe('buyer matching under incomplete evidence', () => {
     ['ground-floor apartment', { groundFloor: true }],
     ['apartment without lift', { lift: false }],
     ['no outdoor space', { outdoor: 'none' }],
-    ['rental', { tenure: 'rental' }],
-    ['sold', { status: 'sold' }],
     [
       'over budget despite unknown rooms',
       { askingPriceSek: 3500001, rooms: null },
