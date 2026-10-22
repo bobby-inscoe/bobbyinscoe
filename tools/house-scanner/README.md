@@ -149,6 +149,18 @@ Tests use answers authored in `husman-hagberg-test-pages.ts` (fictional streets 
 
 Tests use pages authored in `svenskfast-test-pages.ts` (fictional streets and values in the same shape); the parsers were also run once against saved real pages, which are not kept in the repository.
 
+### Images and floor plans
+
+Probed on 22 October 2026 with the owner's approval: one home per source, then one Lundin home page and one Husman Hagberg estate page. Answers were not kept. Every source keeps only its lead photo today.
+
+- Erik Olsson: listing page `home.images[]`, plans flagged `is_floor_plan: true`.
+- Stadshem: record `images.other[]` (photos) and `images.floorPlans[]`, each with `sizes.thumbnail/medium/full` on `storage.googleapis.com`.
+- Boneo: listing page `property_detail.property_images[]`; `field_image_category` is `Planlösning` for plans and `Other` for photos; the file is `resize_image`.
+- Bjurfors: listing page `data-modaldata` JSON with `allImages[]` (home photos mixed with area pictures and the agent portrait) and a separate `floorPlans[]`.
+- Svensk Fast: home page collage `img.lazy-image` with `data-srcsmall/medium/large`, unlabeled. The "Planritning" overlay was empty on the sample.
+- Lundin: the list holds one image per home. The home page has photos in `#sectionimages figure.object-image[data-id]` and plans in `#section-planimages figure.object-image-plan`, all at `/dc/<id>.jpg`, in the page markup. The six preview photos carry addresses; the rest of the gallery (23 on the sample) is IDs in a hidden `#image-gallery` list. The list's `ImageGuid` is the first preview photo.
+- Husman Hagberg: the list holds one image per home (`details.images` is null in the list). The estate page's `__NEXT_DATA__` has `props.pageProps.estateDetails.images[]` (published photos in display order, each with `mediaId`, `category` and ready addresses under `sizes`, such as `list2x` and `full`) and `estateDetails.plans[]` (published plans, same shape). Addresses are `media.husmanhagberg.se/images/<customerId>/<mediaId>-<w>x<h>.jpg`, with one `customerId` for every image of a home. The raw `estate.details.images[]` also lists unpublished images (`showImageOnInternet: false`) and often has empty categories.
+
 ### Estimated positions
 
 Kept homes with a house number in the title and no source position are looked up on OpenStreetMap's Nominatim (`geocoder.ts`): honest user agent, 1.5 seconds apart, at most 60 per run, stop on the first error. Answers are cached in `house-scanner.cache-geocode.json` (gitignored by the `house-scanner.cache*.json` pattern): hits for 90 days, misses for 7. A matched address is stored with `precision: address` and `estimated: true`. A street-only match is stored as `approximate_area`; district or town results are not treated as houses. The database keeps every official neighborhood intersecting a 50 m browsing buffer around an address estimate or a 250 m buffer around a street estimate. These radii are assumptions for browsing, not measured accuracy or the extent of the whole street. Cards say “Near … (approximate)”; selecting any candidate area includes the home. Existing cached answers are reused, so this is not an extra lookup on every scan.
