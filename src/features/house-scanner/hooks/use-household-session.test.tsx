@@ -8,12 +8,12 @@ import {
   emitAuth,
   fixtureSnapshot,
   HOUSEHOLD_ID,
-  missing,
   OTHER_HOUSEHOLD_ID,
   OTHER_USER_ID,
   reply,
   resetSdk,
   sdk,
+  startReply,
   USER_ID,
   userReply,
 } from '@/features/house-scanner/api/session-test-helpers';
@@ -124,22 +124,14 @@ describe('House Scanner session privacy', () => {
       'Example balcony home',
     );
   });
-  it.each(['getSession', 'memberships', 'snapshot'])(
+  it.each(['getSession', 'start'])(
     'ignores a stale %s response after sign-out',
     async (stage) => {
       const pendingUser = deferred<ReturnType<typeof userReply>>();
       const pendingRpc = deferred<ReturnType<typeof reply>>();
       if (stage === 'getSession')
         sdk.auth.getSession.mockReturnValueOnce(pendingUser.promise);
-      else
-        sdk.rpc.mockImplementation(async (name) => {
-          if (
-            (stage === 'memberships' && name === 'hs_memberships') ||
-            (stage === 'snapshot' && name === 'hs_snapshot_neighborhoods')
-          )
-            return pendingRpc.promise;
-          return reply([fixtureSnapshot().members[0]]);
-        });
+      else sdk.rpc.mockReturnValueOnce(pendingRpc.promise);
       const hook = renderHook(useHouseholdSession);
       act(() => emitAuth('INITIAL_SESSION'));
       await waitFor(() =>
@@ -147,23 +139,10 @@ describe('House Scanner session privacy', () => {
           stage === 'getSession' ? sdk.auth.getSession : sdk.rpc,
         ).toHaveBeenCalled(),
       );
-      if (stage === 'snapshot')
-        await waitFor(() =>
-          expect(sdk.rpc).toHaveBeenCalledWith(
-            'hs_snapshot_neighborhoods',
-            expect.any(Object),
-          ),
-        );
       act(() => emitAuth('SIGNED_OUT', null));
       await act(async () => {
         pendingUser.resolve(userReply());
-        pendingRpc.resolve(
-          reply(
-            stage === 'snapshot'
-              ? fixtureSnapshot()
-              : [fixtureSnapshot().members[0]],
-          ),
-        );
+        pendingRpc.resolve(startReply());
       });
       await settle();
       expect(hook.result.current.state).toEqual({ status: 'signed-out' });
@@ -181,7 +160,7 @@ describe('House Scanner session privacy', () => {
     sdk.rpc.mockResolvedValueOnce(reply({ memberships: [], snapshot: null }));
     await act(() => hook.result.current.refresh());
     await act(async () => {
-      pending.resolve(reply([fixtureSnapshot().members[0]]));
+      pending.resolve(startReply());
       await older;
     });
     expect(hook.result.current.state).toEqual({ status: 'nonmember' });
@@ -200,14 +179,17 @@ describe('House Scanner session privacy', () => {
   });
   it('rejects memberships belonging to another identity before showing the chooser', async () => {
     sdk.rpc.mockResolvedValue(
-      reply([
-        { ...fixtureSnapshot().members[0], userId: OTHER_USER_ID },
-        {
-          ...fixtureSnapshot().members[0],
-          householdId: OTHER_HOUSEHOLD_ID,
-          userId: OTHER_USER_ID,
-        },
-      ]),
+      reply({
+        memberships: [
+          { ...fixtureSnapshot().members[0], userId: OTHER_USER_ID },
+          {
+            ...fixtureSnapshot().members[0],
+            householdId: OTHER_HOUSEHOLD_ID,
+            userId: OTHER_USER_ID,
+          },
+        ],
+        snapshot: null,
+      }),
     );
     const hook = renderHook(useHouseholdSession);
     act(() => emitAuth('INITIAL_SESSION'));
@@ -289,12 +271,8 @@ describe('House Scanner session privacy', () => {
     act(() => emitAuth('INITIAL_SESSION'));
     await waitFor(() => expect(sdk.auth.getSession).toHaveBeenCalledTimes(1));
     sdk.auth.getSession.mockResolvedValue(userReply(OTHER_USER_ID));
-    sdk.rpc.mockImplementation(async (name) =>
-      reply(
-        name === 'hs_memberships'
-          ? [fixtureSnapshot().members[1]]
-          : fixtureSnapshot(),
-      ),
+    sdk.rpc.mockImplementation(async () =>
+      startReply(fixtureSnapshot(), [fixtureSnapshot().members[1]]),
     );
     act(() => emitAuth('TOKEN_REFRESHED', OTHER_USER_ID));
     await act(async () => {
@@ -332,44 +310,25 @@ describe('House Scanner session privacy', () => {
       expect(hook.result.current.state.status).toBe('authenticated'),
     );
   });
-  it.each(['memberships', 'snapshot'])(
-    'ignores stale %s data after an identity switch',
-    async (stage) => {
-      const pending = deferred<ReturnType<typeof reply>>();
-      sdk.auth.signOut.mockImplementation(async () => {
-        emitAuth('SIGNED_OUT', null);
-        return { error: null };
-      });
-      sdk.rpc.mockImplementation(async (name) => {
-        if (
-          (stage === 'memberships' && name === 'hs_memberships') ||
-          (stage === 'snapshot' && name === 'hs_snapshot_neighborhoods')
-        )
-          return pending.promise;
-        return reply([fixtureSnapshot().members[0]]);
-      });
-      const hook = renderHook(useHouseholdSession);
-      act(() => emitAuth('INITIAL_SESSION'));
-      await waitFor(() =>
-        expect(sdk.rpc).toHaveBeenCalledWith(
-          stage === 'snapshot' ? 'hs_snapshot_neighborhoods' : 'hs_memberships',
-          expect.any(Object),
-        ),
-      );
-      act(() => emitAuth('TOKEN_REFRESHED', OTHER_USER_ID));
-      await settle();
-      await act(async () => {
-        pending.resolve(
-          reply(
-            stage === 'snapshot'
-              ? fixtureSnapshot()
-              : [fixtureSnapshot().members[0]],
-          ),
-        );
-      });
-      expect(hook.result.current.state).toEqual({ status: 'signed-out' });
-    },
-  );
+  it('ignores stale household data after an identity switch', async () => {
+    const pending = deferred<ReturnType<typeof reply>>();
+    sdk.auth.signOut.mockImplementation(async () => {
+      emitAuth('SIGNED_OUT', null);
+      return { error: null };
+    });
+    sdk.rpc.mockReturnValueOnce(pending.promise);
+    const hook = renderHook(useHouseholdSession);
+    act(() => emitAuth('INITIAL_SESSION'));
+    await waitFor(() =>
+      expect(sdk.rpc).toHaveBeenCalledWith('hs_household_start', {}),
+    );
+    act(() => emitAuth('TOKEN_REFRESHED', OTHER_USER_ID));
+    await settle();
+    await act(async () => {
+      pending.resolve(startReply());
+    });
+    expect(hook.result.current.state).toEqual({ status: 'signed-out' });
+  });
   it('retains the same-user workspace during a token refresh', async () => {
     const hook = await authenticated();
     const previous = hook.result.current.state;
@@ -410,24 +369,17 @@ describe('House Scanner session privacy', () => {
   });
   it('allows only the latest household selection to publish its snapshot', async () => {
     const first = fixtureSnapshot();
-    const second = fixtureSnapshot();
-    second.householdId = OTHER_HOUSEHOLD_ID;
-    for (const member of second.members)
-      member.householdId = OTHER_HOUSEHOLD_ID;
-    for (const profile of second.profiles)
-      profile.householdId = OTHER_HOUSEHOLD_ID;
-    for (const listing of second.listings)
-      listing.householdId = OTHER_HOUSEHOLD_ID;
-    for (const favorite of second.favorites)
-      favorite.householdId = OTHER_HOUSEHOLD_ID;
+    const second = { ...fixtureSnapshot(), householdId: OTHER_HOUSEHOLD_ID };
+    const both = [
+      first.members[0],
+      { ...first.members[0], householdId: OTHER_HOUSEHOLD_ID },
+    ];
     const pending = deferred<ReturnType<typeof reply>>();
-    sdk.rpc.mockImplementation(async (name, args) => {
-      if (name === 'hs_memberships')
-        return reply([first.members[0], second.members[0]]);
-      if (name === 'hs_household_start') return missing();
-      return 'p_household_id' in args &&
-        args.p_household_id === OTHER_HOUSEHOLD_ID
-        ? reply(second)
+    sdk.rpc.mockImplementation(async (_name, args) => {
+      if (!('p_household_id' in args))
+        return reply({ memberships: both, snapshot: null });
+      return args.p_household_id === OTHER_HOUSEHOLD_ID
+        ? startReply(second, both)
         : pending.promise;
     });
     const hook = renderHook(useHouseholdSession);
@@ -440,13 +392,13 @@ describe('House Scanner session privacy', () => {
       oldSelection = hook.result.current.selectHousehold(first.householdId);
     });
     await waitFor(() =>
-      expect(sdk.rpc).toHaveBeenCalledWith('hs_household_snapshot', {
+      expect(sdk.rpc).toHaveBeenCalledWith('hs_household_start', {
         p_household_id: first.householdId,
       }),
     );
     await act(() => hook.result.current.selectHousehold(OTHER_HOUSEHOLD_ID));
     await act(async () => {
-      pending.resolve(reply(first));
+      pending.resolve(startReply(first, both));
       await oldSelection;
     });
     expect(hook.result.current.state).toMatchObject({
@@ -470,29 +422,19 @@ describe('House Scanner session privacy', () => {
     expect(sdk.auth.getSession).not.toHaveBeenCalled();
     expect(sdk.rpc).not.toHaveBeenCalled();
   });
-  it('asks for memberships once per refresh and keeps an unchanged snapshot object', async () => {
+  it('makes one request per refresh and keeps an unchanged snapshot object', async () => {
     const hook = await authenticated();
     const first = hook.result.current.state;
     sdk.rpc.mockClear();
     await act(() => hook.result.current.refresh());
-    await waitFor(() =>
-      expect(sdk.rpc).toHaveBeenCalledWith(
-        'hs_snapshot_neighborhoods',
-        expect.any(Object),
-      ),
-    );
     await settle();
-    expect(
-      sdk.rpc.mock.calls.filter(([name]) => name === 'hs_memberships'),
-    ).toHaveLength(1);
+    expect(sdk.rpc.mock.calls).toEqual([
+      ['hs_household_start', { p_household_id: HOUSEHOLD_ID }],
+    ]);
     expect(hook.result.current.state).toBe(first);
     const changed = fixtureSnapshot();
     changed.listings[0].title = 'Renamed by the latest edition';
-    sdk.rpc.mockImplementation(async (name) =>
-      name === 'hs_memberships'
-        ? reply([fixtureSnapshot().members[0]])
-        : reply(changed),
-    );
+    sdk.rpc.mockImplementation(async () => startReply(changed));
     await act(() => hook.result.current.refresh());
     await waitFor(() => expect(hook.result.current.state).not.toBe(first));
     const state = hook.result.current.state;

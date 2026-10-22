@@ -328,9 +328,6 @@ export const snapshotSchema = z.strictObject({
   // The household's hidden listings, each with the member and time of its latest hide. Left out when
   // there are none.
   hides: z.array(hideSchema).max(1500).optional(),
-  // shortcut: the signed-in member's own hides, as the database sent them before shared hides; remove once
-  // the shared hides migration is live.
-  hiddenListingIds: z.array(id).max(1500).optional(),
   // Every member's notes on the listings above, so opening a listing needs no request. Ten members on
   // 500 listings is the ceiling. The database leaves the key out when there are none; absent means none.
   notes: z.array(snapshotNoteSchema).max(5000).optional(),

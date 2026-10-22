@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { MantineProvider } from '@mantine/core';
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -101,10 +102,20 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+const onOpenListing = vi.fn();
+const onSeeOnMap = vi.fn();
+
 const show = (state: Snapshot = snapshot) =>
   render(
-    <MantineProvider>
-      <ViewingsPanel snapshot={state} userId={DEMO_USER_ID} />
+    <MantineProvider env="test">
+      <ViewingsPanel
+        snapshot={state}
+        userId={DEMO_USER_ID}
+        person="everyone"
+        onPersonChange={vi.fn()}
+        onOpenListing={onOpenListing}
+        onSeeOnMap={onSeeOnMap}
+      />
     </MantineProvider>,
   );
 
@@ -170,4 +181,54 @@ it('hands the browser a calendar file with a week and a day reminder when Add to
   expect(text).toContain('DTSTART:20261018T120000Z');
   expect(text).toContain('TRIGGER:-P7D');
   expect(text).toContain('TRIGGER:-P1D');
+});
+
+it('opens details from the photo, title and Details, with no broker link on the card', () => {
+  show();
+  expect(screen.queryByRole('heading', { name: 'Viewings' })).toBeNull();
+  const card = screen.getByRole('article', { name: /^Exempelgatan 1,/ });
+  expect(within(card).queryByRole('link')).toBeNull();
+  for (const name of ['View Exempelgatan 1', 'Exempelgatan 1', 'Details']) {
+    onOpenListing.mockClear();
+    fireEvent.click(within(card).getByRole('button', { name }));
+    expect(onOpenListing).toHaveBeenCalledExactlyOnceWith(first.id);
+  }
+});
+
+it('shares the broker link from More and opens a located home on the map', async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  vi.stubGlobal('navigator', { clipboard: { writeText } });
+  show();
+  const card = screen.getByRole('article', { name: /^Exempelgatan 1,/ });
+  fireEvent.click(
+    within(card).getByRole('button', {
+      name: 'More actions for Exempelgatan 1',
+    }),
+  );
+  const share = await screen.findByRole('menuitem', {
+    name: 'Share this listing',
+  });
+  await act(async () => {
+    fireEvent.click(share);
+  });
+  expect(writeText).toHaveBeenCalledWith(first.sourceUrls[0]);
+  expect(
+    await screen.findByRole('menuitem', { name: 'Link copied' }),
+  ).toBeTruthy();
+  fireEvent.click(await screen.findByRole('menuitem', { name: 'See on map' }));
+  expect(onSeeOnMap).toHaveBeenCalledExactlyOnceWith(first.id);
+});
+
+it('omits See on map for homes without a usable location', async () => {
+  show({
+    ...snapshot,
+    listings: [{ ...snapshot.listings[0], coordinates: null }],
+  });
+  fireEvent.click(
+    screen.getByRole('button', { name: 'More actions for Exempelgatan 1' }),
+  );
+  expect(
+    await screen.findByRole('menuitem', { name: 'Share this listing' }),
+  ).toBeTruthy();
+  expect(screen.queryByRole('menuitem', { name: 'See on map' })).toBeNull();
 });

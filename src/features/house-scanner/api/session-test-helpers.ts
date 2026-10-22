@@ -1,6 +1,10 @@
 import { vi } from 'vitest';
 
 import {
+  expandSnapshot,
+  snapshotV2Schema,
+} from '@/features/house-scanner/api/snapshot-v2';
+import {
   DEMO_HOUSEHOLD_ID,
   DEMO_OTHER_USER_ID,
   DEMO_USER_ID,
@@ -79,11 +83,126 @@ export const createClient = vi.fn(
     return sdk;
   },
 );
+// A snapshot as the read model would send it in v2. Every photo carries its own credit, so `sources` stays empty.
+export function toV2(snapshot: Snapshot) {
+  const areas: Record<string, { name: string; datasetVersion: string }> = {};
+  const listings = snapshot.listings.map((listing) => {
+    const facts = Object.fromEntries(
+      Object.entries(listing.facts).filter(
+        ([key, value]) =>
+          value !== null &&
+          !(['tenure', 'status'].includes(key) && value === 'unknown'),
+      ),
+    );
+    const times = {
+      observedAt: listing.observedAt,
+      ...(listing.firstSeenAt ? { firstSeenAt: listing.firstSeenAt } : {}),
+      ...(listing.lastChangedAt
+        ? { lastChangedAt: listing.lastChangedAt }
+        : {}),
+      ...(listing.lastCheckedAt
+        ? { lastCheckedAt: listing.lastCheckedAt }
+        : {}),
+    };
+    if (listing.origin === 'manual') {
+      const photos = listing.photos ?? (listing.photo ? [listing.photo] : []);
+      return {
+        id: listing.id,
+        origin: 'manual',
+        title: listing.title,
+        sourceUrls: listing.sourceUrls,
+        facts,
+        ...(photos.length
+          ? {
+              photos: photos.map(({ url }) => ({ url })),
+              photoExpiresAt: photos[0].expiresAt,
+            }
+          : {}),
+        ...times,
+        ...(listing.addedBy ? { addedBy: listing.addedBy } : {}),
+        ...(listing.userTags.length ? { userTags: listing.userTags } : {}),
+      };
+    }
+    for (const area of [
+      ...(listing.neighborhood ? [listing.neighborhood] : []),
+      ...(listing.neighborhoodCandidates ?? []),
+    ])
+      areas[area.id] = { name: area.name, datasetVersion: area.datasetVersion };
+    return {
+      id: listing.id,
+      sourceId: listing.sourceId ?? 'demo',
+      title: listing.title,
+      url: listing.sourceUrls[0],
+      facts,
+      ...(listing.conflicts.length ? { conflicts: listing.conflicts } : {}),
+      ...(listing.coordinates ? { coordinates: listing.coordinates } : {}),
+      ...(listing.photo
+        ? {
+            photo: {
+              url: listing.photo.url,
+              expiresAt: listing.photo.expiresAt,
+              observedAt: listing.photo.observedAt,
+              attribution: listing.photo.attribution,
+              rightsBasis: listing.photo.rightsBasis,
+            },
+          }
+        : {}),
+      ...(listing.previousAskingPriceSek
+        ? { previousAskingPriceSek: listing.previousAskingPriceSek }
+        : {}),
+      ...times,
+      ...(listing.isNew ? { isNew: true } : {}),
+      ...(listing.delistedAt ? { delistedAt: listing.delistedAt } : {}),
+      ...(listing.viewings ? { viewings: listing.viewings } : {}),
+      ...(listing.evidence.length ? { evidence: listing.evidence } : {}),
+      ...(listing.neighborhood
+        ? { neighborhoodId: listing.neighborhood.id }
+        : {}),
+      ...(listing.neighborhoodCandidates
+        ? {
+            neighborhoodIds: listing.neighborhoodCandidates.map(({ id }) => id),
+          }
+        : {}),
+      ...(listing.neighborhoodRadiusM === undefined
+        ? {}
+        : { neighborhoodRadiusM: listing.neighborhoodRadiusM }),
+    };
+  });
+  return {
+    contractVersion: 2,
+    householdId: snapshot.householdId,
+    edition: snapshot.edition,
+    members: snapshot.members.map(({ userId, displayName, role }) => ({
+      userId,
+      displayName,
+      role,
+    })),
+    profiles: snapshot.profiles.map(
+      ({ householdId: _, ...profile }) => profile,
+    ),
+    sources: {},
+    neighborhoods: areas,
+    listings,
+    favorites: snapshot.favorites.map(
+      ({ householdId: _, ...favorite }) => favorite,
+    ),
+    hides: snapshot.hides ?? [],
+    notes: snapshot.notes ?? [],
+  };
+}
+// The demo household as the client builds it from the read model, with every home a member's link.
 export function fixtureSnapshot(): Snapshot {
   const snapshot = structuredClone(SYNTHETIC_SNAPSHOT);
   snapshot.edition = null;
   for (const listing of snapshot.listings) listing.origin = 'manual';
-  return snapshot;
+  return expandSnapshot(snapshotV2Schema.parse(toV2(snapshot)));
+}
+// hs_household_start's reply for a member of one household.
+export function startReply(
+  snapshot: Snapshot = fixtureSnapshot(),
+  members = [fixtureSnapshot().members[0]],
+): Reply {
+  return reply({ memberships: members, snapshot: toV2(snapshot) });
 }
 // A v2 snapshot with one source home, as hs_household_snapshot sends it.
 export function v2Snapshot() {
@@ -160,12 +279,8 @@ export function resetSdk() {
   sdk.auth.updateUser.mockClear();
   sdk.functions.invoke.mockClear();
   sdk.rpc.mockReset().mockImplementation(async (name) => {
-    if (name === 'hs_memberships') return reply([fixtureSnapshot().members[0]]);
-    // Most suites test the session on the previous requests, which the client makes when these are missing.
-    if (name === 'hs_household_start' || name === 'hs_household_snapshot')
-      return missing();
-    if (name === 'hs_snapshot' || name === 'hs_snapshot_neighborhoods')
-      return reply(fixtureSnapshot());
+    if (name === 'hs_household_start') return startReply();
+    if (name === 'hs_household_snapshot') return reply(toV2(fixtureSnapshot()));
     return reply({ ok: true });
   });
 }

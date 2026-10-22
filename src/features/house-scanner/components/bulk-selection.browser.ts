@@ -36,18 +36,12 @@ test('batch hide excludes household favorites and Undo restores the exact batch'
   await page.getByRole('button', { name: 'Hide 3', exact: true }).click();
   await expect(page.getByRole('article')).toHaveCount(2);
   await expect(
-    page.getByText('3 homes hidden.', { exact: true }),
-  ).toBeVisible();
-  await expect(
     page.getByRole('button', { name: 'Select', exact: true }),
   ).toBeVisible();
   await page
     .getByRole('button', { name: 'Undo hide (3)', exact: true })
     .click();
   await expect(page.getByRole('article')).toHaveCount(5);
-  await expect(
-    page.getByText('3 homes restored.', { exact: true }),
-  ).toBeVisible();
   await page.getByRole('button', { name: 'Favorites', exact: true }).click();
   await expect(page.getByRole('article')).toHaveCount(2);
 });

@@ -1,10 +1,13 @@
 import { z } from 'zod';
 
 import {
+  expandSnapshot,
+  snapshotV2Schema,
+} from '@/features/house-scanner/api/snapshot-v2';
+import {
   memberSchema,
-  snapshotSchema,
+  type Snapshot,
 } from '@/features/house-scanner/types/contracts';
-import { noteSchema } from '@/features/house-scanner/types/notes';
 import type { ApiResult, Caller, Gateway } from './gateway';
 
 export type Status = 'PASS' | 'FAIL' | 'SKIPPED';
@@ -39,7 +42,8 @@ const NOTE_BODIES = [
 // name makes PostgREST answer "function not found", which looks like a denial.
 export const PUBLIC_RPC_PROBES: Record<string, Record<string, unknown>> = {
   hs_memberships: {},
-  hs_snapshot: { p_household_id: NIL_UUID },
+  hs_household_start: { p_household_id: NIL_UUID },
+  hs_household_snapshot: { p_household_id: NIL_UUID },
   hs_set_favorite: {
     p_household_id: NIL_UUID,
     p_listing_id: NIL_UUID,
@@ -62,7 +66,6 @@ export const PUBLIC_RPC_PROBES: Record<string, Record<string, unknown>> = {
     p_facts: {},
   },
   hs_delete_manual: { p_household_id: NIL_UUID, p_listing_id: NIL_UUID },
-  hs_notes: { p_household_id: NIL_UUID, p_listing_id: NIL_UUID },
   hs_save_note: {
     p_household_id: NIL_UUID,
     p_listing_id: NIL_UUID,
@@ -183,8 +186,33 @@ const okSchema = z.object({ ok: z.literal(true) });
 const revisionSchema = z.object({ revision: z.number().int().positive() });
 const manualSchema = z.object({ listingId: z.uuid(), existing: z.boolean() });
 const membershipsSchema = z.array(memberSchema);
-const notesSchema = z.array(noteSchema);
-type Note = z.infer<typeof noteSchema>;
+type Note = NonNullable<Snapshot['notes']>[number];
+
+// The household as the app reads it: hs_household_snapshot, checked and expanded by the app's own code. The snapshot
+// is null when the reply does not satisfy the app; problems names the first few reasons.
+async function readHousehold(caller: Caller, household: string) {
+  const result = await caller.rpc('hs_household_snapshot', {
+    p_household_id: household,
+  });
+  const parsed = snapshotV2Schema.safeParse(result.data);
+  if (!parsed.success)
+    return {
+      result,
+      snapshot: null,
+      problems: parsed.error.issues
+        .slice(0, 3)
+        .map((issue) => `${issue.path.join('.') || 'root'}: ${issue.message}`),
+    };
+  try {
+    return { result, snapshot: expandSnapshot(parsed.data), problems: [] };
+  } catch (error) {
+    return {
+      result,
+      snapshot: null,
+      problems: [error instanceof Error ? error.message : 'unknown'],
+    };
+  }
+}
 
 function leaks(results: ApiResult[], secrets: string[]): boolean {
   const text = results.map((r) => JSON.stringify(r.data ?? null)).join('\n');
@@ -287,29 +315,22 @@ async function userASnapshot(ctx: Context): Promise<Outcome> {
   if (parsed.data[0].householdId !== householdA)
     return fail(['hs_memberships changed between calls']);
   const observations = ['hs_memberships returned exactly one household'];
-  const snapshot = await a.caller.rpc('hs_snapshot', {
-    p_household_id: householdA,
-  });
-  if (snapshot.error) return fail([`hs_snapshot: ${describeResult(snapshot)}`]);
-  const contract = snapshotSchema.safeParse(snapshot.data);
-  if (!contract.success)
+  const read = await readHousehold(a.caller, householdA);
+  if (read.result.error)
+    return fail([`hs_household_snapshot: ${describeResult(read.result)}`]);
+  if (!read.snapshot)
     return fail([
-      `hs_snapshot did not satisfy the app contract: ${contract.error.issues
-        .slice(0, 3)
-        .map((issue) => `${issue.path.join('.') || 'root'}: ${issue.message}`)
-        .join('; ')}`,
+      `hs_household_snapshot did not satisfy the app contract: ${read.problems.join('; ')}`,
     ]);
-  const data = contract.data;
-  const foreign =
-    data.householdId !== householdA ||
-    data.listings.some((l) => l.householdId !== householdA) ||
-    data.members.some((m) => m.householdId !== householdA) ||
-    data.profiles.some((p) => p.householdId !== householdA);
-  if (foreign) return fail(['hs_snapshot contains rows of another household']);
+  const data = read.snapshot;
+  if (data.householdId !== householdA)
+    return fail(['hs_household_snapshot answered for another household']);
   if (!data.listings.some((l) => l.id === ctx.listingA))
-    return fail(['hs_snapshot does not list the listing added in setup']);
+    return fail([
+      'hs_household_snapshot does not list the listing added in setup',
+    ]);
   observations.push(
-    `hs_snapshot accepted: contractVersion ${data.contractVersion}, ${data.listings.length} listing(s), ${data.members.length} member(s), ${data.profiles.length} profile(s)`,
+    `hs_household_snapshot accepted: ${data.listings.length} listing(s), ${data.members.length} member(s), ${data.profiles.length} profile(s)`,
   );
   return pass(observations);
 }
@@ -333,12 +354,8 @@ async function crossHousehold(ctx: Context): Promise<Outcome> {
   const household = { p_household_id: householdA };
   const listing = { ...household, p_listing_id: listingA };
   await expectDenied(
-    'hs_snapshot of household A',
-    b.caller.rpc('hs_snapshot', household),
-  );
-  await expectDenied(
-    'hs_notes of household A',
-    b.caller.rpc('hs_notes', listing),
+    'hs_household_snapshot of household A',
+    b.caller.rpc('hs_household_snapshot', household),
   );
   await expectDenied(
     'hs_set_favorite in household A',
@@ -352,18 +369,8 @@ async function crossHousehold(ctx: Context): Promise<Outcome> {
       p_revision: 0,
     }),
   );
-  // Own household with a foreign listing id: no data may come back and no write may succeed.
+  // Own household with a foreign listing id: no write may succeed.
   const own = { p_household_id: householdB, p_listing_id: listingA };
-  const ownNotes = await b.caller.rpc('hs_notes', own);
-  results.push(ownNotes);
-  const empty =
-    !ownNotes.error &&
-    Array.isArray(ownNotes.data) &&
-    ownNotes.data.length === 0;
-  failed ||= !empty;
-  observations.push(
-    `${empty ? 'empty' : 'NOT EMPTY'} hs_notes of A's listing through household B: ${describeResult(ownNotes)}`,
-  );
   const writes: [string, Promise<ApiResult>][] = [
     [
       "hs_set_favorite of A's listing through household B",
@@ -387,15 +394,13 @@ async function crossHousehold(ctx: Context): Promise<Outcome> {
       `${refused ? 'refused' : 'ACCEPTED'} ${label}: ${describeResult(result)}`,
     );
   }
-  const snapshot = await b.caller.rpc('hs_snapshot', {
-    p_household_id: householdB,
-  });
-  results.push(snapshot);
-  const parsed = snapshotSchema.safeParse(snapshot.data);
-  if (!parsed.success) {
+  // B's own household carries nothing of A, notes included.
+  const read = await readHousehold(b.caller, householdB);
+  results.push(read.result);
+  if (!read.snapshot) {
     failed = true;
     observations.push(
-      `own hs_snapshot for user B failed: ${describeResult(snapshot)}`,
+      `own hs_household_snapshot for user B failed: ${describeResult(read.result)} ${read.problems.join('; ')}`,
     );
   }
   results.push(await b.caller.rpc('hs_memberships', {}));
@@ -417,30 +422,25 @@ async function hasFavorite(
   listing: string,
   userId: string,
 ) {
-  const snapshot = await caller.rpc('hs_snapshot', {
-    p_household_id: household,
-  });
-  const parsed = snapshotSchema.safeParse(snapshot.data);
-  if (!parsed.success) return null;
-  return parsed.data.favorites.some(
+  const { snapshot } = await readHousehold(caller, household);
+  if (!snapshot) return null;
+  return snapshot.favorites.some(
     (f) => f.listingId === listing && f.userId === userId,
   );
 }
 
+// The member's note on the listing, from the household snapshot as the app reads notes.
 async function currentNote(
   caller: Caller,
   household: string,
   listing: string,
   userId: string,
 ): Promise<{ result: ApiResult; own: Note | null }> {
-  const result = await caller.rpc('hs_notes', {
-    p_household_id: household,
-    p_listing_id: listing,
-  });
-  const parsed = notesSchema.safeParse(result.data);
-  const own = parsed.success
-    ? (parsed.data.find((n) => n.userId === userId) ?? null)
-    : null;
+  const { result, snapshot } = await readHousehold(caller, household);
+  const own =
+    snapshot?.notes?.find(
+      (n) => n.listingId === listing && n.userId === userId,
+    ) ?? null;
   return { result, own };
 }
 
@@ -469,7 +469,7 @@ async function roundTrip(ctx: Context): Promise<Outcome> {
 
   const before = await currentNote(a.caller, householdA, listingA, a.userId);
   if (before.result.error)
-    return fail([`hs_notes: ${describeResult(before.result)}`]);
+    return fail([`hs_household_snapshot: ${describeResult(before.result)}`]);
   const start = before.own?.revision ?? 0;
   ctx.noteTouched = true;
   const first = await a.caller.rpc('hs_save_note', {
@@ -500,7 +500,9 @@ async function roundTrip(ctx: Context): Promise<Outcome> {
     after.own?.body !== NOTE_BODIES[1] ||
     after.own.revision !== secondRevision.data.revision
   )
-    return fail(['hs_notes does not show the last saved body and revision']);
+    return fail([
+      'the snapshot does not show the last saved note body and revision',
+    ]);
   observations.push(
     `note saved at revision ${start} (${start === 0 ? 'insert' : 'update of an earlier run'}), then at ${firstRevision.data.revision}; now revision ${secondRevision.data.revision}`,
   );
@@ -619,10 +621,9 @@ async function deactivatedMember(
   const listing = { p_household_id: householdA, p_listing_id: listingA };
   const calls: [string, Promise<ApiResult>][] = [
     [
-      'hs_snapshot',
-      a2.caller.rpc('hs_snapshot', { p_household_id: householdA }),
+      'hs_household_snapshot',
+      a2.caller.rpc('hs_household_snapshot', { p_household_id: householdA }),
     ],
-    ['hs_notes', a2.caller.rpc('hs_notes', listing)],
     [
       'hs_set_favorite',
       a2.caller.rpc('hs_set_favorite', { ...listing, p_saved: true }),
@@ -715,7 +716,7 @@ export function buildChecks(
       id: '2-user-a-snapshot',
       title: 'User A sees exactly household A, in contract shape',
       meaning:
-        'hs_memberships and hs_snapshot work through PostgREST and the app contract parser accepts the result.',
+        'hs_memberships and hs_household_snapshot work through PostgREST and the app parser accepts the result.',
       run: () => userASnapshot(ctx),
     },
     {

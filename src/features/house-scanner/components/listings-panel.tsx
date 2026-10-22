@@ -112,7 +112,6 @@ interface ListingsPanelProps {
   onUndoHide: () => Promise<boolean>;
   hideBusy: boolean;
   hideError: string;
-  hideMessage: string;
   undoHideCount: number;
   canHide: boolean;
   selecting: boolean;
@@ -141,7 +140,6 @@ interface ListingsPanelProps {
   satellite: boolean;
   onSatelliteChange: (satellite: boolean) => void;
   pending: string[];
-  favoriteMessage?: string;
   mapWarning?: string;
   canSave: (listingId: string) => boolean;
   notes: ListingNotesController;
@@ -170,7 +168,6 @@ export function ListingsPanel({
   onUndoHide,
   hideBusy,
   hideError,
-  hideMessage,
   undoHideCount,
   canHide,
   selecting,
@@ -197,7 +194,6 @@ export function ListingsPanel({
   satellite,
   onSatelliteChange,
   pending,
-  favoriteMessage,
   mapWarning,
   canSave,
   notes,
@@ -494,11 +490,6 @@ export function ListingsPanel({
               {mapWarning}
             </Text>
           )}
-          {favoriteMessage && (
-            <Text size="sm" role="status" aria-live="polite">
-              {favoriteMessage}
-            </Text>
-          )}
         </header>
       )}
       {!mobileMap && (
@@ -765,13 +756,13 @@ export function ListingsPanel({
           )}
         </Stack>
       )}
-      {(hideError || hideMessage) && (
+      {(hideError || undoHideCount > 0) && (
         <Group
           className={mobileMap ? classes.mobileMapStatus : undefined}
           role={hideError ? 'alert' : 'status'}
           aria-live="polite"
         >
-          <Text size="sm">{hideError || hideMessage}</Text>
+          {hideError && <Text size="sm">{hideError}</Text>}
           {undoHideCount > 0 && (
             <Button
               variant="default"

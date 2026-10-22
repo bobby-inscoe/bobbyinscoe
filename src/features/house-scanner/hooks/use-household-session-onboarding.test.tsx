@@ -4,11 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   emitAuth,
-  fixtureSnapshot,
   HOUSEHOLD_ID,
   reply,
   resetSdk,
   sdk,
+  startReply,
   USER_ID,
 } from '@/features/house-scanner/api/session-test-helpers';
 import { useHouseholdSession } from '@/features/house-scanner/hooks/use-household-session';
@@ -172,9 +172,7 @@ describe('accepting an invitation', () => {
         });
         return reply({ householdId: HOUSEHOLD_ID });
       }
-      if (name === 'hs_memberships')
-        return reply([fixtureSnapshot().members[0]]);
-      return reply(fixtureSnapshot());
+      return startReply();
     });
     await act(() => hook.result.current.acceptInvitation(TOKEN, null, 'Casey'));
     expect(hook.result.current.state.status).toBe('authenticated');
@@ -257,8 +255,7 @@ describe('household settings actions', () => {
     );
     sdk.rpc.mockImplementation(async (name) => {
       if (name === 'hs_household_leave') return reply({ archived: false });
-      if (name === 'hs_memberships') return reply([]);
-      return reply(fixtureSnapshot());
+      return reply({ memberships: [], snapshot: null });
     });
     await act(() => access.leave());
     expect(sdk.rpc).toHaveBeenCalledWith('hs_household_leave', {

@@ -2,7 +2,10 @@ import { readdir, readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { snapshotSchema } from '@/features/house-scanner/types/contracts';
+import {
+  expandSnapshot,
+  snapshotV2Schema,
+} from '@/features/house-scanner/api/snapshot-v2';
 
 // Manual listings: photo links and facts on add, then edit and delete by any member of the household.
 const OWNER = '30000000-0000-4000-8000-0000000000a1';
@@ -71,10 +74,12 @@ const remove = (user: string, listing: string, home = household) =>
   call(user, 'select public.hs_delete_manual($1,$2) as value', [home, listing]);
 
 const listings = async (user: string) =>
-  snapshotSchema.parse(
-    await call(user, 'select public.hs_snapshot_neighborhoods($1) as value', [
-      household,
-    ]),
+  expandSnapshot(
+    snapshotV2Schema.parse(
+      await call(user, 'select public.hs_household_snapshot($1) as value', [
+        household,
+      ]),
+    ),
   ).listings;
 
 async function migratedDb() {

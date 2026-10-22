@@ -112,6 +112,11 @@ describe('browse URL search', () => {
     ).toBe('both');
   });
 
+  it('restores the Viewings drawer context and person filter from a URL', () => {
+    const search = { ...defaults, from: 'viewings' as const, person: 'mine' };
+    expect(roundTrip(search)).toEqual(search);
+  });
+
   it('restores next viewing sort and drops the removed latest check sort', () => {
     expect(validateBrowseSearch({ sort: 'next-viewing' }).sort).toBe(
       'next-viewing',

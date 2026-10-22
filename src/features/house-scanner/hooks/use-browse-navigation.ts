@@ -6,6 +6,7 @@ import {
   toUrlSearch,
   validateBrowseSearch,
 } from '@/features/house-scanner/utils/browse-search';
+import { emptyFilters } from '@/features/house-scanner/utils/listing-filters';
 
 type Layer = 'filterOpen' | 'select';
 interface BrowseOrigin {
@@ -44,7 +45,9 @@ export function useBrowseNavigation() {
   const tab = listingId
     ? search.from === 'favorites'
       ? 'favorites'
-      : 'suggestions'
+      : search.from === 'viewings'
+        ? 'viewings'
+        : 'suggestions'
     : ((Object.entries(destinations).find(
         ([, path]) => path === location.pathname,
       )?.[0] as WorkspaceTab | undefined) ?? 'suggestions');
@@ -180,7 +183,7 @@ export function useBrowseNavigation() {
       params: { listingId: id },
       search: toUrlSearch({
         ...search,
-        from: tab === 'favorites' ? 'favorites' : 'listings',
+        from: tab === 'favorites' || tab === 'viewings' ? tab : 'listings',
       }),
       state: { houseScannerDetailOrigin: origin(), houseScannerLayers: layers },
       resetScroll: false,
@@ -191,7 +194,9 @@ export function useBrowseNavigation() {
     if (previous) void returnTo(previous, previous.search);
     else
       void navigate({
-        to: destinations[tab === 'favorites' ? 'favorites' : 'suggestions'],
+        to: destinations[
+          tab === 'favorites' || tab === 'viewings' ? tab : 'suggestions'
+        ],
         search: toUrlSearch({ ...search, from: 'listings' }),
         replace: true,
         resetScroll: false,
@@ -199,8 +204,18 @@ export function useBrowseNavigation() {
   };
   const seeSelectedOnMap = () => {
     void navigate({
-      to: destinations[tab === 'favorites' ? 'favorites' : 'suggestions'],
-      search: toUrlSearch({ ...search, view: 'map' }),
+      to: destinations[
+        tab === 'favorites' || tab === 'viewings' ? 'favorites' : 'suggestions'
+      ],
+      search: toUrlSearch({
+        ...search,
+        view: 'map',
+        // Viewings ignores browse filters and duplicate folding, so its map must include the same homes.
+        filters:
+          tab === 'viewings'
+            ? { ...emptyFilters, showDuplicates: true }
+            : search.filters,
+      }),
       state: { houseScannerLayers: layers },
       resetScroll: false,
     });

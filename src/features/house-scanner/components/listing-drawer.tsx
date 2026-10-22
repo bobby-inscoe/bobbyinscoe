@@ -42,6 +42,7 @@ interface ListingDrawerProps {
   // Absent when the map is already showing.
   onSeeOnMap?: () => void;
   alsoOn?: string[];
+  hideError?: string;
 }
 
 // A side sheet on wide screens and a bottom sheet on narrow ones.
@@ -58,6 +59,7 @@ export function ListingDrawer({
   onClose,
   onSeeOnMap,
   alsoOn,
+  hideError,
 }: ListingDrawerProps) {
   const wide = useMediaQuery('(min-width: 48em)');
   return (
@@ -88,6 +90,11 @@ export function ListingDrawer({
               onToggle={() => onFavorite(listing.id)}
             />
           </div>
+          {hideError && (
+            <Text role="alert" size="sm">
+              {hideError}
+            </Text>
+          )}
           <PriceLine listing={listing} />
           <EstimateLine listing={listing} />
           <FactsLine listing={listing} />
