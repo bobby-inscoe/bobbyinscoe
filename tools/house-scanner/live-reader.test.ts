@@ -333,8 +333,8 @@ describe('listing pages', () => {
     const image = (style: string, n: string) =>
       `https://files.boneo.se/target_styles/properties/sizex2/${style}/9000001-img-FIXTURE${n}.webp`;
     expect(result.observations[1]).toMatchObject({
-      photo: { url: image('550x366', 'A') },
-      morePhotos: ['B', 'C', 'D'].map((n) => ({ url: image('550x366', n) })),
+      photo: { url: image('872x580', 'A') },
+      morePhotos: ['B', 'C', 'D'].map((n) => ({ url: image('872x580', n) })),
       floorPlan: { url: image('1650x1100', 'PLAN1'), attribution: 'Boneo' },
     });
     expect(result).toMatchObject({

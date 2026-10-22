@@ -3,7 +3,6 @@ import {
   readBjurforsSearchPage,
 } from '@house-scanner-tools/bjurfors-parser';
 import {
-  BONEO_PHOTO_BASE,
   BONEO_PHOTO_NAME,
   readBoneoDetailPage,
   readBoneoSearchPage,
@@ -75,7 +74,9 @@ export function partitionUrl(municipality: string): string | null {
     .join('/')}`;
 }
 
-// A larger style the site's own listing page uses, so a plan is readable. It serves webp and jpeg names alike.
+// Styles the site's own listing page uses with the same webp names as `resize_image`: 872x580 for its gallery, and
+// the larger 1650x1100 for the plan, so it is readable. The search page's 550x366 style was only seen with jpeg names.
+const BONEO_GALLERY_BASE = `${BONEO_IMAGE_ORIGIN}/target_styles/properties/sizex2/872x580/`;
 const BONEO_PLAN_BASE = `${BONEO_IMAGE_ORIGIN}/target_styles/properties/sizex2/1650x1100/`;
 
 export const boneoAdapter: SourceAdapter = {
@@ -100,7 +101,7 @@ export const boneoAdapter: SourceAdapter = {
     return imagesOf(
       (facts.photoKeys ?? [])
         .filter((key) => BONEO_PHOTO_NAME.test(key))
-        .map((key) => `${BONEO_PHOTO_BASE}${key}`),
+        .map((key) => `${BONEO_GALLERY_BASE}${key}`),
       plan !== undefined && BONEO_PHOTO_NAME.test(plan)
         ? `${BONEO_PLAN_BASE}${plan}`
         : undefined,
