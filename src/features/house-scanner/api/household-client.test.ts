@@ -197,6 +197,20 @@ describe('House Scanner RPC boundaries', () => {
       'hs_snapshot_neighborhoods',
     ]);
   });
+  it('reads the previous snapshot when a read model value is invalid', async () => {
+    const invalid = v2Snapshot();
+    invalid.listings[0].facts = { rooms: 2, tenure: 'leasehold' } as never;
+    sdk.rpc
+      .mockResolvedValueOnce(reply([fixtureSnapshot().members[0]]))
+      .mockResolvedValueOnce(reply(invalid))
+      .mockResolvedValueOnce(reply(fixtureSnapshot()));
+    await expect(
+      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
+    ).resolves.toEqual(fixtureSnapshot());
+    expect(sdk.rpc).toHaveBeenLastCalledWith('hs_snapshot_neighborhoods', {
+      p_household_id: HOUSEHOLD_ID,
+    });
+  });
   it('asks for the memberships and the snapshot in one request', async () => {
     const own = [fixtureSnapshot().members[0]];
     sdk.rpc.mockResolvedValueOnce(
