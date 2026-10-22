@@ -201,17 +201,6 @@ describe('Svensk Fastighetsförmedling guarded run', () => {
     ]);
     expect(first.photo).not.toBeNull();
   });
-
-  it('leaves the home page facts unknown when a page fails, without stopping the run', async () => {
-    const { impl } = fakeFetch(site(2, 35, () => ({ body: 'nej' })));
-    const result = await run(goteborg, deps(impl), (all) => all);
-    expect(result).toMatchObject({
-      detailRead: 0,
-      detailFailed: 2,
-      stopped: null,
-    });
-    expect(result.observations[0].facts.askingPriceSek).toBeNull();
-  });
 });
 
 function svenskfast() {

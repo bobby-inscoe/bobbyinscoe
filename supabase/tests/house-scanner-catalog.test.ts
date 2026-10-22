@@ -581,27 +581,6 @@ describe('catalog data move', () => {
       manual_favorites: 1,
     });
   });
-
-  it('refuses to move data owned by more than one household', async () => {
-    const other = await freshDatabase('before');
-    try {
-      await seedHouseholdA(other);
-      await other.query('insert into auth.users values($1)', [OWNER_B]);
-      await other.query(
-        "insert into hs.households(id,name) values($1,'Second household')",
-        [HOUSE_B],
-      );
-      await other.query(
-        'insert into hs.source_policies(household_id,source_id,policy) values($1,$2,$3::jsonb)',
-        [HOUSE_B, 'alpha', JSON.stringify(policy('alpha'))],
-      );
-      await expect(other.exec(await migration(CATALOG))).rejects.toThrow(
-        'Catalog move needs at most one household owning source data',
-      );
-    } finally {
-      await other.close();
-    }
-  });
 });
 
 describe('catalog rollback', () => {

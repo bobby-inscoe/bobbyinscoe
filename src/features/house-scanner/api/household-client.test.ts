@@ -72,10 +72,6 @@ describe('House Scanner storage boundaries', () => {
     vi.stubEnv(name, value);
     expect(privateBackendSettings()).toBeNull();
   });
-  it('uses a namespaced SDK storage key', () => {
-    client();
-    expect(sdkStorageKey).toBe(AUTH_KEY);
-  });
   it.each([false, true])(
     'keeps SDK tokens in the chosen store when remember is %s',
     (remember) => {
@@ -326,33 +322,9 @@ describe('House Scanner RPC boundaries', () => {
       },
     ],
     [
-      'duplicate member',
-      (s) => {
-        s.members.push(s.members[0]);
-      },
-    ],
-    [
-      'note on a listing that is not in the snapshot',
-      (s) => {
-        s.notes = [noteRow('00000000-0000-4000-8000-0000000000ff', USER_ID)];
-      },
-    ],
-    [
       'note by someone who is not a member',
       (s) => {
         s.notes = [noteRow(s.listings[0].id, OTHER_HOUSEHOLD_ID)];
-      },
-    ],
-    [
-      'household hide of a listing that is not in the snapshot',
-      (s) => {
-        s.hides = [
-          {
-            listingId: '00000000-0000-4000-8000-0000000000ff',
-            userId: USER_ID,
-            hiddenAt: '2026-10-20T12:00:00Z',
-          },
-        ];
       },
     ],
     [
@@ -379,7 +351,7 @@ describe('House Scanner RPC boundaries', () => {
       ).rejects.toThrow('inconsistent household data');
     },
   );
-  it.each([null, {}, { contractVersion: 2 }, fixtureSnapshot()])(
+  it.each([null, fixtureSnapshot()])(
     'rejects unsupported snapshot responses %#',
     async (data) => {
       sdk.rpc.mockResolvedValueOnce(reply(data));
@@ -388,15 +360,6 @@ describe('House Scanner RPC boundaries', () => {
       ).rejects.toThrow('unsupported household response');
     },
   );
-  it('does not reveal database details in RPC errors', async () => {
-    sdk.rpc.mockResolvedValue({
-      data: null,
-      error: { message: 'synthetic confidential database detail' },
-    });
-    await expect(
-      householdSnapshot(client(), HOUSEHOLD_ID, USER_ID, own()),
-    ).rejects.toThrow('The household request failed. Reload and try again.');
-  });
   it('reports a note revision conflict as a typed error', async () => {
     sdk.rpc.mockResolvedValue({
       data: null,

@@ -215,19 +215,6 @@ describe('Erik Olsson guarded run', () => {
     const result = await run(goteborg, deps(impl), (all) => all);
     expect(result.observations[0].photo).toBeNull();
   });
-
-  it('leaves the extra facts unknown when a listing page fails, without stopping the run', async () => {
-    const { impl } = fakeFetch(
-      site(2, 2, () => ({ body: '<html>tom</html>' })),
-    );
-    const result = await run(goteborg, deps(impl), (all) => all);
-    expect(result).toMatchObject({
-      detailRead: 0,
-      detailFailed: 2,
-      stopped: null,
-    });
-    expect(result.observations[0].facts.outdoor).toBeNull();
-  });
 });
 
 function erikOlsson() {

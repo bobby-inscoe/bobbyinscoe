@@ -51,6 +51,13 @@ Test behavior through a public surface. Add a focused regression check for a
 non-trivial bug or new branch; test edge and failure cases that matter. Avoid
 tests that merely repeat the implementation. Do not chase a coverage number.
 
+Add a test only when it protects security or privacy, data loss, a contract,
+a real source format, or behavior a member relies on, and no existing test
+already fails for the same break. Before adding one, extend the nearest
+existing test or table. Test a rule once, at the lowest layer that owns it.
+Do not test copy, markup, CSS, framework behavior, or every value of a table
+when two show the rule.
+
 Never commit secrets or private household data. Never log credentials, tokens,
 or personal data. Authorization belongs on the server, not in a hidden button.
 Use parameterized queries and validate data before it reaches SQL or a shell.

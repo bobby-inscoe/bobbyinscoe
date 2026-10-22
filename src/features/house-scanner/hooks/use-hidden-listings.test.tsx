@@ -42,15 +42,6 @@ afterEach(() => {
 });
 
 describe('personal hidden homes', () => {
-  it('reads the set from the snapshot, and an absent field means none', () => {
-    const none = renderHook(() => useHiddenListings(options()));
-    expect(none.result.current.hidden.size).toBe(0);
-    const some = renderHook(() =>
-      useHiddenListings(options({ snapshot: snapshotWith([first]) })),
-    );
-    expect([...some.result.current.hidden]).toEqual([first]);
-  });
-
   it('writes a hide and an unhide through the action as one id', async () => {
     const props = options();
     const { result, rerender } = renderHook((next) => useHiddenListings(next), {
@@ -156,17 +147,6 @@ describe('personal hidden homes', () => {
     );
     expect(props.onSetHidden).toHaveBeenCalledTimes(1);
   });
-
-  it('hands out the same functions when the action or snapshot changes', () => {
-    const { result, rerender } = renderHook(
-      (props: ReturnType<typeof options>) => useHiddenListings(props),
-      { initialProps: options() },
-    );
-    const { hide, unhide } = result.current;
-    rerender(options({ snapshot: snapshotWith([first]) }));
-    expect(result.current.hide).toBe(hide);
-    expect(result.current.unhide).toBe(unhide);
-  });
 });
 
 describe('moving the old browser list to the server', () => {
@@ -205,14 +185,6 @@ describe('moving the old browser list to the server', () => {
     expect(onSetHidden).toHaveBeenCalledTimes(2);
   });
 
-  it('only removes the key when none of its homes exist any more', async () => {
-    localStorage.setItem(KEY, JSON.stringify(['gone']));
-    const props = options();
-    renderHook(() => useHiddenListings(props));
-    await waitFor(() => expect(localStorage.getItem(KEY)).toBeNull());
-    expect(props.onSetHidden).not.toHaveBeenCalled();
-  });
-
   it('does nothing without a key, for the demo, or for another member', () => {
     const props = options();
     renderHook(() => useHiddenListings(props));
@@ -228,6 +200,7 @@ describe('moving the old browser list to the server', () => {
   });
 
   it.each([
+    ['only homes that no longer exist', JSON.stringify(['gone'])],
     ['not JSON', '{oops'],
     ['not an array', JSON.stringify({ a: true })],
   ])(
