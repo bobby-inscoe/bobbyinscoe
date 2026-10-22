@@ -63,7 +63,7 @@ describe('clusterMapPoints', () => {
   it('checks neighboring buckets rather than separating close homes at grid boundaries', () => {
     const zoom = 11;
     const pixelLongitude = 360 / (512 * 2 ** zoom);
-    const boundary = Math.round((11.97 + 180) / pixelLongitude / 56) * 56;
+    const boundary = Math.round((11.97 + 180) / pixelLongitude / 36) * 36;
     const groups = clusterMapPoints(
       [
         home('left', (boundary - 10) * pixelLongitude - 180),
@@ -73,6 +73,16 @@ describe('clusterMapPoints', () => {
     );
     expect(groups).toHaveLength(1);
     expect(groups[0].nearby).toBe(true);
+  });
+
+  it('reveals homes 45 pixels apart while still grouping close neighbors', () => {
+    const pixelLongitude = 360 / (512 * 2 ** 11);
+    expect(
+      clusterMapPoints([home('a'), home('b', 11.97 + 45 * pixelLongitude)], 11),
+    ).toHaveLength(2);
+    expect(
+      clusterMapPoints([home('a'), home('b', 11.97 + 30 * pixelLongitude)], 11),
+    ).toHaveLength(1);
   });
 
   it('keeps membership and marker keys stable across point reordering and fractional zoom', () => {

@@ -666,6 +666,80 @@
     white-space: normal;
   }
 }
+.pinCard.photoPinCard {
+  left: 12px;
+  right: auto;
+  bottom: 12px;
+  width: min(360px, calc(100% - 24px));
+  max-height: calc(100% - 24px);
+  height: min(460px, calc(100% - 80px));
+  display: flex;
+  gap: 0;
+  padding: 0;
+  border-radius: var(--mantine-radius-lg);
+}
+.photoPinImage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.photoPinImage > :global(.mantine-Stack-root) {
+  height: 100%;
+  gap: 0;
+}
+.photoPinImage .photoFrame {
+  flex: 1;
+  min-height: 0;
+}
+.photoPinImage .photo,
+.photoPinImage .placeholder {
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+.photoPinImage .photoAttribution {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 2px 10px;
+  background: var(--shellter-surface);
+}
+.photoPinImage .newFlag {
+  top: 8px;
+  bottom: auto;
+}
+.photoPinClose {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  border-radius: 50%;
+  background: var(--shellter-surface);
+}
+.photoPinClose :global(.mantine-CloseButton-root) {
+  min-width: 44px;
+  min-height: 44px;
+}
+.photoPinActions {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 28px;
+}
+.photoPinActions .star,
+.photoPinActions .hide {
+  position: static;
+  min-width: 44px;
+  min-height: 44px;
+}
+.photoPinActions :global(.mantine-Button-root) {
+  min-height: 44px;
+}
+.photoPinSummary {
+  flex-shrink: 0;
+  padding: 6px 12px 10px;
+  overflow-wrap: anywhere;
+}
 /* A full-width photo in a wide sheet would fill most of its height. */
 .drawerBody .photo {
   max-height: 320px;
@@ -749,6 +823,9 @@
 .photoButton {
   display: block;
   width: 100%;
+}
+.photoPinImage .photoButton {
+  height: 100%;
 }
 .photoButton:focus-visible,
 .titleButton:focus-visible {
@@ -914,7 +991,7 @@
   position: absolute;
   top: 12px;
   left: 12px;
-  z-index: 2;
+  z-index: 3;
   padding: var(--mantine-spacing-xs);
   background: var(--shellter-surface);
   border-radius: var(--mantine-radius-md);

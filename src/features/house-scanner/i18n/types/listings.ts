@@ -149,6 +149,10 @@ export interface ListingsTranslations {
     savedByMembers: string;
   };
   map: {
+    cardLayout: string;
+    classicCard: string;
+    photoCard: string;
+    priceMissing: string;
     selected: string;
     mapTilesAreUnavailableTheListingControlsAndDetails: string;
     thisBrowserCannotDisplayTheMapUseTheListing: string;

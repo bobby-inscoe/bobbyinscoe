@@ -205,6 +205,7 @@ export function HouseholdMap({
   const map = useRef<MapLibreMap | null>(null);
   const [error, setError] = useState<Feedback>('');
   const [loaded, setLoaded] = useState(false);
+  const [overlayHeight, setOverlayHeight] = useState(0);
   const [stack, setStack] = useState<string[]>([]);
   const [unlocatedOpen, setUnlocatedOpen] = useState(false);
   const [mobileOptionsOpen, setMobileOptionsOpen] = useState(false);
@@ -547,9 +548,7 @@ export function HouseholdMap({
     const center: [number, number] = [selectedLongitude, selectedLatitude];
     const { clientWidth, clientHeight } = instance.getContainer();
     // The card sits over the bottom of the map, so the free area ends above it.
-    const cardHeight =
-      overlayRef.current?.firstElementChild?.getBoundingClientRect().height ??
-      0;
+    const cardHeight = overlayHeight;
     const cardInset = cardHeight ? cardHeight + CARD_GAP : 0;
     // Clear the corner controls only while a whole marker still fits between them and the card.
     const top = Math.min(
@@ -586,7 +585,14 @@ export function HouseholdMap({
     // Keep the first view, which frames every marker, when the pin is already in sight.
     if (!inFreeArea)
       instance.jumpTo({ center, padding: { top, bottom: inset } });
-  }, [selectedId, selectedLongitude, selectedLatitude, loaded, error]);
+  }, [
+    selectedId,
+    selectedLongitude,
+    selectedLatitude,
+    loaded,
+    error,
+    overlayHeight,
+  ]);
   // Escape with focus anywhere in the map area (markers, controls, the card) clears the selection.
   useEffect(() => {
     const stage = stageRef.current;
@@ -640,24 +646,35 @@ export function HouseholdMap({
     const stage = stageRef.current;
     const card = overlayRef.current?.firstElementChild;
     if (!hasOverlay || !stage || !card) return;
-    const observer = new ResizeObserver(() =>
-      stage.style.setProperty(
-        '--card-height',
-        `${card.getBoundingClientRect().height}px`,
-      ),
-    );
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      const height = card.getBoundingClientRect().height;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        setOverlayHeight(height);
+        stage.style.setProperty('--card-height', `${height}px`);
+      });
+    });
     observer.observe(card);
     return () => {
       observer.disconnect();
+      cancelAnimationFrame(frame);
       stage.style.removeProperty('--card-height');
     };
   }, [hasOverlay]);
   useEffect(() => {
     const element = container.current;
     if (!element || error) return;
-    const observer = new ResizeObserver(() => map.current?.resize());
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => map.current?.resize());
+    });
     observer.observe(element);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+    };
   }, [error]);
   const mapOptions = (
     <Stack gap="xs">

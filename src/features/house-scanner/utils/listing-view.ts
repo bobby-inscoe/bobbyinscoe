@@ -94,7 +94,9 @@ export function mapPoints(
       : '';
     const price = listing.conflicts.includes('askingPriceSek')
       ? intl.formatMessage({ id: 'listings.map.priceDisputed' })
-      : formatPrice(listing.facts.askingPriceSek, intl);
+      : listing.facts.askingPriceSek === null
+        ? intl.formatMessage({ id: 'listings.map.priceMissing' })
+        : formatPrice(listing.facts.askingPriceSek, intl);
     const status = listing.conflicts.includes('status')
       ? intl.formatMessage({ id: 'listings.map.statusDisputed' })
       : displayLabel(intl, listing.facts.status);
@@ -106,7 +108,7 @@ export function mapPoints(
           markerText:
             listing.facts.askingPriceSek === null ||
             listing.conflicts.includes('askingPriceSek')
-              ? '?'
+              ? price
               : compactPrice(listing.facts.askingPriceSek, intl),
           label: `${listing.title}: ${price} · ${status}${saveLabel}${hiddenNote}`,
           dimmed,

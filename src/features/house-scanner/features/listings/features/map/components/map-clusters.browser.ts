@@ -21,6 +21,12 @@ test.beforeEach(async ({ context, page }) => {
       },
     }),
   );
+  await page.route('https://images.example.invalid/map-home.svg', (route) =>
+    route.fulfill({
+      contentType: 'image/svg+xml',
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600"><path fill="#bfdae3" d="M0 0h800v600H0z"/><path fill="#709579" d="M0 400h800v200H0z"/><path fill="#eee1c9" d="M170 270h460v240H170z"/><path fill="#865b48" d="m130 280 270-180 270 180z"/><path fill="#507a83" d="M220 320h95v95h-95zm265 0h95v95h-95z"/><path fill="#a18060" d="M355 350h90v160h-90z"/></svg>',
+    }),
+  );
 });
 
 async function openMap(page: Page, count = 4) {
@@ -35,6 +41,15 @@ async function openMap(page: Page, count = 4) {
         ...clusterTemplate,
         id: index === 0 ? clusterTemplate.id : '10000000-0000-4000-8000-' + String(index).padStart(12, '0'),
         title: 'Cluster home ' + (index + 1),
+        photo: {
+          url: 'https://images.example.invalid/map-home.svg',
+          attribution: 'Synthetic illustration',
+          rightsBasis: 'Authored fixture',
+          observedAt: '2026-10-12T12:00:00Z',
+          expiresAt: '2099-10-12T12:00:00Z',
+          displayAllowed: true,
+          hotlinkAllowed: true,
+        },
         coordinates: {
           ...clusterTemplate.coordinates,
           longitude: ${count === 4 ? '[11.97, 11.97, 11.9714, 12.01][index]' : '11.97 + (Math.floor(index / 5) % 20) * 0.0002'},
@@ -138,6 +153,82 @@ test('the synthetic demo exposes a nearby cluster', async ({ page }) => {
   await expect(
     page.getByRole('button', { name: /^2 homes nearby/ }),
   ).toBeVisible();
+});
+
+test('card layouts switch an open preview and preserve details, saves and selection', async ({
+  page,
+}) => {
+  await openMap(page);
+  await page.getByRole('button', { name: /^3 homes nearby/ }).click();
+  const pin = page.getByRole('button', { name: /^2 homes at this point/ });
+  await pin.click();
+  const preview = page.getByRole('article', {
+    name: 'Selected home: Cluster home 1',
+    exact: true,
+  });
+  await openOptionsOnPhone(page);
+  await expect(
+    page.getByRole('button', { name: 'Classic', exact: true }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Photo', exact: true }).click();
+  if (test.info().project.name === 'narrow')
+    await page.getByRole('button', { name: 'Map options' }).click();
+  await expect(
+    page.getByRole('dialog', { name: 'Map options', exact: true }),
+  ).toHaveCount(0);
+  await expect(preview).toBeVisible();
+  await expect(
+    preview.getByRole('img', { name: 'Cluster home 1', exact: true }),
+  ).toBeVisible();
+  await expect(
+    preview.getByText('Synthetic illustration', { exact: true }),
+  ).toBeVisible();
+  const image = preview.getByRole('button', {
+    name: 'View Cluster home 1',
+    exact: true,
+  });
+  const imageBox = await image.boundingBox();
+  const cardBox = await preview.boundingBox();
+  if (!imageBox || !cardBox) throw new Error('Missing photo card geometry.');
+  expect(imageBox.width / cardBox.width).toBeGreaterThan(0.95);
+  expect(imageBox.height / cardBox.height).toBeGreaterThan(0.7);
+  expect(cardBox.x).toBeGreaterThanOrEqual(0);
+  expect(cardBox.x + cardBox.width).toBeLessThanOrEqual(
+    page.viewportSize()?.width ?? 0,
+  );
+  await expect(pin).toHaveAttribute('aria-pressed', 'true');
+  await page.screenshot({ path: test.info().outputPath('photo-card.png') });
+  await preview.getByRole('button', { name: 'Details', exact: true }).click();
+  const details = page.getByRole('dialog', {
+    name: 'Cluster home 1',
+    exact: true,
+  });
+  await expect(details).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(details).toHaveCount(0);
+  await preview
+    .getByRole('button', { name: 'Save favorite', exact: true })
+    .click();
+  await expect(
+    preview.getByRole('button', { name: 'Remove my favorite', exact: true }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Select', exact: true }).click();
+  await preview
+    .getByRole('button', { name: 'Select home', exact: true })
+    .click();
+  await expect(
+    preview.getByRole('button', { name: 'Selected', exact: true }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await openOptionsOnPhone(page);
+  await page.getByRole('button', { name: 'Classic', exact: true }).click();
+  if (test.info().project.name === 'narrow')
+    await page.getByRole('button', { name: 'Map options' }).click();
+  await expect(preview).toBeVisible();
+  await expect(
+    preview.getByRole('button', { name: 'Selected', exact: true }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await preview.getByRole('button', { name: 'Close selected home' }).click();
+  await expect(preview).toHaveCount(0);
 });
 
 test('zooming merges and splits markers while preserving the selected home', async ({

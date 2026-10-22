@@ -303,6 +303,10 @@ export const sv = {
         'Sparad av {count, plural, one {# medlem} other {# medlemmar}}',
     },
     map: {
+      cardLayout: 'Kartkortets layout',
+      classicCard: 'Klassisk',
+      photoCard: 'Foto',
+      priceMissing: 'Pris saknas',
       selected: '{value0}. {value1} valda{value2}',
       mapTilesAreUnavailableTheListingControlsAndDetails:
         'Kartbilderna är inte tillgängliga. Du kan fortfarande använda bostadslistan och detaljerna.',
@@ -330,7 +334,8 @@ export const sv = {
       pinGuide: 'Guide till kartnålar',
       '28M28MillionSEK': '2,8M = 2,8 miljoner SEK',
       '850k850000SEK': '850k = 850 000 SEK',
-      priceUnknownOrDisputed: '? = Okänt eller motstridigt pris',
+      priceUnknownOrDisputed:
+        'Pris saknas / Motstridiga prisuppgifter = Inget bekräftat utgångspris',
       numbersCountGroupedHomesTapToZoomOrChoose:
         'Siffrorna visar antalet grupperade bostäder. Tryck för att zooma eller välja.',
       groupFillShowsWhetherAnyoneSavedAHomeIn:

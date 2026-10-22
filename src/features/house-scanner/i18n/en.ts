@@ -300,6 +300,10 @@ export const en = {
         'Saved by {count, plural, one {# member} other {# members}}',
     },
     map: {
+      cardLayout: 'Map card layout',
+      classicCard: 'Classic',
+      photoCard: 'Photo',
+      priceMissing: 'Price missing',
       selected: '{value0}. {value1} selected{value2}',
       mapTilesAreUnavailableTheListingControlsAndDetails:
         'Map tiles are unavailable. The listing controls and details remain usable.',
@@ -327,7 +331,8 @@ export const en = {
       pinGuide: 'Pin guide',
       '28M28MillionSEK': '2.8M = 2.8 million SEK',
       '850k850000SEK': '850k = 850,000 SEK',
-      priceUnknownOrDisputed: '? = Price unknown or disputed',
+      priceUnknownOrDisputed:
+        'Price missing / Price disputed = No confirmed asking price',
       numbersCountGroupedHomesTapToZoomOrChoose:
         'Numbers count grouped homes. Tap to zoom or choose.',
       groupFillShowsWhetherAnyoneSavedAHomeIn:

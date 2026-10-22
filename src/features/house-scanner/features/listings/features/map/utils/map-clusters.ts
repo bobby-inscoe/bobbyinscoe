@@ -9,7 +9,7 @@ export interface MapGroup {
   nearby: boolean;
 }
 
-const CLUSTER_RADIUS = 56;
+const CLUSTER_RADIUS = 36;
 export const MAX_CLUSTER_ZOOM = 20;
 
 function project({ longitude, latitude }: LocatedPoint['coordinates']) {
