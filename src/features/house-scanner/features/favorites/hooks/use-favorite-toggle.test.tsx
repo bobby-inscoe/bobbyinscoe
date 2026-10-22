@@ -8,7 +8,7 @@ import {
   OTHER_USER_ID,
   USER_ID,
 } from '@/features/house-scanner/api/session-test-helpers';
-import { useFavoriteToggle } from '@/features/house-scanner/hooks/use-favorite-toggle';
+import { useFavoriteToggle } from '@/features/house-scanner/features/favorites/hooks/use-favorite-toggle';
 import { MessageError } from '@/features/house-scanner/i18n/catalogs';
 import type { Snapshot } from '@/features/house-scanner/types/contracts';
 import type { HouseholdActions } from '@/features/house-scanner/types/household';

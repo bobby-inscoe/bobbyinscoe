@@ -19,16 +19,16 @@ import {
 } from '@/features/house-scanner/i18n/catalogs';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
-import { MapPinGuide } from '@/features/house-scanner/components/map-pin-guide';
-import { classes } from '@/features/house-scanner/theme/shellter-theme';
-import type { MapPoint } from '@/features/house-scanner/utils/listing-view';
+import { MapPinGuide } from '@/features/house-scanner/features/listings/features/map/components/map-pin-guide';
 import {
   clusterExpansionZoom,
   clusterMapPoints,
   isolationZoom,
   type MapGroup,
-} from '@/features/house-scanner/utils/map-clusters';
-import { mapSelectionIds } from '@/features/house-scanner/utils/map-selection';
+} from '@/features/house-scanner/features/listings/features/map/utils/map-clusters';
+import { mapSelectionIds } from '@/features/house-scanner/features/listings/features/map/utils/map-selection';
+import { classes } from '@/features/house-scanner/theme/shellter-theme';
+import type { MapPoint } from '@/features/house-scanner/utils/listing-view';
 
 // MapLibre resolves its default worker beside import.meta.url, which Vite rewrites.
 setWorkerUrl(workerUrl);

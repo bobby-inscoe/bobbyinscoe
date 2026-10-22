@@ -1,7 +1,7 @@
 import { Stack } from '@mantine/core';
 
 import { ListingCard } from '@/features/house-scanner/components/listing-card';
-import { ManualListingForm } from '@/features/house-scanner/components/manual-listing-form';
+import { ManualListingForm } from '@/features/house-scanner/features/add-link/components/manual-listing-form';
 import type { ListingNotesController } from '@/features/house-scanner/hooks/use-listing-notes';
 import type {
   Listing,

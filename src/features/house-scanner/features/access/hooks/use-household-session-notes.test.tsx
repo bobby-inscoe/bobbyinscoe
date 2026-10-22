@@ -16,7 +16,7 @@ import {
   startReply,
   USER_ID,
 } from '@/features/house-scanner/api/session-test-helpers';
-import { useHouseholdSession } from '@/features/house-scanner/hooks/use-household-session';
+import { useHouseholdSession } from '@/features/house-scanner/features/access/hooks/use-household-session';
 import { NoteConflictError } from '@/features/house-scanner/types/notes';
 
 vi.mock('@supabase/supabase-js', async () => {

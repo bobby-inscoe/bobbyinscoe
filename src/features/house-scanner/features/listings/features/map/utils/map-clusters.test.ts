@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import type { MapPoint } from '@/features/house-scanner/utils/listing-view';
 import {
   clusterExpansionZoom,
   clusterMapPoints,
   isolationZoom,
   MAX_CLUSTER_ZOOM,
-} from '@/features/house-scanner/utils/map-clusters';
-import { mapSelectionIds } from '@/features/house-scanner/utils/map-selection';
+} from '@/features/house-scanner/features/listings/features/map/utils/map-clusters';
+import { mapSelectionIds } from '@/features/house-scanner/features/listings/features/map/utils/map-selection';
+import type { MapPoint } from '@/features/house-scanner/utils/listing-view';
 
 function home(id: string, longitude = 11.97, latitude = 57.71): MapPoint {
   return {

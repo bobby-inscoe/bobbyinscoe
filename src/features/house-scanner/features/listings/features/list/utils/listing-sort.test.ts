@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
+import { sortListings } from '@/features/house-scanner/features/listings/features/list/utils/listing-sort';
 import { SYNTHETIC_SNAPSHOT } from '@/features/house-scanner/mock/synthetic-household';
-import { sortListings } from '@/features/house-scanner/utils/listing-sort';
 
 const base = SYNTHETIC_SNAPSHOT.listings[0];
 const homes = [

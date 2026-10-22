@@ -23,6 +23,47 @@ feature's internal files. If two features need the same stable concept, move
 that concept to an appropriate shared location; do not move feature behavior
 just to avoid an import. Shared code must not import a feature or the app.
 
+## Shellter feature ownership
+
+Shellter follows the [Bulletproof React feature structure](https://github.com/alan2207/bulletproof-react/blob/master/docs/project-structure.md),
+with recursive `features/` directories for subfeatures. Each level can own
+`components/`, `hooks/`, `api/`, `utils/`, `types/`, `assets/`, and `routes/`.
+Create a directory only when it has code to own. Keep tests beside that code
+and import modules directly without barrels.
+
+Under `src/features/house-scanner/`:
+
+| Path | Owner |
+| --- | --- |
+| `features/listings/` | Browse panel, filters, and Listings route |
+| `features/listings/features/list/` | List batching, sorting, and scroll control |
+| `features/listings/features/map/` | Map rendering, pins, clusters, and selection review |
+| `features/favorites/` | Favorites route and save/remove controller |
+| `features/viewings/` | Viewings route and schedule panel |
+| `features/add-link/` | Add Link route and submission form |
+| `features/settings/` | Settings route and composition of criteria and household settings |
+| `features/settings/features/criteria/` | Search profile editor and criteria help |
+| `features/settings/features/household/` | Household membership and invitation management panel |
+| `features/access/` | Sign-in, password setup, invitation acceptance, and session lifecycle |
+
+Place code at the lowest common owner of its consumers. Parent composition
+can import its child features. Sibling features use shared code at their
+common parent rather than importing each other's internals. The page,
+workspace, and route tree compose the child features at the Shellter root.
+
+The root `components/`, `hooks/`, `utils/`, and `types/` hold concepts used
+across tabs: listing cards and details, notes, viewing times, manual listing
+editing, domain contracts, and browse state. A listing card is also used by
+Add Link, so it belongs here rather than inside the List subfeature. Favorites
+uses the same browse panel as Listings; it does not duplicate List or Map.
+Root browser tests cover the shell and navigation across features.
+
+The root `api/` remains the household transport and snapshot boundary. Its
+client serves the shared session lifecycle and household actions across tabs;
+moving it into a tab would give that tab ownership of other tabs' data access.
+Put future requests used by only one feature in that feature's `api/`.
+Translations and the theme remain shared at the Shellter root.
+
 ## Styling
 
 Every project inherits the root Mantine theme. `src/app/theme.ts` holds it,
