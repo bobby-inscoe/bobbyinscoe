@@ -3,6 +3,8 @@ import {
   readBjurforsSearchPage,
 } from '@house-scanner-tools/bjurfors-parser';
 import {
+  BONEO_PHOTO_BASE,
+  BONEO_PHOTO_NAME,
   readBoneoDetailPage,
   readBoneoSearchPage,
 } from '@house-scanner-tools/boneo-parser';
@@ -73,6 +75,9 @@ export function partitionUrl(municipality: string): string | null {
     .join('/')}`;
 }
 
+// A larger style the site's own listing page uses, so a plan is readable. It serves webp and jpeg names alike.
+const BONEO_PLAN_BASE = `${BONEO_IMAGE_ORIGIN}/target_styles/properties/sizex2/1650x1100/`;
+
 export const boneoAdapter: SourceAdapter = {
   sourceId: BONEO_SOURCE_ID,
   executor: 'boneo-personal-read',
@@ -89,6 +94,19 @@ export const boneoAdapter: SourceAdapter = {
     if (!partition.propertyTypes.includes('apartment'))
       return { unsupported: 'only-apartment-path-known' };
     return base;
+  },
+  imagesFor(facts, observedAt) {
+    const plan = facts.planKey;
+    return imagesOf(
+      (facts.photoKeys ?? [])
+        .filter((key) => BONEO_PHOTO_NAME.test(key))
+        .map((key) => `${BONEO_PHOTO_BASE}${key}`),
+      plan !== undefined && BONEO_PHOTO_NAME.test(plan)
+        ? `${BONEO_PLAN_BASE}${plan}`
+        : undefined,
+      'Boneo',
+      observedAt,
+    );
   },
   readSearchPage: readBoneoSearchPage,
   readDetailPage(html) {
