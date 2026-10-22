@@ -285,8 +285,10 @@ export const listingSchema = z.strictObject({
   coordinates: coordinateSchema.nullable(),
   evidence: z.array(evidenceSchema).max(50),
   photo: photoSchema.nullable(),
-  // Every photo, the lead one first. Only manual links carry several; absent means just `photo`.
+  // Every photo, the lead one first. Absent means just `photo`.
   photos: z.array(photoSchema).max(10).optional(),
+  // The broker's floor plan, on catalog homes that have one.
+  floorPlan: photoSchema.optional(),
   /** Previous comparable, undisputed asking price in this source episode; unknown prices break the chain. */
   previousAskingPriceSek: money.positive().nullable(),
   /** Latest accepted collector observation time; not discovery, change or broker publication time. */

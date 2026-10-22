@@ -185,6 +185,7 @@ export const en = {
       conflictingFields: 'Conflicting fields: {value0}',
       viewings: 'Viewings',
       photos: 'Photos',
+      floorPlan: 'Floor plan',
       buildingAndOutdoor: 'Building and outdoor',
       floor: 'Floor',
       lift: 'Lift',

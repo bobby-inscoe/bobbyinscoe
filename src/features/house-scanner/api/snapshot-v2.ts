@@ -71,6 +71,13 @@ const v2Home = z.object({
     .max(10)
     .optional(),
   photoExpiresAt: timestamp.optional(),
+  floorPlan: z
+    .object({
+      url: photoSchema.shape.url,
+      expiresAt: timestamp,
+      observedAt: timestamp,
+    })
+    .optional(),
   previousAskingPriceSek: listingSchema.shape.previousAskingPriceSek
     .unwrap()
     .optional(),
@@ -178,26 +185,47 @@ export function expandSnapshot(v2: SnapshotV2): Snapshot {
       };
     }
     const credit = home.sourceId ? v2.sources[home.sourceId] : undefined;
+    const photo = home.photo
+      ? {
+          url: home.photo.url,
+          attribution: carried(
+            home.photo.attribution ?? credit?.photoAttribution,
+          ),
+          rightsBasis: carried(
+            home.photo.rightsBasis ?? credit?.photoRightsBasis,
+          ),
+          expiresAt: home.photo.expiresAt,
+          observedAt: home.photo.observedAt,
+          displayAllowed: true as const,
+          hotlinkAllowed: true as const,
+        }
+      : null;
+    // Gallery photos share the lead photo's credit and times; the floor plan carries the source's credit.
     return {
       ...shared,
       origin: 'source',
       sourceId: home.sourceId,
       sourceUrls: [carried(home.url)],
-      photo: home.photo
+      photo,
+      ...(home.photos
         ? {
-            url: home.photo.url,
-            attribution: carried(
-              home.photo.attribution ?? credit?.photoAttribution,
-            ),
-            rightsBasis: carried(
-              home.photo.rightsBasis ?? credit?.photoRightsBasis,
-            ),
-            expiresAt: home.photo.expiresAt,
-            observedAt: home.photo.observedAt,
-            displayAllowed: true,
-            hotlinkAllowed: true,
+            photos: home.photos.map(({ url }) => ({
+              ...carried(photo ?? undefined),
+              url,
+            })),
           }
-        : null,
+        : {}),
+      ...(home.floorPlan
+        ? {
+            floorPlan: {
+              ...home.floorPlan,
+              attribution: carried(credit?.photoAttribution),
+              rightsBasis: carried(credit?.photoRightsBasis),
+              displayAllowed: true as const,
+              hotlinkAllowed: true as const,
+            },
+          }
+        : {}),
       addedBy: null,
       userTags: [],
       ...(home.delistedAt ? { delistedAt: home.delistedAt } : {}),
