@@ -1768,8 +1768,62 @@ describe('set-based publish', () => {
   });
 });
 
+// Data foundation migrations (spec: house-scanner-data-foundation).
+const WRITE_PATH = '20261022102043_house_scanner_write_path';
+const CARDS = '20261022103309_house_scanner_listing_cards';
+const rollback = (name: string) =>
+  readFile(new URL(`../rollbacks/${name}_down.sql`, import.meta.url), 'utf8');
+
+// A database with the migrations up to and including the named one.
+async function migratedThrough(last: string) {
+  const database = await PGlite.create();
+  await database.exec(`create role anon; create role authenticated; create role service_role;
+    create schema auth; create table auth.users(id uuid primary key);
+    create function auth.uid() returns uuid language sql stable as $$
+      select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;`);
+  for (const name of (await readdir(new URL('../migrations/', import.meta.url)))
+    .filter((name) => name.endsWith('.sql') && name <= `${last}.sql`)
+    .sort())
+    await database.exec(await migration(name));
+  return database;
+}
+
+// Functions with their grants, tables, indexes, columns, triggers and storage options of hs, as text. Function texts
+// ignore carriage returns: a Windows checkout gives the migration files CRLF line endings.
+async function fingerprint(database: PGlite) {
+  const result = await database.query<{ line: string }>(`
+    select 'fn '||n.nspname||'.'||p.proname||'('||pg_get_function_identity_arguments(p.oid)||') '||md5(replace(pg_get_functiondef(p.oid),chr(13),''))
+      ||' anon='||has_function_privilege('anon',p.oid,'execute')||' auth='||has_function_privilege('authenticated',p.oid,'execute')
+      ||' svc='||has_function_privilege('service_role',p.oid,'execute') line
+    from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('hs','public')
+    union all select 'relation '||c.relkind::text||' '||c.relname||' rls='||c.relrowsecurity from pg_class c
+      join pg_namespace n on n.oid=c.relnamespace where n.nspname='hs' and c.relkind in ('r','S')
+    union all select 'index '||indexdef from pg_indexes where schemaname='hs'
+    union all select 'column '||table_name||'.'||column_name||' '||data_type from information_schema.columns where table_schema='hs'
+    union all select 'trigger '||pg_get_triggerdef(t.oid) from pg_trigger t join pg_class c on c.oid=t.tgrelid
+      join pg_namespace n on n.oid=c.relnamespace where n.nspname='hs' and not t.tgisinternal
+    union all select 'options '||c.relname||' '||coalesce(array_to_string(c.reloptions,','),'') from pg_class c
+      join pg_namespace n on n.oid=c.relnamespace where n.nspname='hs' and c.relkind='r'
+    order by line`);
+  return result.rows.map((row) => row.line);
+}
+
+// A fresh database on every migration with the given sources and a credential for them.
+async function sources(...ids: string[]) {
+  const database = await freshDatabase('all');
+  for (const id of ids)
+    await database.query(
+      'insert into hs.source_policies(source_id,policy) values($1,$2::jsonb)',
+      [id, JSON.stringify(policy(id))],
+    );
+  await database.query(
+    "insert into hs.ingest_credentials(key_id,source_ids,expires_at) values($1,$2,now()+interval '1 day')",
+    [KEY, ids],
+  );
+  return database;
+}
+
 describe('write-path fixes', () => {
-  const WRITE_PATH = '20261022102043_house_scanner_write_path';
   const WRITE_PATH_DOWN = new URL(
     `../rollbacks/${WRITE_PATH}_down.sql`,
     import.meta.url,
@@ -1781,55 +1835,15 @@ describe('write-path fixes', () => {
     where r.state='published' and result->>'status' in ('success','partial')
     order by result->>'sourceId',e.published_at desc,e.id desc`;
 
-  async function sources(...ids: string[]) {
-    const database = await freshDatabase('all');
-    for (const id of ids)
-      await database.query(
-        'insert into hs.source_policies(source_id,policy) values($1,$2::jsonb)',
-        [id, JSON.stringify(policy(id))],
-      );
-    await database.query(
-      "insert into hs.ingest_credentials(key_id,source_ids,expires_at) values($1,$2,now()+interval '1 day')",
-      [KEY, ids],
-    );
-    return database;
-  }
-
-  // Functions with their grants, indexes, columns, triggers and storage options of hs, as text. Function texts ignore
-  // carriage returns: a Windows checkout gives the migration files CRLF line endings.
-  async function fingerprint(database: PGlite) {
-    const result = await database.query<{ line: string }>(`
-      select 'fn '||n.nspname||'.'||p.proname||'('||pg_get_function_identity_arguments(p.oid)||') '||md5(replace(pg_get_functiondef(p.oid),chr(13),''))
-        ||' anon='||has_function_privilege('anon',p.oid,'execute')||' auth='||has_function_privilege('authenticated',p.oid,'execute')
-        ||' svc='||has_function_privilege('service_role',p.oid,'execute') line
-      from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('hs','public')
-      union all select 'index '||indexdef from pg_indexes where schemaname='hs'
-      union all select 'column '||table_name||'.'||column_name||' '||data_type from information_schema.columns where table_schema='hs'
-      union all select 'trigger '||pg_get_triggerdef(t.oid) from pg_trigger t join pg_class c on c.oid=t.tgrelid
-        join pg_namespace n on n.oid=c.relnamespace where n.nspname='hs' and not t.tgisinternal
-      union all select 'options '||c.relname||' '||coalesce(array_to_string(c.reloptions,','),'') from pg_class c
-        join pg_namespace n on n.oid=c.relnamespace where n.nspname='hs' and c.relkind='r'
-      order by line`);
-    return result.rows.map((row) => row.line);
-  }
-
   it('rolls back to exactly the earlier schema and applies again', async () => {
-    const earlier = await freshDatabase('all');
+    const earlier = await migratedThrough(WRITE_PATH);
     try {
       await earlier.exec(await readFile(WRITE_PATH_DOWN, 'utf8'));
       const rolledBack = await fingerprint(earlier);
-      const plain = await PGlite.create();
+      const plain = await migratedThrough(
+        '20261022065048_house_scanner_listing_history',
+      );
       try {
-        await plain.exec(`create role anon; create role authenticated; create role service_role;
-          create schema auth; create table auth.users(id uuid primary key);
-          create function auth.uid() returns uuid language sql stable as $$
-            select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;`);
-        for (const name of (
-          await readdir(new URL('../migrations/', import.meta.url))
-        )
-          .filter((name) => name.endsWith('.sql') && name < WRITE_PATH)
-          .sort())
-          await plain.exec(await migration(name));
         expect(rolledBack).toEqual(await fingerprint(plain));
       } finally {
         await plain.close();
@@ -1954,6 +1968,273 @@ describe('write-path fixes', () => {
         delisted: false,
         changes: ['delisted', 'relisted'],
       });
+    } finally {
+      await database.close();
+    }
+  });
+});
+
+describe('listing cards', () => {
+  const now = () => new Date().toISOString();
+  const hours = (count: number) =>
+    new Date(Date.now() + count * HOUR).toISOString();
+  // A card as today's snapshot sends the home to household $1, with the clock-dependent rules applied at read time.
+  const AS_SNAPSHOT = `
+    select jsonb_build_object(
+      'id',c.listing_id,'householdId',$1::uuid,'origin','source','sourceId',c.source_id,'title',c.title,
+      'sourceUrls',jsonb_build_array(c.source_url),'facts',c.facts,'conflicts',c.conflicts,'coordinates',shown.coordinates,
+      'evidence',coalesce((select jsonb_agg(e order by n) from jsonb_array_elements(c.evidence) with ordinality x(e,n)
+        where (e->>'observedAt')::timestamptz>=now()-c.retention),'[]'::jsonb),
+      'photo',case when hs.policy_current(p.policy) and (c.photo->>'expiresAt')::timestamptz>now()
+        and (c.photo->>'observedAt')::timestamptz>=now()-c.retention then c.photo else 'null'::jsonb end,
+      'previousAskingPriceSek',case when c.previous_price_observed_at>=now()-c.retention then c.previous_asking_price end,
+      'observedAt',c.observed_at,'addedBy',null,'userTags','[]'::jsonb,
+      'firstSeenAt',c.first_seen_at,'lastChangedAt',c.last_changed_at,'lastCheckedAt',c.last_checked_at,
+      'isNew',coalesce(c.first_seen_run_id=p.latest_run_id,false))
+     ||case when c.delisted_at is null then '{}'::jsonb else jsonb_build_object('delistedAt',c.delisted_at) end
+     ||coalesce((select jsonb_build_object('viewings',jsonb_agg(x order by x->>'startsAt')) from jsonb_array_elements(c.viewings) x
+        where hs.policy_current(p.policy) and (x->>'startsAt')::timestamptz>now() having count(*)>0),'{}'::jsonb)
+     ||case when n.id is not null and jsonb_typeof(shown.coordinates)='object' then jsonb_build_object('neighborhood',
+        jsonb_build_object('id',n.id,'name',n.name,'method','polygon','datasetVersion',n.dataset_version)) else '{}'::jsonb end
+     ||case when jsonb_typeof(shown.coordinates)='object' then jsonb_build_object('neighborhoodCandidates',
+        coalesce((select jsonb_agg(jsonb_build_object('id',a.id,'name',a.name,'method','polygon','datasetVersion',a.dataset_version) order by ids.position)
+         from unnest(c.neighborhood_candidates) with ordinality ids(id,position) join hs.neighborhoods a on a.id=ids.id),'[]'::jsonb))
+        ||case when c.neighborhood_radius_m is null then '{}'::jsonb else jsonb_build_object('neighborhoodRadiusM',c.neighborhood_radius_m) end
+       else '{}'::jsonb end item
+    from hs.listing_cards c join hs.source_policies p on p.source_id=c.source_id
+    left join hs.neighborhoods n on n.id=c.neighborhood_id
+    cross join lateral (select case when (c.coordinates->>'observedAt')::timestamptz>=now()-c.retention
+      and (c.coordinates->>'observedAt')::timestamptz<=now()+interval '5 minutes' then c.coordinates else 'null'::jsonb end coordinates) shown
+    where c.listing_id=any($2::uuid[])`;
+  const byId = <T extends { id: string }>(items: T[]) =>
+    [...items].sort((a, b) => a.id.localeCompare(b.id));
+
+  // Every source home in the household's snapshot equals its card, and every card equals a fresh computation.
+  async function matches(database: PGlite, household: string, user: string) {
+    const homes = (await snapshot(household, user, database)).listings.filter(
+      (item) => item.origin === 'source',
+    );
+    const cards = await database.query<{ item: { id: string } }>(AS_SNAPSHOT, [
+      household,
+      homes.map((item) => item.id),
+    ]);
+    expect(byId(cards.rows.map((row) => row.item))).toEqual(byId(homes));
+    const drift = await database.query('select * from hs.card_drift()');
+    expect(drift.rows).toEqual([]);
+    return homes;
+  }
+
+  it('rolls back to exactly the earlier schema and applies again', async () => {
+    const database = await migratedThrough(CARDS);
+    try {
+      const migrated = await fingerprint(database);
+      await database.exec(await rollback(CARDS));
+      const earlier = await migratedThrough(WRITE_PATH);
+      try {
+        expect(await fingerprint(database)).toEqual(await fingerprint(earlier));
+      } finally {
+        await earlier.close();
+      }
+      await database.exec(await migration(`${CARDS}.sql`));
+      expect(await fingerprint(database)).toEqual(migrated);
+      expect(
+        migrated.filter(
+          (line) => line.startsWith('fn hs.') && /card/.test(line),
+        ),
+      ).toEqual(
+        Array(5).fill(
+          expect.stringMatching(/anon=false auth=false svc=false$/),
+        ),
+      );
+      expect(migrated).toContain('relation r listing_cards rls=true');
+    } finally {
+      await database.close();
+    }
+  });
+
+  it('matches what the snapshot sends for every home of both households on the shared database', async () => {
+    const a = await matches(db, HOUSE_A, OWNER_A);
+    const b = await matches(db, HOUSE_B, OWNER_B);
+    expect(a.length).toBeGreaterThan(0);
+    expect(b.length).toBeGreaterThan(0);
+    const counts = await db.query<{ cards: number; listings: number }>(
+      'select (select count(*)::int from hs.listing_cards) cards,(select count(*)::int from hs.listings) listings',
+    );
+    expect(counts.rows[0].cards).toBe(counts.rows[0].listings);
+  });
+
+  it('follows publishes, delisting, direct edits, the clock and policy changes', async () => {
+    const database = await sources('alpha');
+    try {
+      await database.query('insert into auth.users values($1)', [OWNER_A]);
+      await database.query(
+        "insert into hs.households(id,name) values($1,'Synthetic household')",
+        [HOUSE_A],
+      );
+      await database.query(
+        "insert into hs.members(household_id,user_id,display_name,role) values($1,$2,'Synthetic owner','owner')",
+        [HOUSE_A, OWNER_A],
+      );
+      await database.query(
+        "insert into hs.profiles(id,household_id,name,enabled,criteria,edited_by) values($1,$2,'Synthetic profile',true,$3::jsonb,$4)",
+        [PROFILE_A, HOUSE_A, JSON.stringify(criteria), OWNER_A],
+      );
+      const check = () => matches(database, HOUSE_A, OWNER_A);
+      const evidence = (subject: 'facts' | 'nearby_nature', id: string) => ({
+        id,
+        kind: 'source_claim' as const,
+        subject,
+        summary: 'Synthetic claim',
+        sourceUrl: `${ORIGIN}/claim`,
+        observedAt: now(),
+        datasetVersion: null,
+        method: null,
+        value: null,
+        unit: null,
+      });
+      const pictured = (observedAt: string) =>
+        home('pictured', {
+          observedAt,
+          coordinates: {
+            longitude: 11.95,
+            latitude: 57.7,
+            precision: 'address',
+            source: 'Synthetic',
+            observedAt,
+          },
+          photo: {
+            url: `${ORIGIN}/photo.jpg`,
+            attribution: 'Synthetic image',
+            rightsBasis: 'Synthetic permission',
+            observedAt,
+            expiresAt: hours(24),
+            displayAllowed: true,
+            hotlinkAllowed: true,
+          },
+          evidence: [
+            evidence('facts', '40000000-0000-4000-8000-000000000001'),
+            evidence('nearby_nature', '40000000-0000-4000-8000-000000000002'),
+          ],
+        });
+      const facts = home('x').facts;
+      const all = ['plain', 'pictured', 'viewings', 'cheaper', 'conflicted'];
+      await publish(
+        [
+          home('plain', { observedAt: now() }),
+          pictured(now()),
+          home('viewings', {
+            observedAt: now(),
+            viewings: [
+              { startsAt: hours(72), endsAt: null },
+              { startsAt: hours(-2), endsAt: null },
+              { startsAt: hours(48), endsAt: hours(49) },
+            ],
+          }),
+          home('cheaper', { observedAt: now() }),
+          home('conflicted', { observedAt: now() }),
+          home('gone', { observedAt: now() }),
+        ],
+        { database },
+      );
+      await check();
+      for (const price of [2_300_000, 2_200_000])
+        await publish(
+          [
+            home('cheaper', {
+              observedAt: now(),
+              facts: { ...facts, askingPriceSek: price },
+            }),
+            home('conflicted', {
+              observedAt: now(),
+              facts: { ...facts, askingPriceSek: price },
+              conflicts: ['askingPriceSek'],
+            }),
+          ],
+          { database, seen: all, fullRead: true },
+        );
+      await database.query(
+        "insert into hs.favorites(household_id,listing_id,user_id,bookmark_url) select $1,id,$2,value->>'sourceUrl' from hs.listings where source_listing_id='gone'",
+        [HOUSE_A, OWNER_A],
+      );
+      const published = await check();
+      const item = (id: string, homes = published) =>
+        homes.find((entry) => entry.title === id);
+      // The scenario reaches what the card must carry.
+      expect(item('gone')?.delistedAt).toEqual(expect.any(String));
+      expect(item('cheaper')?.previousAskingPriceSek).toBe(2_300_000);
+      expect(item('conflicted')?.previousAskingPriceSek).toBeNull();
+      // The past viewing is left out and the rest come in order.
+      const starts = item('viewings')?.viewings?.map((v) => v.startsAt) ?? [];
+      expect(starts).toHaveLength(2);
+      expect(starts[0] < starts[1]).toBe(true);
+      expect(item('pictured')?.photo).not.toBeNull();
+      expect(item('pictured')?.evidence).toHaveLength(2);
+      // Time passes for the photo, the position and one claim; the card keeps them and the read leaves them out.
+      await database.query(
+        `update hs.listings set value=jsonb_set(jsonb_set(jsonb_set(value,'{photo,expiresAt}',to_jsonb($1::text)),
+          '{coordinates,observedAt}',to_jsonb($2::text)),'{evidence,0,observedAt}',to_jsonb($2::text)) where source_listing_id='pictured'`,
+        [hours(-1), aged(40)],
+      );
+      const aged40 = await check();
+      expect(item('pictured', aged40)?.photo).toBeNull();
+      expect(item('pictured', aged40)?.coordinates).toBeNull();
+      expect(item('pictured', aged40)?.evidence).toHaveLength(1);
+      // A narrower policy rewrites its source's cards without any listing write.
+      await database.query(
+        `update hs.source_policies set policy=policy||jsonb_build_object('allowedFactFields',
+          (select jsonb_agg(f) from jsonb_array_elements(policy->'allowedFactFields') f where f #>> '{}' not in ('askingPriceSek','rooms')),
+          'imageDisplay',false,'viewings',false,'allowedEvidenceSubjects','["nearby_nature"]'::jsonb,'retentionDays',10)`,
+      );
+      const narrowed = await check();
+      expect(item('cheaper', narrowed)?.facts.askingPriceSek).toBeNull();
+      expect(item('cheaper', narrowed)?.previousAskingPriceSek).toBeNull();
+      expect(item('viewings', narrowed)?.viewings).toBeUndefined();
+      const card = await database.query<{
+        photo: unknown;
+        evidence: unknown[];
+      }>(
+        "select c.photo,c.evidence from hs.listing_cards c join hs.listings l on l.id=c.listing_id where l.source_listing_id='pictured'",
+      );
+      expect(card.rows[0].photo).toBeNull();
+      expect(card.rows[0].evidence).toEqual([
+        expect.objectContaining({ subject: 'nearby_nature' }),
+      ]);
+      // A lapsed review leaves only the saved home.
+      await database.query(
+        `update hs.source_policies set policy=jsonb_set(policy,'{reviewDueAt}',to_jsonb($1::text))`,
+        [hours(-1)],
+      );
+      expect((await check()).map((entry) => entry.title)).toEqual(['gone']);
+    } finally {
+      await database.close();
+    }
+  });
+
+  it('keeps an unchanged card and its stamp, and stamps a changed one', async () => {
+    const database = await sources('alpha', 'beta');
+    try {
+      await publish([home('quiet', { observedAt: now() })], {
+        source: 'beta',
+        database,
+      });
+      await publish([home('busy', { observedAt: now() })], { database });
+      const stamps = async () =>
+        Object.fromEntries(
+          (
+            await database.query<{ id: string; seq: string }>(
+              'select l.source_listing_id id,c.changed_seq::text seq from hs.listing_cards c join hs.listings l on l.id=c.listing_id',
+            )
+          ).rows.map((row) => [row.id, row.seq]),
+        );
+      const before = await stamps();
+      // A write the card does not show, and another source's publish, which also records its latest run.
+      await database.query(
+        "update hs.listings set missed_full_reads=1 where source_listing_id='quiet'",
+      );
+      await publish([home('busy', { observedAt: now() })], { database });
+      const after = await stamps();
+      expect(after.quiet).toBe(before.quiet);
+      expect(BigInt(after.busy)).toBeGreaterThan(BigInt(before.busy));
     } finally {
       await database.close();
     }
