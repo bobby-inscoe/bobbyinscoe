@@ -85,9 +85,6 @@ test('private access is closed by default and demo state leaves no browser stora
     .getByRole('article', { name: 'Example balcony home', exact: true })
     .getByRole('button', { name: 'Save favorite', exact: true })
     .click();
-  await expect(
-    page.getByText('Favorite saved.', { exact: true }),
-  ).toBeVisible();
   await page.getByRole('button', { name: 'Leave demo' }).click();
   await expect(page.getByRole('article')).toHaveCount(0);
   await openDemo(page);
@@ -1002,9 +999,6 @@ test('an older saved listing has no scan notice and can be unfavorited by keyboa
   const remove = home.getByRole('button', { name: 'Remove my favorite' });
   await remove.focus();
   await page.keyboard.press('Enter');
-  await expect(
-    page.getByText('Your favorite was removed.', { exact: false }),
-  ).toBeVisible();
   await expect(home.getByText(/^Saved by/)).toHaveCount(0);
   await expect(
     home.getByRole('button', { name: 'Save favorite', exact: true }),

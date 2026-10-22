@@ -172,6 +172,10 @@
 .navTab {
   font-weight: 700;
 }
+.navIcon {
+  display: grid;
+  place-items: center;
+}
 @media (max-width: 35.99375em) {
   /* Room for the tab bar under the last card. */
   .page:has(.tabBar) .content {
@@ -207,38 +211,44 @@
   .navTab:hover {
     background: transparent;
   }
+  .navTab[data-variant="filled"] {
+    position: relative;
+    color: var(--shellter-teal-strong);
+    background: transparent;
+    border-color: transparent;
+  }
+  .navTab[data-variant="filled"]::after {
+    position: absolute;
+    right: 50%;
+    bottom: 0;
+    width: 24px;
+    height: 2px;
+    content: "";
+    background: currentColor;
+    border-radius: var(--mantine-radius-xl);
+    transform: translateX(50%);
+  }
+  .navTab[data-variant="filled"]:hover {
+    background: transparent;
+  }
   .navTab :global(.mantine-Button-inner) {
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: var(--mantine-spacing-xs);
+    display: grid;
+    grid-template-rows: 1fr 20px 8px 18px 1fr;
+    justify-items: center;
+    height: 100%;
   }
   .navTab :global(.mantine-Button-section) {
     margin: 0;
     width: 64px;
-    height: 34px;
+    height: 20px;
     border-radius: var(--mantine-radius-xl);
     display: grid;
     place-items: center;
-    transition: background-color 150ms ease-out;
+    grid-row: 2;
   }
-  .navIcon {
-    position: relative;
-    display: grid;
-    place-items: center;
-  }
-  .navBadge {
-    position: absolute;
-    top: -7px;
-    right: -13px;
-    pointer-events: none;
-  }
-  .navTab[data-variant="filled"] {
-    color: var(--shellter-teal-strong);
-    background: transparent;
-  }
-  .navTab[data-variant="filled"] :global(.mantine-Button-section) {
-    background: var(--shellter-teal-wash);
+  .navTab :global(.mantine-Button-label) {
+    grid-row: 4;
+    line-height: 18px;
   }
 }
 

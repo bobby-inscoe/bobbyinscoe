@@ -1,4 +1,4 @@
-import { Badge, Button, Group, Menu, Text } from '@mantine/core';
+import { Button, Group, Menu, Text } from '@mantine/core';
 import { CalendarDays, Ellipsis, House, Star } from 'lucide-react';
 import { useDeferredValue, useMemo, useState } from 'react';
 
@@ -7,10 +7,7 @@ import { ListingsPanel } from '@/features/house-scanner/components/listings-pane
 import { ManualActionsProvider } from '@/features/house-scanner/components/manual-listing-actions';
 import { PriceEstimateProvider } from '@/features/house-scanner/components/price-estimate';
 import { SettingsPanel } from '@/features/house-scanner/components/settings-panel';
-import {
-  favoriteViewings,
-  ViewingsPanel,
-} from '@/features/house-scanner/components/viewings-panel';
+import { ViewingsPanel } from '@/features/house-scanner/components/viewings-panel';
 import { useBrowseNavigation } from '@/features/house-scanner/hooks/use-browse-navigation';
 import { useFavoriteToggle } from '@/features/house-scanner/hooks/use-favorite-toggle';
 import { useHiddenListings } from '@/features/house-scanner/hooks/use-hidden-listings';
@@ -29,7 +26,6 @@ import {
   listingHost,
 } from '@/features/house-scanner/utils/listing-filters';
 import { scopeListings } from '@/features/house-scanner/utils/listing-view';
-import { viewingsWithin } from '@/features/house-scanner/utils/viewings';
 
 // Any action may be missing, which turns its control off.
 export interface HouseholdWorkspaceProps extends Partial<HouseholdActions> {
@@ -130,15 +126,6 @@ export function HouseholdWorkspace({
         : 0,
     [scoped, deferredFilters, hidden, duplicateIds],
   );
-  // Saved homes with a viewing in the next two days, for the badge on the tab.
-  const viewingsSoon = useMemo(() => {
-    const now = Date.now();
-    return viewingsWithin(
-      favoriteViewings(snapshot, 'everyone', userId, now),
-      48,
-      now,
-    );
-  }, [snapshot, userId]);
   const filterHosts = useMemo(
     () => [...new Set(snapshot.listings.map(listingHost))],
     [snapshot.listings],
@@ -225,24 +212,9 @@ export function HouseholdWorkspace({
             className={classes.navTab}
             variant={tab === 'viewings' ? 'filled' : 'default'}
             aria-pressed={tab === 'viewings'}
-            aria-label={
-              viewingsSoon > 0
-                ? `Viewings, ${viewingsSoon} saved viewings in the next 48 hours`
-                : undefined
-            }
             leftSection={
               <span className={classes.navIcon}>
                 <CalendarDays size={20} aria-hidden />
-                {viewingsSoon > 0 && (
-                  <Badge
-                    className={classes.navBadge}
-                    size="sm"
-                    variant="light"
-                    aria-hidden
-                  >
-                    {viewingsSoon}
-                  </Badge>
-                )}
               </span>
             }
             onClick={() => navigation.changeTab('viewings')}
@@ -253,7 +225,19 @@ export function HouseholdWorkspace({
             <Menu.Target>
               <Button
                 className={classes.navTab}
-                leftSection={<Ellipsis size={20} aria-hidden />}
+                leftSection={
+                  <Ellipsis
+                    size={20}
+                    fill={
+                      tab !== 'suggestions' &&
+                      tab !== 'favorites' &&
+                      tab !== 'viewings'
+                        ? 'currentColor'
+                        : 'none'
+                    }
+                    aria-hidden
+                  />
+                }
                 variant={
                   tab !== 'suggestions' &&
                   tab !== 'favorites' &&
@@ -339,7 +323,6 @@ export function HouseholdWorkspace({
               onUndoHide={hiddenActions.undo}
               hideBusy={hiddenActions.busy}
               hideError={hiddenActions.error}
-              hideMessage={hiddenActions.message}
               undoHideCount={hiddenActions.undoCount}
               canHide={hiddenActions.canHide}
               selecting={search.select}
@@ -379,7 +362,6 @@ export function HouseholdWorkspace({
               satellite={satellite}
               onSatelliteChange={setSatellite}
               pending={pending}
-              favoriteMessage={message}
               mapWarning={
                 stale && !synthetic
                   ? 'Over 36 hours old, so facts may be stale.'

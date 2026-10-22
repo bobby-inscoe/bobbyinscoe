@@ -73,12 +73,6 @@ export function useFavoriteToggle({
     setMessage('');
     try {
       await action(listingId);
-      if (active() && scope.feedbackVersion === feedbackVersion)
-        setMessage(
-          mine
-            ? 'Your favorite was removed. Other members’ saves remain.'
-            : 'Favorite saved.',
-        );
     } catch (error) {
       if (active() && scope.feedbackVersion === feedbackVersion)
         setMessage(
@@ -112,14 +106,10 @@ export function useFavoriteToggle({
     scope.saving = true;
     const feedbackVersion = ++scope.feedbackVersion;
     setBatchBusy(true);
-    setMessage(`Saving ${ids.length} ${ids.length === 1 ? 'home' : 'homes'}…`);
+    setMessage('');
     try {
       await onSaveFavorites(ids);
       if (!active()) return false;
-      if (scope.feedbackVersion === feedbackVersion)
-        setMessage(
-          `${ids.length} ${ids.length === 1 ? 'home' : 'homes'} saved to your favorites.`,
-        );
       return true;
     } catch (error) {
       if (active() && scope.feedbackVersion === feedbackVersion)
