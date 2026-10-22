@@ -80,7 +80,9 @@ export function useDemoHousehold() {
     const ids = [...new Set(listingIds)];
     const available = new Set(snapshot.listings.map((listing) => listing.id));
     if (ids.length > 500 || ids.some((id) => !available.has(id)))
-      throw new Error('Select up to 500 homes that are still available.');
+      throw new Error(
+        'listings.details.selectUpTo500HomesThatAreStillAvailable',
+      );
     const savedAt = new Date().toISOString();
     setSnapshot((current) => {
       const saved = new Set(

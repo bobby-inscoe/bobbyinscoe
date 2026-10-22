@@ -10,6 +10,13 @@ import {
 } from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { FormattedMessage, type IntlShape, useIntl } from 'react-intl';
+import {
+  englishIntl,
+  type Feedback,
+  formatFeedback,
+  messageValue,
+} from '@/features/house-scanner/i18n/catalogs';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 import { MapPinGuide } from '@/features/house-scanner/components/map-pin-guide';
@@ -98,6 +105,7 @@ function markPressed(
   selectionMode: boolean,
   checkedIds: ReadonlySet<string>,
   disabled: boolean,
+  intl: IntlShape = englishIntl,
 ) {
   for (const { button, ids, group } of entries) {
     const checked = ids.filter((id) => checkedIds.has(id)).length;
@@ -122,7 +130,10 @@ function markPressed(
     set(
       'aria-label',
       selectionMode
-        ? `${label}. ${checked} selected${ids.length === 1 ? '. Tap to toggle selection and preview' : '. Open to choose individual homes'}`
+        ? intl.formatMessage(
+            { id: 'listings.map.markerSelection' },
+            { label, count: checked, single: ids.length === 1 ? 'yes' : 'no' },
+          )
         : label,
     );
   }
@@ -173,9 +184,26 @@ export function HouseholdMap({
   captureDisabled = false,
   camera,
 }: HouseholdMapProps) {
+  const intl = useIntl();
+
+  const initialLocale = useRef({
+    'Map.Title': intl.formatMessage({ id: 'listings.list.map' }),
+    'NavigationControl.ZoomIn': intl.formatMessage({
+      id: 'listings.map.zoomIn',
+    }),
+    'NavigationControl.ZoomOut': intl.formatMessage({
+      id: 'listings.map.zoomOut',
+    }),
+    'NavigationControl.ResetBearing': intl.formatMessage({
+      id: 'listings.map.resetBearing',
+    }),
+    'AttributionControl.ToggleAttribution': intl.formatMessage({
+      id: 'listings.map.toggleAttribution',
+    }),
+  });
   const container = useRef<HTMLElement>(null);
   const map = useRef<MapLibreMap | null>(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<Feedback>('');
   const [loaded, setLoaded] = useState(false);
   const [stack, setStack] = useState<string[]>([]);
   const [unlocatedOpen, setUnlocatedOpen] = useState(false);
@@ -231,6 +259,7 @@ export function HouseholdMap({
       const savedCamera = camera?.current;
       instance = new MapLibreMap({
         container: container.current,
+        locale: initialLocale.current,
         style: satelliteRef.current ? SATELLITE_STYLE : styleUrl,
         center: savedCamera?.center ?? [centerLongitude, centerLatitude],
         zoom: savedCamera?.zoom ?? 11,
@@ -264,13 +293,11 @@ export function HouseholdMap({
       });
       instance.on('error', () =>
         setError(
-          'Map tiles are unavailable. The listing controls and details remain usable.',
+          'listings.map.mapTilesAreUnavailableTheListingControlsAndDetails',
         ),
       );
     } catch {
-      setError(
-        'This browser cannot display the map. Use the listing controls instead.',
-      );
+      setError('listings.map.thisBrowserCannotDisplayTheMapUseTheListing');
     }
     return () => {
       if (instance && camera) {
@@ -377,7 +404,15 @@ export function HouseholdMap({
           button.dataset.label =
             group.points.length === 1
               ? group.points[0].label
-              : `${group.points.length} homes ${group.nearby ? 'nearby' : 'at this point'}${savedCount ? `, ${savedCount} saved by household${savedByMe ? ', including you' : ''}` : ''}${group.nearby ? '. Zoom in to explore' : ''}`;
+              : intl.formatMessage(
+                  { id: 'listings.map.groupLabel' },
+                  {
+                    count: group.points.length,
+                    nearby: group.nearby ? 'yes' : 'no',
+                    saved: savedCount,
+                    mine: savedByMe ? 'yes' : 'no',
+                  },
+                );
           entry.marker.setLngLat([
             group.coordinates.longitude,
             group.coordinates.latitude,
@@ -433,6 +468,7 @@ export function HouseholdMap({
         batch.selectionMode,
         batch.checkedIds,
         batch.selectionDisabled,
+        intl,
       );
       if (focused && !buttons.has(focused.button)) {
         const replacement =
@@ -455,7 +491,29 @@ export function HouseholdMap({
     return () => {
       instance.off('zoomend', renderAfterZoom);
     };
-  }, [points, loaded, error]);
+  }, [points, loaded, error, intl]);
+  useEffect(() => {
+    const element = container.current;
+    if (!element || !loaded) return;
+    const controls = [
+      ['.maplibregl-ctrl-zoom-in', 'listings.map.zoomIn'],
+      ['.maplibregl-ctrl-zoom-out', 'listings.map.zoomOut'],
+      ['.maplibregl-ctrl-compass', 'listings.map.resetBearing'],
+      ['.maplibregl-ctrl-attrib-button', 'listings.map.toggleAttribution'],
+    ] as const;
+    for (const [selector, id] of controls) {
+      const control = element.querySelector(selector);
+      const label = intl.formatMessage({ id });
+      control?.setAttribute('aria-label', label);
+      control?.setAttribute('title', label);
+    }
+    element
+      .querySelector('canvas')
+      ?.setAttribute(
+        'aria-label',
+        intl.formatMessage({ id: 'listings.list.map' }),
+      );
+  }, [intl, loaded]);
   // Only the pressed state changes on selection, so a focused marker stays focused.
   useEffect(() => {
     markPressed(
@@ -464,16 +522,29 @@ export function HouseholdMap({
       selectionMode,
       checkedIds,
       selectionDisabled,
+      intl,
     );
-  }, [selectedId, selectionMode, checkedIds, selectionDisabled]);
+  }, [selectedId, selectionMode, checkedIds, selectionDisabled, intl]);
+  const latestPoints = useRef(points);
+  latestPoints.current = points;
+  const selectedPosition = points.find(
+    (point) => point.id === selectedId,
+  )?.coordinates;
+  const selectedLongitude = selectedPosition?.longitude;
+  const selectedLatitude = selectedPosition?.latitude;
+  // Label changes must not reframe a selected home after the user has panned away.
   useEffect(() => {
-    const point = points.find((candidate) => candidate.id === selectedId);
     const instance = map.current;
-    if (!point || point.unlocated || !instance || !loaded || error) return;
-    const center: [number, number] = [
-      point.coordinates.longitude,
-      point.coordinates.latitude,
-    ];
+    if (
+      !selectedId ||
+      selectedLongitude === undefined ||
+      selectedLatitude === undefined ||
+      !instance ||
+      !loaded ||
+      error
+    )
+      return;
+    const center: [number, number] = [selectedLongitude, selectedLatitude];
     const { clientWidth, clientHeight } = instance.getContainer();
     // The card sits over the bottom of the map, so the free area ends above it.
     const cardHeight =
@@ -497,13 +568,16 @@ export function HouseholdMap({
       x <= clientWidth - MARKER_MARGIN &&
       y >= freeTop &&
       y <= clientHeight - inset - MARKER_MARGIN;
-    if (zoomToId.current === point.id) {
+    if (zoomToId.current === selectedId) {
       zoomToId.current = null;
       instance.jumpTo({
         center,
         zoom: Math.min(
           instance.getMaxZoom(),
-          Math.max(instance.getZoom(), isolationZoom(points, point.id)),
+          Math.max(
+            instance.getZoom(),
+            isolationZoom(latestPoints.current, selectedId),
+          ),
         ),
         padding: { top, bottom: inset },
       });
@@ -512,7 +586,7 @@ export function HouseholdMap({
     // Keep the first view, which frames every marker, when the pin is already in sight.
     if (!inFreeArea)
       instance.jumpTo({ center, padding: { top, bottom: inset } });
-  }, [points, selectedId, loaded, error]);
+  }, [selectedId, selectedLongitude, selectedLatitude, loaded, error]);
   // Escape with focus anywhere in the map area (markers, controls, the card) clears the selection.
   useEffect(() => {
     const stage = stageRef.current;
@@ -601,7 +675,7 @@ export function HouseholdMap({
             else captureView();
           }}
         >
-          Review this area
+          <FormattedMessage id="listings.map.reviewThisArea" />
         </Button>
       )}
       {unlocated.length > 0 && (
@@ -620,17 +694,24 @@ export function HouseholdMap({
               aria-haspopup="dialog"
               onClick={() => setUnlocatedOpen((open) => !open)}
             >
-              Not located ({unlocated.length})
+              <FormattedMessage
+                id="listings.map.notLocated"
+                values={{ value0: messageValue(unlocated.length) }}
+              />
             </Button>
           </Popover.Target>
           <Popover.Dropdown
             ref={pickerRef}
             role="dialog"
-            aria-label="Not located homes"
+            aria-label={intl.formatMessage({
+              id: 'listings.map.notLocatedHomes',
+            })}
             className={classes.unlocatedPicker}
           >
             <Stack gap="xs">
-              <Text size="sm">These homes have no known position.</Text>
+              <Text size="sm">
+                <FormattedMessage id="listings.map.theseHomesHaveNoKnownPosition" />
+              </Text>
               {unlocated.map((point) => (
                 <Button
                   key={point.id}
@@ -667,7 +748,13 @@ export function HouseholdMap({
                       size={14}
                       fill={point.savedByMe ? 'currentColor' : 'none'}
                       aria-label={
-                        point.savedByMe ? 'Saved by you' : 'Saved by household'
+                        point.savedByMe
+                          ? intl.formatMessage({
+                              id: 'listings.map.savedByYou',
+                            })
+                          : intl.formatMessage({
+                              id: 'listings.map.savedByHousehold',
+                            })
                       }
                       className={classes.inlineIcon}
                     />
@@ -681,8 +768,7 @@ export function HouseholdMap({
       )}
       {located.length === 0 && unlocated.length > 0 && (
         <Text size="xs" className={classes.noPositions}>
-          These homes have no known position. Choose Not located to view their
-          details.
+          <FormattedMessage id="listings.map.theseHomesHaveNoKnownPositionChooseNotLocated" />
         </Text>
       )}
     </Stack>
@@ -695,13 +781,17 @@ export function HouseholdMap({
   const at = Math.max(0, availableStack.indexOf(selectedId ?? ''));
   return (
     <Stack gap="sm" className={fillMobile ? classes.fillMobile : undefined}>
-      {error && <Text role="alert">{error}</Text>}
-      {!error && !loaded && <Text role="status">Loading map…</Text>}
+      {error && <Text role="alert">{formatFeedback(intl, error)}</Text>}
+      {!error && !loaded && (
+        <Text role="status">
+          <FormattedMessage id="listings.map.loadingMap" />
+        </Text>
+      )}
       <div ref={stageRef} className={classes.stage}>
         <section
           ref={container}
           className={classes.map}
-          aria-label="Listing map"
+          aria-label={intl.formatMessage({ id: 'listings.map.listingMap' })}
         />
         {(controls || onCaptureView || unlocated.length > 0) && (
           <div ref={controlsRef} className={classes.controls}>
@@ -714,7 +804,10 @@ export function HouseholdMap({
                 <Popover.Target>
                   <ActionIcon
                     variant="default"
-                    aria-label="Map options"
+                    data-map-options
+                    aria-label={intl.formatMessage({
+                      id: 'listings.map.mapOptions',
+                    })}
                     aria-expanded={mobileOptionsOpen}
                     aria-haspopup="dialog"
                     onClick={() => setMobileOptionsOpen((open) => !open)}
@@ -722,7 +815,13 @@ export function HouseholdMap({
                     <Settings2 size={20} aria-hidden="true" />
                   </ActionIcon>
                 </Popover.Target>
-                <Popover.Dropdown role="dialog" aria-label="Map options">
+                <Popover.Dropdown
+                  role="dialog"
+                  data-map-options
+                  aria-label={intl.formatMessage({
+                    id: 'listings.map.mapOptions',
+                  })}
+                >
                   {mapOptions}
                 </Popover.Dropdown>
               </Popover>
@@ -736,7 +835,9 @@ export function HouseholdMap({
       </div>
       {availableStack.length > 1 && (
         <Group
-          aria-label="Homes at selected point"
+          aria-label={intl.formatMessage({
+            id: 'listings.map.homesAtSelectedPoint',
+          })}
           className={classes.stackNavigation}
         >
           {availableStack.length > MAX_STACK_BUTTONS ? (
@@ -748,17 +849,23 @@ export function HouseholdMap({
                   onPreview(availableStack[(at - 1 + count) % count])
                 }
               >
-                Previous
+                <FormattedMessage id="common.previous" />
               </Button>
               <Text size="sm">
-                Home {at + 1} of {count}
+                <FormattedMessage
+                  id="listings.map.homeOf"
+                  values={{
+                    value0: messageValue(at + 1),
+                    value1: messageValue(count),
+                  }}
+                />
               </Text>
               <Button
                 size="xs"
                 variant="default"
                 onClick={() => onPreview(availableStack[(at + 1) % count])}
               >
-                Next
+                <FormattedMessage id="common.next" />
               </Button>
             </>
           ) : (
@@ -769,7 +876,10 @@ export function HouseholdMap({
                 variant={id === selectedId ? 'filled' : 'default'}
                 onClick={() => onPreview(id)}
               >
-                Home {index + 1}
+                <FormattedMessage
+                  id="listings.map.home"
+                  values={{ value0: messageValue(index + 1) }}
+                />
               </Button>
             ))
           )}

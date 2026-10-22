@@ -123,7 +123,7 @@ async function demoListings(page: import('@playwright/test').Page) {
 async function applyPrice(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: /^Filters(?: \(\d+\))?$/ }).click();
   await page.getByRole('textbox', { name: 'Max price (SEK)' }).fill('3000000');
-  await page.getByRole('button', { name: /^Show \d+ homes$/ }).click();
+  await page.getByRole('button', { name: /^Show \d+ homes?$/ }).click();
   await expect(
     page.getByRole('dialog', { name: /^Filters(?: \(\d+\))?$/ }),
   ).toHaveCount(0);
@@ -176,7 +176,16 @@ for (const id of [balconyId, '00000000-0000-4000-8000-999999999999']) {
     await page
       .getByRole('button', { name: 'Explore the synthetic demo' })
       .click();
-    await page.getByRole('button', { name: 'Close listing details' }).click();
+    if (id === balconyId) {
+      await page.getByRole('button', { name: 'Close listing details' }).click();
+    } else {
+      await expect(
+        page.getByText('This home is unavailable in this household.'),
+      ).toBeVisible();
+      await page
+        .getByRole('button', { name: 'Back to Favorites', exact: true })
+        .click();
+    }
     await expect(page).toHaveURL(/shellter\/favorites(?:\?|$)/);
     await expect(page.getByRole('article')).toHaveCount(2);
   });

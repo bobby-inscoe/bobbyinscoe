@@ -59,9 +59,7 @@ export function clearOwnedSessionStorage() {
     }
   }
   if (failed)
-    throw new Error(
-      'Browser storage could not be cleared. Close this tab and clear site data.',
-    );
+    throw new Error('errors.browserStorageCouldNotBeClearedCloseThisTab');
 }
 let sharedClient: SupabaseClient | null = null;
 export function createHouseholdClient() {
@@ -139,11 +137,11 @@ async function rpc<T>(
     // 40001 is the server's revision-conflict code; only a note save treats it as recoverable.
     if (name === 'hs_save_note' && error.code === '40001')
       throw new NoteConflictError();
-    throw new Error('The household request failed. Reload and try again.');
+    throw new Error('errors.theHouseholdRequestFailedReloadAndTryAgain');
   }
   const parsed = schema.safeParse(data);
   if (!parsed.success)
-    throw new Error('The server returned an unsupported household response.');
+    throw new Error('errors.theServerReturnedAnUnsupportedHouseholdResponse');
   return parsed.data;
 }
 const membershipsSchema = z.array(memberSchema).max(10);
@@ -162,7 +160,7 @@ export async function householdStart(
     householdId ? { p_household_id: householdId } : {},
   );
   if (error && !['PGRST202', '42883'].includes(error.code))
-    throw new Error('The household request failed. Reload and try again.');
+    throw new Error('errors.theHouseholdRequestFailedReloadAndTryAgain');
   const parsed = z
     .strictObject({ memberships: membershipsSchema, snapshot: z.unknown() })
     .safeParse(data);
@@ -183,7 +181,7 @@ async function readSnapshot(
       p_household_id: householdId,
     });
     if (reply.error && !['PGRST202', '42883'].includes(reply.error.code))
-      throw new Error('The household request failed. Reload and try again.');
+      throw new Error('errors.theHouseholdRequestFailedReloadAndTryAgain');
     data = reply.data;
   }
   const parsed = snapshotV2Schema.safeParse(data);
@@ -213,7 +211,7 @@ export async function householdSnapshot(
   if (
     !current.some((m) => m.householdId === householdId && m.userId === userId)
   )
-    throw new Error('Your household access is no longer active.');
+    throw new Error('errors.yourHouseholdAccessIsNoLongerActive');
   const snapshot = await readSnapshot(client, householdId, started);
   const memberIds = new Set(snapshot.members.map((member) => member.userId));
   const listingIds = new Set(snapshot.listings.map((listing) => listing.id));
@@ -244,7 +242,7 @@ export async function householdSnapshot(
     listingIds.size !== snapshot.listings.length ||
     memberIds.size !== snapshot.members.length
   )
-    throw new Error('The server returned inconsistent household data.');
+    throw new Error('errors.theServerReturnedInconsistentHouseholdData');
   return snapshot;
 }
 export function setFavorite(
@@ -371,7 +369,7 @@ export function saveProfile(
 ) {
   const value = profileSchema.parse(profile);
   if (value.householdId !== householdId)
-    throw new Error('Profile belongs to another household.');
+    throw new Error('errors.profileBelongsToAnotherHousehold');
   return rpc(
     client,
     'hs_save_profile',
@@ -446,15 +444,16 @@ export type HouseholdAccess = z.infer<typeof householdAccessSchema>;
 // The database's reasons a person can act on; anything else stays a generic failure.
 const ACCESS_ERRORS: Record<string, string> = {
   'Make another member an owner before leaving':
-    'Make another member an owner before leaving.',
-  'Household member limit reached': 'This household already has ten members.',
-  'Membership limit reached': 'You already belong to ten households.',
-  'Already a member': 'You are already a member of this household.',
+    'errors.makeAnotherMemberAnOwnerBeforeLeaving',
+  'Household member limit reached': 'errors.thisHouseholdAlreadyHasTenMembers',
+  'Membership limit reached': 'errors.youAlreadyBelongToTenHouseholds',
+  'Already a member': 'errors.youAreAlreadyAMemberOfThisHousehold',
   'Invitation unavailable':
-    'This invitation has expired, been used or revoked, or was sent to a different email. Ask for a fresh link.',
-  'Confirm your email before accepting': 'Confirm your email before accepting.',
-  'Invalid email': 'Enter a valid email address.',
-  'Invalid name': 'Enter a name of 1 to 80 characters.',
+    'errors.thisInvitationHasExpiredBeenUsedOrRevokedOr',
+  'Confirm your email before accepting':
+    'errors.confirmYourEmailBeforeAccepting',
+  'Invalid email': 'errors.enterAValidEmailAddress',
+  'Invalid name': 'errors.enterANameOf1To80Characters',
 };
 async function accessRpc<T>(
   client: SupabaseClient,
@@ -466,11 +465,11 @@ async function accessRpc<T>(
   if (error)
     throw new Error(
       ACCESS_ERRORS[error.message] ??
-        'The household request failed. Reload and try again.',
+        'errors.theHouseholdRequestFailedReloadAndTryAgain',
     );
   const parsed = schema.safeParse(data);
   if (!parsed.success)
-    throw new Error('The server returned an unsupported household response.');
+    throw new Error('errors.theServerReturnedAnUnsupportedHouseholdResponse');
   return parsed.data;
 }
 
@@ -510,7 +509,7 @@ export async function sendInvitation(
       email,
     );
   } catch {
-    throw new Error('The invitation email could not be sent. Try again.');
+    throw new Error('errors.theInvitationEmailCouldNotBeSentTryAgain');
   }
   return url;
 }
@@ -539,9 +538,7 @@ export async function invokeInvite(
     body,
   });
   if (error)
-    throw new Error(
-      'This invitation cannot be used with that email. Check the address or ask for a fresh link.',
-    );
+    throw new Error('errors.thisInvitationCannotBeUsedWithThatEmailCheck');
 }
 export async function redeemInvitation(
   client: SupabaseClient,

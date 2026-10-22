@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Feedback } from '@/features/house-scanner/i18n/catalogs';
 
 import {
   type ListingNote,
@@ -25,7 +26,7 @@ export interface ListingNotesController {
   dirty: boolean;
   saving: boolean;
   conflict: boolean;
-  result: string;
+  result: Feedback;
   setDraft: (value: string) => void;
   retry: () => void;
   save: () => void;
@@ -33,7 +34,7 @@ export interface ListingNotesController {
   discardDraft: () => void;
 }
 
-const SAVE_FAILED = 'Could not save your note. Your draft is kept. Try again.';
+const SAVE_FAILED = 'listings.details.couldNotSaveYourNoteYourDraftIsKept';
 
 interface UseListingNotesOptions {
   listingId: string | null;
@@ -56,7 +57,7 @@ export function useListingNotes({
   const [conflictFor, setConflictFor] = useState<string | null>(null);
   const [resultFor, setResultFor] = useState<{
     listingId: string;
-    message: string;
+    message: Feedback;
   } | null>(null);
   const [reloads, setReloads] = useState(0);
   // Bumped when the listing changes or the component unmounts, so late
@@ -113,7 +114,7 @@ export function useListingNotes({
         if (latest) setLoad({ status: 'ready', listingId, notes: latest });
         setDrafts(({ [listingId]: _saved, ...rest }) => rest);
         setConflictFor(null);
-        setResultFor({ listingId, message: 'Note saved.' });
+        setResultFor({ listingId, message: 'listings.details.noteSaved' });
       } catch (error) {
         if (stale()) return;
         if (error instanceof NoteConflictError) {

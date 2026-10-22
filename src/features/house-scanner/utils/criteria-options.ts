@@ -1,3 +1,6 @@
+import type { IntlShape } from 'react-intl';
+import { englishIntl } from '@/features/house-scanner/i18n/catalogs';
+
 // The choices behind the area, room, radius and municipality dropdowns. One list per control, so the
 // listing filters and the saved search criteria offer the same steps.
 
@@ -15,12 +18,12 @@ export const ROOM_OPTIONS = [...range(1, 6, 0.5)] as const;
 
 export const RADIUS_OPTIONS_KM = [5, 10, 15, 20, 30, 40, 50] as const;
 
-const number = new Intl.NumberFormat('sv-SE');
-
-export const formatArea = (value: number) => `${number.format(value)} m²`;
-export const formatRooms = (value: number) =>
-  `${number.format(value)} ${value === 1 ? 'room' : 'rooms'}`;
-export const formatKm = (value: number) => `${number.format(value)} km`;
+export const formatArea = (value: number, intl: IntlShape = englishIntl) =>
+  `${intl.formatNumber(value)} m²`;
+export const formatRooms = (value: number, intl: IntlShape = englishIntl) =>
+  intl.formatMessage({ id: 'listings.details.roomCount' }, { count: value });
+export const formatKm = (value: number, intl: IntlShape = englishIntl) =>
+  `${intl.formatNumber(value)} km`;
 
 /**
  * Places the collector can read today. The collector lives outside the app bundle, so this list is

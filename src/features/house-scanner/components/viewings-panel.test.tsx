@@ -7,9 +7,10 @@ import {
   screen,
   within,
 } from '@testing-library/react';
+import { IntlProvider } from 'react-intl';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-
 import { ViewingsPanel } from '@/features/house-scanner/components/viewings-panel';
+import { catalogs } from '@/features/house-scanner/i18n/catalogs';
 import {
   DEMO_OTHER_USER_ID,
   DEMO_USER_ID,
@@ -104,7 +105,14 @@ afterEach(() => {
 const show = (state: Snapshot = snapshot) =>
   render(
     <MantineProvider>
-      <ViewingsPanel snapshot={state} userId={DEMO_USER_ID} />
+      <IntlProvider
+        locale="en-GB"
+        defaultLocale="en-GB"
+        timeZone="Europe/Stockholm"
+        messages={catalogs.en}
+      >
+        <ViewingsPanel snapshot={state} userId={DEMO_USER_ID} />
+      </IntlProvider>
     </MantineProvider>,
   );
 

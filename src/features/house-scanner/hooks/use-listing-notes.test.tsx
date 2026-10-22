@@ -91,7 +91,9 @@ describe('useListingNotes', () => {
     act(() => result.current.setDraft('Mine, edited'));
     expect(result.current.dirty).toBe(true);
     await act(async () => result.current.save());
-    await waitFor(() => expect(result.current.result).toBe('Note saved.'));
+    await waitFor(() =>
+      expect(result.current.result).toBe('listings.details.noteSaved'),
+    );
     expect(onSave).toHaveBeenCalledWith('a', 'Mine, edited', 3);
     expect(result.current.dirty).toBe(false);
     expect(result.current.ownNote?.revision).toBe(4);
@@ -185,7 +187,9 @@ describe('useListingNotes', () => {
     act(() => result.current.setDraft('Keep me'));
     await act(async () => result.current.save());
     await waitFor(() =>
-      expect(result.current.result).toContain('Could not save'),
+      expect(result.current.result).toContain(
+        'listings.details.couldNotSaveYourNoteYourDraftIsKept',
+      ),
     );
     expect(result.current.draft).toBe('Keep me');
     expect(result.current.conflict).toBe(false);

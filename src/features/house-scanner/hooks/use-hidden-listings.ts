@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { Feedback } from '@/features/house-scanner/i18n/catalogs';
 import type { Snapshot } from '@/features/house-scanner/types/contracts';
 import type { HouseholdActions } from '@/features/house-scanner/types/household';
 
@@ -63,8 +64,8 @@ export function useHiddenListings({
   current.current = { snapshot, hidden, userId };
   const [busy, setBusy] = useState(false);
   const writing = useRef(false);
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
+  const [error, setError] = useState<Feedback>('');
+  const [message, setMessage] = useState<Feedback>('');
   const [undoIds, setUndoIds] = useState<string[]>([]);
   const mounted = useRef(true);
   useEffect(() => {
@@ -84,7 +85,7 @@ export function useHiddenListings({
     );
     if (!ids.length) return false;
     if (ids.length > 500 || ids.some((id) => !present.has(id))) {
-      setError('Select up to 500 available homes before trying again.');
+      setError('listings.details.selectUpTo500AvailableHomesBeforeTryingAgain');
       return false;
     }
     writing.current = true;
@@ -101,9 +102,10 @@ export function useHiddenListings({
       )
         return false;
       setUndoIds(hide ? ids : []);
-      setMessage(
-        `${ids.length} ${ids.length === 1 ? 'home' : 'homes'} ${hide ? 'hidden' : 'restored'}.`,
-      );
+      setMessage({
+        id: hide ? 'listings.list.hiddenCount' : 'listings.list.restoredCount',
+        values: { count: ids.length },
+      });
       return true;
     } catch {
       if (
@@ -112,7 +114,7 @@ export function useHiddenListings({
         current.current.snapshot.householdId === start.snapshot.householdId
       )
         setError(
-          'Could not confirm the change. Review the current results, then try again or reload the household.',
+          'listings.details.couldNotConfirmTheChangeReviewTheCurrentResults',
         );
       return false;
     } finally {

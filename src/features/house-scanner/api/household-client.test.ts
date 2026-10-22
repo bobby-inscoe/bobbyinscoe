@@ -106,6 +106,7 @@ describe('House Scanner storage boundaries', () => {
     for (const store of [window.localStorage, window.sessionStorage]) {
       store.setItem('duck-feed:high-scores', '[123]');
       store.setItem('portfolio.preference', 'green');
+      store.setItem('shellter.language', 'sv');
       store.setItem(AUTH_KEY, 'synthetic token');
       store.setItem(`${AUTH_KEY}-code-verifier`, 'synthetic verifier');
       store.setItem('house-scanner.remember', 'true');
@@ -115,6 +116,7 @@ describe('House Scanner storage boundaries', () => {
       expect(Object.keys(store).sort()).toEqual([
         'duck-feed:high-scores',
         'portfolio.preference',
+        'shellter.language',
       ]);
     }
   });
@@ -135,7 +137,7 @@ describe('House Scanner storage boundaries', () => {
       throw new DOMException('Denied', 'SecurityError');
     });
     expect(clearOwnedSessionStorage).toThrow(
-      'Browser storage could not be cleared',
+      'errors.browserStorageCouldNotBeClearedCloseThisTab',
     );
     expect(window.sessionStorage.getItem(AUTH_KEY)).toBeNull();
   });
@@ -229,7 +231,7 @@ describe('House Scanner RPC boundaries', () => {
       error: { message: 'synthetic confidential database detail' },
     });
     await expect(householdStart(client(), null)).rejects.toThrow(
-      'The household request failed. Reload and try again.',
+      'errors.theHouseholdRequestFailedReloadAndTryAgain',
     );
   });
   it('reads no snapshot when the start request already sent it', async () => {
@@ -266,7 +268,7 @@ describe('House Scanner RPC boundaries', () => {
     });
     await expect(
       householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
-    ).rejects.toThrow('household request failed');
+    ).rejects.toThrow('errors.theHouseholdRequestFailedReloadAndTryAgain');
     expect(sdk.rpc).toHaveBeenCalledTimes(2);
   });
   it('does not request a snapshot without current matching membership', async () => {
@@ -275,7 +277,7 @@ describe('House Scanner RPC boundaries', () => {
     );
     await expect(
       householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
-    ).rejects.toThrow('no longer active');
+    ).rejects.toThrow('errors.yourHouseholdAccessIsNoLongerActive');
     expect(sdk.rpc).toHaveBeenCalledTimes(1);
   });
   const noteRow = (listingId: string, userId: string) => ({
@@ -406,7 +408,7 @@ describe('House Scanner RPC boundaries', () => {
         .mockResolvedValueOnce(reply(snapshot));
       await expect(
         householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
-      ).rejects.toThrow('inconsistent household data');
+      ).rejects.toThrow('errors.theServerReturnedInconsistentHouseholdData');
     },
   );
   it.each([
@@ -421,7 +423,7 @@ describe('House Scanner RPC boundaries', () => {
       .mockResolvedValueOnce(reply(data));
     await expect(
       householdSnapshot(client(), HOUSEHOLD_ID, USER_ID),
-    ).rejects.toThrow('unsupported household response');
+    ).rejects.toThrow('errors.theServerReturnedAnUnsupportedHouseholdResponse');
   });
   it('does not reveal database details in RPC errors', async () => {
     sdk.rpc.mockResolvedValue({
@@ -429,7 +431,7 @@ describe('House Scanner RPC boundaries', () => {
       error: { message: 'synthetic confidential database detail' },
     });
     await expect(memberships(client())).rejects.toThrow(
-      'The household request failed. Reload and try again.',
+      'errors.theHouseholdRequestFailedReloadAndTryAgain',
     );
   });
   it('reports a note revision conflict as a typed error', async () => {
@@ -462,7 +464,7 @@ describe('House Scanner RPC boundaries', () => {
         ? saveNote(client(), HOUSEHOLD_ID, listingId, 'draft', 1)
         : saveProfile(client(), HOUSEHOLD_ID, fixtureSnapshot().profiles[0]);
     await expect(call).rejects.toThrow(
-      'The household request failed. Reload and try again.',
+      'errors.theHouseholdRequestFailedReloadAndTryAgain',
     );
     await expect(call).rejects.not.toBeInstanceOf(NoteConflictError);
   });
@@ -471,7 +473,7 @@ describe('House Scanner RPC boundaries', () => {
       reply(Array.from({ length: 11 }, () => fixtureSnapshot().members[0])),
     );
     await expect(memberships(client())).rejects.toThrow(
-      'unsupported household response',
+      'errors.theServerReturnedAnUnsupportedHouseholdResponse',
     );
   });
   it('leaves favorite actor identity to the server', async () => {
@@ -611,7 +613,7 @@ describe('House Scanner RPC boundaries', () => {
   it('rejects a profile owned by another household before calling the server', () => {
     const profile = fixtureSnapshot().profiles[0];
     expect(() => saveProfile(client(), OTHER_HOUSEHOLD_ID, profile)).toThrow(
-      'another household',
+      'errors.profileBelongsToAnotherHousehold',
     );
     expect(sdk.rpc).not.toHaveBeenCalled();
   });
@@ -639,7 +641,7 @@ describe('House Scanner RPC boundaries', () => {
         fixtureSnapshot().listings[0].id,
         true,
       ),
-    ).rejects.toThrow('unsupported household response');
+    ).rejects.toThrow('errors.theServerReturnedAnUnsupportedHouseholdResponse');
     expect(() =>
       saveNote(
         client(),

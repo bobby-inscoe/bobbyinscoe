@@ -1,4 +1,5 @@
 import { ActionIcon } from '@mantine/core';
+import { useIntl } from 'react-intl';
 
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
 
@@ -34,14 +35,24 @@ interface HideButtonProps {
 // Sits over the photo beside the star and lights up in the same green while the home is hidden.
 // Hiding is personal and only changes this member's view; it never touches favorites or notes.
 export function HideButton({ listingId, hidden, onToggle }: HideButtonProps) {
+  const intl = useIntl();
+
   return (
     <ActionIcon
       className={classes.hide}
       variant={hidden ? 'filled' : 'default'}
       size="lg"
       radius="xl"
-      aria-label={hidden ? 'Unhide this home' : 'Hide this home'}
-      title={hidden ? 'Unhide this home' : 'Hide this home'}
+      aria-label={
+        hidden
+          ? intl.formatMessage({ id: 'listings.details.unhideThisHome' })
+          : intl.formatMessage({ id: 'listings.details.hideThisHome' })
+      }
+      title={
+        hidden
+          ? intl.formatMessage({ id: 'listings.details.unhideThisHome' })
+          : intl.formatMessage({ id: 'listings.details.hideThisHome' })
+      }
       onClick={() => onToggle(listingId)}
     >
       <EyeOffIcon />

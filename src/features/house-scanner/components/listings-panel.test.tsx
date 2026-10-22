@@ -16,6 +16,7 @@ import {
 } from '@/features/house-scanner/api/session-test-helpers';
 import { ListingsPanel } from '@/features/house-scanner/components/listings-panel';
 import { useListingNotes } from '@/features/house-scanner/hooks/use-listing-notes';
+import { ShellterLanguageProvider } from '@/features/house-scanner/i18n/language-provider';
 import { emptyFilters } from '@/features/house-scanner/utils/listing-filters';
 
 type PanelProps = Omit<ComponentProps<typeof ListingsPanel>, 'notes'>;
@@ -24,7 +25,9 @@ function PanelHarness(props: PanelProps) {
   const notes = useListingNotes({ listingId: null, userId: USER_ID });
   return (
     <MantineProvider>
-      <ListingsPanel {...props} notes={notes} />
+      <ShellterLanguageProvider>
+        <ListingsPanel {...props} notes={notes} />
+      </ShellterLanguageProvider>
     </MantineProvider>
   );
 }

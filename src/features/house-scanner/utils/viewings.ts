@@ -1,3 +1,5 @@
+import type { IntlShape } from 'react-intl';
+import { englishIntl } from '@/features/house-scanner/i18n/catalogs';
 import type {
   Listing,
   Viewing,
@@ -36,29 +38,37 @@ export function hasViewingWithin(
   );
 }
 
-const dateParts = new Intl.DateTimeFormat('en-GB', {
-  timeZone: ZONE,
-  weekday: 'short',
-  day: 'numeric',
-  month: 'short',
-});
-const clock = new Intl.DateTimeFormat('en-GB', {
-  timeZone: ZONE,
-  hour: '2-digit',
-  minute: '2-digit',
-  hourCycle: 'h23',
-});
+const dateParts = (intl: IntlShape) =>
+  new Intl.DateTimeFormat(intl.locale, {
+    timeZone: ZONE,
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+const clock = (intl: IntlShape) =>
+  new Intl.DateTimeFormat(intl.locale, {
+    timeZone: ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  });
 const dayKey = new Intl.DateTimeFormat('en-CA', { timeZone: ZONE });
 
 // "Sat 24 Oct": the weekday, day and month without the comma Intl puts after the weekday.
-const dayText = (ms: number) => dateParts.format(new Date(ms)).replace(',', '');
+const dayText = (ms: number, intl: IntlShape) =>
+  dateParts(intl).format(new Date(ms)).replace(',', '');
 
 /** "Sat 24 Oct, 15:00–16:00" in Stockholm time, or "Sat 24 Oct, 15:00" when there is no end. */
-export function formatViewing(viewing: Viewing): string {
+export function formatViewing(
+  viewing: Viewing,
+  intl: IntlShape = englishIntl,
+): string {
   const start = Date.parse(viewing.startsAt);
   const end =
-    viewing.endsAt === null ? '' : `–${clock.format(new Date(viewing.endsAt))}`;
-  return `${dayText(start)}, ${clock.format(new Date(start))}${end}`;
+    viewing.endsAt === null
+      ? ''
+      : `–${clock(intl).format(new Date(viewing.endsAt))}`;
+  return `${dayText(start, intl)}, ${clock(intl).format(new Date(start))}${end}`;
 }
 
 export interface ViewingDay {
@@ -71,6 +81,7 @@ export interface ViewingDay {
 export function groupByDay(
   entries: UpcomingViewing[],
   now: number,
+  intl: IntlShape = englishIntl,
 ): ViewingDay[] {
   const today = dayKey.format(new Date(now));
   const tomorrow = dayKey.format(new Date(now + DAY));
@@ -84,10 +95,10 @@ export function groupByDay(
       day,
       label:
         day === today
-          ? 'Today'
+          ? intl.formatMessage({ id: 'viewings.today' })
           : day === tomorrow
-            ? 'Tomorrow'
-            : dayText(start),
+            ? intl.formatMessage({ id: 'viewings.tomorrow' })
+            : dayText(start, intl),
       entries: [],
     };
     group.entries.push(entry);
@@ -146,12 +157,18 @@ export function viewingCalendar(
   listing: Listing,
   viewing: Viewing,
   now: number,
+  intl: IntlShape = englishIntl,
 ): string {
   const start = Date.parse(viewing.startsAt);
   const where = [listing.title, listing.facts.municipality]
     .filter(Boolean)
     .join(', ');
-  const title = escapeText(`Viewing: ${listing.title}`);
+  const title = escapeText(
+    intl.formatMessage(
+      { id: 'viewings.calendarTitle' },
+      { title: listing.title },
+    ),
+  );
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -165,10 +182,16 @@ export function viewingCalendar(
     `DTEND:${utc(endOf(viewing))}`,
     `SUMMARY:${title}`,
     `LOCATION:${escapeText(where)}`,
-    `DESCRIPTION:${escapeText(`Listing: ${listing.sourceUrls[0]}`)}`,
+    `DESCRIPTION:${escapeText(intl.formatMessage({ id: 'viewings.calendarDescription' }, { url: listing.sourceUrls[0] }))}`,
     `URL:${listing.sourceUrls[0]}`,
-    ...reminder('-P7D', `${title} in one week`),
-    ...reminder('-P1D', `${title} tomorrow`),
+    ...reminder(
+      '-P7D',
+      intl.formatMessage({ id: 'viewings.weekReminder' }, { title }),
+    ),
+    ...reminder(
+      '-P1D',
+      intl.formatMessage({ id: 'viewings.dayReminder' }, { title }),
+    ),
     'END:VEVENT',
     'END:VCALENDAR',
   ];
@@ -176,7 +199,11 @@ export function viewingCalendar(
 }
 
 /** "viewing-2026-10-24-exempelgatan-1.ics": the Stockholm date and the address without accents. */
-export function calendarFileName(listing: Listing, viewing: Viewing): string {
+export function calendarFileName(
+  listing: Listing,
+  viewing: Viewing,
+  intl: IntlShape = englishIntl,
+): string {
   const slug = listing.title
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
@@ -184,5 +211,5 @@ export function calendarFileName(listing: Listing, viewing: Viewing): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
     .slice(0, 60);
-  return `viewing-${dayKey.format(new Date(viewing.startsAt))}-${slug}.ics`;
+  return `${intl.locale.startsWith('sv') ? 'visning' : 'viewing'}-${dayKey.format(new Date(viewing.startsAt))}-${slug}.ics`;
 }

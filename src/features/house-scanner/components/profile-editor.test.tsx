@@ -8,11 +8,12 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
+import { IntlProvider } from 'react-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { CriteriaHelp } from '@/features/house-scanner/components/criteria-help';
 import { ProfileEditor } from '@/features/house-scanner/components/profile-editor';
 import { SettingsPanel } from '@/features/house-scanner/components/settings-panel';
+import { catalogs } from '@/features/house-scanner/i18n/catalogs';
 import {
   DEMO_USER_ID,
   SYNTHETIC_SNAPSHOT,
@@ -56,7 +57,14 @@ function show(profile: SearchProfile, canEdit = true) {
   const onSave = vi.fn(async (_saved: SearchProfile) => {});
   render(
     <MantineProvider>
-      <ProfileEditor profile={profile} canEdit={canEdit} onSave={onSave} />
+      <IntlProvider
+        locale="en-GB"
+        defaultLocale="en-GB"
+        timeZone="Europe/Stockholm"
+        messages={catalogs.en}
+      >
+        <ProfileEditor profile={profile} canEdit={canEdit} onSave={onSave} />
+      </IntlProvider>
     </MantineProvider>,
   );
   return onSave;
@@ -106,7 +114,7 @@ describe('size and room dropdowns', () => {
     const onSave = show(demo);
     await choose('Minimum living area (m²)', '80 m²');
     await choose('Maximum living area (m²)', 'No maximum');
-    await choose('Minimum rooms', '2,5 rooms');
+    await choose('Minimum rooms', '2.5 rooms');
     await choose('Radius', '30 km');
     expect(await save(onSave)).toMatchObject({
       minAreaM2: 80,
@@ -263,7 +271,14 @@ describe('How does this work?', () => {
   it('opens a dialog that explains the page, and closes with Escape', async () => {
     render(
       <MantineProvider>
-        <CriteriaHelp />
+        <IntlProvider
+          locale="en-GB"
+          defaultLocale="en-GB"
+          timeZone="Europe/Stockholm"
+          messages={catalogs.en}
+        >
+          <CriteriaHelp />
+        </IntlProvider>
       </MantineProvider>,
     );
     fireEvent.click(
@@ -284,11 +299,18 @@ describe('the Settings tab', () => {
   it('offers the explanation next to the criteria', () => {
     render(
       <MantineProvider>
-        <SettingsPanel
-          snapshot={SYNTHETIC_SNAPSHOT}
-          userId={DEMO_USER_ID}
-          synthetic
-        />
+        <IntlProvider
+          locale="en-GB"
+          defaultLocale="en-GB"
+          timeZone="Europe/Stockholm"
+          messages={catalogs.en}
+        >
+          <SettingsPanel
+            snapshot={SYNTHETIC_SNAPSHOT}
+            userId={DEMO_USER_ID}
+            synthetic
+          />
+        </IntlProvider>
       </MantineProvider>,
     );
     expect(

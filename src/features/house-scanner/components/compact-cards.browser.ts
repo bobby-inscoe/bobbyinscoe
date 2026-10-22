@@ -58,10 +58,10 @@ test('mobile summaries keep individual actions reachable', async ({ page }) => {
   ).not.toBeVisible();
   await first.getByRole('button', { name: /More actions/ }).click();
   await expect(
-    page.getByRole('menuitem', { name: 'Hide this home' }),
+    page.getByRole('menuitem', { name: 'Share this listing' }),
   ).toBeVisible();
   await page.keyboard.press('Escape');
-  for (const name of ['Details', 'Save favorite']) {
+  for (const name of ['Details', 'Save favorite', 'Hide this home']) {
     const target = await first
       .getByRole('button', { name, exact: true })
       .boundingBox();

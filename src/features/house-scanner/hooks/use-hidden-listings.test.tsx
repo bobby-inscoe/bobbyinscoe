@@ -1,12 +1,15 @@
 // @vitest-environment jsdom
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import {
   fixtureSnapshot,
   USER_ID,
 } from '@/features/house-scanner/api/session-test-helpers';
 import { useHiddenListings } from '@/features/house-scanner/hooks/use-hidden-listings';
+import {
+  englishIntl,
+  formatFeedback,
+} from '@/features/house-scanner/i18n/catalogs';
 import type { Snapshot } from '@/features/house-scanner/types/contracts';
 
 const [first, second] = fixtureSnapshot().listings.map((listing) => listing.id);
@@ -67,8 +70,10 @@ describe('personal hidden homes', () => {
     );
     await act(async () => result.current.hide(first));
     expect(onSetHidden).toHaveBeenCalledTimes(1);
-    expect(result.current.error).toContain('Could not confirm');
-    expect(result.current.message).toBe('');
+    expect(result.current.error).toContain(
+      'listings.details.couldNotConfirmTheChangeReviewTheCurrentResults',
+    );
+    expect(formatFeedback(englishIntl, result.current.message)).toBe('');
     expect(result.current.busy).toBe(false);
   });
 
@@ -84,7 +89,9 @@ describe('personal hidden homes', () => {
     expect(result.current.undoCount).toBe(2);
     await act(() => result.current.undo());
     expect(props.onSetHidden).toHaveBeenLastCalledWith([second, third], false);
-    expect(result.current.message).toBe('2 homes restored.');
+    expect(formatFeedback(englishIntl, result.current.message)).toBe(
+      '2 homes restored.',
+    );
   });
 
   it('keeps Undo available when restoring fails and permits retry', async () => {
@@ -141,7 +148,9 @@ describe('personal hidden homes', () => {
       result.current.hideMany(listings.map((listing) => listing.id)),
     );
     expect(props.onSetHidden).not.toHaveBeenCalled();
-    expect(result.current.error).toContain('up to 500');
+    expect(result.current.error).toContain(
+      'listings.details.selectUpTo500AvailableHomesBeforeTryingAgain',
+    );
     await act(() =>
       result.current.hideMany(
         listings.slice(0, 500).map((listing) => listing.id),

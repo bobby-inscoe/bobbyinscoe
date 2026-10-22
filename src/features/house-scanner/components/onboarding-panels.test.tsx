@@ -9,14 +9,15 @@ import {
   within,
 } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { IntlProvider } from 'react-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import type {
   HouseholdAccess,
   InvitationPreview,
 } from '@/features/house-scanner/api/household-client';
 import { HouseholdAccessPanel } from '@/features/house-scanner/components/household-access-panel';
 import { InvitePanel } from '@/features/house-scanner/components/invite-panel';
+import { catalogs } from '@/features/house-scanner/i18n/catalogs';
 import type { HouseholdAccessActions } from '@/features/house-scanner/types/household';
 
 const TOKEN = 'c'.repeat(64);
@@ -50,7 +51,18 @@ beforeEach(() => {
 afterEach(cleanup);
 
 const view = (node: ReactNode) =>
-  render(<MantineProvider>{node}</MantineProvider>);
+  render(
+    <MantineProvider>
+      <IntlProvider
+        locale="en-GB"
+        defaultLocale="en-GB"
+        timeZone="Europe/Stockholm"
+        messages={catalogs.en}
+      >
+        {node}
+      </IntlProvider>
+    </MantineProvider>,
+  );
 const type = (label: string | RegExp, value: string) =>
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
 

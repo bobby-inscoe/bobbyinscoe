@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import { MantineProvider } from '@mantine/core';
 import { cleanup, render, screen } from '@testing-library/react';
+import { IntlProvider } from 'react-intl';
 import { afterEach, expect, it, vi } from 'vitest';
-
 import { FactsLine } from '@/features/house-scanner/components/listing-summary';
+import { catalogs } from '@/features/house-scanner/i18n/catalogs';
 import { SYNTHETIC_SNAPSHOT } from '@/features/house-scanner/mock/synthetic-household';
 import type { Listing } from '@/features/house-scanner/types/contracts';
 
@@ -25,7 +26,16 @@ function renderFacts(coordinates: Listing['coordinates']) {
   );
   render(
     <MantineProvider>
-      <FactsLine listing={{ ...SYNTHETIC_SNAPSHOT.listings[0], coordinates }} />
+      <IntlProvider
+        locale="en-GB"
+        defaultLocale="en-GB"
+        timeZone="Europe/Stockholm"
+        messages={catalogs.en}
+      >
+        <FactsLine
+          listing={{ ...SYNTHETIC_SNAPSHOT.listings[0], coordinates }}
+        />
+      </IntlProvider>
     </MantineProvider>,
   );
 }

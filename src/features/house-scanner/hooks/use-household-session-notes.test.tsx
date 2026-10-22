@@ -196,7 +196,7 @@ describe('House Scanner session notes', () => {
     });
     await expect(
       hook.result.current.onSaveNote(listingId, 'draft', 0),
-    ).rejects.toThrow('The household request failed');
+    ).rejects.toThrow('errors.theHouseholdRequestFailedReloadAndTryAgain');
     expect(hook.result.current.state).toBe(before);
     expect(sdk.rpc.mock.calls.map(([name]) => name)).toEqual(['hs_save_note']);
   });
@@ -207,10 +207,10 @@ describe('House Scanner session notes', () => {
     await act(() => hook.result.current.signOut());
     sdk.rpc.mockClear();
     await expect(onLoadNotes(listingId)).rejects.toThrow(
-      'Reload your household',
+      'errors.reloadYourHouseholdBeforeMakingAChange',
     );
     await expect(onSaveNote(listingId, 'draft', 0)).rejects.toThrow(
-      'Reload your household',
+      'errors.reloadYourHouseholdBeforeMakingAChange',
     );
     expect(sdk.rpc).not.toHaveBeenCalled();
   });

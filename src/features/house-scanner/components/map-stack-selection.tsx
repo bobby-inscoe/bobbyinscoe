@@ -7,11 +7,13 @@ import {
   Stack,
   Text,
 } from '@mantine/core';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
 import {
   KeyFacts,
   PriceLine,
 } from '@/features/house-scanner/components/listing-summary';
+import { messageValue } from '@/features/house-scanner/i18n/catalogs';
 import type { Listing } from '@/features/house-scanner/types/contracts';
 
 /** A shared pin never selects unseen homes; choose from photos and facts instead. */
@@ -30,19 +32,24 @@ export function MapStackSelection({
   onDetails: (id: string) => void;
   onClose: () => void;
 }) {
+  const intl = useIntl();
+
   return (
     <Drawer
       opened
       onClose={onClose}
-      title="Choose homes at this pin"
+      title={intl.formatMessage({ id: 'listings.map.chooseHomesAtThisPin' })}
       size="md"
       position="right"
-      closeButtonProps={{ 'aria-label': 'Close pin selection' }}
+      closeButtonProps={{
+        'aria-label': intl.formatMessage({
+          id: 'listings.map.closePinSelection',
+        }),
+      }}
     >
       <Stack>
         <Text size="sm">
-          These homes share a map point. Select them individually; your other
-          selections stay checked.
+          <FormattedMessage id="listings.map.theseHomesShareAMapPointSelectThemIndividually" />
         </Text>
         {listings.map((listing) => {
           const checked = checkedIds.has(listing.id);
@@ -53,7 +60,7 @@ export function MapStackSelection({
                 <ListingPhoto
                   listing={listing}
                   onOpen={() => onToggle(listing.id)}
-                  actionLabel={`${checked ? 'Deselect' : 'Select'} ${listing.title}`}
+                  actionLabel={`${checked ? intl.formatMessage({ id: 'common.deselect' }) : intl.formatMessage({ id: 'common.select' })} ${listing.title}`}
                   pressed={checked}
                   disabled={unavailable}
                 />
@@ -72,14 +79,17 @@ export function MapStackSelection({
                   size="xs"
                   onClick={() => onDetails(listing.id)}
                 >
-                  Details
+                  <FormattedMessage id="listings.map.details" />
                 </Button>
               </Stack>
             </Group>
           );
         })}
         <Button variant="default" onClick={onClose}>
-          Back to map · {checkedIds.size} selected
+          <FormattedMessage
+            id="listings.map.backToMapSelected"
+            values={{ value0: messageValue(checkedIds.size) }}
+          />
         </Button>
       </Stack>
     </Drawer>

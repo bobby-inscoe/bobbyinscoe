@@ -1,6 +1,9 @@
 import { Badge, Stack, Text, UnstyledButton } from '@mantine/core';
 import { House } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
+import { messageValue } from '@/features/house-scanner/i18n/catalogs';
+import { displayLabel } from '@/features/house-scanner/i18n/display-labels';
 
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type { Listing } from '@/features/house-scanner/types/contracts';
@@ -21,6 +24,8 @@ export function ListingPhoto({
   // Flags a fresh find in the photo's bottom-left corner, clear of the credit line below.
   isNew?: boolean;
 }) {
+  const intl = useIntl();
+
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const photo = listing.photo;
   const [expiryCheckAt, setExpiryCheckAt] = useState(Date.now);
@@ -53,7 +58,7 @@ export function ListingPhoto({
   ) : (
     <div className={classes.placeholder}>
       <House size={28} aria-hidden />
-      No photo
+      <FormattedMessage id="listings.details.noPhoto" />
     </div>
   );
   return (
@@ -64,7 +69,13 @@ export function ListingPhoto({
             type="button"
             className={classes.photoButton}
             onClick={onOpen}
-            aria-label={actionLabel ?? `View ${listing.title}`}
+            aria-label={
+              actionLabel ??
+              intl.formatMessage(
+                { id: 'listings.details.view' },
+                { value0: messageValue(listing.title) },
+              )
+            }
             aria-pressed={pressed}
             disabled={disabled}
           >
@@ -85,13 +96,13 @@ export function ListingPhoto({
         )}
         {isNew && (
           <Badge variant="new" className={classes.newFlag}>
-            New
+            <FormattedMessage id="listings.details.new" />
           </Badge>
         )}
       </div>
       {permitted && (
         <Text size="xs" c="dimmed" className={classes.photoAttribution}>
-          {photo.attribution}
+          {displayLabel(intl, photo.attribution)}
         </Text>
       )}
     </Stack>

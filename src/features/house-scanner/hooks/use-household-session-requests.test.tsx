@@ -292,7 +292,7 @@ describe('requests made by a signed-in session', () => {
 
     await act(async () => {
       await expect(hook.result.current.onSaveFavorites(ids)).rejects.toThrow(
-        'The 2 new favorites could not be saved',
+        'errors.favoritesSaveFailed',
       );
     });
     expect(hook.result.current.state).toEqual(before);
@@ -346,7 +346,9 @@ describe('requests made by a signed-in session', () => {
     expect(hook.result.current.state).toEqual({ status: 'signed-out' });
     await act(async () => {
       pending.resolve(reply({ ok: true }));
-      await expect(saving).rejects.toThrow('Your session changed');
+      await expect(saving).rejects.toThrow(
+        'errors.yourSessionChangedSavingStopped',
+      );
     });
     await settle();
     expect(sdk.rpc.mock.calls).toEqual(firstRequest);

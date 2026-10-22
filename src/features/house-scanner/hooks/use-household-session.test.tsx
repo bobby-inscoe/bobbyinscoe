@@ -89,7 +89,7 @@ describe('House Scanner session privacy', () => {
     expect(hook.result.current.state).toEqual({ status: 'nonmember' });
     await expect(
       hook.result.current.onSaveFavorite(fixtureSnapshot().listings[0].id),
-    ).rejects.toThrow('Reload your household');
+    ).rejects.toThrow('errors.reloadYourHouseholdBeforeMakingAChange');
   });
   it('clears private state immediately while sign-out is pending', async () => {
     const hook = await authenticated();
@@ -320,7 +320,7 @@ describe('House Scanner session privacy', () => {
     await act(() => hook.result.current.signOut());
     sdk.rpc.mockClear();
     await expect(staleSave(fixtureSnapshot().listings[0].id)).rejects.toThrow(
-      'Reload your household',
+      'errors.reloadYourHouseholdBeforeMakingAChange',
     );
     expect(sdk.rpc).not.toHaveBeenCalled();
   });
@@ -404,7 +404,7 @@ describe('House Scanner session privacy', () => {
     await act(() => hook.result.current.refresh());
     sdk.rpc.mockClear();
     await expect(staleSave(fixtureSnapshot().listings[0].id)).rejects.toThrow(
-      'Reload your household',
+      'errors.reloadYourHouseholdBeforeMakingAChange',
     );
     expect(sdk.rpc).not.toHaveBeenCalled();
   });
@@ -534,7 +534,7 @@ describe('House Scanner session privacy', () => {
       const hook = renderHook(useHouseholdSession);
       await expect(
         hook.result.current.signInWithCode(login, code, true),
-      ).rejects.toThrow('Enter your email and password.');
+      ).rejects.toThrow('errors.enterYourEmailAndPassword');
       expect(sdk.auth.signInWithPassword).not.toHaveBeenCalled();
     },
   );
@@ -549,7 +549,7 @@ describe('House Scanner session privacy', () => {
         'wrongcode1',
         true,
       ),
-    ).rejects.toThrow('The email or password was not accepted.');
+    ).rejects.toThrow('errors.theEmailOrPasswordWasNotAccepted');
   });
   it('ignores a completed mutation from an earlier login of the same user', async () => {
     const hook = await authenticated();
@@ -583,7 +583,7 @@ describe('House Scanner session privacy', () => {
     await act(() => hook.result.current.refresh());
     sdk.rpc.mockClear();
     await expect(staleSave(fixtureSnapshot().listings[0].id)).rejects.toThrow(
-      'Reload your household',
+      'errors.reloadYourHouseholdBeforeMakingAChange',
     );
     expect(sdk.rpc).not.toHaveBeenCalled();
   });
@@ -598,7 +598,7 @@ it('offers recovery when a refresh detects a changed identity and SDK sign-out r
   await act(() => hook.result.current.refresh());
   expect(hook.result.current.state).toMatchObject({
     status: 'error',
-    message: 'Session changed. Sign out and try again.',
+    message: 'errors.sessionChangedSignOutAndTryAgain',
   });
   expect(JSON.stringify(hook.result.current.state)).not.toContain(
     'Example balcony home',

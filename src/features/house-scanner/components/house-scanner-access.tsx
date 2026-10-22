@@ -9,11 +9,17 @@ import {
   Title,
 } from '@mantine/core';
 import { type ReactNode, useState } from 'react';
-
+import { FormattedMessage, useIntl } from 'react-intl';
 import { InvitePanel } from '@/features/house-scanner/components/invite-panel';
 import { SetPasswordForm } from '@/features/house-scanner/components/set-password-form';
 import { SignInForm } from '@/features/house-scanner/components/sign-in-form';
 import { useHouseholdSession } from '@/features/house-scanner/hooks/use-household-session';
+import {
+  errorFeedback,
+  type Feedback,
+  formatFeedback,
+  messageValue,
+} from '@/features/house-scanner/i18n/catalogs';
 import type { Household } from '@/features/house-scanner/types/household';
 
 export function HouseScannerAccess({
@@ -28,18 +34,18 @@ export function HouseScannerAccess({
   inviteToken?: string | null;
   onInviteDone?: () => void;
 }) {
+  const intl = useIntl();
+
   const session = useHouseholdSession();
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<Feedback | null>(null);
   async function perform(action: () => Promise<void>) {
     setBusy(true);
     setMessage(null);
     try {
       await action();
     } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : 'Request failed. Try again.',
-      );
+      setMessage(errorFeedback(error));
     } finally {
       setBusy(false);
     }
@@ -48,15 +54,21 @@ export function HouseScannerAccess({
   if (state.status === 'unconfigured')
     return (
       <Stack align="flex-start">
-        <Title order={2}>Private access is not configured</Title>
-        <Text>No household data is loaded.</Text>
+        <Title order={2}>
+          <FormattedMessage id="access.privateAccessIsNotConfigured" />
+        </Title>
+        <Text>
+          <FormattedMessage id="access.noHouseholdDataIsLoaded" />
+        </Text>
         {onDemo && (
           <Button
             variant="filled"
-            aria-label="Explore the synthetic demo"
+            aria-label={intl.formatMessage({
+              id: 'access.exploreTheSyntheticDemo',
+            })}
             onClick={onDemo}
           >
-            Explore demo
+            <FormattedMessage id="access.exploreDemo" />
           </Button>
         )}
       </Stack>
@@ -75,21 +87,22 @@ export function HouseScannerAccess({
         <Button
           type="button"
           variant="subtle"
-          aria-label="Explore the synthetic demo"
+          aria-label={intl.formatMessage({
+            id: 'access.exploreTheSyntheticDemo',
+          })}
           onClick={onDemo}
         >
-          Explore demo
+          <FormattedMessage id="access.exploreDemo" />
         </Button>
       )}
     </SignInForm>
   );
   return (
     <Stack gap="md">
-      {message && <Alert role="alert">{message}</Alert>}
+      {message && <Alert role="alert">{formatFeedback(intl, message)}</Alert>}
       {session.linkError && (
         <Alert role="alert">
-          That email link has expired or was already used. Ask for a new
-          invitation, or use Forgot password to get a fresh link.
+          <FormattedMessage id="access.thatEmailLinkHasExpiredOrWasAlreadyUsed" />
         </Alert>
       )}
       {session.passwordSetup && signedIn ? (
@@ -109,14 +122,15 @@ export function HouseScannerAccess({
               onInviteDone?.();
             }}
             signIn={signIn(
-              <Title order={3}>Already have an account?</Title>,
+              <Title order={3}>
+                <FormattedMessage id="access.alreadyHaveAnAccount" />
+              </Title>,
               false,
             )}
           />
         ) : (
           <Text role="alert">
-            This invitation link is incomplete. Copy the whole link and try
-            again.
+            <FormattedMessage id="access.thisInvitationLinkIsIncompleteCopyTheWholeLink" />
           </Text>
         )
       ) : state.status === 'authenticated' ? (
@@ -142,14 +156,23 @@ export function HouseScannerAccess({
         <Center mih={280}>
           <Stack align="center" gap="sm" role="status">
             <Loader />
-            <Text c="dimmed">Loading your household…</Text>
+            <Text c="dimmed">
+              <FormattedMessage id="access.loadingYourHousehold" />
+            </Text>
           </Stack>
         </Center>
       ) : state.status === 'signed-out' ? (
-        signIn(<Title order={2}>Sign in</Title>, true)
+        signIn(
+          <Title order={2}>
+            <FormattedMessage id="access.signIn" />
+          </Title>,
+          true,
+        )
       ) : state.status === 'choose-household' ? (
         <Stack>
-          <Text>Choose a household.</Text>
+          <Text>
+            <FormattedMessage id="access.chooseAHousehold" />
+          </Text>
           {state.memberships.map((member) => (
             <Button
               key={member.householdId}
@@ -158,7 +181,16 @@ export function HouseScannerAccess({
                 void perform(() => session.selectHousehold(member.householdId))
               }
             >
-              {member.householdName ?? 'Household'} · as {member.displayName}
+              <FormattedMessage
+                id="access.as"
+                values={{
+                  value0: messageValue(
+                    member.householdName ??
+                      intl.formatMessage({ id: 'access.household' }),
+                  ),
+                  value1: messageValue(member.displayName),
+                }}
+              />
             </Button>
           ))}
         </Stack>
@@ -166,22 +198,24 @@ export function HouseScannerAccess({
         <Stack align="flex-start">
           <Text role="alert">
             {state.status === 'nonmember'
-              ? 'This account has no active household. Ask a household owner for a link to join, or a member for a link to create your own.'
-              : state.message}
+              ? intl.formatMessage({
+                  id: 'access.thisAccountHasNoActiveHouseholdAskAHousehold',
+                })
+              : formatFeedback(intl, state.message)}
           </Text>
           <Group>
             <Button
               loading={busy}
               onClick={() => void perform(session.refresh)}
             >
-              Retry
+              <FormattedMessage id="common.retry" />
             </Button>
             <Button
               variant="default"
               loading={busy}
               onClick={() => void perform(session.signOut)}
             >
-              Sign out
+              <FormattedMessage id="access.signOut" />
             </Button>
           </Group>
         </Stack>
