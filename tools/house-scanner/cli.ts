@@ -19,6 +19,11 @@ import {
   startLiveRun,
 } from '@house-scanner-tools/run-memory';
 import { senderConfig, sendRequests } from '@house-scanner-tools/sender';
+import {
+  loadSoldPool,
+  SOLD_POOL_PATH,
+  saveSoldPool,
+} from '@house-scanner-tools/sold-pool';
 import { adapterFor } from '@house-scanner-tools/source-adapters';
 import {
   BJURFORS_SOURCE_ID,
@@ -115,6 +120,8 @@ async function live(values: Values) {
   const memory = startLiveRun(cachePath, Date.now(), values.force);
   const geocodePath = resolve(GEOCODE_CACHE_PATH);
   const geocodeCache = loadGeocodeCache(geocodePath);
+  const soldPoolPath = resolve(SOLD_POOL_PATH);
+  const soldPool = loadSoldPool(soldPoolPath);
   const events: LiveEvent[] = [];
   const prepared = await prepareLiveRun(
     {
@@ -124,6 +131,7 @@ async function live(values: Values) {
       planning: { profiles, collectionPriceCapSek: null, maxPartitions: 5 },
       memory,
       geocodeCache,
+      soldPool,
     },
     defaultLiveDeps((event) => events.push(event)),
   );
@@ -135,6 +143,7 @@ async function live(values: Values) {
   }
   try {
     saveGeocodeCache(geocodePath, geocodeCache);
+    saveSoldPool(soldPoolPath, soldPool);
   } catch {
     cacheSaved = false;
   }

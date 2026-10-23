@@ -7,6 +7,7 @@ import {
   positiveInt,
   type ReadContext,
 } from '@house-scanner-tools/page-read';
+import { type ModelRow, periodOf } from '@house-scanner-tools/price-model';
 import type { DetailFacts } from '@house-scanner-tools/run-memory';
 import {
   type Observation,
@@ -92,6 +93,39 @@ function photoFrom(item: Rec, origin: string, observedAt: string) {
   };
 }
 
+// A sold apartment from the archive, for the price model only. Price is the last asking price (checked against three
+// homes we tracked that sold on 21 to 23 October 2026); Date falls in 2024 to 2026 and is used as the listing time.
+function soldRowFrom(item: unknown): [string, ModelRow] | null {
+  if (!isRecord(item) || item.Status !== 'Såld') return null;
+  if (typeOf(item.Type)?.propertyType !== 'apartment') return null;
+  const id = item.Guid;
+  const priceSek = positiveInt(numberOf(item.Price), 1_000_000_000);
+  const areaM2 = area(numberOf(item.Area), 1000);
+  const feeSek = positiveInt(numberOf(item.Rent), 1_000_000);
+  const period = typeof item.Date === 'string' ? periodOf(item.Date) : null;
+  if (typeof id !== 'string' || !OBJECT_ID.test(id)) return null;
+  if (
+    priceSek === null ||
+    areaM2 === null ||
+    feeSek === null ||
+    period === null
+  )
+    return null;
+  const district =
+    typeof item.Location === 'string' ? item.Location.trim().toLowerCase() : '';
+  return [
+    id,
+    {
+      priceSek,
+      areaM2,
+      feeSek,
+      rooms: area(numberOf(item.Rooms), 100),
+      period,
+      neighbourhood: district.slice(0, 100) || null,
+    },
+  ];
+}
+
 function observationFrom(
   item: unknown,
   origin: string,
@@ -172,8 +206,11 @@ export function readLundinSearchPage(
   const observedAt = context.observedAt.toISOString();
   const wanted = context.municipality?.trim().toLowerCase();
   const observations: Observation[] = [];
+  const sold: Record<string, ModelRow> = {};
   const seen = new Set<string>();
   for (const item of data) {
+    const row = soldRowFrom(item);
+    if (row) sold[row[0]] = row[1];
     const observation = observationFrom(item, context.origin, observedAt);
     if (observation === null || seen.has(observation.sourceListingId)) continue;
     seen.add(observation.sourceListingId);
@@ -191,6 +228,7 @@ export function readLundinSearchPage(
     skipped: data.length - observations.length,
     total: data.length,
     more: { kind: 'none' },
+    sold,
   };
 }
 

@@ -411,6 +411,8 @@ export const ingestRequestSchema = z.discriminatedUnion('action', [
           cursor: z.string().max(2000).nullable(),
           // True when every search page was read to its end and reached the source's own total.
           fullRead: z.boolean().optional(),
+          // Fitted from sold apartments the collector pooled; numbers only.
+          priceModel: priceModelSchema.optional(),
           // Every home on the search pages, including those the collector bounds drop.
           seen: z
             .array(

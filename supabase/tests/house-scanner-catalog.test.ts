@@ -3092,7 +3092,7 @@ describe('source settings', () => {
     );
 
   it('rolls back to exactly the earlier schema and applies again', async () => {
-    const database = await freshDatabase('all');
+    const database = await migratedThrough(SOURCES);
     try {
       const migrated = await fingerprint(database);
       await database.exec(await rollback(SOURCES));

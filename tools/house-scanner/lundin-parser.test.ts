@@ -10,6 +10,7 @@ import {
   lundinHome,
   lundinHomePage,
   lundinList,
+  numbered,
 } from '@house-scanner-tools/lundin-test-pages';
 import { MAX_HTML_CHARS } from '@house-scanner-tools/page-read';
 import {
@@ -302,5 +303,33 @@ describe('Lundin highest bid', () => {
     expect(bid(box('2&nbsp;750&nbsp;000'))).toBe(2_750_000);
     expect(bid(box('okänt'))).toBeUndefined();
     expect(bid(lundinHomePage())).toBeUndefined();
+  });
+});
+
+describe('Lundin sold archive', () => {
+  it('turns sold apartments into model rows by id and never into observations', () => {
+    const sold = { Status: 'Såld', IsSold: true, Location: ' Majorna ' };
+    const read = page(
+      lundinList([
+        lundinHome(),
+        numbered(2, sold),
+        numbered(3, { ...sold, Type: 'cmvilla' }),
+        numbered(4, { ...sold, Rent: 0 }),
+        numbered(5, { ...sold, Date: 'okänt' }),
+        numbered(6, { ...sold, City: 'Stockholm', Location: '' }),
+      ]),
+    );
+    expect(read.observations.map((o) => o.sourceListingId)).toEqual([GUID]);
+    expect(read.sold).toEqual({
+      OBJ0000000000000000002: {
+        priceSek: 3_900_000,
+        areaM2: 70.5,
+        feeSek: 4250,
+        rooms: 3,
+        period: '2026H2',
+        neighbourhood: 'majorna',
+      },
+      OBJ0000000000000000006: expect.objectContaining({ neighbourhood: null }),
+    });
   });
 });

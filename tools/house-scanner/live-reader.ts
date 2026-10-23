@@ -8,6 +8,7 @@ import {
   positionPrecision,
   type ReadContext,
 } from '@house-scanner-tools/page-read';
+import type { ModelRow } from '@house-scanner-tools/price-model';
 import { parseRobots, robotsAllows } from '@house-scanner-tools/robots';
 import {
   type DetailFacts,
@@ -202,6 +203,8 @@ export interface LiveRunResult {
   detailSkipped: number;
   detailCached: number;
   stopped: StopReason | null;
+  /** Sold apartments the search pages carried, by source id, for the price model. */
+  sold: Record<string, ModelRow>;
 }
 
 export async function runCollection(
@@ -221,6 +224,7 @@ export async function runCollection(
   let detailCached = 0;
   let lastFinishedAt: number | null = null;
   const observations: Observation[] = [];
+  const sold: Record<string, ModelRow> = {};
   const seen = new Set<string>();
   const outcomes: PartitionOutcome[] = partitions.map((partition) => ({
     id: partition.id,
@@ -315,6 +319,7 @@ export async function runCollection(
       detailSkipped,
       detailCached,
       stopped,
+      sold,
     };
   }
 
@@ -381,6 +386,7 @@ export async function runCollection(
         });
         return finish(read.reason);
       }
+      Object.assign(sold, read.sold);
       const room = MAX_RUN_OBSERVATIONS - observations.length;
       const fresh = read.observations.filter((observation) => {
         const key = sourceIdentity(adapter.sourceId, observation);
