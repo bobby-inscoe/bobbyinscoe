@@ -322,7 +322,7 @@ function viewingsFrom(html: string, now: Date) {
   return finishViewings(found, now);
 }
 
-/** Up to four distinct collage photos in page order, as keys. The page labels no floor plan, so none is read. */
+/** Up to four distinct collage photos in page order, as keys. The floor plan is not in the collage. */
 function photoKeysOf(html: string): string[] {
   const start = html.indexOf('id="collageWrapper"');
   if (start < 0) return [];
@@ -337,6 +337,18 @@ function photoKeysOf(html: string): string[] {
     if (keys.size === 4) break;
   }
   return [...keys];
+}
+
+/** The first floor plan in the page's "Planritning" section, as a key. */
+function planKeyOf(html: string): string | undefined {
+  const start = html.indexOf('object-images--floorplan__gallery');
+  if (start < 0) return undefined;
+  const end = html.indexOf('</section>', start);
+  const section = html.slice(start, end < 0 ? undefined : end);
+  const src = /\bdata-url-large="([^"]*)"/.exec(section)?.[1];
+  const match = src === undefined ? null : KEY_OF_IMAGE.exec(decode(src));
+  const key = match === null ? '' : `${match[1]}/${match[2]}`;
+  return SVENSKFAST_IMAGE_KEY.test(key) ? key : undefined;
 }
 
 export type SvenskfastDetailRead =
@@ -393,5 +405,7 @@ export function readSvenskfastDetailPage(
   if (viewings) facts.viewings = viewings;
   const photoKeys = photoKeysOf(html);
   if (photoKeys.length > 0) facts.photoKeys = photoKeys;
+  const planKey = planKeyOf(html);
+  if (planKey) facts.planKey = planKey;
   return { kind: 'detail', facts };
 }

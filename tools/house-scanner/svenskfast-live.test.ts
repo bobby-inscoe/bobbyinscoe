@@ -208,11 +208,14 @@ describe('Svensk Fastighetsförmedling guarded run', () => {
     expect(first.photo).not.toBeNull();
   });
 
-  it('adds the collage photos at the Large size and keeps them for a home read from memory', async () => {
+  it('adds the collage photos and the floor plan at the Large size and keeps them for a home read from memory', async () => {
     const memory = emptyMemory();
     const first = fakeFetch(
       site(1, 1, () => ({
-        body: home({ collage: [1, 2, 3].map(collagePhoto) }),
+        body: home({
+          collage: [1, 2, 3].map(collagePhoto),
+          plans: [collagePhoto(7).replace('/Small/', '/Large/')],
+        }),
       })),
     );
     const read = await run(goteborg, deps(first.impl), (all) => all, memory);
@@ -221,9 +224,9 @@ describe('Svensk Fastighetsförmedling guarded run', () => {
       morePhotos: [2, 3].map((n) => ({
         url: collagePhoto(n).replace('/Small/', '/Large/'),
       })),
+      floorPlan: { url: collagePhoto(7).replace('/Small/', '/Large/') },
     };
     expect(read.observations[0]).toMatchObject(expected);
-    expect(read.observations[0].floorPlan).toBeUndefined();
 
     // An hour later, by the next run's clock, the remembered page is still fresh.
     for (const entry of Object.values(memory.details))

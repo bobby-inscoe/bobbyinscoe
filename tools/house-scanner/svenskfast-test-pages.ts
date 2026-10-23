@@ -116,6 +116,8 @@ export interface HomeInput {
   withListing?: boolean;
   // Collage photo addresses in page order, as the Small size; the Medium and Large attributes follow from them.
   collage?: string[];
+  // Floor plan addresses in the "Planritning" section, as the Large size.
+  plans?: string[];
 }
 
 // Spaces inside numbers are the non-breaking space the site writes as &#160;.
@@ -130,6 +132,7 @@ export function home({
   viewings = [],
   withListing = true,
   collage = [],
+  plans = [],
 }: HomeInput = {}) {
   const listing = JSON.stringify({
     '@context': 'https://schema.org/',
@@ -186,6 +189,13 @@ export function home({
   <div class="summary__exhibitions--wrapper"><div class="summary__exhibitions--header">V&#228;lj visningstid</div>
   <div class="summary__exhibitions--row">${rows}</div></div></div>
   <div class="object-images__collage" id="collageWrapper">${cells}</div>
+  <section class="object-images-wrapper object-images-wrapper--floorplan"><div id="planritning"><h2 class="h2">Planritning</h2></div>
+  <div class="object-images__gallery object-images--floorplan__gallery jsOnPageImage">${plans
+    .map(
+      (large) =>
+        `<div class="img-container" data-url-small="${large.replace('/Large/', '/Medium/')}" data-url-large="${large}"><img src="${large.replace('/Large/', '/Medium/')}" /></div>`,
+    )
+    .join('')}</div></section>
   <div id="bofakta-container">Om Bostaden Sammanfattning Typ: Bostadsr&#228;ttsl&#228;genhet Rum: 3, varav 2 sovrum
   Boarea: 70 m 2 L&#228;genhetsnummer: 2 Byggnads&#229;r: 1996${fee === null ? '' : ` M&#229;nadsavgift: ${fee}`}
   Uppl&#229;telseform: ${ownership}${floor === null ? '' : ` V&#229;ning: ${floor}`}${lift === null ? '' : ` Hiss: ${lift}`}

@@ -152,13 +152,13 @@ Tests use answers and an estate page authored in `husman-hagberg-test-pages.ts` 
 - A run is about 18 list pages plus about 200 home pages of about 300 kB, one to two seconds apart: roughly seven minutes.
 - Operator steps as for the others: `--print-policy-sql --source=svenskfast`, then a credential for this source.
 
-The home page's `#collageWrapper` `img.lazy-image` elements give up to four distinct photos in page order, kept as `<id>/<stamp>/<name>.jpg` (the part after `/Resurs/Image/<id>/<size>/`) and rebuilt at `Large`, the size the list card uses. No floor plan is read: the page labels none.
+The home page's `#collageWrapper` `img.lazy-image` elements give up to four distinct photos in page order, kept as `<id>/<stamp>/<name>.jpg` (the part after `/Resurs/Image/<id>/<size>/`) and rebuilt at `Large`, the size the list card uses. The floor plan is the first `data-url-large` in the page's "Planritning" section (`.object-images--floorplan__gallery`), kept in the same key form and rebuilt at `Large`; it is not one of the collage photos. Probed on 23 October 2026 on two homes, both of which had a plan there.
 
 Tests use pages authored in `svenskfast-test-pages.ts` (fictional streets and values in the same shape); the parsers were also run once against saved real pages, which are not kept in the repository.
 
 ### Images and floor plans
 
-Probed on 22 October 2026 with the owner's approval: one home per source, then one Lundin home page and one Husman Hagberg estate page. Answers were not kept. Each source now sends up to four photos and, where the source labels one, the first floor plan; Svensk Fast sends photos only. Every image comes from a host already in its source policy's `imageOrigins`, so the hosted policies need no change for galleries; the registry text and revisions were updated to describe them.
+Probed on 22 October 2026 with the owner's approval: one home per source, then one Lundin home page and one Husman Hagberg estate page. Answers were not kept. Each source now sends up to four photos and, where the source labels one, the first floor plan; Svensk Fast sent photos only until its plan was found on 23 October 2026 (below). Every image comes from a host already in its source policy's `imageOrigins`, so the hosted policies need no change for galleries; the registry text and revisions were updated to describe them.
 
 - Erik Olsson: listing page `home.images[]`, plans flagged `is_floor_plan: true`.
 - Stadshem: record `images.other[]` (photos) and `images.floorPlans[]`, each with `sizes.thumbnail/medium/full` on `storage.googleapis.com`.
