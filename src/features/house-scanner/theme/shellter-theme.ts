@@ -26,6 +26,7 @@ export const shellterTheme = createTheme({
     // "new" is the one warm badge: homes first seen in the latest scan.
     Badge: Badge.extend({
       defaultProps: { radius: 'xl' },
+      styles: { label: { lineHeight: 1 } },
       vars: (_theme, props) =>
         props.variant === 'new'
           ? {

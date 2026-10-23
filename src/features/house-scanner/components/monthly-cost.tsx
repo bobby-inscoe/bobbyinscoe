@@ -1,4 +1,5 @@
 import {
+  ActionIcon,
   Button,
   Group,
   NumberInput,
@@ -106,27 +107,35 @@ export function MonthlyCost({
         <Title order={3} size="h4">
           <FormattedMessage id="listings.cost.heading" />
         </Title>
-        {result?.kind === 'cost' && (
-          <>
+        <Group justify="space-between" gap="xs">
+          {result?.kind === 'cost' && (
             <Text size="xl" fw={700}>
               {formatFee(result.cost.totalSek, intl)}
             </Text>
+          )}
+          <Switch
+            label={intl.formatMessage({ id: 'listings.cost.taxDeduction' })}
+            aria-label={intl.formatMessage({
+              id: 'listings.cost.includeTaxDeduction',
+            })}
+            checked={taxDeduction}
+            onChange={(event) => setTaxDeduction(event.currentTarget.checked)}
+          />
+        </Group>
+        {result?.kind === 'cost' && (
+          <>
             <dl className={classes.factList}>
               {[
                 {
                   label: intl.formatMessage({ id: 'listings.cost.interest' }),
                   value: result.cost.interestSek,
                 },
-                ...(taxDeduction
-                  ? [
-                      {
-                        label: intl.formatMessage({
-                          id: 'listings.cost.taxDeduction',
-                        }),
-                        value: -result.cost.deductionSek,
-                      },
-                    ]
-                  : []),
+                {
+                  label: intl.formatMessage({
+                    id: 'listings.cost.taxDeduction',
+                  }),
+                  value: 0 - result.cost.deductionSek,
+                },
                 {
                   label: intl.formatMessage(
                     { id: 'listings.cost.amortization' },
@@ -260,29 +269,29 @@ export function MonthlyCost({
               decimalSeparator={separators.decimalSeparator}
               onChange={(value) => typeof value === 'number' && setRate(value)}
             />
-            <Group gap="xs" grow>
-              <Button
+            <Group gap="xs">
+              <ActionIcon
                 variant="default"
-                mih={44}
+                size="sm"
                 disabled={rate <= 0.01}
                 aria-label={`${intl.formatMessage({ id: 'listings.cost.rate' })} −0.1`}
                 onClick={() =>
                   setRate(Math.max(0.01, Math.round((rate - 0.1) * 100) / 100))
                 }
               >
-                <ChevronDown size={24} aria-hidden />
-              </Button>
-              <Button
+                <ChevronDown size={16} aria-hidden />
+              </ActionIcon>
+              <ActionIcon
                 variant="default"
-                mih={44}
+                size="sm"
                 disabled={rate >= 20}
                 aria-label={`${intl.formatMessage({ id: 'listings.cost.rate' })} +0.1`}
                 onClick={() =>
                   setRate(Math.min(20, Math.round((rate + 0.1) * 100) / 100))
                 }
               >
-                <ChevronUp size={24} aria-hidden />
-              </Button>
+                <ChevronUp size={16} aria-hidden />
+              </ActionIcon>
             </Group>
           </Stack>
         </SimpleGrid>
@@ -300,13 +309,6 @@ export function MonthlyCost({
           allowNegative={false}
           {...separators}
           onChange={setOperatingCosts}
-        />
-        <Switch
-          label={intl.formatMessage({
-            id: 'listings.cost.includeTaxDeduction',
-          })}
-          checked={taxDeduction}
-          onChange={(event) => setTaxDeduction(event.currentTarget.checked)}
         />
         {scenario !== null && (
           <Group gap="xs">

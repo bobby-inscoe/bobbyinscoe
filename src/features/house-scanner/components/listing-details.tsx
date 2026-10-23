@@ -459,43 +459,6 @@ export function ListingDetails({
           )}
         </Section>
         {monthlyCost}
-        {listing.photos && listing.photos.length > 1 && (
-          <Section
-            title={intl.formatMessage({ id: 'listings.details.photos' })}
-            order={sectionOrder}
-          >
-            <Group gap="xs">
-              {listing.photos.map((photo, index) => {
-                const image = (
-                  <img
-                    key={photo.url}
-                    src={photo.url}
-                    alt={listing.title}
-                    loading="lazy"
-                    referrerPolicy="no-referrer"
-                    width={160}
-                    height={107}
-                    style={{ objectFit: 'cover' }}
-                  />
-                );
-                return onSelectPhoto ? (
-                  <UnstyledButton
-                    key={photo.url}
-                    onClick={() => onSelectPhoto(index)}
-                    aria-label={intl.formatMessage(
-                      { id: 'listings.details.viewPhoto' },
-                      { value0: index + 1 },
-                    )}
-                  >
-                    {image}
-                  </UnstyledButton>
-                ) : (
-                  <div key={photo.url}>{image}</div>
-                );
-              })}
-            </Group>
-          </Section>
-        )}
         <Section
           title={intl.formatMessage({ id: 'listings.details.source' })}
           order={sectionOrder}
@@ -544,6 +507,7 @@ export function ListingDetails({
                 <Popover.Target>
                   <ActionIcon
                     size="xs"
+                    className={classes.inlineHelp}
                     variant="transparent"
                     c="dimmed"
                     aria-label={intl.formatMessage({
@@ -553,10 +517,7 @@ export function ListingDetails({
                     <Info
                       size={14}
                       strokeWidth={1.5}
-                      style={{
-                        display: 'block',
-                        transform: 'translateY(-1px)',
-                      }}
+                      style={{ display: 'block' }}
                       aria-hidden
                     />
                   </ActionIcon>

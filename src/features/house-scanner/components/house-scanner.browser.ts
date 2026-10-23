@@ -1683,7 +1683,7 @@ test('the Viewings tab lists saved homes with their times and hands over a calen
   await expect(page.getByText(/^3 homes/)).toBeVisible();
 });
 
-test('drawer cycles photos and thumbnails select the carousel photo', async ({
+test('drawer cycles photos and keeps floor plans accessible', async ({
   page,
 }) => {
   await openDemo(page);
@@ -1746,11 +1746,9 @@ test('drawer cycles photos and thumbnails select the carousel photo', async ({
     .click();
   await expect(photo).toHaveAttribute('src', /floor-plan\.svg(?:\?.*)?$/);
   await expect(photo).toBeInViewport({ ratio: 1 });
-  await drawer
-    .getByRole('button', { name: 'View photo 2', exact: true })
-    .click();
-  await expect(photo).toHaveAttribute('src', /kitchen\.svg(?:\?.*)?$/);
-  await expect(photo).toBeInViewport({ ratio: 1 });
+  await expect(
+    drawer.getByRole('heading', { name: 'Photos', exact: true }),
+  ).toHaveCount(0);
   await expect(
     drawer.locator('a:has(img[width="160"]), a:has(img[width="480"])'),
   ).toHaveCount(0);

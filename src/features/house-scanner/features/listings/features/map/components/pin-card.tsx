@@ -121,6 +121,7 @@ export function PinCard({
               index={photoIndex}
               onSelect={(index) => setSelectionPhoto({ id: listing.id, index })}
               onOpen={onDetails}
+              showAttribution
             >
               {null}
             </ListingGallery>

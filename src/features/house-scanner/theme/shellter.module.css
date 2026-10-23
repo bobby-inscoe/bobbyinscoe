@@ -322,7 +322,7 @@
 /* The photo runs to the card's edges, as on every listing portal. */
 .card > .cardPhoto {
   margin: calc(-1 * var(--mantine-spacing-md))
-    calc(-1 * var(--mantine-spacing-md)) var(--mantine-spacing-xs);
+    calc(-1 * var(--mantine-spacing-md)) 0;
 }
 .priceText {
   font-weight: 800;
@@ -402,6 +402,9 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+.photoGallery > .photoAttribution {
+  margin-top: var(--mantine-spacing-xs);
+}
 /* The photo runs to the card's edge, so its credit line needs the card's own padding. */
 .cardPhoto .photoAttribution {
   padding-inline: var(--mantine-spacing-md);
@@ -465,7 +468,7 @@
     padding: 12px;
   }
   .viewingCard > .cardPhoto {
-    margin: -12px -12px 4px;
+    margin: -12px -12px 0;
   }
   .viewingCard .placeholder {
     padding: 0;
@@ -683,6 +686,10 @@
   flex: 1;
   min-height: 0;
 }
+.photoPinImage .photo {
+  object-fit: contain;
+  background: var(--shellter-sunk);
+}
 .photoPinImage .photo,
 .photoPinImage .placeholder {
   height: 100%;
@@ -776,6 +783,12 @@
 .toolbarSearch {
   grid-area: search;
 }
+.inlineHelp {
+  flex-shrink: 0;
+}
+.inlineHelp :global(.mantine-ActionIcon-icon) {
+  justify-content: flex-start;
+}
 .matchHelp:hover {
   background: transparent;
 }
@@ -861,7 +874,7 @@
   /* The photo leads the card at full width, like a viewing. */
   .compactCard .cardPhoto {
     min-width: 0;
-    margin: -12px -12px 4px;
+    margin: -12px -12px 0;
   }
   .compactCard .photoAttribution {
     padding: 0 12px;
@@ -1439,6 +1452,8 @@
   z-index: 1;
 }
 
+.photoPinImage .photoSlide,
+.photoPinImage .photoDisplay,
 .photoPinImage .photoGallery,
 .photoPinImage .photoSlides {
   height: 100%;

@@ -41,6 +41,7 @@ async function openMap(page: Page, count = 4) {
         ...clusterTemplate,
         id: index === 0 ? clusterTemplate.id : '10000000-0000-4000-8000-' + String(index).padStart(12, '0'),
         title: 'Cluster home ' + (index + 1),
+        photos: undefined,
         photo: {
           url: 'https://images.example.invalid/map-home.svg',
           attribution: 'Synthetic illustration',
