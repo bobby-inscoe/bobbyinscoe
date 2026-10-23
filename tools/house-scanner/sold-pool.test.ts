@@ -1,4 +1,7 @@
-import type { ModelRow } from '@house-scanner-tools/price-model';
+import {
+  FALLBACK_PREMIUM,
+  type ModelRow,
+} from '@house-scanner-tools/price-model';
 import {
   MIN_MODEL_HOMES,
   refreshPriceModel,
@@ -40,7 +43,8 @@ describe('refreshPriceModel', () => {
     const model = refreshPriceModel(pool, 'lundin', rows(MIN_MODEL_HOMES), now);
     expect(model && priceModelSchema.parse(model)).toEqual(model);
     expect(model?.homes).toBe(MIN_MODEL_HOMES);
-    expect(model?.finalPremium).toBe(0);
+    // Asking prices only: the gap to final prices is the fallback.
+    expect(model?.finalPremium).toBe(FALLBACK_PREMIUM);
   });
 
   it('learns the premium of final prices over asking prices', () => {
@@ -58,7 +62,7 @@ describe('refreshPriceModel', () => {
     expect(model?.finalPremium).toBeCloseTo(Math.log(1.05), 3);
   });
 
-  it('replaces a list read whole, merges a sold list read by hand, and drops a collector source not read for 14 days', () => {
+  it('merges every read, keeps a source read by hand, and drops a collector source not read for 14 days', () => {
     const pool: SoldPool = {
       boneo: { readAt: '2026-10-01T12:00:00.000Z', rows: {} },
       'erik-olsson': {
@@ -69,7 +73,8 @@ describe('refreshPriceModel', () => {
     };
     refreshPriceModel(pool, 'lundin', rows(100), now);
     refreshPriceModel(pool, 'lundin', rows(50, {}, 'other'), now);
-    expect(homes(pool, 'lundin')).toBe(50);
+    // A later Lundin read without the archive keeps the rows earlier reads saw.
+    expect(homes(pool, 'lundin')).toBe(150);
     refreshPriceModel(pool, 'stadshem', rows(100), now, { manual: true });
     refreshPriceModel(pool, 'stadshem', rows(30, {}, 'new'), now, {
       manual: true,

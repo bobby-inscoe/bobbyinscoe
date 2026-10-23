@@ -1,5 +1,6 @@
 import {
   baselineLog,
+  FALLBACK_PREMIUM,
   fitPriceModel,
   type ModelRow,
   periodOf,
@@ -76,6 +77,32 @@ describe('fitPriceModel', () => {
     expect(Math.abs(shrunk.levels.centrum.level)).toBeLessThan(
       Math.abs(strong.levels.centrum.level),
     );
+  });
+
+  it('fits final prices alone with the fallback gap when asking prices are too few', () => {
+    const finals = synthetic().map((r) => ({ ...r, final: true }));
+    const few = synthetic()
+      .slice(0, 3)
+      .map((r) => ({ ...r, priceSek: r.priceSek * 3 }));
+    const model = fitPriceModel([...finals, ...few], {
+      fittedAt: '2026-10-23T12:00:00.000Z',
+      shrink: 0.01,
+    });
+    expect(model.homes).toBe(finals.length);
+    expect(model.finalPremium).toBe(FALLBACK_PREMIUM);
+    const home = {
+      areaM2: 60,
+      feeSek: 3000,
+      rooms: null,
+      neighbourhood: 'okänd',
+    };
+    expect(baselineLog(model, home, true)).toBeCloseTo(
+      12 + 0.75 * Math.log(60) - 0.2,
+      1,
+    );
+    expect(
+      baselineLog(model, home, true) - baselineLog(model, home),
+    ).toBeCloseTo(FALLBACK_PREMIUM, 10);
   });
 
   it('reads the half-year from a date', () => {
