@@ -118,7 +118,7 @@ export interface ListingsTranslations {
     estimateBasis: string;
     estimateBasisArea: string;
     estimate: string;
-    likelyFinalPrice: string;
+    expectedSalePrice: string;
     selectUpTo500HomesThatAreStillAvailable: string;
     yourFavoriteWasRemovedOtherMembersSavesRemain: string;
     favoriteSaved: string;

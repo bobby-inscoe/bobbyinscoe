@@ -60,13 +60,13 @@ function show(listing: Listing, language: 'en' | 'sv' = 'en') {
 it('shows the database range and the likely final price', () => {
   show(target);
   expect(screen.getByText(/Estimate 2.8M–3.8M/)).toBeTruthy();
-  expect(screen.getByText(/likely final 3.4M/)).toBeTruthy();
+  expect(screen.getByText(/expected sale price 3.4M/)).toBeTruthy();
 });
 
 it('says the same in Swedish', () => {
   show(target, 'sv');
   expect(screen.getByText(/Uppskattning/)).toBeTruthy();
-  expect(screen.getByText(/troligt slutpris/)).toBeTruthy();
+  expect(screen.getByText(/förväntat slutpris/)).toBeTruthy();
 });
 
 it('shows nothing for a home without an estimate', () => {

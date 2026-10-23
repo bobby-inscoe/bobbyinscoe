@@ -307,11 +307,11 @@ export const en = {
         "Delete this link for the whole household? Everyone's favorites and notes on it are removed too.",
       keepIt: 'Keep it',
       estimateBasis:
-        'From similar homes by size, fee and area, and {value0} priced homes within {value1} km. The range is the likely asking price.',
+        'Estimated from similar apartments within {value0} km. The range is the expected asking price.',
       estimateBasisArea:
-        'From similar homes by size, fee and area. The range is the likely asking price.',
+        'Estimated from similar apartments in the area. The range is the expected asking price.',
       estimate: 'Estimate',
-      likelyFinalPrice: 'likely final {value0}',
+      expectedSalePrice: '· expected sale price {value0}',
       selectUpTo500HomesThatAreStillAvailable:
         'Select up to 500 homes that are still available.',
       yourFavoriteWasRemovedOtherMembersSavesRemain:

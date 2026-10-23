@@ -15,7 +15,7 @@ export function usePriceEstimate(listing: Listing) {
   return listing.priceEstimate;
 }
 
-/** "Estimate 2,8M–3,8M likely final 3,4M": the database's guide for a home with no asking price, and its basis. */
+/** "Estimate 2.8M–3.8M · expected sale price 3.4M": the database's guide for a home with no asking price. */
 export function EstimateLine({ listing }: { listing: Listing }) {
   const intl = useIntl();
   const estimate = listing.priceEstimate;
@@ -33,10 +33,7 @@ export function EstimateLine({ listing }: { listing: Listing }) {
         estimate.nearby > 0
           ? intl.formatMessage(
               { id: 'listings.details.estimateBasis' },
-              {
-                value0: messageValue(estimate.nearby),
-                value1: messageValue(kilometres),
-              },
+              { value0: messageValue(kilometres) },
             )
           : intl.formatMessage({ id: 'listings.details.estimateBasisArea' })
       }
@@ -48,7 +45,7 @@ export function EstimateLine({ listing }: { listing: Listing }) {
         <Text span size="sm" c="dimmed" fw={400}>
           {' '}
           <FormattedMessage
-            id="listings.details.likelyFinalPrice"
+            id="listings.details.expectedSalePrice"
             values={{ value0: compactPrice(estimate.finalSek, intl) }}
           />
         </Text>
