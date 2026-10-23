@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import { MantineProvider } from '@mantine/core';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { ListingGallery } from '@/features/house-scanner/components/listing-gallery';
@@ -18,7 +24,10 @@ beforeEach(() => {
     },
   );
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 function gallery(count = 3, reducedMotion = false) {
   vi.stubGlobal('matchMedia', (media: string) => ({
@@ -121,4 +130,25 @@ it('uses discrete dots without scaling when reduced motion is requested', () => 
   expect(first.style.opacity).toBe('0.45');
   expect(second.style.opacity).toBe('1');
   expect(second.style.transform).toBe('');
+});
+
+it('restores overlays 200ms after swipe activity stops, including momentum scrolling', () => {
+  vi.useFakeTimers();
+  const { viewport, move } = gallery();
+  const controls = viewport.parentElement?.querySelector<HTMLElement>(
+    `.${classes.photoGalleryControls}`,
+  );
+  if (!controls) throw new Error('Missing gallery controls');
+  fireEvent.touchStart(viewport, { touches: [{ clientX: 100, clientY: 50 }] });
+  fireEvent.touchMove(viewport, { touches: [{ clientX: 20, clientY: 50 }] });
+  expect(controls.hasAttribute('data-hidden')).toBe(true);
+  expect(controls.hasAttribute('inert')).toBe(true);
+  fireEvent.touchEnd(viewport, { touches: [] });
+  act(() => vi.advanceTimersByTime(100));
+  move(0.5);
+  act(() => vi.advanceTimersByTime(199));
+  expect(controls.hasAttribute('data-hidden')).toBe(true);
+  act(() => vi.advanceTimersByTime(1));
+  expect(controls.hasAttribute('data-hidden')).toBe(false);
+  expect(controls.hasAttribute('inert')).toBe(false);
 });

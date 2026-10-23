@@ -26,6 +26,7 @@ async function swipePhoto(
   page: import('@playwright/test').Page,
   photo: import('@playwright/test').Locator,
   distance: number,
+  duringSwipe?: () => Promise<void>,
 ) {
   const box = await photo.boundingBox();
   if (!box) throw new Error('Missing photo');
@@ -43,6 +44,7 @@ async function swipePhoto(
     });
     await page.waitForTimeout(25);
   }
+  await duringSwipe?.();
   await session.send('Input.dispatchTouchEvent', {
     type: 'touchEnd',
     touchPoints: [],
@@ -1906,17 +1908,18 @@ test('listing and favorite cards share swipe galleries and open details', async 
     await expect(photo).toHaveAttribute('src', /living-room\.svg(?:\?.*)?$/);
     if (test.info().project.name === 'narrow') {
       await photo.scrollIntoViewIfNeeded();
-      await swipePhoto(page, photo, -240);
+      await swipePhoto(page, photo, -240, async () => {
+        await expect(next).toBeHidden();
+        await expect(
+          card.getByRole('button', { name: 'Save favorite', exact: true }),
+        ).toBeHidden();
+      });
       await expect(photo).toHaveAttribute('src', /kitchen\.svg(?:\?.*)?$/);
       await expect(
         card.getByRole('img', { name: 'Photo 2 of 4', exact: true }),
       ).toBeVisible();
-      await expect(next).toBeHidden();
-      await expect(
-        card.getByRole('button', { name: 'Save favorite', exact: true }),
-      ).toBeHidden();
       await expect(page.getByRole('dialog')).toHaveCount(0);
-      await expect(next).toBeVisible({ timeout: 5000 });
+      await expect(next).toBeVisible({ timeout: 1500 });
       await next.click();
       await expect(photo).toHaveAttribute('src', /balcony\.svg(?:\?.*)?$/);
       await next.click();
@@ -2488,7 +2491,7 @@ test('drawer location map pans and zooms without navigating, keeps drawer scroll
   ).toBeVisible();
 });
 
-test('mobile navigation recedes while reading and returns on upward scroll', async ({
+test('mobile bottom navigation recedes while reading and the header stays at page top', async ({
   page,
 }, testInfo) => {
   await openDemo(page);
@@ -2521,7 +2524,7 @@ test('mobile navigation recedes while reading and returns on upward scroll', asy
   }
   await expect(shell).toHaveAttribute('data-navigation-hidden');
   await expect(nav).toHaveJSProperty('inert', true);
-  await expect(header).toHaveJSProperty('inert', true);
+  await expect(header).toHaveJSProperty('inert', false);
   await expect
     .poll(() => header.evaluate((el) => el.getBoundingClientRect().bottom))
     .toBeLessThanOrEqual(0);
@@ -2535,10 +2538,8 @@ test('mobile navigation recedes while reading and returns on upward scroll', asy
   await page.evaluate(() => window.scrollBy({ top: -12, behavior: 'instant' }));
   await expect(shell).not.toHaveAttribute('data-navigation-hidden');
   await expect
-    .poll(() =>
-      header.evaluate((el) => Math.round(el.getBoundingClientRect().top)),
-    )
-    .toBe(0);
+    .poll(() => header.evaluate((el) => el.getBoundingClientRect().bottom))
+    .toBeLessThanOrEqual(0);
   await expect(nav).toHaveJSProperty('inert', false);
   await nav.getByRole('button', { name: 'More', exact: true }).click();
   await page.evaluate(() => window.scrollBy({ top: 80, behavior: 'instant' }));
@@ -2564,6 +2565,7 @@ test('mobile navigation recedes while reading and returns on upward scroll', asy
   await expect(shell).toHaveAttribute('data-navigation-hidden');
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
   await expect(shell).not.toHaveAttribute('data-navigation-hidden');
+  await expect(header).toBeInViewport();
   await nav.getByRole('button', { name: 'Favorites', exact: true }).click();
   await expect(shell).not.toHaveAttribute('data-navigation-hidden');
   await page.emulateMedia({ reducedMotion: 'reduce' });

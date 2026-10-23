@@ -2,7 +2,7 @@ import { useRouterState } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
 
-// Only page scrolling controls the bars; drawers and maps own their gestures.
+// Only page scrolling controls the bottom navigation; drawers and maps own their gestures.
 export function useMobileNavigation() {
   const ref = useRef<HTMLElement>(null);
   const pathname = useRouterState({
@@ -15,15 +15,13 @@ export function useMobileNavigation() {
     if (!page) return;
     const phone = window.matchMedia('(max-width: 35.99375em)');
     const header = page.querySelector<HTMLElement>('header');
-    const bars = () => [
-      header,
-      page.querySelector<HTMLElement>(`.${classes.tabBar}`),
-    ];
+    const tabBar = () => page.querySelector<HTMLElement>(`.${classes.tabBar}`);
     let previous = window.scrollY;
     let travel = 0;
     const show = () => {
       page.removeAttribute('data-navigation-hidden');
-      for (const bar of bars()) if (bar) bar.inert = false;
+      const nav = tabBar();
+      if (nav) nav.inert = false;
       travel = 0;
     };
     const scroll = () => {
@@ -36,13 +34,13 @@ export function useMobileNavigation() {
       );
       const delta = y - previous;
       previous = y;
-      const nav = bars()[1];
+      const nav = tabBar();
       if (!phone.matches || !nav || y <= (header?.offsetHeight ?? 56)) {
         show();
         return;
       }
       if (
-        bars().some((bar) => bar?.querySelector(':focus-visible')) ||
+        nav.querySelector(':focus-visible') ||
         nav.querySelector('[aria-expanded="true"]')
       ) {
         show();
@@ -52,7 +50,7 @@ export function useMobileNavigation() {
       if (travel <= -8) show();
       else if (travel >= 24) {
         page.setAttribute('data-navigation-hidden', '');
-        for (const bar of bars()) if (bar) bar.inert = true;
+        nav.inert = true;
       }
     };
     const keyboard = (event: KeyboardEvent) => {
