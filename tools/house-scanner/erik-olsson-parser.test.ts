@@ -335,7 +335,7 @@ describe('Erik Olsson listing page', () => {
     });
   });
 
-  it('names up to four photos in page order and the first floor plan, with the image account from the page', () => {
+  it('names up to eight photos in page order and the first floor plan, with the image account from the page', () => {
     const keys = (images: unknown, imageHost = true) => {
       const { photoKeys, planKey } = detail(
         listingPage({ ...home(), images }, 3, imageHost),
@@ -350,9 +350,12 @@ describe('Erik Olsson listing page', () => {
       `${n}1111111-2222-4333-8444-555555555555`.slice(-36);
     const key = (id: string) => `${IMAGE_ACCOUNT}/${id}`;
     expect(
-      keys([img(PLAN_ID, true), ...[1, 2, 3, 4, 5].map((n) => img(photo(n)))]),
+      keys([
+        img(PLAN_ID, true),
+        ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => img(photo(n))),
+      ]),
     ).toEqual({
-      photoKeys: [1, 2, 3, 4].map((n) => key(photo(n))),
+      photoKeys: [1, 2, 3, 4, 5, 6, 7, 8].map((n) => key(photo(n))),
       planKey: key(PLAN_ID),
     });
     // An unusable id is skipped, not taken as the end of the list.

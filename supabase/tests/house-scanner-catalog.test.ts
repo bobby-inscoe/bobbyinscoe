@@ -3024,6 +3024,51 @@ describe('listing gallery', () => {
     }
   });
 
+  it('accepts eight photos, rejects nine, and restores the limit on rollback', async () => {
+    const database = await household();
+    const version = '20261023150017_house_scanner_eight_photos';
+    const check = (count: number) => {
+      const observation = {
+        ...home('eight-photos'),
+        photo: image('lead'),
+        morePhotos: Array.from({ length: count - 1 }, (_, n) =>
+          image(String(n)),
+        ),
+        floorPlan: image('plan'),
+      };
+      return {
+        observation,
+        query: () =>
+          database.query(
+            "select hs.assert_observation(s,$1::jsonb) from hs.sources s where source_id='alpha'",
+            [JSON.stringify(observation)],
+          ),
+      };
+    };
+    try {
+      await database.exec(await migration(`${version}.sql`));
+      const eight = check(8);
+      expect(observationSchema.safeParse(eight.observation).success).toBe(true);
+      await eight.query();
+      const nine = check(9);
+      expect(observationSchema.safeParse(nine.observation).success).toBe(false);
+      await expect(nine.query()).rejects.toThrow('Photo not permitted');
+      await publish([eight.observation], { database });
+      expect((await homes(database))['eight-photos'].photos).toHaveLength(8);
+      expect(await drift(database)).toEqual([]);
+      expect(
+        (await database.query('select * from hs.household_drift()')).rows,
+      ).toEqual([]);
+      await database.exec(await rollback(version));
+      await expect(check(5).query()).rejects.toThrow('Photo not permitted');
+      await check(4).query();
+      await database.exec(await migration(`${version}.sql`));
+      await eight.query();
+    } finally {
+      await database.close();
+    }
+  });
+
   it('refuses images from other hosts, expired ones and extra photos without a lead', async () => {
     const database = await household();
     const check = (observation: Observation) =>
@@ -3416,11 +3461,13 @@ describe('carried-over guards', () => {
 // Household financing for monthly cost estimates (spec: shellter-monthly-cost, S1).
 describe('household financing', () => {
   it('rolls back to exactly the earlier schema and applies again', async () => {
-    const database = await freshDatabase('all');
+    const database = await migratedThrough(FINANCING);
     try {
       const migrated = await fingerprint(database);
       await database.exec(await rollback(FINANCING));
-      const earlier = await migratedThrough(SOURCES);
+      const earlier = await migratedThrough(
+        '20261023150017_house_scanner_eight_photos',
+      );
       try {
         expect(await fingerprint(database)).toEqual(await fingerprint(earlier));
       } finally {

@@ -77,7 +77,7 @@ describe('Lundin guarded run', () => {
     const thumb = 'mode=max&w=640&h=480&scale=down';
     const expected = {
       photo: { url: dc(11, thumb), attribution: 'Lundin' },
-      morePhotos: [12, 13, 14].map((n) => ({ url: dc(n, thumb) })),
+      morePhotos: [12, 13, 14, 15].map((n) => ({ url: dc(n, thumb) })),
       floorPlan: { url: dc(21, 'mode=max&w=1200&h=1200&scale=down') },
     };
     const memory = emptyMemory();

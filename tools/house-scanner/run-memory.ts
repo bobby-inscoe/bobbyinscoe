@@ -49,8 +49,8 @@ export const detailFactsSchema = z.strictObject({
       /^[A-Za-z0-9_-]{10,40}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
     )
     .optional(),
-  // Up to four photos, in page order, and the floor plan.
-  photoKeys: z.array(imageKey).min(1).max(4).optional(),
+  // Up to eight photos, in page order, and the floor plan.
+  photoKeys: z.array(imageKey).min(1).max(8).optional(),
   planKey: imageKey.optional(),
 });
 export type DetailFacts = z.infer<typeof detailFactsSchema>;

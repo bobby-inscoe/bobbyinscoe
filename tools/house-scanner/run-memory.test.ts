@@ -128,6 +128,16 @@ describe('loading', () => {
 });
 
 describe('saving', () => {
+  it('round-trips eight photo keys and a floor plan', () => {
+    const path = tempFile();
+    const photoKeys = Array.from({ length: 8 }, (_, n) => `photo-${n}`);
+    const memory = memoryWith({
+      gallery: { ...entry(DAY), photoKeys, planKey: 'plan' },
+    });
+    saveMemory(path, memory, NOW);
+    expect(loadMemory(path)).toEqual({ memory, reset: false });
+  });
+
   it('drops entries older than 30 days and keeps the newest 5000', () => {
     const path = tempFile();
     const details: RunMemory['details'] = {};

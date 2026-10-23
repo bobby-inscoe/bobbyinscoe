@@ -275,9 +275,13 @@ describe('Bjurfors listing page', () => {
           [2, 2],
           [3, 4],
           [4, 5],
+          [5, 6],
+          [6, 10],
+          [7, 11],
+          [8, 12],
         ].map(
           ([n, v]) =>
-            `/contentassets/00000000000000000000000000000001/fixturebild${n}.jpg?v=100000000${v}`,
+            `/contentassets/00000000000000000000000000000001/fixturebild${n}.jpg?v=${1000000000 + v}`,
         ),
         planKey:
           '/contentassets/00000000000000000000000000000001/fixtureplan.jpg',
@@ -288,7 +292,19 @@ describe('Bjurfors listing page', () => {
       expect(text).not.toContain(value);
   });
 
-  it('takes the first four images as the photos, captioned or not, and only valid keys', () => {
+  it('keeps a short gallery short before the broker portrait and area pictures', () => {
+    const html = fixture('detail-full.html').replace(
+      /,?\{"caption":null,"urls":\{"Full":"[^"\n]*fixturebild[6-9]\.jpg[^"\n]*"\}\}/g,
+      '',
+    );
+    const read = facts(html);
+    expect(read.photoKeys).toHaveLength(5);
+    expect(read.photoKeys?.every((key) => key.includes('fixturebild'))).toBe(
+      true,
+    );
+  });
+
+  it('takes the first eight images as the photos, captioned or not, and only valid keys', () => {
     const path = (name: string) =>
       `/contentassets/${'a'.repeat(32)}/${name}.jpg?v=1`;
     const image = (name: string, caption: string | null = null) => ({
@@ -304,13 +320,16 @@ describe('Bjurfors listing page', () => {
         image('hem3', 'Köket'),
         image('hem4'),
         image('hem5'),
+        ...[6, 7, 8, 9].map((n) => image(`hem${n}`)),
       ],
       floorPlans: [{ originalUrl: '/contentassets/x/plan.pdf' }],
     };
     const read = facts(
       `${detailPage([])}<div data-modaldata='${JSON.stringify(gallery)}'></div>`,
     );
-    expect(read.photoKeys).toEqual(['hem1', 'hem2', 'hem3', 'hem4'].map(path));
+    expect(read.photoKeys).toEqual(
+      [1, 2, 3, 4, 5, 6, 7, 8].map((n) => path(`hem${n}`)),
+    );
     expect(read).not.toHaveProperty('planKey');
   });
 

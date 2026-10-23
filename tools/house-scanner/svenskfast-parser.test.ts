@@ -259,7 +259,7 @@ describe('Svensk Fastighetsförmedling home page', () => {
     );
   });
 
-  it('reads up to four distinct collage photos in page order and drops a bad address', () => {
+  it('reads up to eight distinct collage photos in page order and drops a bad address', () => {
     const photos = [1, 2, 3, 4, 5].map(collagePhoto);
     const bad = collagePhoto(6).replace('i.sfcdn.se', 'example.invalid');
     const { photoKeys } = read(
@@ -270,6 +270,7 @@ describe('Svensk Fastighetsförmedling home page', () => {
       '402000/638544103482000000/ExempelBild2Xyz...jpg',
       '403000/638544103483000000/ExempelBild3Xyz...jpg',
       '404000/638544103484000000/ExempelBild4Xyz...jpg',
+      '405000/638544103485000000/ExempelBild5Xyz...jpg',
     ]);
     expect(read(home()).photoKeys).toBeUndefined();
   });
