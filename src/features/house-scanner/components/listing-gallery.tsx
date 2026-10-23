@@ -155,6 +155,7 @@ export function ListingGallery({
               <ListingPhoto
                 listing={{ ...listing, photo }}
                 contain={contain}
+                showAttribution={false}
                 linkToListing={!fullScreen}
                 onOpen={onOpen}
                 actionLabel={

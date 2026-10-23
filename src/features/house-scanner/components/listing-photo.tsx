@@ -17,6 +17,7 @@ export function ListingPhoto({
   isNew,
   contain,
   linkToListing = true,
+  showAttribution = true,
 }: {
   listing: Listing;
   onOpen?: () => void;
@@ -27,6 +28,7 @@ export function ListingPhoto({
   isNew?: boolean;
   contain?: boolean;
   linkToListing?: boolean;
+  showAttribution?: boolean;
 }) {
   const intl = useIntl();
 
@@ -104,7 +106,7 @@ export function ListingPhoto({
           </Badge>
         )}
       </div>
-      {permitted && (
+      {permitted && showAttribution && (
         <Text size="xs" c="dimmed" className={classes.photoAttribution}>
           {displayLabel(intl, photo.attribution)}
         </Text>
