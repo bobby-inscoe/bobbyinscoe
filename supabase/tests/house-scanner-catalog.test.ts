@@ -998,6 +998,68 @@ describe('candidates filtered by household criteria', () => {
     ).toContain('fits-both');
   });
 
+  it('saves household financing only in its exact shape, and the rollback strips it', async () => {
+    const revision = async () =>
+      (
+        await db.query<{ revision: number }>(
+          'select revision from hs.profiles where id=$1',
+          [PROFILE_B],
+        )
+      ).rows[0].revision;
+    const save = async (financing: unknown) =>
+      asUser(
+        OWNER_B,
+        'select public.hs_save_profile($1,$2,$3,$4,true,$5::jsonb) as value',
+        [
+          HOUSE_B,
+          PROFILE_B,
+          String(await revision()),
+          'Second profile',
+          JSON.stringify({ ...criteria, financing }),
+        ],
+      );
+    const financing = async () =>
+      (await snapshot(HOUSE_B, OWNER_B)).profiles[0].criteria.financing;
+    const valid = {
+      cashSek: 500000,
+      interestRatePercent: 2.7,
+      taxDeduction: true,
+    };
+    for (const value of [
+      null,
+      {},
+      { ...valid, extra: 1 },
+      { ...valid, cashSek: -1 },
+      { ...valid, cashSek: 1.5 },
+      { ...valid, interestRatePercent: 0 },
+      { ...valid, interestRatePercent: 21 },
+      { ...valid, taxDeduction: 'yes' },
+    ])
+      await expect(save(value)).rejects.toThrow('Invalid profile');
+    await save({ ...valid, cashSek: null });
+    await save(valid);
+    expect(await financing()).toEqual(valid);
+
+    const name = '20261023200000_house_scanner_financing';
+    const run = async (folder: string, file: string) =>
+      db.exec(
+        await readFile(
+          new URL(`../${folder}/${file}.sql`, import.meta.url),
+          'utf8',
+        ),
+      );
+    await run('rollbacks', `${name}_down`);
+    expect(await financing()).toBeUndefined();
+    await expect(save(valid)).rejects.toThrow('Invalid profile');
+    await run('migrations', name);
+    await save(valid);
+    // Leave the profile as the previous test did for the rollback test below.
+    await db.query('update hs.profiles set criteria=$1::jsonb where id=$2', [
+      JSON.stringify({ ...criteria, minAreaM2: 60 }),
+      PROFILE_B,
+    ]);
+  });
+
   it('rolls back delisting, shared hides and the criteria filter, and applies them again', async () => {
     const delisted = '20261020142553_house_scanner_delisted';
     const shared = '20261020133201_house_scanner_shared_hides';
@@ -2993,6 +3055,7 @@ describe('listing gallery', () => {
 // The bidding fact (spec: house-scanner-bidding-flag, S1).
 const BIDDING = '20261023080000_house_scanner_bidding';
 const HIGHEST_BID = '20261023090000_house_scanner_highest_bid';
+const FINANCING = '20261023200000_house_scanner_financing';
 
 describe('bidding flag', () => {
   it('rolls back to exactly the earlier schema and applies again', async () => {
@@ -3092,7 +3155,7 @@ describe('source settings', () => {
     );
 
   it('rolls back to exactly the earlier schema and applies again', async () => {
-    const database = await freshDatabase('all');
+    const database = await migratedThrough(SOURCES);
     try {
       const migrated = await fingerprint(database);
       await database.exec(await rollback(SOURCES));
@@ -3347,5 +3410,26 @@ describe('carried-over guards', () => {
     await expect(add(`${ORIGIN}/long-note`, '😀'.repeat(1001))).rejects.toThrow(
       'Invalid bookmark',
     );
+  });
+});
+
+// Household financing for monthly cost estimates (spec: shellter-monthly-cost, S1).
+describe('household financing', () => {
+  it('rolls back to exactly the earlier schema and applies again', async () => {
+    const database = await freshDatabase('all');
+    try {
+      const migrated = await fingerprint(database);
+      await database.exec(await rollback(FINANCING));
+      const earlier = await migratedThrough(SOURCES);
+      try {
+        expect(await fingerprint(database)).toEqual(await fingerprint(earlier));
+      } finally {
+        await earlier.close();
+      }
+      await database.exec(await migration(`${FINANCING}.sql`));
+      expect(await fingerprint(database)).toEqual(migrated);
+    } finally {
+      await database.close();
+    }
   });
 });
