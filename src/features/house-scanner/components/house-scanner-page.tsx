@@ -14,6 +14,7 @@ import { FormattedMessage, useIntl } from 'react-intl';
 import { HouseholdWorkspace } from '@/features/house-scanner/components/household-workspace';
 import { SyntheticWorkspace } from '@/features/house-scanner/components/synthetic-workspace';
 import { HouseScannerAccess } from '@/features/house-scanner/features/access/components/house-scanner-access';
+import { useMobileNavigation } from '@/features/house-scanner/hooks/use-mobile-navigation';
 import { ShellterLanguageProvider } from '@/features/house-scanner/i18n/language-provider';
 import {
   classes,
@@ -38,13 +39,18 @@ export function HouseScannerPage() {
 
 function HouseScannerContent() {
   const intl = useIntl();
+  const pageRef = useMobileNavigation();
 
   const [demo, setDemo] = useState(false);
   const [inviteToken, setInviteToken] = useState(readInviteToken);
   const navigate = useNavigate();
   return (
     <MantineThemeProvider theme={shellterTheme}>
-      <Box component="main" className={`${shellterScope} ${classes.page}`}>
+      <Box
+        ref={pageRef}
+        component="main"
+        className={`${shellterScope} ${classes.page}`}
+      >
         <header className={classes.appBar}>
           <Group
             className={classes.appBarInner}

@@ -1805,6 +1805,7 @@ test('the scrolled drawer header meets the top edge and photos open full screen'
       }),
     )
     .toBeLessThan(1);
+  await expect(page.locator('main[data-navigation-hidden]')).toHaveCount(0);
   await page.screenshot({
     path: `.browser-test-results/scrolled-header-${test.info().project.name}.png`,
   });
@@ -2485,4 +2486,101 @@ test('drawer location map pans and zooms without navigating, keeps drawer scroll
       exact: true,
     }),
   ).toBeVisible();
+});
+
+test('mobile navigation recedes while reading and returns on upward scroll', async ({
+  page,
+}, testInfo) => {
+  await openDemo(page);
+  const shell = page.locator('main').filter({
+    has: page.getByRole('heading', { name: 'Shellter', exact: true }),
+  });
+  const nav = page.getByRole('navigation', { name: 'Shortlist sections' });
+  const header = shell.locator('header').first();
+  const mobile = testInfo.project.name === 'narrow';
+  await expect(
+    nav.getByRole('button', { name: 'Listings', exact: true }),
+  ).toBeVisible();
+  await expect(
+    nav.getByRole('button', { name: 'More', exact: true }),
+  ).toBeVisible();
+  expect(
+    await nav
+      .locator('.mantine-Button-label')
+      .first()
+      .evaluate((el) => getComputedStyle(el).clipPath),
+  ).toBe(mobile ? 'inset(50%)' : 'none');
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement)
+      document.activeElement.blur();
+    window.scrollTo({ top: 400, behavior: 'instant' });
+  });
+  if (!mobile) {
+    await expect(shell).not.toHaveAttribute('data-navigation-hidden');
+    return;
+  }
+  await expect(shell).toHaveAttribute('data-navigation-hidden');
+  await expect(nav).toHaveJSProperty('inert', true);
+  await expect(header).toHaveJSProperty('inert', true);
+  await expect
+    .poll(() => header.evaluate((el) => el.getBoundingClientRect().bottom))
+    .toBeLessThanOrEqual(0);
+  await expect
+    .poll(() =>
+      nav.evaluate((el) => el.getBoundingClientRect().top - window.innerHeight),
+    )
+    .toBeGreaterThanOrEqual(0);
+  await page.evaluate(() => window.scrollBy({ top: -2, behavior: 'instant' }));
+  await expect(shell).toHaveAttribute('data-navigation-hidden');
+  await page.evaluate(() => window.scrollBy({ top: -12, behavior: 'instant' }));
+  await expect(shell).not.toHaveAttribute('data-navigation-hidden');
+  await expect
+    .poll(() =>
+      header.evaluate((el) => Math.round(el.getBoundingClientRect().top)),
+    )
+    .toBe(0);
+  await expect(nav).toHaveJSProperty('inert', false);
+  await nav.getByRole('button', { name: 'More', exact: true }).click();
+  await page.evaluate(() => window.scrollBy({ top: 80, behavior: 'instant' }));
+  await expect(shell).not.toHaveAttribute('data-navigation-hidden');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menu')).not.toBeVisible();
+  await expect(
+    nav.getByRole('button', { name: 'More', exact: true }),
+  ).toBeFocused();
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement)
+      document.activeElement.blur();
+    window.scrollBy({ top: 80, behavior: 'instant' });
+  });
+  await expect(shell).toHaveAttribute('data-navigation-hidden');
+  await page.keyboard.press('Tab');
+  await expect(shell).not.toHaveAttribute('data-navigation-hidden');
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement)
+      document.activeElement.blur();
+    window.scrollBy({ top: 80, behavior: 'instant' });
+  });
+  await expect(shell).toHaveAttribute('data-navigation-hidden');
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+  await expect(shell).not.toHaveAttribute('data-navigation-hidden');
+  await nav.getByRole('button', { name: 'Favorites', exact: true }).click();
+  await expect(shell).not.toHaveAttribute('data-navigation-hidden');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(nav).toHaveCSS('transition-duration', '0s');
+  await page.screenshot({
+    path: `.browser-test-results/mobile-navigation-${testInfo.project.name}.png`,
+  });
+  await page.getByRole('button', { name: 'Select', exact: true }).click();
+  const selectionBar = page
+    .getByText('0 selected', { exact: true })
+    .locator('..');
+  await expect(selectionBar).toHaveCSS('bottom', '52px');
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement)
+      document.activeElement.blur();
+    window.scrollTo({ top: 400, behavior: 'instant' });
+  });
+  await expect(shell).toHaveAttribute('data-navigation-hidden');
+  await expect(selectionBar).toHaveCSS('bottom', '0px');
 });
