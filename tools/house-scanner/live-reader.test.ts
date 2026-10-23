@@ -585,6 +585,28 @@ describe('listing pages', () => {
       expect(memory).toEqual(before);
     });
 
+    it('lets a remembered page fill only facts the list left blank', async () => {
+      const run = async (memory: RunMemory) =>
+        runBoneoCollection(
+          goteborg,
+          deps(
+            fakeFetch(boneoRobotsOr(serve(1, () => ({ body: BALCONY })))).impl,
+          ),
+          keepAll,
+          memory,
+        );
+      const plain = await run(rememberedIds(1));
+      const listPrice = plain.observations[0].facts.askingPriceSek;
+      expect(listPrice).not.toBeNull();
+      const stale = await run(
+        memoryOf({ '1': { ...remembered(DAY), askingPriceSek: 9_999_999 } }),
+      );
+      expect(stale.observations[0].facts).toMatchObject({
+        askingPriceSek: listPrice,
+        outdoor: 'terrace',
+      });
+    });
+
     it('reads again an entry older than 7 days and replaces it', async () => {
       const memory = memoryOf({
         '1': remembered(8 * DAY),
