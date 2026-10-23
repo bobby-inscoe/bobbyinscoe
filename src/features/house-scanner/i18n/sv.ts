@@ -368,7 +368,6 @@ export const sv = {
       price: 'Förväntat slutpris (SEK)',
       cash: 'Kontantinsats (SEK)',
       rate: 'Ränta (%)',
-      rateChoices: 'Prova en annan ränta',
       interest: 'Ränta',
       taxDeduction: 'Ränteavdrag',
       amortization: 'Amortering ({percent} %)',

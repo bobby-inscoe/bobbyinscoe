@@ -41,6 +41,7 @@ interface ListingDetailsProps {
   headingOrder?: 3 | 4;
   onSelectPhoto?: (index: number) => void;
   locationPreview?: ReactNode;
+  monthlyCost?: ReactNode;
 }
 
 interface FactRow {
@@ -115,6 +116,7 @@ export function ListingDetails({
   headingOrder = 4,
   onSelectPhoto,
   locationPreview,
+  monthlyCost,
 }: ListingDetailsProps) {
   const intl = useIntl();
   const { facts, conflicts } = listing;
@@ -456,6 +458,7 @@ export function ListingDetails({
             </Text>
           )}
         </Section>
+        {monthlyCost}
         {listing.photos && listing.photos.length > 1 && (
           <Section
             title={intl.formatMessage({ id: 'listings.details.photos' })}
