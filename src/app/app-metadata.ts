@@ -3,10 +3,8 @@ export function applyAppMetadata(pathname: string) {
     pathname === '/shellter' || pathname.startsWith('/shellter/');
   const links = {
     manifest: shellter ? '/shellter/manifest.webmanifest' : '/manifest.json',
-    icon: shellter ? '/shellter/icon.svg' : '/favicon.ico',
-    'apple-touch-icon': shellter
-      ? '/shellter/apple-touch-icon.png'
-      : '/apple-touch-icon.png',
+    icon: '/favicon.ico',
+    'apple-touch-icon': '/apple-touch-icon.png',
   };
   for (const [rel, href] of Object.entries(links)) {
     document
