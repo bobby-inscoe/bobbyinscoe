@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useIntl } from 'react-intl';
 import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type { Listing } from '@/features/house-scanner/types/contracts';
@@ -17,6 +18,8 @@ export function ListingGallery({
   onSelect,
   contain,
   children,
+  onOpen,
+  fullScreen,
 }: {
   listing: Listing;
   photos: NonNullable<Listing['photos']>;
@@ -24,7 +27,10 @@ export function ListingGallery({
   onSelect: (index: number) => void;
   contain?: boolean;
   children: ReactNode;
+  onOpen?: () => void;
+  fullScreen?: boolean;
 }) {
+  const intl = useIntl();
   const viewport = useRef<HTMLDivElement>(null);
   const loop = photos.length > 1;
   const slides = loop
@@ -86,7 +92,9 @@ export function ListingGallery({
   }, []);
 
   return (
-    <div className={classes.photoGallery}>
+    <div
+      className={`${classes.photoGallery} ${fullScreen ? classes.fullScreenGallery : ''}`}
+    >
       <div
         ref={viewport}
         className={classes.photoSlides}
@@ -142,8 +150,20 @@ export function ListingGallery({
               key={`${loop && position === 0 ? 'before' : loop && position === slides.length - 1 ? 'after' : 'photo'}-${photo.url}`}
               className={classes.photoSlide}
               inert={position !== index + (loop ? 1 : 0)}
+              aria-hidden={position !== index + (loop ? 1 : 0)}
             >
-              <ListingPhoto listing={{ ...listing, photo }} contain={contain} />
+              <ListingPhoto
+                listing={{ ...listing, photo }}
+                contain={contain}
+                onOpen={onOpen}
+                actionLabel={
+                  onOpen
+                    ? intl.formatMessage({
+                        id: 'listings.details.viewFullScreen',
+                      })
+                    : undefined
+                }
+              />
             </div>
           ))
         ) : (

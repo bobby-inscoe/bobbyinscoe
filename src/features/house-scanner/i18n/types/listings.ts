@@ -47,6 +47,9 @@ export interface ListingsTranslations {
     conflictingFields: string;
     viewings: string;
     photos: string;
+    viewFullScreen: string;
+    fullScreenPhotos: string;
+    exitFullScreen: string;
     viewPhoto: string;
     previousPhoto: string;
     nextPhoto: string;

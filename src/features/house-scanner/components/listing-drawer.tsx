@@ -1,7 +1,15 @@
-import { ActionIcon, Button, Drawer, Group, Stack, Text } from '@mantine/core';
+import {
+  ActionIcon,
+  Button,
+  Drawer,
+  Group,
+  Modal,
+  Stack,
+  Text,
+} from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { ChevronLeft, ChevronRight, LayoutTemplate } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { FavoriteStar } from '@/features/house-scanner/components/favorite-star';
 import { HideButton } from '@/features/house-scanner/components/hide-button';
@@ -65,6 +73,10 @@ export function ListingDrawer({
   hideError,
 }: ListingDrawerProps) {
   const intl = useIntl();
+  const [fullScreen, setFullScreen] = useState(false);
+  useEffect(() => {
+    if (!opened || !listing) setFullScreen(false);
+  }, [opened, listing]);
 
   const [selection, setSelection] = useState({ listingId: '', index: 0 });
   const photoRef = useRef<HTMLDivElement>(null);
@@ -88,150 +100,218 @@ export function ListingDrawer({
   };
   const wide = useMediaQuery('(min-width: 48em)');
   return (
-    <Drawer
-      opened={opened}
-      onClose={onClose}
-      title={listing?.title}
-      closeButtonProps={{
-        'aria-label': intl.formatMessage({
-          id: 'listings.details.closeListingDetails',
-        }),
-      }}
-      position={wide ? 'right' : 'bottom'}
-      size={wide ? 'lg' : '100%'}
-      classNames={{
-        title: classes.drawerTitle,
-        header: classes.drawerHeader,
-        body: classes.drawerSheetBody,
-      }}
-    >
-      {listing && (
-        <Stack gap="sm" className={classes.drawerBody}>
-          <div ref={photoRef} className={classes.photoWrap}>
-            <ListingGallery
-              key={`${listing.id}-${showingFloorPlan}`}
-              listing={
-                showingFloorPlan
-                  ? {
-                      ...listing,
-                      title: intl.formatMessage({
-                        id: 'listings.details.floorPlan',
-                      }),
-                    }
-                  : listing
-              }
-              photos={showingFloorPlan ? [floorPlan] : photos}
-              index={showingFloorPlan ? 0 : index}
-              onSelect={showingFloorPlan ? () => {} : selectPhoto}
-              contain={showingFloorPlan}
-            >
-              {photos.length > 1 && !showingFloorPlan && (
-                <>
-                  <ActionIcon
-                    variant="default"
-                    size="lg"
-                    radius="xl"
-                    className={classes.photoPrevious}
-                    aria-label={intl.formatMessage({
-                      id: 'listings.details.previousPhoto',
-                    })}
-                    onClick={() =>
-                      selectPhoto((index - 1 + photos.length) % photos.length)
-                    }
-                  >
-                    <ChevronLeft size={22} aria-hidden />
-                  </ActionIcon>
-                  <ActionIcon
-                    variant="default"
-                    size="lg"
-                    radius="xl"
-                    className={classes.photoNext}
-                    aria-label={intl.formatMessage({
-                      id: 'listings.details.nextPhoto',
-                    })}
-                    onClick={() => selectPhoto((index + 1) % photos.length)}
-                  >
-                    <ChevronRight size={22} aria-hidden />
-                  </ActionIcon>
-                </>
-              )}
-              {floorPlan && (
-                <Button
-                  size="xs"
-                  variant="default"
-                  className={classes.photoFloorPlan}
-                  leftSection={<LayoutTemplate size={16} aria-hidden />}
-                  onClick={() => selectPhoto(showingFloorPlan ? 0 : -1)}
-                  aria-pressed={showingFloorPlan}
-                >
-                  <FormattedMessage
-                    id={
+    <>
+      <Drawer.Root
+        opened={opened}
+        onClose={() => {
+          setFullScreen(false);
+          onClose();
+        }}
+        trapFocus={!fullScreen}
+        closeOnEscape={!fullScreen}
+        position={wide ? 'right' : 'bottom'}
+        size={wide ? 'lg' : '100%'}
+      >
+        <Drawer.Overlay />
+        <Drawer.Content p={0}>
+          <Drawer.Header className={classes.drawerHeader}>
+            <Drawer.Title className={classes.drawerTitle}>
+              {listing?.title}
+            </Drawer.Title>
+            <Drawer.CloseButton
+              aria-label={intl.formatMessage({
+                id: 'listings.details.closeListingDetails',
+              })}
+            />
+          </Drawer.Header>
+          <Drawer.Body className={classes.drawerSheetBody}>
+            {listing && (
+              <Stack gap="sm" className={classes.drawerBody}>
+                <div ref={photoRef} className={classes.photoWrap}>
+                  <ListingGallery
+                    key={`${listing.id}-${showingFloorPlan}`}
+                    listing={
                       showingFloorPlan
-                        ? 'listings.details.photos'
-                        : 'listings.details.floorPlan'
+                        ? {
+                            ...listing,
+                            title: intl.formatMessage({
+                              id: 'listings.details.floorPlan',
+                            }),
+                          }
+                        : listing
                     }
-                  />
-                </Button>
-              )}
-              <HideButton
-                listingId={listing.id}
-                hidden={hidden}
-                onToggle={onToggleHidden}
-              />
-              <FavoriteStar
-                {...favorite}
-                onToggle={() => onFavorite(listing.id)}
-              />
-            </ListingGallery>
-          </div>
-          {hideError && (
-            <Text role="alert" size="sm">
-              {hideError}
-            </Text>
-          )}
-          <PriceLine listing={listing} />
-          <EstimateLine listing={listing} />
-          <FactsLine listing={listing} />
-          <ReasonChips listing={listing} />
-          <AlsoOn sites={alsoOn} />
-          {snapshot.favorites.some(
-            (favorite) => favorite.listingId === listing.id,
-          ) && (
-            <Text size="sm">
-              <FormattedMessage id="listings.details.savedBy" />{' '}
-              {snapshot.favorites
-                .filter((favorite) => favorite.listingId === listing.id)
-                .map(
-                  (favorite) =>
-                    snapshot.members.find(
-                      (member) => member.userId === favorite.userId,
-                    )?.displayName ||
-                    intl.formatMessage({
-                      id: 'listings.details.householdMember',
-                    }),
-                )
-                .join(', ')}
-            </Text>
-          )}
-          <MatchLines listing={listing} snapshot={snapshot} details />
-          <Group>
-            <OriginalListingButton listing={listing} />
-            {onSeeOnMap && hasPin(listing.coordinates) && (
-              <Button size="xs" variant="default" onClick={onSeeOnMap}>
-                <FormattedMessage id="listings.details.seeOnMap" />
-              </Button>
+                    photos={showingFloorPlan ? [floorPlan] : photos}
+                    index={showingFloorPlan ? 0 : index}
+                    onSelect={showingFloorPlan ? () => {} : selectPhoto}
+                    contain={showingFloorPlan}
+                    onOpen={() => setFullScreen(true)}
+                  >
+                    {photos.length > 1 && !showingFloorPlan && (
+                      <>
+                        <ActionIcon
+                          variant="default"
+                          size="lg"
+                          radius="xl"
+                          className={classes.photoPrevious}
+                          aria-label={intl.formatMessage({
+                            id: 'listings.details.previousPhoto',
+                          })}
+                          onClick={() =>
+                            selectPhoto(
+                              (index - 1 + photos.length) % photos.length,
+                            )
+                          }
+                        >
+                          <ChevronLeft size={22} aria-hidden />
+                        </ActionIcon>
+                        <ActionIcon
+                          variant="default"
+                          size="lg"
+                          radius="xl"
+                          className={classes.photoNext}
+                          aria-label={intl.formatMessage({
+                            id: 'listings.details.nextPhoto',
+                          })}
+                          onClick={() =>
+                            selectPhoto((index + 1) % photos.length)
+                          }
+                        >
+                          <ChevronRight size={22} aria-hidden />
+                        </ActionIcon>
+                      </>
+                    )}
+                    {floorPlan && (
+                      <Button
+                        size="xs"
+                        variant="default"
+                        className={classes.photoFloorPlan}
+                        leftSection={<LayoutTemplate size={16} aria-hidden />}
+                        onClick={() => selectPhoto(showingFloorPlan ? 0 : -1)}
+                        aria-pressed={showingFloorPlan}
+                      >
+                        <FormattedMessage
+                          id={
+                            showingFloorPlan
+                              ? 'listings.details.photos'
+                              : 'listings.details.floorPlan'
+                          }
+                        />
+                      </Button>
+                    )}
+                    <HideButton
+                      listingId={listing.id}
+                      hidden={hidden}
+                      onToggle={onToggleHidden}
+                    />
+                    <FavoriteStar
+                      {...favorite}
+                      onToggle={() => onFavorite(listing.id)}
+                    />
+                  </ListingGallery>
+                </div>
+                {hideError && (
+                  <Text role="alert" size="sm">
+                    {hideError}
+                  </Text>
+                )}
+                <PriceLine listing={listing} />
+                <EstimateLine listing={listing} />
+                <FactsLine listing={listing} />
+                <ReasonChips listing={listing} />
+                <AlsoOn sites={alsoOn} />
+                {snapshot.favorites.some(
+                  (favorite) => favorite.listingId === listing.id,
+                ) && (
+                  <Text size="sm">
+                    <FormattedMessage id="listings.details.savedBy" />{' '}
+                    {snapshot.favorites
+                      .filter((favorite) => favorite.listingId === listing.id)
+                      .map(
+                        (favorite) =>
+                          snapshot.members.find(
+                            (member) => member.userId === favorite.userId,
+                          )?.displayName ||
+                          intl.formatMessage({
+                            id: 'listings.details.householdMember',
+                          }),
+                      )
+                      .join(', ')}
+                  </Text>
+                )}
+                <MatchLines listing={listing} snapshot={snapshot} details />
+                <Group>
+                  <OriginalListingButton listing={listing} />
+                  {onSeeOnMap && hasPin(listing.coordinates) && (
+                    <Button size="xs" variant="default" onClick={onSeeOnMap}>
+                      <FormattedMessage id="listings.details.seeOnMap" />
+                    </Button>
+                  )}
+                </Group>
+                <ListingDetails
+                  listing={listing}
+                  snapshot={snapshot}
+                  userId={userId}
+                  notes={notes}
+                  headingOrder={3}
+                  onSelectPhoto={showPhoto}
+                />
+              </Stack>
             )}
-          </Group>
-          <ListingDetails
-            listing={listing}
-            snapshot={snapshot}
-            userId={userId}
-            notes={notes}
-            headingOrder={3}
-            onSelectPhoto={showPhoto}
-          />
-        </Stack>
-      )}
-    </Drawer>
+          </Drawer.Body>
+        </Drawer.Content>
+      </Drawer.Root>
+      <Modal.Root
+        opened={fullScreen && opened && !!listing}
+        onClose={() => setFullScreen(false)}
+        fullScreen
+        returnFocus={false}
+        onExitTransitionEnd={() =>
+          photoRef.current
+            ?.querySelector<HTMLButtonElement>('button:not([inert] button)')
+            ?.focus()
+        }
+        zIndex={300}
+      >
+        <Modal.Overlay />
+        <Modal.Content
+          p={0}
+          radius={0}
+          aria-label={intl.formatMessage({
+            id: 'listings.details.fullScreenPhotos',
+          })}
+        >
+          <Modal.Body p={0} className={classes.fullScreenBody}>
+            {listing && (
+              <ListingGallery
+                key={`${listing.id}-${showingFloorPlan}-full`}
+                listing={
+                  showingFloorPlan
+                    ? {
+                        ...listing,
+                        title: intl.formatMessage({
+                          id: 'listings.details.floorPlan',
+                        }),
+                      }
+                    : listing
+                }
+                photos={showingFloorPlan ? [floorPlan] : photos}
+                index={showingFloorPlan ? 0 : index}
+                onSelect={showingFloorPlan ? () => {} : selectPhoto}
+                contain
+                fullScreen
+              >
+                {null}
+              </ListingGallery>
+            )}
+            <Modal.CloseButton
+              className={classes.exitFullScreen}
+              aria-label={intl.formatMessage({
+                id: 'listings.details.exitFullScreen',
+              })}
+            />
+          </Modal.Body>
+        </Modal.Content>
+      </Modal.Root>
+    </>
   );
 }

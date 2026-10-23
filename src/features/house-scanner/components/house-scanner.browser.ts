@@ -22,6 +22,34 @@ async function openDemo(page: import('@playwright/test').Page) {
   ).toBeVisible();
 }
 
+async function swipePhoto(
+  page: import('@playwright/test').Page,
+  photo: import('@playwright/test').Locator,
+  distance: number,
+) {
+  const box = await photo.boundingBox();
+  if (!box) throw new Error('Missing photo');
+  const x = box.x + box.width * (distance < 0 ? 0.85 : 0.15);
+  const y = box.y + box.height * 0.32;
+  const session = await page.context().newCDPSession(page);
+  await session.send('Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: [{ x, y }],
+  });
+  for (let step = 1; step <= 8; step++) {
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ x: x + (distance * step) / 8, y }],
+    });
+    await page.waitForTimeout(25);
+  }
+  await session.send('Input.dispatchTouchEvent', {
+    type: 'touchEnd',
+    touchPoints: [],
+  });
+  await session.detach();
+}
+
 async function useSharedDemoPoint(page: import('@playwright/test').Page) {
   await page.route(
     '**/src/features/house-scanner/mock/synthetic-household.ts*',
@@ -1657,33 +1685,10 @@ test('drawer cycles photos and thumbnails select the carousel photo', async ({
   await drawer.getByRole('button', { name: 'Next photo' }).click();
   await expect(photo).toHaveAttribute('src', /living-room\.svg(?:\?.*)?$/);
   if (test.info().project.name === 'narrow') {
-    const swipe = async (distance: number) => {
-      const box = await photo.boundingBox();
-      if (!box) throw new Error('Missing photo');
-      const x = box.x + box.width * (distance < 0 ? 0.85 : 0.15);
-      const y = box.y + box.height * 0.32;
-      const session = await page.context().newCDPSession(page);
-      await session.send('Input.dispatchTouchEvent', {
-        type: 'touchStart',
-        touchPoints: [{ x, y }],
-      });
-      for (let step = 1; step <= 8; step++) {
-        await session.send('Input.dispatchTouchEvent', {
-          type: 'touchMove',
-          touchPoints: [{ x: x + (distance * step) / 8, y }],
-        });
-        await page.waitForTimeout(25);
-      }
-      await session.send('Input.dispatchTouchEvent', {
-        type: 'touchEnd',
-        touchPoints: [],
-      });
-      await session.detach();
-    };
     await expect(photo).toBeInViewport({ ratio: 1 });
-    await swipe(-260);
+    await swipePhoto(page, photo, -260);
     await expect(photo).toHaveAttribute('src', /kitchen\.svg(?:\?.*)?$/);
-    await swipe(260);
+    await swipePhoto(page, photo, 260);
     await expect(photo).toHaveAttribute('src', /living-room\.svg(?:\?.*)?$/);
     const next = drawer.locator('button[aria-label="Next photo"]');
     const favorite = drawer.locator('button[aria-label="Save favorite"]');
@@ -1692,11 +1697,11 @@ test('drawer cycles photos and thumbnails select the carousel photo', async ({
     await expect(favorite).toBeHidden();
     await expect(hide).toBeHidden();
     await page.waitForTimeout(2000);
-    await swipe(260);
+    await swipePhoto(page, photo, 260);
     await expect(photo).toHaveAttribute('src', /balcony\.svg(?:\?.*)?$/);
     await page.waitForTimeout(2000);
     await expect(next).toBeHidden();
-    await swipe(-260);
+    await swipePhoto(page, photo, -260);
     await expect(photo).toHaveAttribute('src', /living-room\.svg(?:\?.*)?$/);
     await expect(next).toBeVisible({ timeout: 5000 });
     await expect(favorite).toBeVisible();
@@ -1730,4 +1735,94 @@ test('drawer cycles photos and thumbnails select the carousel photo', async ({
       .getByRole('dialog')
       .getByRole('button', { name: 'Floor plan', exact: true }),
   ).toHaveCount(0);
+});
+
+test('the scrolled drawer header meets the top edge and photos open full screen', async ({
+  page,
+}) => {
+  if (test.info().project.name === 'narrow')
+    await page.setViewportSize({ width: 430, height: 932 });
+  await openDemo(page);
+  await page
+    .getByRole('article', { name: 'Example balcony home', exact: true })
+    .getByRole('button', { name: 'Details', exact: true })
+    .click();
+  const drawer = page.getByRole('dialog', {
+    name: 'Example balcony home',
+    exact: true,
+  });
+  await expect(drawer).toBeVisible();
+  await expect
+    .poll(() =>
+      drawer.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        return window.innerWidth < 768
+          ? Math.round(box.top)
+          : Math.round(box.right - window.innerWidth);
+      }),
+    )
+    .toBe(0);
+
+  await drawer.evaluate((element) => {
+    element.scrollTop = 220;
+  });
+  await expect
+    .poll(() =>
+      drawer.evaluate((element) => {
+        const header = element.querySelector('header');
+        if (!header) throw new Error('Missing header');
+        return Math.abs(
+          header.getBoundingClientRect().top -
+            element.getBoundingClientRect().top,
+        );
+      }),
+    )
+    .toBeLessThan(1);
+  await page.screenshot({
+    path: `.browser-test-results/scrolled-header-${test.info().project.name}.png`,
+  });
+  await drawer.evaluate((element) => {
+    element.scrollTop = 0;
+  });
+  const open = drawer.getByRole('button', {
+    name: 'View full screen',
+    exact: true,
+  });
+  await open.click();
+  const viewer = page.getByRole('dialog', {
+    name: 'Full-screen photos',
+    exact: true,
+  });
+  await expect(viewer).toBeVisible();
+  await expect(viewer.getByRole('button')).toHaveCount(1);
+  await expect(
+    viewer.getByRole('button', { name: 'Exit full screen' }),
+  ).toBeVisible();
+  const link = viewer.getByRole('link');
+  await expect(link).toHaveCount(1);
+  await expect(link).toHaveAttribute(
+    'href',
+    'https://example.invalid/homes/00000000-0000-4000-8000-000000000010',
+  );
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link.locator('img')).toBeInViewport({ ratio: 1 });
+  await page.screenshot({
+    path: `.browser-test-results/full-screen-${test.info().project.name}.png`,
+  });
+  if (test.info().project.name === 'narrow') {
+    await swipePhoto(page, link.locator('img'), -290);
+    await expect(viewer.locator('img:not([inert] img)')).toHaveAttribute(
+      'src',
+      /kitchen\.svg(?:\?.*)?$/,
+    );
+  }
+
+  await page.keyboard.press('Escape');
+  await expect(viewer).toBeHidden();
+  await expect(drawer).toBeVisible();
+  await expect(open).toBeFocused();
+  await open.click();
+  await viewer.getByRole('button', { name: 'Exit full screen' }).click();
+  await expect(viewer).toBeHidden();
+  await expect(drawer).toBeVisible();
 });

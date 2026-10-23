@@ -65,7 +65,7 @@ export function ListingPhoto({
     </div>
   );
   return (
-    <Stack gap="xs">
+    <Stack gap="xs" className={classes.photoDisplay}>
       <div className={classes.photoFrame}>
         {onOpen ? (
           <UnstyledButton

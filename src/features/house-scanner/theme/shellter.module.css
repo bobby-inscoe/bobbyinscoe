@@ -1325,3 +1325,39 @@
     transition: none;
   }
 }
+
+.fullScreenBody {
+  height: 100dvh;
+  background: #142624;
+}
+.fullScreenGallery {
+  height: 100%;
+  --mantine-color-dimmed: #d7eae6;
+}
+.fullScreenGallery .photoSlides,
+.fullScreenGallery .photoSlide,
+.fullScreenGallery .photoDisplay {
+  height: 100%;
+}
+.fullScreenGallery .photoFrame {
+  flex: 1;
+  min-height: 0;
+}
+.fullScreenGallery .photoLink {
+  height: 100%;
+}
+.fullScreenGallery .photo {
+  height: 100%;
+  max-height: none;
+  aspect-ratio: auto;
+  object-fit: contain;
+}
+.fullScreenGallery .photoAttribution {
+  padding: 0 12px 12px;
+}
+.exitFullScreen {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  background: rgb(255 255 255 / 85%);
+}
