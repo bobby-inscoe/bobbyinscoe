@@ -234,6 +234,9 @@ export interface ListingsTranslations {
     closeSelectedHome: string;
     selectHome: string;
     openOriginalListing: string;
+    ctrlScrollToZoom: string;
+    commandScrollToZoom: string;
+    twoFingersToMove: string;
     zoomIn: string;
     zoomOut: string;
     resetBearing: string;

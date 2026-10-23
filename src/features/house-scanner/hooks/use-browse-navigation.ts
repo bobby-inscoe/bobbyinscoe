@@ -174,7 +174,7 @@ export function useBrowseNavigation() {
     void navigate({
       to: destinations[value],
       search: toUrlSearch({ ...search, select: false, filterOpen: false }),
-      resetScroll: false,
+      resetScroll: window.matchMedia('(max-width: 35.99375em)').matches,
     });
   };
   const openListing = (id: string) => {

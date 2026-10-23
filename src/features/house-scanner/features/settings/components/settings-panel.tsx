@@ -1,4 +1,4 @@
-import { Button, Divider, Paper, Stack, Text, Title } from '@mantine/core';
+import { Button, Paper, Stack, Text, Title } from '@mantine/core';
 import { LogOut } from 'lucide-react';
 import { FormattedMessage } from 'react-intl';
 import { LanguageSelect } from '@/features/house-scanner/components/language-select';
@@ -57,21 +57,18 @@ export function SettingsPanel({
             <FormattedMessage id="settings.personal.languageDescription" />
           </Text>
           <LanguageSelect label />
+          {onSignOut && (
+            <Button
+              variant="default"
+              w="50%"
+              leftSection={<LogOut size={16} aria-hidden />}
+              onClick={onSignOut}
+            >
+              <FormattedMessage id="navigation.signOut" />
+            </Button>
+          )}
         </Stack>
       </Paper>
-      {onSignOut && (
-        <>
-          <Divider />
-          <Button
-            variant="default"
-            w="fit-content"
-            leftSection={<LogOut size={16} aria-hidden />}
-            onClick={onSignOut}
-          >
-            <FormattedMessage id="navigation.signOut" />
-          </Button>
-        </>
-      )}
     </Stack>
   );
 }
