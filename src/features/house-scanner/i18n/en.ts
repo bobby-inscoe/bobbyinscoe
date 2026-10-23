@@ -188,6 +188,7 @@ export const en = {
       floorPlan: 'Floor plan',
       bidding: 'Bidding',
       biddingUnderWay: 'Bidding under way',
+      highestBid: 'Highest bid',
       buildingAndOutdoor: 'Building and outdoor',
       floor: 'Floor',
       lift: 'Lift',

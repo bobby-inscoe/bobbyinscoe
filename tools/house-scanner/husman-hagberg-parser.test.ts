@@ -443,3 +443,25 @@ describe('Husman Hagberg bidding', () => {
       expect(one({ bidding: value }).facts.bidding).toBeNull();
   });
 });
+
+describe('Husman Hagberg highest bid', () => {
+  const bid = (bids: unknown) => {
+    const read = readHusmanHagbergDetailPage(
+      estatePage([], [], { estate: { details: { bids } } }),
+    );
+    return read.kind === 'detail' ? read.facts.highestBidSek : read.kind;
+  };
+  it('takes the highest bid that is neither cancelled nor hidden', () => {
+    expect(
+      bid([
+        { alias: 'A', amount: 4_500_000, cancelled: false, isHidden: false },
+        { alias: 'B', amount: 4_600_000, cancelled: false, isHidden: false },
+        { alias: 'C', amount: 4_900_000, cancelled: true, isHidden: false },
+        { alias: 'D', amount: 5_000_000, cancelled: false, isHidden: true },
+      ]),
+    ).toBe(4_600_000);
+    expect(bid([])).toBeUndefined();
+    expect(bid(undefined)).toBeUndefined();
+    expect(bid([{ amount: 'mycket' }])).toBeUndefined();
+  });
+});

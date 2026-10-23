@@ -231,11 +231,18 @@ export function readLundinDetailPage(
       : /\/dc\/([^./"?]+)\.jpg/.exec(
           plans.slice(plan.index).split('</figure>')[0],
         )?.[1];
+  // The price box shows "Högsta bud" while bids are published (seen 23 October 2026).
+  const bid =
+    /H(?:ö|&#246;|&ouml;)gsta bud:\s*<\/dt>\s*<dd class=['"]pricebid['"]>\s*([\d\s ]{1,20})kr/.exec(
+      html.replace(/&nbsp;|&#160;/g, ' '),
+    )?.[1];
+  const highestBidSek = positiveInt(bid?.replace(/\D/g, ''), 1_000_000_000);
   return {
     kind: 'detail',
     facts: {
       outdoor: null,
       glazed: null,
+      ...(highestBidSek === null ? {} : { highestBidSek }),
       ...(photoKeys.length > 0 ? { photoKeys } : {}),
       ...(planId !== undefined && LUNDIN_IMAGE_ID.test(planId)
         ? { planKey: planId }

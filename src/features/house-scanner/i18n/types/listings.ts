@@ -50,6 +50,7 @@ export interface ListingsTranslations {
     floorPlan: string;
     bidding: string;
     biddingUnderWay: string;
+    highestBid: string;
     buildingAndOutdoor: string;
     floor: string;
     lift: string;

@@ -286,3 +286,21 @@ describe('Lundin bidding', () => {
       expect(facts({ HasBidding: value }).bidding).toBeNull();
   });
 });
+
+describe('Lundin highest bid', () => {
+  const box = (amount: string) =>
+    lundinHomePage().replace(
+      '</body>',
+      `<dl><dt class='pricebid'>Högsta bud:</dt><dd class='pricebid'> ${amount} kr</dd></dl></body>`,
+    );
+  const bid = (html: string) => {
+    const read = readLundinDetailPage(html);
+    return read.kind === 'detail' ? read.facts.highestBidSek : read.kind;
+  };
+  it('reads the published highest bid from the price box, and nothing without one', () => {
+    expect(bid(box('2 750 000'))).toBe(2_750_000);
+    expect(bid(box('2&nbsp;750&nbsp;000'))).toBe(2_750_000);
+    expect(bid(box('okänt'))).toBeUndefined();
+    expect(bid(lundinHomePage())).toBeUndefined();
+  });
+});

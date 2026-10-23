@@ -1774,7 +1774,8 @@ async function compareWithOld(
   // The old snapshot fills every fact from hs.empty_facts(); the client leaves an unknown bidding absent.
   const old = snapshotSchema.parse(today);
   for (const listing of old.listings)
-    if (listing.facts.bidding === null) delete listing.facts.bidding;
+    for (const key of ['bidding', 'highestBidSek'] as const)
+      if (listing.facts[key] === null) delete listing.facts[key];
   expect(expandSnapshot(parsed)).toEqual(old);
   return parsed;
 }
@@ -1985,7 +1986,7 @@ describe('listing cards', () => {
       'id',c.listing_id,'householdId',$1::uuid,'origin','source','sourceId',c.source_id,'title',c.title,
       'sourceUrls',jsonb_build_array(c.source_url),'conflicts',c.conflicts,'coordinates',shown.coordinates,
       -- The client leaves an unknown bidding absent.
-      'facts',case when c.facts->'bidding'='null'::jsonb then c.facts-'bidding' else c.facts end,
+      'facts',c.facts-array(select k from unnest(array['bidding','highestBidSek']) k where c.facts->k='null'::jsonb),
       'evidence',coalesce((select jsonb_agg(e order by n) from jsonb_array_elements(c.evidence) with ordinality x(e,n)
         where (e->>'observedAt')::timestamptz>=now()-c.retention),'[]'::jsonb),
       'photo',case when hs.policy_current(p.policy) and (c.photo->>'expiresAt')::timestamptz>now()
@@ -2968,6 +2969,7 @@ describe('listing gallery', () => {
 
 // The bidding fact (spec: house-scanner-bidding-flag, S1).
 const BIDDING = '20261023080000_house_scanner_bidding';
+const HIGHEST_BID = '20261023090000_house_scanner_highest_bid';
 
 describe('bidding flag', () => {
   it('rolls back to exactly the earlier schema and applies again', async () => {
@@ -2982,6 +2984,24 @@ describe('bidding flag', () => {
         await earlier.close();
       }
       await database.exec(await migration(`${BIDDING}.sql`));
+      expect(await fingerprint(database)).toEqual(migrated);
+    } finally {
+      await database.close();
+    }
+  });
+
+  it('rolls the highest bid back to exactly the earlier schema and applies it again', async () => {
+    const database = await migratedThrough(HIGHEST_BID);
+    try {
+      const migrated = await fingerprint(database);
+      await database.exec(await rollback(HIGHEST_BID));
+      const earlier = await migratedThrough(BIDDING);
+      try {
+        expect(await fingerprint(database)).toEqual(await fingerprint(earlier));
+      } finally {
+        await earlier.close();
+      }
+      await database.exec(await migration(`${HIGHEST_BID}.sql`));
       expect(await fingerprint(database)).toEqual(migrated);
     } finally {
       await database.close();

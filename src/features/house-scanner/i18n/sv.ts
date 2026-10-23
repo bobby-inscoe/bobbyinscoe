@@ -189,6 +189,7 @@ export const sv = {
       floorPlan: 'Planritning',
       bidding: 'Budgivning',
       biddingUnderWay: 'Budgivning pågår',
+      highestBid: 'Högsta bud',
       buildingAndOutdoor: 'Byggnad och uteplats',
       floor: 'Våning',
       lift: 'Hiss',

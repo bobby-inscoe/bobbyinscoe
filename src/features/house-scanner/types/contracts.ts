@@ -162,6 +162,8 @@ export const factsSchema = z.strictObject({
   status: z.enum(['upcoming', 'available', 'sold', 'withdrawn', 'unknown']),
   // True only when the source says bidding is under way; anything else is unknown. Optional so older observations parse.
   bidding: z.boolean().nullable().optional(),
+  // The highest bid the broker publishes, as of the observation. Never inferred; absent when hidden.
+  highestBidSek: money.positive().nullable().optional(),
 });
 export const photoSchema = z.strictObject({
   url: listingUrlSchema,
