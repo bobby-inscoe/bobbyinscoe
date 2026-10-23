@@ -108,3 +108,13 @@ describe('hs.price_models', () => {
     ).rejects.toThrow();
   });
 });
+
+describe('hosted safe-update guard', () => {
+  it('leaves no DELETE without a WHERE in any hs function, which the hosted database refuses', async () => {
+    const found = await db.query<{ name: string }>(
+      `select p.proname as name from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+       where n.nspname='hs' and p.prokind='f' and pg_get_functiondef(p.oid) ~* 'delete[[:space:]]+from[[:space:]]+[a-z_.]+[[:space:]]*;'`,
+    );
+    expect(found.rows).toEqual([]);
+  });
+});
