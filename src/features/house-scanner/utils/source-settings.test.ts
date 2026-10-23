@@ -111,15 +111,14 @@ describe('source content check', () => {
         now,
       ),
     ).toThrow('another host');
+    const photo = observation.photo;
+    if (!photo) throw new Error('Missing fixture photo');
     expect(() =>
       assertObservationAllowed(
         source,
         {
           ...observation,
-          floorPlan: observation.photo && {
-            ...observation.photo,
-            url: 'https://other.invalid/plan.jpg',
-          },
+          floorPlan: { ...photo, url: 'https://other.invalid/plan.jpg' },
         },
         now,
       ),

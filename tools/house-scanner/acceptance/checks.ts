@@ -112,7 +112,12 @@ export const ADMIN_PROBES: Record<string, Record<string, unknown>> = {
     p_role: 'member',
     p_active: true,
   },
-  admin_set_source: { p_source_id: 'Invalid probe', p_enabled: true },
+  admin_set_source: {
+    p_source_id: 'Invalid probe',
+    p_enabled: true,
+    p_listing_origins: null,
+    p_image_origins: null,
+  },
   admin_issue_credential: {
     p_key_id: 'accept-probe',
     p_source_ids: ['accept-probe'],
