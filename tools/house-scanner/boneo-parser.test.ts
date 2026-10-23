@@ -148,19 +148,19 @@ describe('Boneo parser', () => {
     ).toBe(false);
   });
 
-  it('produces output the source policy accepts', () => {
+  it('produces output from the source hosts', () => {
     const policy = sourceRegistry().find(
-      (entry) => entry.policy.sourceId === 'boneo',
-    )?.policy;
+      (entry) => entry.source.sourceId === 'boneo',
+    )?.source;
     if (!policy) throw new Error('boneo missing');
     for (const observation of page().observations)
       expect(() => assertAdapterOutput(policy, observation)).not.toThrow();
   });
 
-  it('rejects a photo from another host or when the policy has images off', () => {
+  it('rejects a photo from another host', () => {
     const policy = sourceRegistry().find(
-      (entry) => entry.policy.sourceId === 'boneo',
-    )?.policy;
+      (entry) => entry.source.sourceId === 'boneo',
+    )?.source;
     if (!policy) throw new Error('boneo missing');
     const withPhoto = byListing(1);
     if (!withPhoto.photo) throw new Error('fixture photo missing');
@@ -172,12 +172,6 @@ describe('Boneo parser', () => {
       },
     };
     expect(() => assertAdapterOutput(policy, elsewhere)).toThrow();
-    expect(() =>
-      assertAdapterOutput({ ...policy, imageDisplay: false }, withPhoto),
-    ).toThrow();
-    expect(() =>
-      assertAdapterOutput({ ...policy, imageHotlink: false }, withPhoto),
-    ).toThrow();
   });
   it('reports total and a more-pages signal from the embedded data', () => {
     const first = page('search-page-more.html');

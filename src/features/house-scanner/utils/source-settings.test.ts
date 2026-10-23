@@ -85,7 +85,11 @@ describe('source content check', () => {
         source,
         {
           ...observation,
-          facts: { ...observation.facts, bidding: true, highestBidSek: 2_000_000 },
+          facts: {
+            ...observation.facts,
+            bidding: true,
+            highestBidSek: 2_000_000,
+          },
           viewings: [{ startsAt: '2026-10-24T13:00:00Z', endsAt: null }],
         },
         now,

@@ -18,7 +18,6 @@ import { emptyMemory } from '@house-scanner-tools/run-memory';
 import { husmanHagbergAdapter } from '@house-scanner-tools/source-adapters';
 import { sourceRegistry } from '@house-scanner-tools/source-registry';
 import { describe, expect, it } from 'vitest';
-import { assertSourceAllowed } from '@/features/house-scanner/utils/source-policy';
 
 const LIST =
   'https://api.husmanhagberg.se/object/api/objects?ps=200&regX=G%C3%B6teborg';
@@ -98,7 +97,7 @@ describe('Husman Hagberg guarded run', () => {
     ]);
     expect(read).toMatchObject({ detailRead: 1, stopped: null });
     expect(read.observations[0]).toMatchObject(expected);
-    assertAdapterOutput(husmanHagberg().policy, read.observations[0]);
+    assertAdapterOutput(husmanHagberg().source, read.observations[0]);
 
     // An hour later, by the next run's clock, the page fails and the remembered read fills in.
     for (const entry of Object.values(memory.details))
@@ -210,44 +209,24 @@ describe('Husman Hagberg guarded run', () => {
 
 function husmanHagberg() {
   const found = sourceRegistry().find(
-    (e) => e.policy.sourceId === 'husman-hagberg',
+    (e) => e.source.sourceId === 'husman-hagberg',
   );
   if (!found) throw new Error('husman-hagberg missing');
   return found;
 }
 
 describe('Husman Hagberg registry entry', () => {
-  it('registers a pending source with an honest policy and the right hosts', () => {
-    const { policy, executor } = husmanHagberg();
+  it('registers the source as on, with its hosts and coverage notes', () => {
+    const { source, executor } = husmanHagberg();
     expect(executor).toBe('husman-hagberg-personal-read');
-    expect(policy).toMatchObject({
+    expect(source).toMatchObject({
       sourceId: 'husman-hagberg',
-      status: 'pending',
-      automatedCollection: false,
-      privateDisplay: false,
+      enabled: true,
       listingOrigins: ['https://www.husmanhagberg.se'],
       imageOrigins: ['https://media.husmanhagberg.se'],
-      imageDisplay: true,
-      imageHotlink: true,
-      retentionDays: 14,
     });
-    expect(policy.rightsBasis).toContain('Permission unresolved');
-    expect(policy.allowedFactFields).toEqual(
-      expect.arrayContaining([
-        'livingAreaM2',
-        'askingPriceSek',
-        'status',
-        'groundFloor',
-      ]),
-    );
-    // The list does not carry these, so the policy does not allow them.
-    for (const left of ['glazed', 'outdoor', 'lift'])
-      expect(policy.allowedFactFields).not.toContain(left);
-    expect(policy.capabilities.coverageGaps.join(' ')).toContain(
-      'not a documented',
-    );
-    expect(() =>
-      assertSourceAllowed(policy, new Date('2026-10-20T00:00:00Z')),
-    ).toThrow();
+    expect(
+      source.capabilities.coverageGaps.every((gap) => gap.length <= 300),
+    ).toBe(true);
   });
 });

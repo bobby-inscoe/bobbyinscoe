@@ -173,8 +173,8 @@ describe('Svensk Fastighetsförmedling list page', () => {
 
   it('passes the contract and the registry policy checks, and carries no free text', () => {
     const policy = sourceRegistry().find(
-      (entry) => entry.policy.sourceId === 'svenskfast',
-    )?.policy;
+      (entry) => entry.source.sourceId === 'svenskfast',
+    )?.source;
     if (!policy) throw new Error('svenskfast is not in the registry');
     const observation = one();
     expect(() => assertAdapterOutput(policy, observation)).not.toThrow();

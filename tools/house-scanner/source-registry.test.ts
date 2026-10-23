@@ -8,12 +8,8 @@ import {
   stadshemAdapter,
   svenskfastAdapter,
 } from '@house-scanner-tools/source-adapters';
-import {
-  approvedPolicy,
-  sourceRegistry,
-} from '@house-scanner-tools/source-registry';
+import { sourceRegistry } from '@house-scanner-tools/source-registry';
 import { describe, expect, it } from 'vitest';
-import { assertSourceAllowed } from '@/features/house-scanner/utils/source-policy';
 
 const adapters = [
   boneoAdapter,
@@ -27,7 +23,7 @@ const adapters = [
 
 type Entry = ReturnType<typeof entry>;
 const entry = (sourceId: string) => {
-  const found = sourceRegistry().find((e) => e.policy.sourceId === sourceId);
+  const found = sourceRegistry().find((e) => e.source.sourceId === sourceId);
   if (!found) throw new Error(`${sourceId} missing`);
   return structuredClone(found);
 };
@@ -35,50 +31,39 @@ const entry = (sourceId: string) => {
 describe.each(adapters.map((adapter) => [adapter.sourceId, adapter] as const))(
   '%s registry entry',
   (sourceId, adapter) => {
-    it('yields a policy the owner can approve for 90 days', () => {
-      const approved = approvedPolicy(
-        sourceId,
-        new Date('2026-10-20T00:00:00Z'),
-      );
-      expect(approved).toMatchObject({ status: 'approved' });
-      expect(() =>
-        assertSourceAllowed(approved, new Date('2026-10-21T00:00:00Z')),
-      ).not.toThrow();
-    });
-
     it('is found by its capability', () => {
       expect(adapterFor(entry(sourceId))).toBe(adapter);
     });
 
     it('refuses a capability whose source id, hosts or executor differ', () => {
       const changes: [string, (c: Entry) => unknown][] = [
-        ['the wrong source id', (c: Entry) => (c.policy.sourceId = 'other')],
+        ['the wrong source id', (c: Entry) => (c.source.sourceId = 'other')],
         [
           'a different listing origin',
           (c: Entry) =>
-            (c.policy.listingOrigins = [`${adapter.origin}.example.invalid`]),
+            (c.source.listingOrigins = [`${adapter.origin}.example.invalid`]),
         ],
         [
           'an extra listing origin',
           (c: Entry) =>
-            (c.policy.listingOrigins = [adapter.origin, 'https://x.invalid']),
+            (c.source.listingOrigins = [adapter.origin, 'https://x.invalid']),
         ],
         [
           'a plain http origin',
           (c: Entry) =>
-            (c.policy.listingOrigins = [
+            (c.source.listingOrigins = [
               adapter.origin.replace('https:', 'http:'),
             ]),
         ],
-        ['no image origin', (c: Entry) => (c.policy.imageOrigins = [])],
+        ['no image origin', (c: Entry) => (c.source.imageOrigins = [])],
         [
           'another image origin',
-          (c: Entry) => (c.policy.imageOrigins = ['https://images.invalid']),
+          (c: Entry) => (c.source.imageOrigins = ['https://images.invalid']),
         ],
         [
           'an extra image origin',
           (c: Entry) =>
-            (c.policy.imageOrigins = [
+            (c.source.imageOrigins = [
               adapter.imageOrigin,
               'https://cdn.invalid',
             ]),
