@@ -1343,9 +1343,6 @@
   flex: 1;
   min-height: 0;
 }
-.fullScreenGallery .photoLink {
-  height: 100%;
-}
 .fullScreenGallery .photo {
   height: 100%;
   max-height: none;
@@ -1355,9 +1352,22 @@
 .fullScreenGallery .photoAttribution {
   padding: 0 12px 12px;
 }
-.exitFullScreen {
+.fullScreenToolbar {
   position: absolute;
   top: max(12px, env(safe-area-inset-top));
   right: max(12px, env(safe-area-inset-right));
+}
+
+.exitFullScreen {
   background: rgb(255 255 255 / 85%);
+}
+.containedPhoto {
+  object-fit: contain;
+  object-position: center;
+}
+.floorPlanPreview {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-inline: auto;
 }

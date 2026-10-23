@@ -303,12 +303,15 @@ export function ListingDrawer({
                 {null}
               </ListingGallery>
             )}
-            <Modal.CloseButton
-              className={classes.exitFullScreen}
-              aria-label={intl.formatMessage({
-                id: 'listings.details.exitFullScreen',
-              })}
-            />
+            <Group gap="xs" className={classes.fullScreenToolbar}>
+              {listing && <OriginalListingButton listing={listing} />}
+              <Modal.CloseButton
+                className={classes.exitFullScreen}
+                aria-label={intl.formatMessage({
+                  id: 'listings.details.exitFullScreen',
+                })}
+              />
+            </Group>
           </Modal.Body>
         </Modal.Content>
       </Modal.Root>

@@ -317,7 +317,7 @@ export function ListingDetails({
               loading="lazy"
               referrerPolicy="no-referrer"
               width={480}
-              style={{ maxWidth: '100%', height: 'auto' }}
+              className={classes.floorPlanPreview}
             />
           </Section>
         )}

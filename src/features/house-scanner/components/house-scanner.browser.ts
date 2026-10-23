@@ -1794,23 +1794,33 @@ test('the scrolled drawer header meets the top edge and photos open full screen'
     exact: true,
   });
   await expect(viewer).toBeVisible();
+  await expect
+    .poll(() => viewer.evaluate((element) => getComputedStyle(element).opacity))
+    .toBe('1');
   await expect(viewer.getByRole('button')).toHaveCount(1);
   await expect(
     viewer.getByRole('button', { name: 'Exit full screen' }),
   ).toBeVisible();
-  const link = viewer.getByRole('link');
+  const link = viewer.getByRole('link', {
+    name: 'Open original listing',
+    exact: true,
+  });
+  const fullScreenPhoto = viewer.locator('img:not([inert] img)');
+  await expect(viewer.locator('a:has(img)')).toHaveCount(0);
+  await fullScreenPhoto.click();
+  await expect(viewer).toBeVisible();
   await expect(link).toHaveCount(1);
   await expect(link).toHaveAttribute(
     'href',
     'https://example.invalid/homes/00000000-0000-4000-8000-000000000010',
   );
   await expect(link).toHaveAttribute('target', '_blank');
-  await expect(link.locator('img')).toBeInViewport({ ratio: 1 });
+  await expect(fullScreenPhoto).toBeInViewport({ ratio: 1 });
   await page.screenshot({
     path: `.browser-test-results/full-screen-${test.info().project.name}.png`,
   });
   if (test.info().project.name === 'narrow') {
-    await swipePhoto(page, link.locator('img'), -290);
+    await swipePhoto(page, fullScreenPhoto, -290);
     await expect(viewer.locator('img:not([inert] img)')).toHaveAttribute(
       'src',
       /kitchen\.svg(?:\?.*)?$/,
@@ -1821,7 +1831,20 @@ test('the scrolled drawer header meets the top edge and photos open full screen'
   await expect(viewer).toBeHidden();
   await expect(drawer).toBeVisible();
   await expect(open).toBeFocused();
+  await drawer.getByRole('button', { name: 'Floor plan', exact: true }).click();
   await open.click();
+  await expect(fullScreenPhoto).toHaveAttribute(
+    'src',
+    /floor-plan\.svg(?:\?.*)?$/,
+  );
+  await expect(viewer.locator('a:has(img)')).toHaveCount(0);
+  await expect(link).toBeVisible();
+  await expect
+    .poll(() => viewer.evaluate((element) => getComputedStyle(element).opacity))
+    .toBe('1');
+  await page.screenshot({
+    path: `.browser-test-results/full-screen-floor-plan-${test.info().project.name}.png`,
+  });
   await viewer.getByRole('button', { name: 'Exit full screen' }).click();
   await expect(viewer).toBeHidden();
   await expect(drawer).toBeVisible();

@@ -16,6 +16,7 @@ export function ListingPhoto({
   pressed,
   isNew,
   contain,
+  linkToListing = true,
 }: {
   listing: Listing;
   onOpen?: () => void;
@@ -25,6 +26,7 @@ export function ListingPhoto({
   // Flags a fresh find in the photo's bottom-left corner, clear of the credit line below.
   isNew?: boolean;
   contain?: boolean;
+  linkToListing?: boolean;
 }) {
   const intl = useIntl();
 
@@ -48,8 +50,7 @@ export function ListingPhoto({
     Date.parse(photo.expiresAt) > Date.now();
   const content = permitted ? (
     <img
-      className={classes.photo}
-      style={contain ? { objectFit: 'contain' } : undefined}
+      className={`${classes.photo} ${contain ? classes.containedPhoto : ''}`}
       src={photo.url}
       alt={listing.title}
       loading="lazy"
@@ -84,7 +85,7 @@ export function ListingPhoto({
           >
             {content}
           </UnstyledButton>
-        ) : permitted ? (
+        ) : permitted && linkToListing ? (
           <a
             className={classes.photoLink}
             href={listing.sourceUrls[0]}
