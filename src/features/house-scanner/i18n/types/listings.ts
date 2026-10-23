@@ -160,6 +160,27 @@ export interface ListingsTranslations {
     roomFacts: string;
     savedByMembers: string;
   };
+  cost: {
+    heading: string;
+    price: string;
+    cash: string;
+    rate: string;
+    rateChoices: string;
+    interest: string;
+    taxDeduction: string;
+    amortization: string;
+    fee: string;
+    total: string;
+    loan: string;
+    shortfall: string;
+    noPrice: string;
+    feeUnknown: string;
+    runningCosts: string;
+    oneTime: string;
+    typical: string;
+    scenario: string;
+    reset: string;
+  };
   map: {
     cardLayout: string;
     classicCard: string;

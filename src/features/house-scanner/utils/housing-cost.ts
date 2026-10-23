@@ -1,6 +1,7 @@
 import type {
   Financing,
   Listing,
+  SearchProfile,
 } from '@/features/house-scanner/types/contracts';
 import type { PriceEstimate } from '@/features/house-scanner/utils/price-estimate';
 
@@ -24,6 +25,13 @@ const TITLE_FEE_SHARE = 0.015;
 const TITLE_FEE_SEK = 825;
 const DEED_FEE_SHARE = 0.02;
 const DEED_FEE_SEK = 375;
+
+// The profile that holds the household's financing: the first enabled one. A household has one today.
+export function financingProfile(
+  profiles: SearchProfile[],
+): SearchProfile | undefined {
+  return profiles.find((profile) => profile.enabled) ?? profiles[0];
+}
 
 export function minimumCash(priceSek: number): number {
   return Math.ceil(priceSek * MIN_CASH_SHARE);

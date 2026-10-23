@@ -60,6 +60,20 @@ export interface SettingsTranslations {
     theseCriteriaAreFictionalEditsAffectThisDemoOnly: string;
     noSearchProfilesYet: string;
   };
+  financing: {
+    heading: string;
+    description: string;
+    cash: string;
+    cashDescription: string;
+    rate: string;
+    rateDescription: string;
+    taxDeduction: string;
+    save: string;
+    useTypical: string;
+    usingTypical: string;
+    saved: string;
+    ownerOnly: string;
+  };
   household: {
     memberActions: string;
     couldNotLoadTheHouseholdMembersReloadToTry: string;

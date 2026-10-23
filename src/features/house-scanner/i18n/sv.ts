@@ -111,6 +111,23 @@ export const sv = {
         'De här kriterierna är fiktiva. Ändringar gäller bara den här demon.',
       noSearchProfilesYet: 'Inga sökprofiler ännu.',
     },
+    financing: {
+      heading: 'Finansiering',
+      description:
+        'Hushållets siffror för månadskostnaden för varje bostad. Alla medlemmar ser samma siffror.',
+      cash: 'Kontantinsats (SEK)',
+      cashDescription:
+        'Lämna tomt för att räkna med minsta insatsen, 10 % av priset.',
+      rate: 'Ränta (%)',
+      rateDescription:
+        'Typisk ränta: {rate} %, snitträntan för 3 månader i {month}.',
+      taxDeduction: 'Visa räntan efter ränteavdrag',
+      save: 'Spara finansiering',
+      useTypical: 'Använd typiska värden',
+      usingTypical: 'Typiska värden används tills ni sparar egna.',
+      saved: 'Finansieringen har sparats.',
+      ownerOnly: 'Bara hushållets ägare kan ändra finansieringen.',
+    },
     household: {
       memberActions: 'Åtgärder för {name}',
       couldNotLoadTheHouseholdMembersReloadToTry:
@@ -345,6 +362,30 @@ export const sv = {
         '{area} m²{areaDisputed} · {rooms}{roomsDisputed}{fee}{feeDisputed}{neighborhood}',
       savedByMembers:
         'Sparad av {count, plural, one {# medlem} other {# medlemmar}}',
+    },
+    cost: {
+      heading: 'Månadskostnad',
+      price: 'Förväntat slutpris (SEK)',
+      cash: 'Kontantinsats (SEK)',
+      rate: 'Ränta (%)',
+      rateChoices: 'Prova en annan ränta',
+      interest: 'Ränta',
+      taxDeduction: 'Ränteavdrag',
+      amortization: 'Amortering ({percent} %)',
+      fee: 'Månadsavgift',
+      total: 'Per månad',
+      loan: 'Lån {loan}, {share} % av priset.',
+      shortfall:
+        'Banker lånar ut högst 90 % av priset. Lägg till {amount} i kontantinsats.',
+      noPrice: 'Ange ett förväntat pris för att se månadskostnaden.',
+      feeUnknown: 'Månadsavgiften är okänd och ingår inte.',
+      runningCosts:
+        'Driftkostnader som värme, vatten och försäkring ingår inte.',
+      oneTime: 'Engångskostnader: lagfart {title}, pantbrev {deeds}.',
+      typical:
+        'Typisk ränta och 10 % kontantinsats, enligt {month}. Hushållets ägare kan lägga in egna siffror under Inställningar.',
+      scenario: 'Ränteexempel för alla bostäder, sparas inte.',
+      reset: 'Återställ',
     },
     map: {
       cardLayout: 'Kartkortets layout',

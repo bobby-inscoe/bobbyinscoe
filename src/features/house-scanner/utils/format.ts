@@ -24,3 +24,11 @@ export function formatDate(value: string, intl: IntlShape = englishIntl) {
     timeStyle: 'short',
   }).format(new Date(value));
 }
+// A 'YYYY-MM' month as words, such as September 2026.
+export function formatMonth(month: string, intl: IntlShape = englishIntl) {
+  return new Intl.DateTimeFormat(intl.locale, {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(`${month}-01T00:00:00Z`));
+}
