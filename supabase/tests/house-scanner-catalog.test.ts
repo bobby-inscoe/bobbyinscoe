@@ -3495,7 +3495,7 @@ describe('price estimates', () => {
     finalPremium: Math.log(1.05),
     typicalFeePerM2: 60,
     residualSd: 0.2,
-    levels: {},
+    levels: { testby: { level: Math.log(0.8), homes: 10 } },
   };
   const at = (north: number, east = 0) => ({
     latitude: 0.05 + north * 0.001,
@@ -3552,7 +3552,17 @@ describe('price estimates', () => {
       flat('pe-house', 'Husvägen 1', null, at(0.2), 'house'),
       // An unpriced flat 20 km away with no neighbours and no level.
       flat('pe-lonely', 'Ensamvägen 1', null, at(0, 0.18)),
+      // 55 km away: an unpriced flat outside Testby whose two closest neighbours, on its street, are in Testby and
+      // list 10% under its level; two homes on another street list at the level.
+      flat('pe-street', 'Gatan 2', null, at(0, 0.5)),
+      flat('pe-s1', 'Gatan 4', 2_160_000, at(1, 0.5)),
+      flat('pe-s2', 'Gatan 6', 2_160_000, at(2, 0.5)),
+      flat('pe-o1', 'Annan väg 1', 2_400_000, at(3, 0.5)),
+      flat('pe-o2', 'Annan väg 3', 2_400_000, at(4, 0.5)),
     ]);
+    await db.exec(`insert into hs.neighborhoods(id,name,dataset_version) values('testby','Testby','test');
+      update hs.listing_cards c set neighborhood_id='testby' from hs.listings l
+      where l.id=c.listing_id and l.source_listing_id in ('pe-s1','pe-s2','pe-o1','pe-o2')`);
     const run = await db.query<{ id: string }>(
       "select id from hs.runs where state='published' order by created_at desc limit 1",
     );
@@ -3566,19 +3576,33 @@ describe('price estimates', () => {
   it('estimates an unpriced flat from the model and its neighbours in other buildings', async () => {
     const mid = 50_000 * 60 * Math.exp((Math.log(1.1) * 6) / 7);
     const sd = 0.5 * model.residualSd;
-    expect(await estimates()).toEqual([
+    expect((await estimates()).filter((e) => e.id !== 'pe-street')).toEqual([
       {
         id: 'pe-target',
-        low_sek: Math.floor((mid * Math.exp(-1.4 * sd)) / 50_000) * 50_000,
-        high_sek: Math.ceil((mid * Math.exp(1.4 * sd)) / 50_000) * 50_000,
+        low_sek: Math.floor((mid * Math.exp(-1.5 * sd)) / 50_000) * 50_000,
+        high_sek: Math.ceil((mid * Math.exp(1.5 * sd)) / 50_000) * 50_000,
         final_sek: Math.round((mid * 1.05) / 10_000) * 10_000,
         nearby: 6,
       },
     ]);
   });
 
+  it('takes its street neighbourhood and leans on homes on its street', async () => {
+    // Level 0.8 from the street's neighbourhood. The weighted median of all four is the street's -10%, shrunk 4/5;
+    // the street's own median counts n/(n+2) = 1/2, so the shift is 0.9·log(0.9).
+    const mid = 50_000 * 60 * 0.8 * 0.9 ** 0.9;
+    const sd = 0.5 * model.residualSd;
+    expect((await estimates()).find((e) => e.id === 'pe-street')).toEqual({
+      id: 'pe-street',
+      low_sek: Math.floor((mid * Math.exp(-1.5 * sd)) / 50_000) * 50_000,
+      high_sek: Math.ceil((mid * Math.exp(1.5 * sd)) / 50_000) * 50_000,
+      final_sek: Math.round((mid * 1.05) / 10_000) * 10_000,
+      nearby: 4,
+    });
+  });
+
   it('sends the estimate in the snapshot, and stops once the model is older than 30 days', async () => {
-    const row = (await estimates())[0];
+    const row = (await estimates()).find((e) => e.id === 'pe-target');
     const raw = await as('authenticated', OWNER_A, () =>
       rpc('select public.hs_household_snapshot($1) as value', [HOUSE_A]),
     );
@@ -3588,9 +3612,9 @@ describe('price estimates', () => {
       }
     ).listings.find((l) => l.title === 'Målgatan 1');
     expect(listing?.priceEstimate).toEqual({
-      lowSek: row.low_sek,
-      highSek: row.high_sek,
-      finalSek: row.final_sek,
+      lowSek: row?.low_sek,
+      highSek: row?.high_sek,
+      finalSek: row?.final_sek,
       nearby: 6,
       farthestM: expect.any(Number),
       levelUsed: false,
