@@ -378,8 +378,11 @@ export const sv = {
         'Banker lånar ut högst 90 % av priset. Lägg till {amount} i kontantinsats.',
       noPrice: 'Ange ett förväntat pris för att se månadskostnaden.',
       feeUnknown: 'Månadsavgiften är okänd och ingår inte.',
-      runningCosts:
-        'Driftkostnader som värme, vatten och försäkring ingår inte.',
+      operatingCosts: 'Driftkostnad',
+      operatingCostsInput: 'Driftkostnad (SEK/mån)',
+      operatingCostsHelp:
+        'Uppskattning, inte hämtad från annonsen. Börjar på 1 000 SEK/mån; anpassa efter kostnader som inte ingår i månadsavgiften.',
+      includeTaxDeduction: 'Inkludera ränteavdrag',
       oneTime: 'Engångskostnader: lagfart {title}, pantbrev {deeds}.',
       typical:
         'Typisk ränta och 10 % kontantinsats, enligt {month}. Hushållets ägare kan lägga in egna siffror under Inställningar.',

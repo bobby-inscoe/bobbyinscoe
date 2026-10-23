@@ -174,7 +174,10 @@ export interface ListingsTranslations {
     shortfall: string;
     noPrice: string;
     feeUnknown: string;
-    runningCosts: string;
+    operatingCosts: string;
+    operatingCostsInput: string;
+    operatingCostsHelp: string;
+    includeTaxDeduction: string;
     oneTime: string;
     typical: string;
     scenario: string;

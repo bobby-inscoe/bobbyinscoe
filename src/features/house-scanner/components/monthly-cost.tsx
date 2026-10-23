@@ -5,6 +5,7 @@ import {
   Paper,
   SimpleGrid,
   Stack,
+  Switch,
   Text,
   Title,
 } from '@mantine/core';
@@ -45,7 +46,7 @@ export function RateScenarioProvider({ children }: { children: ReactNode }) {
 
 /**
  * What the home would cost each month with the household's financing. Price and cash start from the listing and the
- * household and can be changed here; the caller remounts this per home, which discards those changes.
+ * household. Price, cash, operating costs and tax relief edits are discarded when the caller remounts this per home.
  */
 export function MonthlyCost({
   listing,
@@ -59,6 +60,8 @@ export function MonthlyCost({
   const saved = financingProfile(snapshot.profiles)?.criteria.financing;
   const financing = saved ?? DEFAULT_FINANCING;
   const [price, setPrice] = useState(() => startingPrice(listing, estimate));
+  const [operatingCosts, setOperatingCosts] = useState<number | string>(1000);
+  const [taxDeduction, setTaxDeduction] = useState(financing.taxDeduction);
   // Null follows the price, so a new price moves the 10% minimum with it.
   const [cash, setCash] = useState<number | null>(null);
   const [scenario, setScenario] = useContext(RateScenario);
@@ -72,7 +75,6 @@ export function MonthlyCost({
   const { facts, conflicts } = listing;
   const ownership =
     facts.tenure === 'ownership' && !conflicts.includes('tenure');
-  const house = facts.propertyType === 'house';
   const fee = monthlyFee(listing);
   const result =
     price && price > 0
@@ -80,7 +82,9 @@ export function MonthlyCost({
           priceSek: price,
           cashSek: cash ?? startingCash(price, financing),
           interestRatePercent: rate,
-          taxDeduction: financing.taxDeduction,
+          taxDeduction,
+          operatingCostsSek:
+            typeof operatingCosts === 'number' ? operatingCosts : 0,
           feeSek: fee,
           ownership,
         })
@@ -107,7 +111,7 @@ export function MonthlyCost({
                   label: intl.formatMessage({ id: 'listings.cost.interest' }),
                   value: result.cost.interestSek,
                 },
-                ...(financing.taxDeduction
+                ...(taxDeduction
                   ? [
                       {
                         label: intl.formatMessage({
@@ -132,6 +136,12 @@ export function MonthlyCost({
                       },
                     ]
                   : []),
+                {
+                  label: intl.formatMessage({
+                    id: 'listings.cost.operatingCosts',
+                  }),
+                  value: result.cost.operatingCostsSek,
+                },
               ].map(({ label, value }) => (
                 <div key={label} className={classes.factRow}>
                   <dt>{label}</dt>
@@ -153,11 +163,6 @@ export function MonthlyCost({
             {result.cost.feeSek === null && !ownership && (
               <Text size="sm" c="orange.8">
                 <FormattedMessage id="listings.cost.feeUnknown" />
-              </Text>
-            )}
-            {house && (
-              <Text size="sm" c="dimmed">
-                <FormattedMessage id="listings.cost.runningCosts" />
               </Text>
             )}
             {result.cost.titleFeeSek !== null && (
@@ -225,6 +230,28 @@ export function MonthlyCost({
             onChange={(value) => typeof value === 'number' && setRate(value)}
           />
         </SimpleGrid>
+        <NumberInput
+          size="xs"
+          label={intl.formatMessage({
+            id: 'listings.cost.operatingCostsInput',
+          })}
+          description={intl.formatMessage({
+            id: 'listings.cost.operatingCostsHelp',
+          })}
+          value={operatingCosts}
+          min={0}
+          allowDecimal={false}
+          allowNegative={false}
+          {...separators}
+          onChange={setOperatingCosts}
+        />
+        <Switch
+          label={intl.formatMessage({
+            id: 'listings.cost.includeTaxDeduction',
+          })}
+          checked={taxDeduction}
+          onChange={(event) => setTaxDeduction(event.currentTarget.checked)}
+        />
         {scenario !== null && (
           <Group gap="xs">
             <Text size="sm" c="orange.8">

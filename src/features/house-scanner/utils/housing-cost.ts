@@ -79,6 +79,7 @@ export interface CostInput {
   interestRatePercent: number;
   taxDeduction: boolean;
   feeSek: number | null;
+  operatingCostsSek: number;
   ownership: boolean;
 }
 
@@ -90,6 +91,7 @@ export interface HousingCost {
   deductionSek: number;
   amortizationSek: number;
   feeSek: number | null;
+  operatingCostsSek: number;
   totalSek: number;
   // One-time fees, for ownership only.
   titleFeeSek: number | null;
@@ -119,6 +121,7 @@ export function housingCost(input: CostInput): CostResult {
   const amortizationSek = Math.round(
     (loanSek * amortizationPercent) / 100 / 12,
   );
+  const operatingCostsSek = Math.round(input.operatingCostsSek);
   return {
     kind: 'cost',
     cost: {
@@ -128,7 +131,13 @@ export function housingCost(input: CostInput): CostResult {
       deductionSek,
       amortizationSek,
       feeSek,
-      totalSek: interestSek - deductionSek + amortizationSek + (feeSek ?? 0),
+      operatingCostsSek,
+      totalSek:
+        interestSek -
+        deductionSek +
+        amortizationSek +
+        (feeSek ?? 0) +
+        operatingCostsSek,
       titleFeeSek: ownership
         ? Math.round(priceSek * TITLE_FEE_SHARE) + TITLE_FEE_SEK
         : null,

@@ -373,8 +373,11 @@ export const en = {
       shortfall: 'Banks lend at most 90 % of the price. Add {amount} in cash.',
       noPrice: 'Enter an expected price to see the monthly cost.',
       feeUnknown: 'Leaves out the monthly fee, which is unknown.',
-      runningCosts:
-        'Leaves out running costs such as heating, water and insurance.',
+      operatingCosts: 'Operating costs',
+      operatingCostsInput: 'Operating costs (SEK/month)',
+      operatingCostsHelp:
+        'Estimate, not collected from the listing. Starts at 1,000 SEK/month; adjust for costs not included in the monthly fee.',
+      includeTaxDeduction: 'Include interest tax relief',
       oneTime: 'One-time fees: title {title}, mortgage deeds {deeds}.',
       typical:
         'Typical rate and 10 % cash, as of {month}. Household owners can set your own numbers in Settings.',

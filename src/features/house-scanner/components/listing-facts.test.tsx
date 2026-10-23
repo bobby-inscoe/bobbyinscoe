@@ -15,6 +15,7 @@ import {
   MatchLines,
   PriceLine,
 } from '@/features/house-scanner/components/listing-summary';
+import { MonthlyCost } from '@/features/house-scanner/components/monthly-cost';
 import { SettingsPanel } from '@/features/house-scanner/features/settings/components/settings-panel';
 import { catalogs } from '@/features/house-scanner/i18n/catalogs';
 import { ShellterLanguageProvider } from '@/features/house-scanner/i18n/language-provider';
@@ -304,4 +305,33 @@ describe('the details sheet', () => {
     details({ ...home(), lastChangedAt: null, lastCheckedAt: undefined });
     expect(screen.getByText(/^Last checked:/)).toBeTruthy();
   });
+});
+
+it('recalculates monthly cost when operating costs and interest tax relief change', () => {
+  view(
+    <MonthlyCost
+      listing={home({
+        askingPriceSek: 1_000_000,
+        highestBidSek: null,
+        baseFeeSek: 4000,
+        mandatoryMonthlySek: 300,
+      })}
+      snapshot={{ ...SYNTHETIC_SNAPSHOT, profiles: [] }}
+    />,
+  );
+  const operatingCosts = screen.getByLabelText('Operating costs (SEK/month)');
+  const taxRelief = screen.getByRole('switch', {
+    name: 'Include interest tax relief',
+  });
+  expect((operatingCosts as HTMLInputElement).value).toBe('1,000');
+  expect((taxRelief as HTMLInputElement).checked).toBe(true);
+  expect(screen.getByText('8,217 SEK/month')).toBeTruthy();
+  fireEvent.change(operatingCosts, { target: { value: '1500' } });
+  expect(screen.getByText('8,717 SEK/month')).toBeTruthy();
+  fireEvent.click(taxRelief);
+  expect(screen.getByText('9,325 SEK/month')).toBeTruthy();
+  fireEvent.change(operatingCosts, { target: { value: '0' } });
+  expect(screen.getByText('7,825 SEK/month')).toBeTruthy();
+  fireEvent.click(taxRelief);
+  expect(screen.getByText('7,217 SEK/month')).toBeTruthy();
 });
