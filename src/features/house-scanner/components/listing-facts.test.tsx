@@ -334,4 +334,25 @@ it('recalculates monthly cost when operating costs and interest tax relief chang
   expect(screen.getByText('7,825 SEK/month')).toBeTruthy();
   fireEvent.click(taxRelief);
   expect(screen.getByText('7,217 SEK/month')).toBeTruthy();
+  fireEvent.keyDown(
+    screen.getByRole('slider', { name: 'Expected final price (SEK)' }),
+    { key: 'ArrowRight' },
+  );
+  expect(
+    (
+      screen.getByRole('textbox', {
+        name: 'Expected final price (SEK)',
+      }) as HTMLInputElement
+    ).value,
+  ).toBe('1,050,000');
+  fireEvent.keyDown(screen.getByRole('slider', { name: 'Cash down (SEK)' }), {
+    key: 'ArrowRight',
+  });
+  expect(
+    (
+      screen.getByRole('textbox', {
+        name: 'Cash down (SEK)',
+      }) as HTMLInputElement
+    ).value,
+  ).toBe('115,000');
 });

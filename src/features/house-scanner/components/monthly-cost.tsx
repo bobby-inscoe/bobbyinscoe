@@ -4,11 +4,13 @@ import {
   NumberInput,
   Paper,
   SimpleGrid,
+  Slider,
   Stack,
   Switch,
   Text,
   Title,
 } from '@mantine/core';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { createContext, type ReactNode, useContext, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { usePriceEstimate } from '@/features/house-scanner/components/price-estimate';
@@ -59,6 +61,10 @@ export function MonthlyCost({
   const estimate = usePriceEstimate(listing);
   const saved = financingProfile(snapshot.profiles)?.criteria.financing;
   const financing = saved ?? DEFAULT_FINANCING;
+  const sliderMax = Math.max(
+    1000000,
+    (startingPrice(listing, estimate) ?? 5000000) * 2,
+  );
   const [price, setPrice] = useState(() => startingPrice(listing, estimate));
   const [operatingCosts, setOperatingCosts] = useState<number | string>(1000);
   const [taxDeduction, setTaxDeduction] = useState(financing.taxDeduction);
@@ -192,43 +198,93 @@ export function MonthlyCost({
           </Text>
         )}
         <SimpleGrid cols={{ base: 1, xs: 3 }} spacing="xs">
-          <NumberInput
-            size="xs"
-            label={intl.formatMessage({ id: 'listings.cost.price' })}
-            value={price ?? ''}
-            min={0}
-            allowDecimal={false}
-            allowNegative={false}
-            {...separators}
-            onChange={(value) =>
-              setPrice(typeof value === 'number' ? value : null)
-            }
-          />
-          <NumberInput
-            size="xs"
-            label={intl.formatMessage({ id: 'listings.cost.cash' })}
-            value={cash ?? (price ? startingCash(price, financing) : '')}
-            min={0}
-            allowDecimal={false}
-            allowNegative={false}
-            {...separators}
-            onChange={(value) =>
-              setCash(typeof value === 'number' ? value : null)
-            }
-          />
-          <NumberInput
-            size="xs"
-            label={intl.formatMessage({ id: 'listings.cost.rate' })}
-            value={rate}
-            min={0.01}
-            max={20}
-            step={0.1}
-            classNames={{ controls: classes.rateControls }}
-            decimalScale={2}
-            allowNegative={false}
-            decimalSeparator={separators.decimalSeparator}
-            onChange={(value) => typeof value === 'number' && setRate(value)}
-          />
+          <Stack gap="xs">
+            <NumberInput
+              size="xs"
+              label={intl.formatMessage({ id: 'listings.cost.price' })}
+              value={price ?? ''}
+              min={0}
+              allowDecimal={false}
+              allowNegative={false}
+              {...separators}
+              onChange={(value) =>
+                setPrice(typeof value === 'number' ? value : null)
+              }
+            />
+            <Slider
+              thumbSize={24}
+              min={0}
+              max={Math.max(sliderMax, price ?? 0)}
+              step={50000}
+              value={price ?? 0}
+              onChange={setPrice}
+              label={(value) => formatPrice(value, intl)}
+              thumbLabel={intl.formatMessage({ id: 'listings.cost.price' })}
+            />
+          </Stack>
+          <Stack gap="xs">
+            <NumberInput
+              size="xs"
+              label={intl.formatMessage({ id: 'listings.cost.cash' })}
+              value={cash ?? (price ? startingCash(price, financing) : '')}
+              min={0}
+              allowDecimal={false}
+              allowNegative={false}
+              {...separators}
+              onChange={(value) =>
+                setCash(typeof value === 'number' ? value : null)
+              }
+            />
+            <Slider
+              thumbSize={24}
+              min={0}
+              max={Math.max(price ?? sliderMax, cash ?? 0, 1)}
+              step={10000}
+              value={cash ?? (price ? startingCash(price, financing) : 0)}
+              onChange={setCash}
+              label={(value) => formatPrice(value, intl)}
+              thumbLabel={intl.formatMessage({ id: 'listings.cost.cash' })}
+            />
+          </Stack>
+          <Stack gap="xs">
+            <NumberInput
+              size="xs"
+              label={intl.formatMessage({ id: 'listings.cost.rate' })}
+              value={rate}
+              min={0.01}
+              max={20}
+              step={0.1}
+              hideControls
+              decimalScale={2}
+              allowNegative={false}
+              decimalSeparator={separators.decimalSeparator}
+              onChange={(value) => typeof value === 'number' && setRate(value)}
+            />
+            <Group gap="xs" grow>
+              <Button
+                variant="default"
+                mih={44}
+                disabled={rate <= 0.01}
+                aria-label={`${intl.formatMessage({ id: 'listings.cost.rate' })} −0.1`}
+                onClick={() =>
+                  setRate(Math.max(0.01, Math.round((rate - 0.1) * 100) / 100))
+                }
+              >
+                <ChevronDown size={24} aria-hidden />
+              </Button>
+              <Button
+                variant="default"
+                mih={44}
+                disabled={rate >= 20}
+                aria-label={`${intl.formatMessage({ id: 'listings.cost.rate' })} +0.1`}
+                onClick={() =>
+                  setRate(Math.min(20, Math.round((rate + 0.1) * 100) / 100))
+                }
+              >
+                <ChevronUp size={24} aria-hidden />
+              </Button>
+            </Group>
+          </Stack>
         </SimpleGrid>
         <NumberInput
           size="xs"
