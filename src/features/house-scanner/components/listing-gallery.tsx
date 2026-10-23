@@ -74,7 +74,7 @@ export function ListingGallery({
     restoreTimer.current = setTimeout(() => {
       swiping.current = false;
       setControlsHidden(false);
-    }, 200);
+    }, 500);
   };
   useEffect(
     () => () => {
