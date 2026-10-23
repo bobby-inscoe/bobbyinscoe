@@ -424,9 +424,9 @@ export const svenskfastAdapter: SourceAdapter = {
   readDetailPage: readSvenskfastDetailPage,
 };
 
-/** The adapter for a capability, only when its policy names exactly this adapter's source and hosts. */
+/** The adapter for a capability, only when its settings name exactly this adapter's source and hosts. */
 export function adapterFor(capability: SourceCapability): SourceAdapter {
-  const { policy } = capability;
+  const { source } = capability;
   const adapter = [
     boneoAdapter,
     bjurforsAdapter,
@@ -438,12 +438,12 @@ export function adapterFor(capability: SourceCapability): SourceAdapter {
   ].find((candidate) => candidate.executor === capability.executor);
   if (
     adapter === undefined ||
-    policy.sourceId !== adapter.sourceId ||
-    policy.listingOrigins.length !== 1 ||
-    policy.listingOrigins[0] !== adapter.origin ||
+    source.sourceId !== adapter.sourceId ||
+    source.listingOrigins.length !== 1 ||
+    source.listingOrigins[0] !== adapter.origin ||
     // Photos are allowed from the one image host only, shown by the browser and never fetched here.
-    policy.imageOrigins.length !== 1 ||
-    policy.imageOrigins[0] !== adapter.imageOrigin
+    source.imageOrigins.length !== 1 ||
+    source.imageOrigins[0] !== adapter.imageOrigin
   )
     throw new Error('No permitted executor for this source.');
   return adapter;

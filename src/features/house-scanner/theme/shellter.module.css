@@ -1400,3 +1400,38 @@
   pointer-events: none;
   z-index: 1;
 }
+
+.feedbackLauncher {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 89;
+  min-height: 44px;
+  box-shadow: 0 2px 12px rgb(20 38 36 / 18%);
+}
+.page:has(.feedbackLauncher) .content {
+  padding-bottom: 80px;
+}
+@media (max-width: 35.99375em) {
+  .feedbackLauncher {
+    bottom: calc(
+      var(--shellter-tabbar-height) +
+      env(safe-area-inset-bottom) +
+      16px
+    );
+  }
+  .page:has(.selectionBar) .feedbackLauncher {
+    bottom: calc(
+      var(--shellter-tabbar-height) +
+      env(safe-area-inset-bottom) +
+      104px
+    );
+  }
+  .page:has(.feedbackLauncher) .content {
+    padding-bottom: calc(
+      var(--shellter-tabbar-height) +
+      env(safe-area-inset-bottom) +
+      80px
+    );
+  }
+}

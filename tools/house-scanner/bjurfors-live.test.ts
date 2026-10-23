@@ -22,13 +22,9 @@ import {
   bjurforsAdapter,
   boneoAdapter,
 } from '@house-scanner-tools/source-adapters';
-import {
-  approvedPolicy,
-  sourceRegistry,
-} from '@house-scanner-tools/source-registry';
+import { sourceRegistry } from '@house-scanner-tools/source-registry';
 import { describe, expect, it } from 'vitest';
 import { SYNTHETIC_SNAPSHOT } from '@/features/house-scanner/mock/synthetic-household';
-import { assertSourceAllowed } from '@/features/house-scanner/utils/source-policy';
 
 const fixture = (name: string) =>
   readFileSync(resolve('tools/house-scanner/fixtures/bjurfors', name), 'utf8');
@@ -475,7 +471,7 @@ describe('Bjurfors run memory', () => {
 });
 
 function bjurfors() {
-  const found = sourceRegistry().find((e) => e.policy.sourceId === 'bjurfors');
+  const found = sourceRegistry().find((e) => e.source.sourceId === 'bjurfors');
   if (!found) throw new Error('bjurfors missing');
   return found;
 }
@@ -522,51 +518,18 @@ function liveOptions(overrides: {
 }
 
 describe('Bjurfors registry entry and run', () => {
-  it('registers bjurfors as a pending source with an honest policy', () => {
-    const { policy, executor } = bjurfors();
+  it('registers the source as on, with its hosts and coverage notes', () => {
+    const { source, executor } = bjurfors();
     expect(executor).toBe('bjurfors-personal-read');
-    expect(policy).toMatchObject({
+    expect(source).toMatchObject({
       sourceId: 'bjurfors',
-      status: 'pending',
-      revision: 3,
-      viewings: true,
-      retentionDays: 14,
-      automatedCollection: false,
-      privateDisplay: false,
+      enabled: true,
       listingOrigins: ['https://www.bjurfors.se'],
-      imageOrigins: ['https://www.bjurfors.se'],
-      imageDisplay: true,
-      imageHotlink: true,
-      capabilities: { upcoming: false, unknownPrice: false, pagination: false },
-    });
-    expect(policy.allowedFactFields).toEqual(
-      expect.arrayContaining(['groundFloor', 'outdoor', 'lift']),
-    );
-    expect(policy.allowedFactFields).not.toContain('glazed');
-    expect(policy.capabilities.coverageGaps.length).toBeGreaterThan(5);
-    expect(() =>
-      assertSourceAllowed(policy, new Date('2026-10-16T00:00:00Z')),
-    ).toThrow();
-  });
-
-  it('builds an approved policy only for a registry source, leaving the rest unchanged', () => {
-    const approved = approvedPolicy(
-      'bjurfors',
-      new Date('2026-10-16T12:00:00Z'),
-    );
-    expect(approved).toMatchObject({
-      sourceId: 'bjurfors',
-      status: 'approved',
-      revision: 3,
-      automatedCollection: true,
-      privateDisplay: true,
       imageOrigins: ['https://www.bjurfors.se'],
     });
     expect(
-      approved.capabilities.coverageGaps.some((gap) =>
-        gap.includes('not approved'),
-      ),
-    ).toBe(false);
+      source.capabilities.coverageGaps.every((gap) => gap.length <= 300),
+    ).toBe(true);
   });
 
   it('prepares valid requests for source bjurfors and never reports success', async () => {
@@ -625,35 +588,20 @@ describe('Bjurfors registry entry and run', () => {
     ]);
   });
 
-  it('rejects a fact field the policy does not allow, and photos from other hosts', async () => {
+  it('rejects photos from other hosts', async () => {
     const { impl } = fakeFetch(fixtureSite());
     const result = await run(goteborg, deps(impl), keepAll);
     const observation = result.observations[0];
-    const { policy } = bjurfors();
-    expect(() => assertAdapterOutput(policy, observation)).not.toThrow();
-    const narrowed = {
-      ...policy,
-      allowedFactFields: policy.allowedFactFields.filter(
-        (f) => f !== 'groundFloor',
-      ),
-    };
-    expect(() =>
-      assertAdapterOutput(narrowed, {
-        ...observation,
-        facts: { ...observation.facts, groundFloor: false },
-      }),
-    ).toThrow('unapproved fact field');
+    const { source } = bjurfors();
+    expect(() => assertAdapterOutput(source, observation)).not.toThrow();
     const photo = observation.photo;
     if (!photo) throw new Error('fixture photo missing');
     expect(() =>
-      assertAdapterOutput(policy, {
+      assertAdapterOutput(source, {
         ...observation,
         photo: { ...photo, url: 'https://files.boneo.se/x.jpg' },
       }),
-    ).toThrow('outside the source policy');
-    expect(() =>
-      assertAdapterOutput({ ...policy, imageHotlink: false }, observation),
-    ).toThrow('outside the source policy');
+    ).toThrow("outside the source's hosts");
   });
 });
 
@@ -663,7 +611,7 @@ describe('executor guards', () => {
   it('makes no request when the capability is refused', async () => {
     const { impl, calls } = fakeFetch(fixtureSite());
     const capability = structuredClone(base());
-    capability.policy.imageOrigins = [];
+    capability.source.imageOrigins = [];
     await expect(
       prepareLiveRun(
         {
@@ -748,17 +696,6 @@ describe('floor rule through both readers', () => {
       expect(result.observations[0].facts.groundFloor).toBe(expected);
     },
   );
-
-  it('allows groundFloor in both source policies and revises Boneo to 6', () => {
-    for (const id of ['boneo', 'bjurfors']) {
-      const entry = sourceRegistry().find((e) => e.policy.sourceId === id);
-      expect(entry?.policy.allowedFactFields).toContain('groundFloor');
-    }
-    expect(
-      sourceRegistry().find((e) => e.policy.sourceId === 'boneo')?.policy
-        .revision,
-    ).toBe(6);
-  });
 });
 
 describe('Bjurfors viewing times in a run', () => {

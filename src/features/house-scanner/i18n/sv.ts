@@ -1,6 +1,33 @@
 import type { Translations } from '@/features/house-scanner/i18n/types/translations';
 
 export const sv = {
+  feedback: {
+    label: 'Feedback',
+    hint: 'Rapportera ett fel eller föreslå en funktion',
+    intro:
+      'Hittat ett problem eller har du en idé? Berätta hur vi kan förbättra Shellter.',
+    type: 'Typ',
+    bug: 'Fel',
+    feature: 'Funktionsförslag',
+    title: 'Rubrik',
+    description: 'Beskrivning',
+    bugHelp:
+      'Beskriv problemet i detalj: stegen, vad du förväntade dig och vad som hände i stället.',
+    featureHelp:
+      'Vad vill du kunna göra och hur skulle det hjälpa dig? Beskriv din idé i detalj.',
+    screenshot: 'Skärmbild (valfritt)',
+    imageHelp:
+      'En PNG, JPEG eller WebP, högst 5 MiB. Ta bort privat information före uppladdning.',
+    remove: 'Ta bort skärmbild',
+    privacy:
+      'Rapporten innehåller denna sida och din kontos e-postadress så att ägaren kan svara.',
+    send: 'Skicka feedback',
+    cancel: 'Avbryt',
+    success: 'Tack! Din feedback har tagits emot för att skickas.',
+    error: 'Det gick inte att skicka. Utkastet finns kvar här. Försök igen.',
+    invalid:
+      'Ange rubrik och beskrivning och välj en tillåten bild på högst 5 MiB.',
+  },
   settings: {
     criteria: {
       preferredBudgetDescription:

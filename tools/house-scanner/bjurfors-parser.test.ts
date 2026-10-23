@@ -219,8 +219,8 @@ describe('Bjurfors search page', () => {
 
   it('passes the policy check for Bjurfors with the registry policy', () => {
     const policy = sourceRegistry().find(
-      (entry) => entry.policy.sourceId === 'bjurfors',
-    )?.policy;
+      (entry) => entry.source.sourceId === 'bjurfors',
+    )?.source;
     if (!policy) throw new Error('bjurfors missing');
     for (const observation of page().observations)
       expect(() => assertAdapterOutput(policy, observation)).not.toThrow();

@@ -15,7 +15,6 @@ import {
   pathOf,
 } from '@house-scanner-tools/svenskfast-test-pages';
 import { describe, expect, it } from 'vitest';
-import { assertSourceAllowed } from '@/features/house-scanner/utils/source-policy';
 
 const BASE = 'https://www.svenskfast.se/bostad/vastra-gotaland/goteborg/';
 // The shape the real robots.txt has.
@@ -242,46 +241,24 @@ describe('Svensk Fastighetsförmedling guarded run', () => {
 
 function svenskfast() {
   const found = sourceRegistry().find(
-    (e) => e.policy.sourceId === 'svenskfast',
+    (e) => e.source.sourceId === 'svenskfast',
   );
   if (!found) throw new Error('svenskfast missing');
   return found;
 }
 
 describe('Svensk Fastighetsförmedling registry entry', () => {
-  it('registers a pending source with an honest policy and the right hosts', () => {
-    const { policy, executor } = svenskfast();
+  it('registers the source as on, with its hosts and coverage notes', () => {
+    const { source, executor } = svenskfast();
     expect(executor).toBe('svenskfast-personal-read');
-    expect(policy).toMatchObject({
+    expect(source).toMatchObject({
       sourceId: 'svenskfast',
-      status: 'pending',
-      viewings: true,
-      automatedCollection: false,
-      privateDisplay: false,
+      enabled: true,
       listingOrigins: ['https://www.svenskfast.se'],
       imageOrigins: ['https://i.sfcdn.se'],
-      imageDisplay: true,
-      imageHotlink: true,
-      retentionDays: 14,
-      capabilities: { pagination: true },
     });
-    expect(policy.rightsBasis).toContain('Permission unresolved');
-    expect(policy.allowedFactFields).toEqual(
-      expect.arrayContaining([
-        'askingPriceSek',
-        'baseFeeSek',
-        'groundFloor',
-        'lift',
-        'status',
-      ]),
-    );
-    for (const left of ['glazed', 'outdoor'])
-      expect(policy.allowedFactFields).not.toContain(left);
     expect(
-      policy.capabilities.coverageGaps.every((gap) => gap.length <= 300),
+      source.capabilities.coverageGaps.every((gap) => gap.length <= 300),
     ).toBe(true);
-    expect(() =>
-      assertSourceAllowed(policy, new Date('2026-10-20T00:00:00Z')),
-    ).toThrow();
   });
 });

@@ -91,23 +91,6 @@ it.each([
   },
 );
 
-it('prints the SQL that approves a policy, and refuses a source without one', () => {
-  const result = collector(['--print-policy-sql', '--source=boneo']);
-  expect(result.status).toBe(0);
-  const match =
-    /^select hs\.admin_set_source_policy\('(.*)'::jsonb\);\n$/s.exec(
-      String(result.stdout),
-    );
-  const policy = JSON.parse((match?.[1] ?? '').replaceAll("''", "'"));
-  expect(policy).toMatchObject({ sourceId: 'boneo', status: 'approved' });
-  expect(Date.parse(policy.reviewDueAt)).toBeGreaterThan(Date.now());
-  for (const args of [[], ['--source=alvhem']]) {
-    const refused = collector(['--print-policy-sql', ...args]);
-    expect(refused.status).toBe(1);
-    expect(refused.stdout).toBe('');
-  }
-});
-
 // These runs block fetch in the child process, so a missing guard fails a test
 // instead of reaching the source.
 const noFetch = join(

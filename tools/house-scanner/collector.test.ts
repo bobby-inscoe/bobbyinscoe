@@ -69,16 +69,13 @@ describe('local fixture collector', () => {
   it('offers exactly the live sources in the Settings source picker', () => {
     const live = sourceRegistry()
       .filter(({ executor }) => executor.endsWith('-personal-read'))
-      .map(({ policy }) => policy.sourceId)
+      .map(({ source }) => source.sourceId)
       .sort();
     expect(SOURCES.map(({ value }) => value)).toEqual(live);
   });
-  it('refuses every real-source executor and expired fixture policy', () => {
+  it('refuses every real-source executor', () => {
     for (const capability of sourceRegistry().slice(1))
       expect(() => prepareFixtureRun({ ...options, capability })).toThrow();
-    expect(() =>
-      prepareFixtureRun({ ...options, at: '2027-02-01T12:00:00Z' }),
-    ).toThrow();
   });
   it('orders history and retains the last meaningful change across unchanged refreshes', () => {
     const [price] = compareAskingPrices('synthetic-demo', [

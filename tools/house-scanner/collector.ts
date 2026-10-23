@@ -15,7 +15,7 @@ import {
   type Observation,
   observationSchema,
 } from '@/features/house-scanner/types/contracts';
-import { assertObservationAllowed } from '@/features/house-scanner/utils/source-policy';
+import { assertObservationAllowed } from '@/features/house-scanner/utils/source-settings';
 
 // The server allows 100 observations per stage request and 100 requests per run.
 export const MAX_RUN_OBSERVATIONS = 1000;
@@ -166,15 +166,15 @@ function fixtureObservations(at: string): Observation[] {
 export function prepareFixtureRun(input: z.input<typeof runOptionsSchema>) {
   const options = runOptionsSchema.parse(input);
   const at = new Date(options.at);
-  // Policy validation precedes even the local fixture executor.
-  assertDemoExecution(options.capability, at);
+  // Only the synthetic source runs here, even locally.
+  assertDemoExecution(options.capability);
   const queryPlan = planQueries({
     ...options.planning,
     capability: options.capability,
   });
   const observations = fixtureObservations(options.at);
   for (const observation of observations)
-    assertObservationAllowed(options.capability.policy, observation, at);
+    assertObservationAllowed(options.capability.source, observation, at);
   const common = { contractVersion: CONTRACT_VERSION, runId: options.runId };
   const requests = [
     ingestRequestSchema.parse({

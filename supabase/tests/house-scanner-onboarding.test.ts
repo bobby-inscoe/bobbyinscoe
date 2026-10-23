@@ -12,7 +12,6 @@ import {
   type IngestRequest,
   ingestRequestSchema,
   observationSchema,
-  sourcePolicySchema,
 } from '@/features/house-scanner/types/contracts';
 
 // Invitations, household creation with starter criteria, and member management (specs: shared catalog S5).
@@ -180,49 +179,10 @@ beforeAll(async () => {
     [householdA, MEMBER_A],
   );
   const now = new Date(Date.now() - HOUR).toISOString();
-  await value('select hs.admin_set_source_policy($1::jsonb) as value', [
-    JSON.stringify(
-      sourcePolicySchema.parse({
-        sourceId: 'alpha',
-        revision: 1,
-        status: 'approved',
-        reviewedAt: now,
-        reviewDueAt: new Date(Date.now() + 30 * 24 * HOUR).toISOString(),
-        rightsBasis: 'Synthetic local test permission',
-        listingOrigins: [ORIGIN],
-        imageOrigins: [],
-        allowedEvidenceSubjects: [],
-        freeOnly: true,
-        automatedCollection: true,
-        privateDisplay: true,
-        imageDisplay: false,
-        imageHotlink: false,
-        modelProcessing: false,
-        emailDigest: false,
-        telegramDigest: false,
-        allowedFactFields: [
-          'propertyType',
-          'tenure',
-          'purchase',
-          'livingAreaM2',
-          'rooms',
-          'askingPriceSek',
-          'municipality',
-          'status',
-        ],
-        retentionDays: 30,
-        capabilities: {
-          discovery: true,
-          knownListingRefresh: true,
-          unknownPrice: true,
-          upcoming: true,
-          pagination: true,
-          resultCap: null,
-          coverageGaps: [],
-        },
-      }),
-    ),
-  ]);
+  await value(
+    "select hs.admin_set_source('alpha',true,array[$1],array[]::text[]) as value",
+    [ORIGIN],
+  );
   await value(
     "select hs.admin_issue_credential('onboarding-key',array['alpha'],now()+interval '1 day') as value",
   );

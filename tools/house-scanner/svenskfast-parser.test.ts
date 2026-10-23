@@ -5,7 +5,7 @@ import {
   readSvenskfastSearchPage,
 } from '@house-scanner-tools/svenskfast-parser';
 import {
-  type card,
+  card,
   collagePhoto,
   home,
   IMAGE_HOST,
@@ -171,10 +171,38 @@ describe('Svensk Fastighetsförmedling list page', () => {
     });
   });
 
+  it('marks bidding only for a home card labelled "Budgivning pågår", not the office block', () => {
+    const article = (classes: string, inner: string) =>
+      `<article class="${classes}">${inner}</article>`;
+    const html = list([{ id: 471701 }, { id: 471702 }, { id: 471703 }])
+      .replace(
+        card({ id: 471701 }),
+        article(
+          'island--white search-hit object-card search-hit--bidding',
+          `${card({ id: 471701 })}<span class="search-hit__label bidding">Budgivning p&#229;g&#229;r</span>`,
+        ),
+      )
+      .replace(
+        card({ id: 471702 }),
+        article('island--white search-hit object-card', card({ id: 471702 })),
+      )
+      .replace(
+        '</body>',
+        `${article('island--white search-hit search-hit--bidding search-hit__office-suggest', `"url":"${ORIGIN}${pathOf({ id: 471703 })}"`)}</body>`,
+      );
+    expect(
+      page(html).observations.map((o) => [o.sourceListingId, o.facts.bidding]),
+    ).toEqual([
+      ['471701', true],
+      ['471702', null],
+      ['471703', null],
+    ]);
+  });
+
   it('passes the contract and the registry policy checks, and carries no free text', () => {
     const policy = sourceRegistry().find(
-      (entry) => entry.policy.sourceId === 'svenskfast',
-    )?.policy;
+      (entry) => entry.source.sourceId === 'svenskfast',
+    )?.source;
     if (!policy) throw new Error('svenskfast is not in the registry');
     const observation = one();
     expect(() => assertAdapterOutput(policy, observation)).not.toThrow();
@@ -254,6 +282,22 @@ describe('Svensk Fastighetsförmedling home page', () => {
     const bad = plan(7).replace('i.sfcdn.se', 'example.invalid');
     expect(read(home({ plans: [bad] })).planKey).toBeUndefined();
     expect(read(home()).planKey).toBeUndefined();
+  });
+
+  it('reads the highest bid from the bid box, and none when the box shows the asking price', () => {
+    const box = (heading: string, amount: string) =>
+      home().replace(
+        '</body>',
+        `<div class="bid"><div class="bid__bids"><div class="price__heading"><span class="">${heading}</span>:&nbsp;</div><div class="price__kr notranslate">${amount} kr</div></div></div></body>`,
+      );
+    expect(
+      read(box('H&#246;gsta bud', '2&#160;800&#160;000')).highestBidSek,
+    ).toBe(2_800_000);
+    // A broker that hides the bids shows the asking price in the same box.
+    expect(
+      read(box('Utg&#229;ngspris', '2&#160;150&#160;000')).highestBidSek,
+    ).toBeUndefined();
+    expect(read(home()).highestBidSek).toBeUndefined();
   });
 
   it('ignores a fact that appears only inside a script', () => {

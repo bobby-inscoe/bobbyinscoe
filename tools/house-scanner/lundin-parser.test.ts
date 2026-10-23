@@ -73,8 +73,8 @@ describe('Lundin list', () => {
 
   it('passes the contract and the Lundin policy checks', () => {
     const policy = sourceRegistry().find(
-      (entry) => entry.policy.sourceId === 'lundin',
-    )?.policy;
+      (entry) => entry.source.sourceId === 'lundin',
+    )?.source;
     if (!policy) throw new Error('Lundin is not in the registry.');
     const [observation] = page(lundinList([lundinHome()])).observations;
     expect(() => assertAdapterOutput(policy, observation)).not.toThrow();
