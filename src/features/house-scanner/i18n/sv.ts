@@ -294,9 +294,9 @@ export const sv = {
         'Ta bort den här länken för hela hushållet? Allas favoriter och anteckningar för den tas också bort.',
       keepIt: 'Behåll',
       estimateBasis:
-        'Jämför liknande bostäder efter storlek, avgift och område: en modell av aktuella utgångs- och slutpriser i Göteborg, justerad efter {value0} bostäder med pris inom {value1} km. Spannet gäller utgångspriset; det troliga slutpriset lägger till den vanliga budgivningen. Våning och skick ingår inte.',
+        'Från liknande bostäder efter storlek, avgift och område, och {value0} bostäder med pris inom {value1} km. Spannet är det troliga utgångspriset.',
       estimateBasisArea:
-        'Jämför liknande bostäder efter storlek, avgift och område: en modell av aktuella utgångs- och slutpriser i Göteborg och det här området. Spannet gäller utgångspriset; det troliga slutpriset lägger till den vanliga budgivningen. Våning och skick ingår inte.',
+        'Från liknande bostäder efter storlek, avgift och område. Spannet är det troliga utgångspriset.',
       estimate: 'Uppskattning',
       likelyFinalPrice: 'troligt slutpris {value0}',
       selectUpTo500HomesThatAreStillAvailable:
