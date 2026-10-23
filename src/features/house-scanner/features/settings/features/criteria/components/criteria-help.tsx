@@ -7,7 +7,7 @@ const ABOUT = (intl: IntlShape) => [
     id: 'settings.criteria.shellterFollowsApartmentsForSaleInGoteborg',
   }),
   intl.formatMessage({
-    id: 'settings.criteria.theSettingsBelowAreYourDefaultFilterForThe',
+    id: 'settings.criteria.householdProfileHelp',
   }),
   intl.formatMessage({ id: 'settings.criteria.budgetHelp' }),
   intl.formatMessage({ id: 'settings.criteria.locationHelp' }),

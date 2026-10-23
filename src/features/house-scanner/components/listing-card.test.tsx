@@ -295,13 +295,14 @@ it('shows a status badge only when a home is not available or its status is disp
 it('opens details from the Details button, the photo and the title without expanding the card', async () => {
   const onSelect = vi.fn();
   await renderOverridden({ onSelect });
+  fireEvent.click(screen.getByRole('article'));
+  expect(onSelect).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Details' }));
   fireEvent.click(
     screen.getByRole('button', { name: 'View Example balcony home' }),
   );
   fireEvent.click(screen.getByRole('button', { name: 'Example balcony home' }));
-  fireEvent.click(screen.getByRole('article'));
-  expect(onSelect).toHaveBeenCalledTimes(4);
+  expect(onSelect).toHaveBeenCalledTimes(3);
   expect(screen.queryByText('Facts and source evidence')).toBeNull();
 });
 

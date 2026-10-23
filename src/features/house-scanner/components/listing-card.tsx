@@ -273,7 +273,7 @@ export const ListingCard = memo(function ListingCard({
           : undefined
       }
       onClick={(event) => {
-        if (details) return;
+        if (details || !selectionMode) return;
         if (
           event.target instanceof Element &&
           !event.target.closest('button, a, input, label, [role="menuitem"]')
