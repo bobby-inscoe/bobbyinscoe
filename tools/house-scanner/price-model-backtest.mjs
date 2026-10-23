@@ -97,21 +97,44 @@ function current(target) {
   };
 }
 
-function modelled(model, target, { local, z, localShrink }) {
+// Weighted median of [value, weight] pairs.
+const wmedian = (pairs) => {
+  const sorted = [...pairs].sort((a, b) => a[0] - b[0]);
+  const total = sorted.reduce((sum, [, w]) => sum + w, 0);
+  let run = 0;
+  for (const [value, w] of sorted) {
+    run += w;
+    if (run >= total / 2) return value;
+  }
+  return sorted.at(-1)[0];
+};
+
+// The database's rule (hs.refresh_price_estimates): up to 16 nearby priced homes, weighted 1/(metres+150), and a
+// range no wider than the model's own spread.
+function modelled(
+  model,
+  target,
+  { count = 16, z = 1.4, localShrink = 1 } = {},
+) {
   const base = baselineLog(model, target);
-  const n = local ? near(target, 2000, 8) : [];
-  const res = n.map(({ o }) => Math.log(o.price) - baselineLog(model, o));
+  const res = near(target, 2000, count).map(({ o, d }) => [
+    Math.log(o.price) - baselineLog(model, o),
+    1 / (d + 150),
+  ]);
   const hasLevel = target.neighbourhood && model.levels[target.neighbourhood];
   if (!hasLevel && res.length < 4) return null;
+  const centre = res.length ? wmedian(res) : 0;
   const shift = res.length
-    ? (median(res) * res.length) / (res.length + localShrink)
+    ? (centre * res.length) / (res.length + localShrink)
     : 0;
   const mad =
     res.length >= 4
-      ? 1.4826 * median(res.map((r) => Math.abs(r - median(res))))
+      ? 1.4826 * wmedian(res.map(([r, w]) => [Math.abs(r - centre), w]))
       : 0;
-  const sd =
-    res.length >= 4 ? Math.max(mad, model.residualSd * 0.5) : model.residualSd;
+  const sd = Math.min(
+    model.residualSd,
+    res.length >= 4 ? Math.max(mad, model.residualSd * 0.5) : model.residualSd,
+  );
   const mid = Math.exp(base + shift);
   return {
     mid,
@@ -165,7 +188,7 @@ console.log(
 );
 console.log(`catalog homes ${homes.length}, final-price rows ${finals.length}`);
 const both = homes.filter((h) => current(h));
-const chosen = { local: true, z: 1.4, localShrink: 1 };
+const chosen = {};
 const asking = fitModel(archive);
 describeModel('Lundin only', asking);
 score('today (homes today can estimate)', current, both);

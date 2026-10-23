@@ -323,8 +323,8 @@ export const listingSchema = z.strictObject({
       highSek: money.positive(),
       // The likely final price: the midpoint plus the usual gap between final and asking prices.
       finalSek: money.positive(),
-      // Priced homes within 2 km in other buildings that moved it, and how far the farthest is.
-      nearby: z.number().int().min(0).max(8),
+      // Priced homes within 2 km in other buildings that moved it (up to 16), and how far the farthest is.
+      nearby: z.number().int().min(0).max(16),
       farthestM: z.number().int().nonnegative().optional(),
       // True when the home's neighbourhood had its own level in the model.
       levelUsed: z.boolean(),
