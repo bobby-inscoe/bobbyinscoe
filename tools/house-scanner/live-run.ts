@@ -13,7 +13,11 @@ import {
   planQueries,
   type queryPlanInputSchema,
 } from '@house-scanner-tools/query-plan';
-import type { LoadedMemory } from '@house-scanner-tools/run-memory';
+import {
+  isTracked,
+  type LoadedMemory,
+  markTracked,
+} from '@house-scanner-tools/run-memory';
 import { adapterFor } from '@house-scanner-tools/source-adapters';
 import type { SourceCapability } from '@house-scanner-tools/source-registry';
 import type { z } from 'zod';
@@ -74,8 +78,15 @@ export async function prepareLiveRun(options: LiveRunOptions, deps: LiveDeps) {
     ...options.planning,
     capability: options.capability,
   });
+  const memory = options.memory?.memory;
   const prefilter = (observations: Observation[]) =>
-    prefilterObservations(observations, options.bounds);
+    prefilterObservations(
+      observations,
+      options.bounds,
+      (observation) =>
+        memory !== undefined &&
+        isTracked(memory, adapter.sourceId, observation.sourceListingId),
+    );
   const result = await runCollection(
     adapter,
     queryPlan.partitions.map(({ id, municipality, propertyTypes }) => ({
@@ -92,7 +103,14 @@ export async function prepareLiveRun(options: LiveRunOptions, deps: LiveDeps) {
   // ponytail: the run ceiling counts collected observations, so a run that hits
   // it can lose matching listings to non-matching ones. Move this filter into
   // the page loop if runs ever approach the ceiling.
-  const { kept, dropped } = prefilter(result.observations);
+  const { kept, tracked, dropped } = prefilter(result.observations);
+  if (memory)
+    markTracked(
+      memory,
+      adapter.sourceId,
+      kept.map(({ sourceListingId }) => sourceListingId),
+      deps.now(),
+    );
   const geocoded = options.geocodeCache
     ? await geocodeMissing(kept, options.geocodeCache, deps)
     : null;
@@ -118,7 +136,8 @@ export async function prepareLiveRun(options: LiveRunOptions, deps: LiveDeps) {
   // Plain sentences for people. The database prefixes the source and status and appends the
   // policy's gap list, which the app strips when it shows this.
   const coverageNote = [
-    `Read ${result.observations.length} homes across ${pages} pages; kept ${kept.length} within collector bounds and dropped ${droppedCount}.`,
+    `Read ${result.observations.length} homes across ${pages} pages; kept ${kept.length - tracked} within collector bounds and dropped ${droppedCount}.`,
+    tracked ? `Also kept ${tracked} already tracked outside the bounds.` : '',
     `${adapter.detailLabel}: ${result.detailRead} read, ${result.detailCached} reused, ${result.detailFailed} failed, ${result.detailSkipped} skipped.`,
     geocoded
       ? `Positions estimated from addresses: ${geocoded.found} found (${geocoded.cached} reused).`
@@ -171,7 +190,7 @@ export async function prepareLiveRun(options: LiveRunOptions, deps: LiveDeps) {
     requests,
     queryPlan,
     result,
-    prefilter: { kept: kept.length, dropped },
+    prefilter: { kept: kept.length, tracked, dropped },
     publishStatus: failed ? ('failed' as const) : ('partial' as const),
     cacheReset: options.memory?.reset ?? false,
   };

@@ -264,6 +264,52 @@ describe('prepared run', () => {
     );
   });
 
+  it('keeps staging homes it tracks after they move outside the bounds', async () => {
+    const serve = () =>
+      fakeFetch(
+        boneoRobotsOr((url) => ({
+          body: url.includes('/bostad/')
+            ? boneoFixture('detail-glazed.html')
+            : boneoFixture('search-page.html'),
+        })),
+      ).impl;
+    const memory = { memory: emptyMemory(), reset: false };
+    const one = await prepareLiveRun(
+      { capability, planning, bounds, memory },
+      deps(serve()),
+    );
+    const tracked = one.prefilter.kept;
+    expect(tracked).toBeGreaterThan(0);
+    // Without detail entries, only the tracked set can keep them.
+    memory.memory.details = {};
+    const two = await prepareLiveRun(
+      { capability, planning, bounds: strict, memory },
+      deps(serve()),
+    );
+    expect(two.prefilter).toMatchObject({ kept: tracked, tracked });
+    const stage = two.requests[1];
+    expect(stage.action === 'stage' && stage.observations).toHaveLength(
+      tracked,
+    );
+    const publish = two.requests.at(-1);
+    expect(
+      publish?.action === 'publish' && publish.results[0].coverageNote,
+    ).toContain(
+      `kept 0 within collector bounds and dropped ${8 - tracked}. Also kept ${tracked} already tracked outside the bounds.`,
+    );
+    // A home no run staged before is still dropped.
+    const fresh = await prepareLiveRun(
+      {
+        capability,
+        planning,
+        bounds: strict,
+        memory: { memory: emptyMemory(), reset: false },
+      },
+      deps(serve()),
+    );
+    expect(fresh.prefilter.kept).toBe(0);
+  });
+
   it('splits kept observations into stage requests of at most one hundred', async () => {
     const { impl } = fakeFetch(
       boneoRobotsOr((url) => {
