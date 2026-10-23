@@ -716,7 +716,7 @@
   position: absolute;
   left: 8px;
   right: 8px;
-  bottom: 28px;
+  bottom: 48px;
 }
 .photoPinActions .star,
 .photoPinActions .hide {
@@ -1437,4 +1437,16 @@
   border-radius: var(--mantine-radius-sm);
   pointer-events: none;
   z-index: 1;
+}
+
+.photoPinImage .photoGallery,
+.photoPinImage .photoSlides {
+  height: 100%;
+}
+
+.photoPinImage .photoGalleryControls,
+.photoPinImage .photoIndicators {
+  height: 100%;
+  max-height: none;
+  aspect-ratio: auto;
 }
