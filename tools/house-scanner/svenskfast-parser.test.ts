@@ -246,6 +246,16 @@ describe('Svensk Fastighetsförmedling home page', () => {
     expect(read(home()).photoKeys).toBeUndefined();
   });
 
+  it('reads the first floor plan from the Planritning section and drops a bad address', () => {
+    const plan = (n: number) => collagePhoto(n).replace('/Small/', '/Large/');
+    expect(read(home({ plans: [plan(7), plan(8)] })).planKey).toBe(
+      '407000/638544103487000000/ExempelBild7Xyz...jpg',
+    );
+    const bad = plan(7).replace('i.sfcdn.se', 'example.invalid');
+    expect(read(home({ plans: [bad] })).planKey).toBeUndefined();
+    expect(read(home()).planKey).toBeUndefined();
+  });
+
   it('ignores a fact that appears only inside a script', () => {
     const facts = read(home({ floor: null, lift: null }));
     expect(facts.lift).toBeNull();

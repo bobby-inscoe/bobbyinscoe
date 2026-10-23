@@ -403,15 +403,18 @@ export const svenskfastAdapter: SourceAdapter = {
       : `${SVENSKFAST_ORIGIN}/bostad/vastra-gotaland/${path}/`;
   },
   imagesFor(facts, observedAt) {
-    // Large, like the list card's photo.
+    // Large, like the list card's photo and the page's own floor plan.
+    const large = (key: string) => {
+      const [id, ...rest] = key.split('/');
+      return `${SVENSKFAST_IMAGE_ORIGIN}/Resurs/Image/${id}/Large/${rest.join('/')}`;
+    };
     return imagesOf(
       (facts.photoKeys ?? [])
         .filter((key) => SVENSKFAST_IMAGE_KEY.test(key))
-        .map((key) => {
-          const [id, ...rest] = key.split('/');
-          return `${SVENSKFAST_IMAGE_ORIGIN}/Resurs/Image/${id}/Large/${rest.join('/')}`;
-        }),
-      undefined,
+        .map(large),
+      facts.planKey && SVENSKFAST_IMAGE_KEY.test(facts.planKey)
+        ? large(facts.planKey)
+        : undefined,
       'Svensk Fastighetsförmedling',
       observedAt,
     );
