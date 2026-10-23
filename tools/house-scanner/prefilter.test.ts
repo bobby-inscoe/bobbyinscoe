@@ -93,6 +93,24 @@ describe('prefilterObservations with the collector bounds', () => {
     expect(prefilterObservations([listing(facts, [key])]).kept).toHaveLength(1);
   });
 
+  it('keeps a tracked apartment outside the area and price bounds but never a tracked house', () => {
+    const pricey = listing({ askingPriceSek: 6_590_000 });
+    const small = listing({ livingAreaM2: 40 });
+    const house = listing({ propertyType: 'house' });
+    const { kept, tracked, dropped } = prefilterObservations(
+      [pricey, small, house],
+      COLLECTOR_BOUNDS,
+      () => true,
+    );
+    expect(kept).toEqual([pricey, small]);
+    expect(tracked).toBe(2);
+    expect(dropped).toEqual({
+      'property-type': 1,
+      'living-area': 0,
+      'asking-price': 0,
+    });
+  });
+
   it('applies other bounds when given and keeps order', () => {
     const a = listing({ livingAreaM2: 70 });
     const b = listing({ livingAreaM2: 10 });

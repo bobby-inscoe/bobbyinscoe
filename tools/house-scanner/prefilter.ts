@@ -51,7 +51,8 @@ function failedBound(
 
 /**
  * Drops an observation only when a known fact is outside the collector bounds (inclusive).
- * A home already tracked is kept anyway, so its facts stay current after it moves outside them.
+ * A home already tracked is kept outside the area and price bounds, so its facts stay current.
+ * A tracked home of another property type is still dropped and ages out.
  */
 export function prefilterObservations(
   observations: readonly Observation[],
@@ -68,7 +69,7 @@ export function prefilterObservations(
   for (const observation of observations) {
     const reason = failedBound(observation, bounds);
     if (reason === null) kept.push(observation);
-    else if (isTracked(observation)) {
+    else if (reason !== 'property-type' && isTracked(observation)) {
       kept.push(observation);
       tracked += 1;
     } else dropped[reason] += 1;
