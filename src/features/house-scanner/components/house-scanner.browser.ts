@@ -26,6 +26,7 @@ async function swipePhoto(
   page: import('@playwright/test').Page,
   photo: import('@playwright/test').Locator,
   distance: number,
+  duringSwipe?: () => Promise<void>,
 ) {
   const box = await photo.boundingBox();
   if (!box) throw new Error('Missing photo');
@@ -43,6 +44,7 @@ async function swipePhoto(
     });
     await page.waitForTimeout(25);
   }
+  await duringSwipe?.();
   await session.send('Input.dispatchTouchEvent', {
     type: 'touchEnd',
     touchPoints: [],
@@ -1906,17 +1908,18 @@ test('listing and favorite cards share swipe galleries and open details', async 
     await expect(photo).toHaveAttribute('src', /living-room\.svg(?:\?.*)?$/);
     if (test.info().project.name === 'narrow') {
       await photo.scrollIntoViewIfNeeded();
-      await swipePhoto(page, photo, -240);
+      await swipePhoto(page, photo, -240, async () => {
+        await expect(next).toBeHidden();
+        await expect(
+          card.getByRole('button', { name: 'Save favorite', exact: true }),
+        ).toBeHidden();
+      });
       await expect(photo).toHaveAttribute('src', /kitchen\.svg(?:\?.*)?$/);
       await expect(
         card.getByRole('img', { name: 'Photo 2 of 4', exact: true }),
       ).toBeVisible();
-      await expect(next).toBeHidden();
-      await expect(
-        card.getByRole('button', { name: 'Save favorite', exact: true }),
-      ).toBeHidden();
       await expect(page.getByRole('dialog')).toHaveCount(0);
-      await expect(next).toBeVisible({ timeout: 5000 });
+      await expect(next).toBeVisible({ timeout: 1500 });
       await next.click();
       await expect(photo).toHaveAttribute('src', /balcony\.svg(?:\?.*)?$/);
       await next.click();
