@@ -14,6 +14,7 @@ import {
 } from '@house-scanner-tools/price-model';
 import { parseRobots, robotsAllows } from '@house-scanner-tools/robots';
 import {
+  poolKey,
   refreshPriceModel,
   type Shape,
   type SoldPool,
@@ -28,7 +29,8 @@ import { readStadshemSoldPage } from '@house-scanner-tools/stadshem-parser';
 
 // A one-off read of sold apartments with final prices, run by hand (spec: house-scanner-price-estimates, S2b/S2d).
 // It is not part of a collector run. Each list is read newest first, under robots.txt and the run's 1 to 2 second
-// pacing, until a page reaches back two years, adds nothing new, is the last, or the page cap is hit. Rows go into the
+// pacing, until a page reaches back two years, adds nothing new, holds only sales the pool already has (so a later
+// read fetches only the newest pages), is the last, or the page cap is hit. Rows go into the
 // local sold pool; nothing is sent.
 // A list sorted by sale date but without dates (Erik Olsson) is dated from anchors: the first home of every fifth page
 // and the last home read are opened for their sale date, and every row gets a date interpolated from its place
@@ -157,6 +159,7 @@ export async function collectSold(
     const order: string[] = [];
     const anchors: Anchor[] = [];
     const since = new Date(deps.now() - BACK_MS).toISOString();
+    const known = new Set(Object.keys(pool[list.sourceId]?.rows ?? {}));
     let pages = 0;
     let stopped = 'page-cap';
     try {
@@ -202,6 +205,14 @@ export async function collectSold(
           stopped = 'end';
           break;
         }
+        const kept = Object.keys(read.rows);
+        if (
+          kept.length > 0 &&
+          kept.every((id) => known.has(poolKey(list.sourceId, id)))
+        ) {
+          stopped = 'known';
+          break;
+        }
         const anchored =
           page % ANCHOR_EVERY === 0 ? await anchorAt(first) : null;
         if (
@@ -212,7 +223,11 @@ export async function collectSold(
           break;
         }
       }
-      if (list.anchor && order.length > 0) await anchorAt(order.length - 1);
+      // Sales already in the pool keep the values and dates they were stored with.
+      for (const id of Object.keys(rows))
+        if (known.has(poolKey(list.sourceId, id))) delete rows[id];
+      const lastNew = order.findLastIndex((id) => rows[id] !== undefined);
+      if (list.anchor && lastNew >= 0) await anchorAt(lastNew);
     } catch {
       stopped = 'network-error';
     }

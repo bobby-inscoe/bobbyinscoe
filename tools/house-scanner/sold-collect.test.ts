@@ -155,3 +155,43 @@ describe('dating a list by place', () => {
     expect(kept.map((r) => r.period)).toContain('2025H1');
   });
 });
+
+describe('a later read', () => {
+  it('stops at the first page the pool already has and keeps the stored rows as they were', async () => {
+    const pages = [
+      page(['new1', 'old1'], '2026-10-01'),
+      page(['old2', 'old3'], '2026-09-01'),
+      page(['old4'], '2026-08-01'),
+    ];
+    const { impl, calls } = fakeFetch((url) =>
+      url.endsWith('/robots.txt')
+        ? { body: '', type: 'text/plain' }
+        : {
+            body: JSON.stringify(
+              pages[Number(new URL(url).searchParams.get('page'))],
+            ),
+            type: 'application/json',
+          },
+    );
+    const pool: SoldPool = {};
+    await collectSold(
+      pool,
+      [],
+      deps(
+        fakeFetch(() => ({
+          body: JSON.stringify(
+            page(['old1', 'old2', 'old3', 'old4'], '2026-08-01', true),
+          ),
+        })).impl,
+      ),
+      [list([])],
+    );
+    const stored = { ...pool.stadshem.rows };
+    const [report] = await collectSold(pool, [], deps(impl), [list(pages)]);
+    expect(report).toMatchObject({ pages: 2, stopped: 'known' });
+    expect(calls.filter((c) => c.url.includes('/sold'))).toHaveLength(2);
+    expect(Object.keys(pool.stadshem.rows)).toHaveLength(5);
+    for (const [key, row] of Object.entries(stored))
+      expect(pool.stadshem.rows[key]).toEqual(row);
+  });
+});

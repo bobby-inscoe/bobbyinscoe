@@ -124,7 +124,8 @@ export function neighbourhoodAt(
 
 // ---- pool ----
 
-const hashed = (sourceId: string, id: string) =>
+/** The key a source's row is kept under: a one-way hash of its id. */
+export const poolKey = (sourceId: string, id: string) =>
   createHash('sha256').update(`${sourceId}:${id}`).digest('hex').slice(0, 16);
 
 export interface RefreshOptions {
@@ -147,7 +148,7 @@ export function refreshPriceModel(
       position && options.shapes?.length
         ? neighbourhoodAt(options.shapes, position[0], position[1])
         : null;
-    fresh[hashed(sourceId, id)] = {
+    fresh[poolKey(sourceId, id)] = {
       ...row,
       neighbourhood: placed ?? row.neighbourhood,
     };
