@@ -5,6 +5,7 @@ import type { HouseholdAccess } from '@/features/house-scanner/api/household-cli
 import {
   createDemoNoteStore,
   DEMO_USER_ID,
+  STALE_LISTING_ID,
   SYNTHETIC_SNAPSHOT,
 } from '@/features/house-scanner/mock/synthetic-household';
 import type {
@@ -21,12 +22,14 @@ const HOUR = 3_600_000;
 const BALCONY_HOME = '00000000-0000-4000-8000-000000000010';
 const TERRACE_HOME = '00000000-0000-4000-8000-000000000011';
 function demoViewings(snapshot: Snapshot): Snapshot {
-  const inDays = (days: number) =>
-    new Date(Math.ceil((Date.now() + days * 24 * HOUR) / HOUR) * HOUR);
-  const slot = (days: number, hours = 1) => ({
-    startsAt: inDays(days).toISOString(),
-    endsAt: new Date(inDays(days).getTime() + hours * HOUR).toISOString(),
-  });
+  const slot = (days: number, hour = 10) => {
+    const start = new Date(Date.now() + days * 24 * HOUR);
+    start.setUTCHours(hour, 0, 0, 0);
+    return {
+      startsAt: start.toISOString(),
+      endsAt: new Date(start.getTime() + HOUR).toISOString(),
+    };
+  };
   return {
     ...snapshot,
     listings: snapshot.listings.map((listing) =>
@@ -34,7 +37,9 @@ function demoViewings(snapshot: Snapshot): Snapshot {
         ? { ...listing, viewings: [slot(1), slot(8)] }
         : listing.id === TERRACE_HOME
           ? { ...listing, viewings: [slot(3)] }
-          : listing,
+          : listing.id === STALE_LISTING_ID
+            ? { ...listing, viewings: [slot(1, 9)] }
+            : listing,
     ),
   };
 }
