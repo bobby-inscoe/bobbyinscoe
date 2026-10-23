@@ -4,7 +4,6 @@ import { z } from 'zod';
 import {
   addManual,
   clearOwnedSessionStorage,
-  consumeAuthRedirect,
   createHouseholdClient,
   createInvitation,
   deactivateMember,
@@ -28,6 +27,12 @@ import {
   setRememberDevice,
   updateManual,
 } from '@/features/house-scanner/api/household-client';
+import { usePasswordSetup } from '@/features/house-scanner/features/access/hooks/use-password-setup';
+import {
+  withFavorite,
+  withHides,
+  withNote,
+} from '@/features/house-scanner/features/access/utils/snapshot-updates';
 import { MessageError } from '@/features/house-scanner/i18n/catalogs';
 import type {
   ManualEdit,
@@ -47,78 +52,6 @@ export type HouseholdSessionState =
   | { status: 'error'; message: string }
   | { status: 'choose-household'; memberships: Member[] }
   | { status: 'authenticated'; snapshot: Snapshot; userId: string };
-
-// The member's own favorite, as hs_set_favorite stores it: saving twice keeps the first time.
-function withFavorite(
-  snapshot: Snapshot,
-  userId: string,
-  listingId: string,
-  saved: boolean,
-): Snapshot {
-  const mine = (favorite: Snapshot['favorites'][number]) =>
-    favorite.listingId === listingId && favorite.userId === userId;
-  if (saved === snapshot.favorites.some(mine)) return snapshot;
-  return {
-    ...snapshot,
-    favorites: saved
-      ? [
-          ...snapshot.favorites,
-          {
-            householdId: snapshot.householdId,
-            listingId,
-            userId,
-            savedAt: new Date().toISOString(),
-          },
-        ]
-      : snapshot.favorites.filter((favorite) => !mine(favorite)),
-  };
-}
-// Hides as hs_set_hidden stores them: a hide makes this member the latest hider, an unhide clears it
-// for everyone.
-function withHides(
-  snapshot: Snapshot,
-  userId: string,
-  listingIds: string[],
-  hidden: boolean,
-): Snapshot {
-  const ids = new Set(listingIds);
-  const hiddenAt = new Date().toISOString();
-  const hides = [
-    ...(snapshot.hides ?? []).filter((hide) => !ids.has(hide.listingId)),
-    ...(hidden
-      ? [...ids].map((listingId) => ({ listingId, userId, hiddenAt }))
-      : []),
-  ];
-  return { ...snapshot, hides: hides.length ? hides : undefined };
-}
-
-// The member's note as hs_save_note stores it: one per member and listing, at the revision the server returned.
-function withNote(
-  snapshot: Snapshot,
-  userId: string,
-  listingId: string,
-  body: string,
-  revision: number,
-): Snapshot {
-  const note = {
-    listingId,
-    userId,
-    body,
-    revision,
-    editedAt: new Date().toISOString(),
-  };
-  const notes = snapshot.notes ?? [];
-  const mine = notes.findIndex(
-    (entry) => entry.listingId === listingId && entry.userId === userId,
-  );
-  return {
-    ...snapshot,
-    notes:
-      mine < 0
-        ? [...notes, note]
-        : notes.map((entry, index) => (index === mine ? note : entry)),
-  };
-}
 
 export function useHouseholdSession() {
   const [connection] = useState<{
@@ -396,28 +329,8 @@ export function useHouseholdSession() {
       subscription.unsubscribe();
     };
   }, [client, refresh, fail, forget]);
-  // An invitation or recovery email returns with a session in the address. Reading it once signs the person in and
-  // asks them to choose a password before anything else.
-  const [passwordSetup, setPasswordSetup] = useState<
-    'invite' | 'recovery' | null
-  >(null);
-  const [linkError, setLinkError] = useState(false);
-  useEffect(() => {
-    if (!client) return;
-    let current = true;
-    void consumeAuthRedirect(client)
-      .then((kind) => {
-        if (!current) return;
-        if (kind === 'error') setLinkError(true);
-        else if (kind) setPasswordSetup(kind);
-      })
-      .catch(() => {
-        if (current) setLinkError(true);
-      });
-    return () => {
-      current = false;
-    };
-  }, [client]);
+  const { passwordSetup, linkError, requestPasswordReset, setPassword } =
+    usePasswordSetup(client);
   async function signInWithCode(
     login: string,
     code: string,
@@ -434,25 +347,6 @@ export function useHouseholdSession() {
     });
     if (error) throw new Error('errors.theEmailOrPasswordWasNotAccepted');
     await (inflight.current ?? refresh());
-  }
-  // The answer is the same whether or not the address has an account.
-  async function requestPasswordReset(email: string) {
-    if (!client) throw new Error('errors.privateAccessIsNotConfigured');
-    const address = z.email().max(254).safeParse(email.trim());
-    if (!address.success) throw new Error('errors.enterYourEmail');
-    // Auth only returns to allow-listed URLs, still on the old path; the app redirects it to /shellter.
-    await client.auth.resetPasswordForEmail(address.data, {
-      redirectTo: `${window.location.origin}/projects/house-scanner/listings`,
-    });
-  }
-  async function setPassword(password: string) {
-    if (!client) throw new Error('errors.privateAccessIsNotConfigured');
-    if (password.length < 8 || password.length > 72)
-      throw new Error('errors.chooseAPasswordOf8To72Characters');
-    const { error } = await client.auth.updateUser({ password });
-    if (error)
-      throw new Error('errors.thePasswordCouldNotBeSavedChooseADifferent');
-    setPasswordSetup(null);
   }
   // The link is the invitation: the server creates the account for its email, then this signs in with the same
   // password. An address that already has an account only gets in when the password is its own.
