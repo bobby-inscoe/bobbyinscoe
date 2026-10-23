@@ -444,42 +444,26 @@
   max-width: 640px;
   min-width: 0;
 }
-/* A viewing leads with its time; the photo is a thumbnail beside it. */
+/* Viewings use the listing photo layout, followed by the time and saved-home details. */
 .viewingCard {
   display: grid;
-  grid-template-columns: 96px minmax(0, 1fr);
-  column-gap: var(--mantine-spacing-sm);
+  grid-template-columns: minmax(0, 1fr);
   row-gap: var(--mantine-spacing-xs);
   align-items: start;
-}
-.viewingThumb {
-  grid-row: span 2;
-}
-.viewingThumb .photo,
-.viewingThumb .placeholder {
-  width: 96px;
-  aspect-ratio: 1;
-  padding: 0;
-  border-radius: var(--mantine-radius-sm);
-  font-size: var(--mantine-font-size-xs);
 }
 /* On a phone the photo leads the card at full width, like a listing. */
 @media (max-width: 35.99375em) {
   .viewingCard {
-    grid-template-columns: minmax(0, 1fr);
     padding: 12px;
   }
-  .viewingThumb {
-    grid-row: auto;
+  .viewingCard > .cardPhoto {
     margin: -12px -12px 4px;
   }
-  .viewingThumb .photo,
-  .viewingThumb .placeholder {
-    width: 100%;
-    aspect-ratio: 3 / 2;
-    border-radius: 0;
+  .viewingCard .placeholder {
+    padding: 0;
+    font-size: var(--mantine-font-size-xs);
   }
-  .viewingThumb .photoAttribution {
+  .viewingCard .photoAttribution {
     padding-inline: 12px;
     font-size: 0.625rem;
   }

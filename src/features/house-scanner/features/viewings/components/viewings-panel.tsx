@@ -170,7 +170,7 @@ function ViewingCard({
       aria-label={`${listing.title}, ${formatViewing(viewing, intl)}`}
       className={`${classes.card} ${classes.viewingCard}`}
     >
-      <Box className={classes.viewingThumb}>
+      <Box className={classes.cardPhoto}>
         <ListingPhoto listing={listing} onOpen={onOpen} />
       </Box>
       <Stack gap={4} className={classes.grow}>
