@@ -4,7 +4,6 @@ import {
   MultiSelect,
   NumberInput,
   Paper,
-  Select,
   SimpleGrid,
   Stack,
   Text,
@@ -12,6 +11,7 @@ import {
 import { type ReactNode, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { NumberSelect } from '@/features/house-scanner/components/number-select';
+import { SearchLocationFields } from '@/features/house-scanner/features/settings/features/criteria/components/search-location-fields';
 import {
   errorFeedback,
   type Feedback,
@@ -25,13 +25,8 @@ import {
 import {
   AREA_OPTIONS,
   formatArea,
-  formatKm,
   formatRooms,
-  isNear,
-  MUNICIPALITIES,
-  RADIUS_OPTIONS_KM,
   ROOM_OPTIONS,
-  SEARCH_HUBS,
   SOURCES,
 } from '@/features/house-scanner/utils/criteria-options';
 
@@ -52,19 +47,6 @@ export function ProfileEditor({
   const [enabled, setEnabled] = useState(profile.enabled);
   const [message, setMessage] = useState<Feedback>('');
   const [busy, setBusy] = useState(false);
-  const hub = SEARCH_HUBS.find(({ center }) =>
-    isNear(criteria.geography.center, center),
-  );
-  const location =
-    criteria.geography.mode === 'municipalities' &&
-    criteria.geography.municipalities.length === 1 &&
-    MUNICIPALITIES.some(
-      ({ value }) => value === criteria.geography.municipalities[0],
-    )
-      ? `city:${criteria.geography.municipalities[0]}`
-      : criteria.geography.mode === 'radius' && hub
-        ? `hub:${hub.value}`
-        : 'current';
   // A new revision (ours or another member's) resets the fields but keeps the status message.
   const [seenRevision, setSeenRevision] = useState(profile.revision);
   if (seenRevision !== profile.revision) {
@@ -238,121 +220,13 @@ export function ProfileEditor({
           intl.formatMessage({ id: 'settings.criteria.monthlyFeeLabel' }),
           intl.formatMessage({ id: 'settings.criteria.monthlyFeeDescription' }),
         )}
-        <Select
-          label={intl.formatMessage({ id: 'settings.criteria.searchLocation' })}
-          description={intl.formatMessage({
-            id: 'settings.criteria.searchLocationDescription',
-          })}
-          value={location}
-          data={[
-            ...(location === 'current'
-              ? [
-                  {
-                    value: 'current',
-                    label:
-                      criteria.geography.mode === 'radius'
-                        ? intl.formatMessage(
-                            { id: 'settings.criteria.savedPoint' },
-                            {
-                              latitude: criteria.geography.center[1].toFixed(3),
-                              longitude:
-                                criteria.geography.center[0].toFixed(3),
-                            },
-                          )
-                        : intl.formatMessage({
-                            id: 'settings.criteria.currentSavedSearch',
-                          }),
-                    disabled: true,
-                  },
-                ]
-              : []),
-            ...MUNICIPALITIES.map(({ value, supported }) => ({
-              group: value,
-              items: [
-                {
-                  value: `city:${value}`,
-                  label: supported
-                    ? intl.formatMessage(
-                        { id: 'settings.criteria.wholeCity' },
-                        { city: value },
-                      )
-                    : intl.formatMessage(
-                        { id: 'settings.criteria.comingSoon' },
-                        { value0: value },
-                      ),
-                  disabled: !supported,
-                },
-                ...SEARCH_HUBS.filter(
-                  (entry) => entry.municipality === value && supported,
-                ).map(({ value, label }) => ({
-                  value: `hub:${value}`,
-                  label:
-                    value === 'brunnsparken'
-                      ? intl.formatMessage({
-                          id: 'settings.criteria.brunnsparkenCentralGoteborg',
-                        })
-                      : label,
-                })),
-              ],
-            })),
-          ]}
-          allowDeselect={false}
+        <SearchLocationFields
+          geography={criteria.geography}
           disabled={!canEdit || !onSave}
-          onChange={(next) => {
-            const selected = SEARCH_HUBS.find(
-              ({ value }) => `hub:${value}` === next,
-            );
-            const city = MUNICIPALITIES.find(
-              ({ value, supported }) => supported && `city:${value}` === next,
-            );
-            if (selected)
-              setCriteria((current) => ({
-                ...current,
-                geography: {
-                  ...current.geography,
-                  mode: 'radius',
-                  center: [...selected.center],
-                  municipalities: [selected.municipality],
-                },
-              }));
-            else if (city)
-              setCriteria((current) => ({
-                ...current,
-                geography: {
-                  ...current.geography,
-                  mode: 'municipalities',
-                  municipalities: [city.value],
-                },
-              }));
-          }}
+          onChange={(geography) =>
+            setCriteria((current) => ({ ...current, geography }))
+          }
         />
-        {!criteria.geography.mode && (
-          <Text size="sm" c="dimmed">
-            <FormattedMessage
-              id="settings.criteria.legacySearchDescription"
-              values={{
-                cities: criteria.geography.municipalities.join(', '),
-                radius: formatKm(criteria.geography.radiusKm, intl),
-              }}
-            />
-          </Text>
-        )}
-        {criteria.geography.mode === 'radius' && (
-          <NumberSelect
-            label={intl.formatMessage({ id: 'settings.criteria.radius' })}
-            value={criteria.geography.radiusKm}
-            onChange={(radiusKm) =>
-              radiusKm !== null &&
-              setCriteria((current) => ({
-                ...current,
-                geography: { ...current.geography, radiusKm },
-              }))
-            }
-            options={RADIUS_OPTIONS_KM}
-            format={(value) => formatKm(value, intl)}
-            disabled={!canEdit || !onSave}
-          />
-        )}
         <MultiSelect
           label={intl.formatMessage({ id: 'settings.criteria.sources' })}
           description={intl.formatMessage({
