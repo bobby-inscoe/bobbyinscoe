@@ -39,13 +39,7 @@ async function chooseLanguage(
   await select.evaluate((element) =>
     element.scrollIntoView({ block: 'center', behavior: 'instant' }),
   );
-  await select.click();
-  await page
-    .getByRole('option', {
-      name: next === 'sv' ? 'Svenska' : 'English',
-      exact: true,
-    })
-    .click();
+  await select.selectOption(next);
 }
 
 test('Swedish is the default and an explicit English choice survives reload', async ({
@@ -55,12 +49,12 @@ test('Swedish is the default and an explicit English choice survives reload', as
   await expect(page.locator('html')).toHaveAttribute('lang', 'sv');
   await expect(
     page.getByRole('combobox', { name: 'Språk', exact: true }),
-  ).toHaveValue('Svenska');
+  ).toHaveValue('sv');
   await chooseLanguage(page, 'sv', 'en');
   await page.reload();
   await expect(
     page.getByRole('combobox', { name: 'Language', exact: true }),
-  ).toHaveValue('English');
+  ).toHaveValue('en');
   await page
     .getByRole('button', { name: 'Explore the synthetic demo' })
     .click();
@@ -301,9 +295,9 @@ test('blocked preference writes keep the chosen language usable and explain pers
   await expect(page.getByRole('status')).toContainText('could not');
   await expect(
     page.getByRole('combobox', { name: 'Language', exact: true }),
-  ).toHaveValue('English');
+  ).toHaveValue('en');
   await page.reload();
   await expect(
     page.getByRole('combobox', { name: 'Språk', exact: true }),
-  ).toHaveValue('Svenska');
+  ).toHaveValue('sv');
 });

@@ -294,7 +294,7 @@ export const sv = {
         'Ta bort den här länken för hela hushållet? Allas favoriter och anteckningar för den tas också bort.',
       keepIt: 'Behåll',
       workedOutFromTheAskingPricesOfTheNearest:
-        'Beräknat från utgångspriserna för de {value0} närmaste lägenheterna med känt pris, inom {value1} km, anpassat till bostadens storlek. Utgångspriser är inte slutpriser. Avgift, våning och skick beaktas inte. I ett test på de andra bostäderna låg det faktiska utgångspriset inom intervallet ungefär tre gånger av fyra.',
+        'Baserat på {value0} utgångspriser inom {value1} km, anpassat efter storlek. Avgift, våning och skick ingår inte.',
       estimate: 'Uppskattning',
       fromNearbyAskingPrices: 'från {value0} utgångspriser i närheten',
       selectUpTo500HomesThatAreStillAvailable:

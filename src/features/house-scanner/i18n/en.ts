@@ -291,7 +291,7 @@ export const en = {
         "Delete this link for the whole household? Everyone's favorites and notes on it are removed too.",
       keepIt: 'Keep it',
       workedOutFromTheAskingPricesOfTheNearest:
-        "Worked out from the asking prices of the {value0} nearest apartments that have one, within {value1} km, scaled to this home's size. Asking prices are not sale prices, and the fee, floor and condition are not considered. In a test on the other homes it held the real asking price about three times in four.",
+        'Based on {value0} asking prices within {value1} km, adjusted for size. Excludes fee, floor and condition.',
       estimate: 'Estimate',
       fromNearbyAskingPrices: 'from {value0} nearby asking prices',
       selectUpTo500HomesThatAreStillAvailable:
