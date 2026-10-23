@@ -55,6 +55,7 @@ export interface ListingsTranslations {
     fullScreenPhotos: string;
     exitFullScreen: string;
     viewPhoto: string;
+    photoPosition: string;
     previousPhoto: string;
     nextPhoto: string;
     floorPlan: string;

@@ -1,4 +1,8 @@
 export interface SettingsTranslations {
+  personal: {
+    heading: string;
+    languageDescription: string;
+  };
   criteria: {
     preferredBudgetDescription: string;
     maximumBudgetDescription: string;
@@ -57,6 +61,7 @@ export interface SettingsTranslations {
     noSearchProfilesYet: string;
   };
   household: {
+    memberActions: string;
     couldNotLoadTheHouseholdMembersReloadToTry: string;
     loadingHousehold: string;
     enterAValidEmailAddress: string;

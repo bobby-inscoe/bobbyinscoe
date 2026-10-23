@@ -1,4 +1,6 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
+
+test.use({ storageState: { cookies: [], origins: [] } });
 
 test.beforeEach(async ({ context }) => {
   await context.route('**/*', async (route) => {
@@ -11,163 +13,276 @@ test.beforeEach(async ({ context }) => {
   });
 });
 
-test('language persists before sign-in and changes retained UI state', async ({
+async function openSettings(page: Page, swedish = false) {
+  await page
+    .getByRole('button', { name: swedish ? 'Mer' : 'More', exact: true })
+    .click();
+  await page
+    .getByRole('menuitem', { name: swedish ? /^Inställningar/ : /^Settings/ })
+    .click();
+  await expect(
+    page.getByRole('menuitem', {
+      name: swedish ? /^Inställningar/ : /^Settings/,
+    }),
+  ).toBeHidden();
+}
+
+async function chooseLanguage(
+  page: Page,
+  current: 'en' | 'sv',
+  next: 'en' | 'sv',
+) {
+  const select = page.getByRole('combobox', {
+    name: current === 'sv' ? 'Språk' : 'Language',
+    exact: true,
+  });
+  await select.evaluate((element) =>
+    element.scrollIntoView({ block: 'center', behavior: 'instant' }),
+  );
+  await select.click();
+  await page
+    .getByRole('option', {
+      name: next === 'sv' ? 'Svenska' : 'English',
+      exact: true,
+    })
+    .click();
+}
+
+test('Swedish is the default and an explicit English choice survives reload', async ({
   page,
 }) => {
-  const errors: string[] = [];
-  page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('/shellter');
-  await page.getByRole('combobox', { name: 'Language', exact: true }).click();
-  await page.getByRole('option', { name: 'Svenska', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'sv');
   await expect(
     page.getByRole('combobox', { name: 'Språk', exact: true }),
   ).toHaveValue('Svenska');
+  await chooseLanguage(page, 'sv', 'en');
   await page.reload();
   await expect(
-    page.getByRole('combobox', { name: 'Språk', exact: true }),
-  ).toHaveValue('Svenska');
-  await page
-    .getByRole('button', {
-      name: 'Utforska demon med fiktiva uppgifter',
-      exact: true,
-    })
-    .click();
-  const card = page.getByRole('article', {
-    name: 'Example balcony home',
-    exact: true,
-  });
-  await card
-    .getByRole('button', { name: 'Spara favorit', exact: true })
-    .click();
-  await expect(
-    card.getByRole('button', { name: 'Ta bort min favorit', exact: true }),
-  ).toBeVisible();
-  await page
-    .getByRole('searchbox', { name: 'Sök på rubrik', exact: true })
-    .fill('Example');
-  const before = page.url();
-  await page.getByRole('combobox', { name: 'Språk', exact: true }).click();
-  await page.getByRole('option', { name: 'English', exact: true }).click();
-
-  await expect(
-    page.getByRole('searchbox', { name: 'Search by title', exact: true }),
-  ).toHaveValue('Example');
-  expect(page.url()).toBe(before);
-  await expect(
-    card.getByRole('button', { name: 'Remove my favorite', exact: true }),
-  ).toBeVisible();
-  expect(
-    await page.evaluate(() => localStorage.getItem('shellter.language')),
-  ).toBe('en');
-  expect(errors).toEqual([]);
-
-  await page.getByRole('button', { name: 'More', exact: true }).click();
-  await page.getByRole('menuitem', { name: /^Settings/ }).click();
-  await page
-    .getByRole('combobox', { name: 'Search location', exact: true })
-    .click();
-  await page
-    .getByRole('option', { name: 'Centralstationen', exact: true })
-    .click();
-  await page.getByRole('combobox', { name: 'Radius', exact: true }).click();
-  await page.getByRole('option', { name: '2 km', exact: true }).click();
-  await page
-    .getByRole('textbox', { name: 'Maximum budget (SEK)' })
-    .fill('3600000');
-  await page.getByRole('combobox', { name: 'Language', exact: true }).click();
-  await page.getByRole('option', { name: 'Svenska', exact: true }).click();
-  await expect(
-    page.getByRole('combobox', { name: 'Sökområde', exact: true }),
-  ).toHaveValue('Centralstationen');
-  await expect(
-    page.getByRole('textbox', { name: 'Maxbudget (SEK)' }),
-  ).toHaveValue('3 600 000');
-  await page.getByRole('combobox', { name: 'Sökområde', exact: true }).click();
-  await page
-    .getByRole('option', { name: 'Göteborg (hela kommunen)', exact: true })
-    .click();
-  await page.getByRole('combobox', { name: 'Språk', exact: true }).click();
-  await page.getByRole('option', { name: 'English', exact: true }).click();
-  await expect(
-    page.getByRole('combobox', { name: 'Search location', exact: true }),
-  ).toHaveValue('Göteborg (whole city)');
-  expect(errors).toEqual([]);
-});
-
-test('Swedish fits a narrow screen and leaving Shellter restores the document language', async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 320, height: 800 });
-  await page.addInitScript(() =>
-    localStorage.setItem('shellter.language', 'sv'),
-  );
-  await page.goto('/shellter');
-  await expect(
-    page.getByRole('combobox', { name: 'Språk', exact: true }),
-  ).toBeVisible();
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
-  ).toBe(true);
-  await page
-    .getByRole('button', {
-      name: 'Utforska demon med fiktiva uppgifter',
-      exact: true,
-    })
-    .click();
-  await expect(
-    page.getByRole('heading', { name: 'Bostäder', exact: true }),
-  ).toBeVisible();
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
-  ).toBe(true);
-  await page.screenshot({
-    path: '.browser-test-results/language-swedish-narrow.png',
-    fullPage: true,
-  });
-  await page.setViewportSize({ width: 1000, height: 800 });
-  await page.getByRole('link', { name: 'Tillbaka till verkstaden' }).click();
-  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-});
-
-test('map markers and controls change language without replacing the map', async ({
-  page,
-}) => {
-  await page.goto('/shellter');
+    page.getByRole('combobox', { name: 'Language', exact: true }),
+  ).toHaveValue('English');
   await page
     .getByRole('button', { name: 'Explore the synthetic demo' })
     .click();
-  await page.getByRole('button', { name: 'Map', exact: true }).click();
-  const map = page.getByLabel('Listing map', { exact: true });
-  const canvas = map.locator('canvas');
-  await expect(canvas).toBeVisible();
-  const originalCanvas = await canvas.elementHandle();
-  const marker = page.getByRole('button', { name: /^2 homes nearby/ });
-  await expect(marker).toBeVisible();
-  const originalMarker = await marker.elementHandle();
-  await page.getByRole('combobox', { name: 'Language', exact: true }).click();
-  await page.getByRole('option', { name: 'Svenska', exact: true }).click();
-  const translatedMap = page.getByLabel('Bostadskarta', { exact: true });
   await expect(
-    translatedMap.locator('.maplibregl-ctrl-zoom-in'),
-  ).toHaveAttribute('aria-label', 'Zooma in');
-  await expect(translatedMap.locator('canvas')).toHaveAttribute(
-    'aria-label',
-    'Karta',
+    page.getByRole('combobox', { name: 'Language', exact: true }),
+  ).toHaveCount(0);
+  await openSettings(page);
+  const personal = page.getByRole('heading', {
+    name: 'Personal settings',
+    exact: true,
+  });
+  await expect(personal).toBeVisible();
+  const headings = await page
+    .getByRole('heading', { level: 2 })
+    .allTextContents();
+  expect(headings.indexOf('Personal settings')).toBeGreaterThan(
+    headings.indexOf('Household'),
   );
+  await page
+    .getByRole('textbox', { name: 'Maximum budget (SEK)' })
+    .fill('3600000');
+  await chooseLanguage(page, 'en', 'sv');
   await expect(
-    page.getByRole('button', { name: /^2 bostäder i närheten.*sparad av/ }),
+    page.getByRole('textbox', { name: 'Maxbudget (SEK)' }),
+  ).toHaveValue('3 600 000');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'sv');
+  expect(
+    await page.evaluate(() => localStorage.getItem('shellter.language')),
+  ).toBe('sv');
+});
+
+test('member menu stays beside the name on mobile and desktop in both languages', async ({
+  page,
+}) => {
+  await page.goto('/shellter');
+  await page
+    .getByRole('button', {
+      name: 'Utforska demon med fiktiva uppgifter',
+      exact: true,
+    })
+    .click();
+  await openSettings(page, true);
+  for (const width of [1440, 390, 320]) {
+    await page.setViewportSize({ width, height: 1000 });
+    for (const language of ['sv', 'en'] as const) {
+      if (language === 'en') await chooseLanguage(page, 'sv', 'en');
+      const row = page.getByRole('listitem').filter({ hasText: 'Demo Morgan' });
+      const name = row.getByText('Demo Morgan', { exact: true });
+      const trigger = row.getByRole('button', {
+        name:
+          language === 'sv'
+            ? 'Åtgärder för Demo Morgan'
+            : 'Actions for Demo Morgan',
+        exact: true,
+      });
+      await expect(trigger).toBeVisible();
+      const nameBox = await name.boundingBox();
+      const triggerBox = await trigger.boundingBox();
+      if (!nameBox || !triggerBox) throw new Error('Member row is missing');
+      expect(
+        Math.abs(
+          nameBox.y + nameBox.height / 2 - triggerBox.y - triggerBox.height / 2,
+        ),
+      ).toBeLessThan(1);
+      expect(nameBox.x + nameBox.width).toBeLessThanOrEqual(triggerBox.x);
+      expect(triggerBox.x + triggerBox.width).toBeLessThanOrEqual(width);
+      const select = page.getByRole('combobox', {
+        name: language === 'sv' ? 'Språk' : 'Language',
+        exact: true,
+      });
+      const selectWidth = await select.evaluate(
+        (element) => element.getBoundingClientRect().width,
+      );
+      if (width < 576) {
+        const contentWidth = await select.evaluate((element) => {
+          const paper = element.closest('.mantine-Paper-root');
+          if (!paper) throw new Error('Missing personal settings panel');
+          const style = getComputedStyle(paper);
+          return (
+            paper.clientWidth -
+            parseFloat(style.paddingLeft) -
+            parseFloat(style.paddingRight)
+          );
+        });
+        expect(Math.abs(selectWidth - contentWidth)).toBeLessThan(2);
+      } else expect(selectWidth).toBe(240);
+      await trigger.click();
+      await expect(
+        page.getByRole('menuitem', {
+          name: language === 'sv' ? 'Gör till ägare' : 'Make owner',
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole('menuitem', {
+          name: language === 'sv' ? 'Ta bort' : 'Remove',
+          exact: true,
+        }),
+      ).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(trigger).toBeFocused();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      ).toBe(true);
+      if (language === 'en') await chooseLanguage(page, 'en', 'sv');
+    }
+  }
+  const trigger = page.getByRole('button', {
+    name: 'Åtgärder för Demo Morgan',
+    exact: true,
+  });
+  await trigger.click();
+  page.once('dialog', (dialog) => dialog.dismiss());
+  await page.getByRole('menuitem', { name: 'Ta bort', exact: true }).click();
+  await expect(trigger).toBeVisible();
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  await page
+    .getByRole('menuitem', { name: 'Gör till ägare', exact: true })
+    .click();
+  await trigger.click();
+  await expect(
+    page.getByRole('menuitem', { name: 'Gör till ägare', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('menuitem', { name: 'Ta bort', exact: true }),
   ).toBeVisible();
-  expect(await originalCanvas?.evaluate((element) => element.isConnected)).toBe(
-    true,
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('menuitem', { name: 'Ta bort', exact: true }).click();
+  await expect(
+    page.getByRole('listitem').filter({ hasText: 'Demo Morgan' }),
+  ).toHaveCount(0);
+});
+
+test('Sign out follows personal settings and calls the session action', async ({
+  page,
+}) => {
+  await page.route(
+    '**/src/features/house-scanner/components/synthetic-workspace.tsx*',
+    async (route) => {
+      const response = await route.fetch();
+      const source = await response.text();
+      const marker = 'userId: DEMO_USER_ID,';
+      if (!source.includes(marker))
+        throw new Error('Demo workspace fixture changed');
+      await route.fulfill({
+        response,
+        body: source.replace(
+          marker,
+          marker +
+            "onSignOut: () => { document.documentElement.dataset.signedOut = 'true'; },",
+        ),
+      });
+    },
   );
-  expect(await originalMarker?.evaluate((element) => element.isConnected)).toBe(
-    true,
+  await page.goto('/shellter');
+  await page
+    .getByRole('button', {
+      name: 'Utforska demon med fiktiva uppgifter',
+      exact: true,
+    })
+    .click();
+  await openSettings(page, true);
+  const signOut = page.getByRole('button', { name: 'Logga ut', exact: true });
+  await expect(signOut).toBeVisible();
+  const language = page.getByRole('combobox', { name: 'Språk', exact: true });
+  expect(
+    await language.evaluate((element) => {
+      const signOut = Array.from(document.querySelectorAll('button')).find(
+        (button) => button.textContent === 'Logga ut',
+      );
+      return (
+        signOut &&
+        Boolean(
+          element.compareDocumentPosition(signOut) &
+            Node.DOCUMENT_POSITION_FOLLOWING,
+        )
+      );
+    }),
+  ).toBe(true);
+  for (const [name, width] of [
+    ['mobile', 390],
+    ['desktop', 1000],
+  ] as const) {
+    await page.setViewportSize({ width, height: 1300 });
+    await page
+      .getByRole('heading', { name: 'Hushåll', exact: true })
+      .evaluate((element) =>
+        element.scrollIntoView({ block: 'start', behavior: 'instant' }),
+      );
+    await page.screenshot({
+      path: `.browser-test-results/settings-${name}.png`,
+    });
+  }
+  await signOut.click();
+  await expect(page.locator('html')).toHaveAttribute('data-signed-out', 'true');
+});
+
+test('map controls use the language selected in settings', async ({ page }) => {
+  await page.goto('/shellter');
+  await chooseLanguage(page, 'sv', 'en');
+  await page
+    .getByRole('button', { name: 'Explore the synthetic demo' })
+    .click();
+  await openSettings(page);
+  await chooseLanguage(page, 'en', 'sv');
+  await page.getByRole('button', { name: 'Bostäder', exact: true }).click();
+  await page.getByRole('button', { name: 'Karta', exact: true }).click();
+  const map = page.getByLabel('Bostadskarta', { exact: true });
+  await expect(map.locator('canvas')).toHaveAttribute('aria-label', 'Karta');
+  await expect(map.locator('.maplibregl-ctrl-zoom-in')).toHaveAttribute(
+    'aria-label',
+    'Zooma in',
   );
+  await expect(
+    page.getByRole('button', { name: /^2 bostäder i närheten/ }),
+  ).toBeVisible();
+  await page.setViewportSize({ width: 1000, height: 800 });
+  await page.getByRole('link', { name: 'Tillbaka till verkstaden' }).click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 });
 
 test('blocked preference writes keep the chosen language usable and explain persistence failure', async ({
@@ -182,68 +297,13 @@ test('blocked preference writes keep the chosen language usable and explain pers
     };
   });
   await page.goto('/shellter');
-  await page.getByRole('combobox', { name: 'Language', exact: true }).click();
-  await page.getByRole('option', { name: 'Svenska', exact: true }).click();
-  await expect(
-    page.getByText(
-      'Ditt språkval kunde inte sparas. Det gäller tills du lämnar sidan.',
-    ),
-  ).toBeVisible();
-  await expect(
-    page.getByRole('combobox', { name: 'Språk', exact: true }),
-  ).toHaveValue('Svenska');
-  await page.reload();
+  await chooseLanguage(page, 'sv', 'en');
+  await expect(page.getByRole('status')).toContainText('could not');
   await expect(
     page.getByRole('combobox', { name: 'Language', exact: true }),
   ).toHaveValue('English');
-});
-
-test('changing language preserves a panned camera even when a home remains selected', async ({
-  page,
-}) => {
-  test.skip(test.info().project.name !== 'desktop', 'Mouse panning regression');
-  await page.goto('/shellter');
-  await page
-    .getByRole('button', { name: 'Explore the synthetic demo' })
-    .click();
-  await page.getByRole('button', { name: 'Map', exact: true }).click();
-  await page.getByRole('button', { name: /^2 homes nearby/ }).click();
-  const marker = page.getByRole('button', { name: /^Example balcony home:/ });
-  await marker.click();
-  await expect(marker).toHaveAttribute('aria-pressed', 'true');
-  const canvas = page
-    .getByLabel('Listing map', { exact: true })
-    .locator('canvas');
-  const box = await canvas.boundingBox();
-  if (!box) throw new Error('Map canvas is missing');
-  await page.mouse.move(box.x + box.width * 0.25, box.y + box.height * 0.3);
-  await page.mouse.down();
-  await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.8, {
-    steps: 12,
-  });
-  await page.mouse.up();
-  let previous = '';
-  let stable = 0;
-  await expect
-    .poll(
-      async () => {
-        const current = await marker.locator('..').getAttribute('style');
-        stable = current === previous ? stable + 1 : 0;
-        previous = current ?? '';
-        return stable;
-      },
-      { intervals: [100] },
-    )
-    .toBeGreaterThanOrEqual(3);
-  const position = await marker.locator('..').getAttribute('style');
-  await page.getByRole('combobox', { name: 'Language', exact: true }).click();
-  await page.getByRole('option', { name: 'Svenska', exact: true }).click();
-  const translated = page.getByRole('button', {
-    name: /^Example balcony home:/,
-  });
-  await expect(translated).toHaveAttribute('aria-pressed', 'true');
-  await expect(translated.locator('..')).toHaveAttribute(
-    'style',
-    position ?? '',
-  );
+  await page.reload();
+  await expect(
+    page.getByRole('combobox', { name: 'Språk', exact: true }),
+  ).toHaveValue('Svenska');
 });

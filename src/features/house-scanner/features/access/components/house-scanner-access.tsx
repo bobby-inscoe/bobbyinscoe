@@ -10,6 +10,7 @@ import {
 } from '@mantine/core';
 import { type ReactNode, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
+import { LanguageSelect } from '@/features/house-scanner/components/language-select';
 import { InvitePanel } from '@/features/house-scanner/features/access/components/invite-panel';
 import { SetPasswordForm } from '@/features/house-scanner/features/access/components/set-password-form';
 import { SignInForm } from '@/features/house-scanner/features/access/components/sign-in-form';
@@ -55,6 +56,7 @@ export function HouseScannerAccess({
   if (state.status === 'unconfigured')
     return (
       <Stack align="flex-start">
+        <LanguageSelect />
         <Title order={2}>
           <FormattedMessage id="access.privateAccessIsNotConfigured" />
         </Title>
@@ -100,6 +102,9 @@ export function HouseScannerAccess({
   );
   return (
     <Stack gap="md">
+      {(state.status !== 'authenticated' ||
+        session.passwordSetup ||
+        inviteToken !== null) && <LanguageSelect />}
       {message && <Alert role="alert">{formatFeedback(intl, message)}</Alert>}
       {signedIn && (
         <FeedbackWidget

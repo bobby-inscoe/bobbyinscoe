@@ -7,7 +7,7 @@ import {
   screen,
 } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { ListingCard } from '@/features/house-scanner/components/listing-card';
 import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
 import { catalogs } from '@/features/house-scanner/i18n/catalogs';
@@ -17,6 +17,18 @@ import {
   STALE_LISTING_ID,
   SYNTHETIC_SNAPSHOT,
 } from '@/features/house-scanner/mock/synthetic-household';
+
+beforeEach(() => {
+  HTMLElement.prototype.scrollTo = vi.fn();
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
+});
 
 afterEach(() => {
   cleanup();
@@ -288,7 +300,8 @@ it('opens details from the Details button, the photo and the title without expan
     screen.getByRole('button', { name: 'View Example balcony home' }),
   );
   fireEvent.click(screen.getByRole('button', { name: 'Example balcony home' }));
-  expect(onSelect).toHaveBeenCalledTimes(3);
+  fireEvent.click(screen.getByRole('article'));
+  expect(onSelect).toHaveBeenCalledTimes(4);
   expect(screen.queryByText('Facts and source evidence')).toBeNull();
 });
 
@@ -352,6 +365,7 @@ it('keeps photo attribution and a working detail target when an image fails', as
   await renderOverridden({
     onSelect,
     listing: {
+      photos: [],
       photo: {
         url: 'https://images.example.invalid/synthetic.jpg',
         attribution: 'Synthetic author',

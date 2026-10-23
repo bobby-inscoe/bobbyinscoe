@@ -379,10 +379,10 @@ export function HouseholdWorkspace({
           </>
         ) : tab === 'settings' ? (
           <SettingsPanel
-            onSignOut={onSignOut}
             snapshot={snapshot}
             userId={userId}
             synthetic={synthetic}
+            onSignOut={onSignOut}
             onSaveProfile={onSaveProfile}
             access={access}
           />

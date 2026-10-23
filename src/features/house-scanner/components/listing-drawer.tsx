@@ -1,14 +1,6 @@
-import {
-  ActionIcon,
-  Button,
-  Drawer,
-  Group,
-  Modal,
-  Stack,
-  Text,
-} from '@mantine/core';
+import { Button, Drawer, Group, Modal, Stack, Text } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { ChevronLeft, ChevronRight, LayoutTemplate } from 'lucide-react';
+import { LayoutTemplate } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { FavoriteStar } from '@/features/house-scanner/components/favorite-star';
@@ -158,40 +150,6 @@ export function ListingDrawer({
                     contain={showingFloorPlan}
                     onOpen={() => setFullScreen(true)}
                   >
-                    {photos.length > 1 && !showingFloorPlan && (
-                      <>
-                        <ActionIcon
-                          variant="default"
-                          size="lg"
-                          radius="xl"
-                          className={classes.photoPrevious}
-                          aria-label={intl.formatMessage({
-                            id: 'listings.details.previousPhoto',
-                          })}
-                          onClick={() =>
-                            selectPhoto(
-                              (index - 1 + photos.length) % photos.length,
-                            )
-                          }
-                        >
-                          <ChevronLeft size={22} aria-hidden />
-                        </ActionIcon>
-                        <ActionIcon
-                          variant="default"
-                          size="lg"
-                          radius="xl"
-                          className={classes.photoNext}
-                          aria-label={intl.formatMessage({
-                            id: 'listings.details.nextPhoto',
-                          })}
-                          onClick={() =>
-                            selectPhoto((index + 1) % photos.length)
-                          }
-                        >
-                          <ChevronRight size={22} aria-hidden />
-                        </ActionIcon>
-                      </>
-                    )}
                     {floorPlan && (
                       <Button
                         size="xs"

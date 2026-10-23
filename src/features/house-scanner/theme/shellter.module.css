@@ -300,6 +300,7 @@
   height: 1px;
 }
 .card {
+  cursor: pointer;
   position: relative;
   background: var(--shellter-surface);
   border: 1px solid transparent;
@@ -1355,6 +1356,50 @@
   max-width: 100%;
   height: auto;
   margin-inline: auto;
+}
+
+.memberIdentity {
+  flex: 1;
+  min-width: 0;
+}
+
+.photoIndicators {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  max-height: 320px;
+  pointer-events: none;
+}
+.photoDots {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgb(20 38 36 / 45%);
+}
+.photoDots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 45%);
+}
+.photoDots span[data-active] {
+  background: white;
+}
+.cardPhoto .photoGalleryControls,
+.cardPhoto .photoIndicators {
+  max-height: none;
+}
+.fullScreenGallery .photoGalleryControls,
+.fullScreenGallery .photoIndicators {
+  height: 100%;
+  max-height: none;
+  aspect-ratio: auto;
 }
 
 .locationPreview {

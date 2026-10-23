@@ -3,9 +3,9 @@ export const LANGUAGE_KEY = 'shellter.language';
 export const locales = { en: 'en-GB', sv: 'sv-SE' } as const;
 export function readLanguage(): Language {
   try {
-    return localStorage.getItem(LANGUAGE_KEY) === 'sv' ? 'sv' : 'en';
+    return localStorage.getItem(LANGUAGE_KEY) === 'en' ? 'en' : 'sv';
   } catch {
-    return 'en';
+    return 'sv';
   }
 }
 export function saveLanguage(language: Language): boolean {
