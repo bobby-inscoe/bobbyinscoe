@@ -334,8 +334,8 @@ const RESIZED = /^\/cdn-cgi\/image\/[a-z0-9=,-]{1,120}(\/contentassets\/.*)$/;
 /**
  * Up to four home photos and the first floor plan from the gallery JSON. The home's photos, its plan, the agent
  * portrait and the area pictures all sit in one /contentassets/ folder, so the folder does not tell them apart.
- * The home's photos come first and carry no caption; the portrait and most area pictures that follow do, so the
- * photos are the run before the first captioned image.
+ * The home's photos come first, in page order, and a home has far more than four, so the first four valid entries
+ * are its photos. Captions do not tell them apart: brokers caption their own photos as well as the area pictures.
  */
 function imageKeysOf(html: string): Pick<DetailFacts, 'photoKeys' | 'planKey'> {
   const match = /\bdata-modaldata=(?:'([^']*)'|"([^"]*)")/.exec(html);
@@ -347,13 +347,10 @@ function imageKeysOf(html: string): Pick<DetailFacts, 'photoKeys' | 'planKey'> {
   }
   if (!isRecord(data)) return {};
   const images = Array.isArray(data.allImages) ? data.allImages : [];
-  const end = images.findIndex(
-    (image) => !isRecord(image) || (image.caption ?? '') !== '',
-  );
   const photoKeys = images
-    .slice(0, end < 0 ? images.length : end)
     .map((image) => {
-      const full = isRecord(image.urls) ? image.urls.Full : undefined;
+      const full =
+        isRecord(image) && isRecord(image.urls) ? image.urls.Full : undefined;
       return typeof full === 'string' ? RESIZED.exec(full)?.[1] : undefined;
     })
     .filter(

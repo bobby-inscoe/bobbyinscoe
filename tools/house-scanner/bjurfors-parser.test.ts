@@ -288,7 +288,7 @@ describe('Bjurfors listing page', () => {
       expect(text).not.toContain(value);
   });
 
-  it('takes the uncaptioned photos before the first captioned image, and only valid keys', () => {
+  it('takes the first four images as the photos, captioned or not, and only valid keys', () => {
     const path = (name: string) =>
       `/contentassets/${'a'.repeat(32)}/${name}.jpg?v=1`;
     const image = (name: string, caption: string | null = null) => ({
@@ -299,17 +299,18 @@ describe('Bjurfors listing page', () => {
     });
     const gallery = {
       allImages: [
-        image('hem1'),
+        image('hem1', 'Ett luftigt vardagsrum'),
         image('hem2'),
-        image('maklare', 'Namn'),
-        image('omrade'),
+        image('hem3', 'Köket'),
+        image('hem4'),
+        image('hem5'),
       ],
       floorPlans: [{ originalUrl: '/contentassets/x/plan.pdf' }],
     };
     const read = facts(
       `${detailPage([])}<div data-modaldata='${JSON.stringify(gallery)}'></div>`,
     );
-    expect(read.photoKeys).toEqual([path('hem1'), path('hem2')]);
+    expect(read.photoKeys).toEqual(['hem1', 'hem2', 'hem3', 'hem4'].map(path));
     expect(read).not.toHaveProperty('planKey');
   });
 
