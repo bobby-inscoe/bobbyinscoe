@@ -142,13 +142,18 @@ export interface SourceAdapter {
     | { kind: 'failed'; reason: StopReason };
 }
 
-/** Merges what a listing page supplied; unknown and missing values never overwrite. */
+/**
+ * Merges what a listing page supplied; unknown and missing values never overwrite. A remembered
+ * page (up to a week old) fills only facts the list left blank, so today's list price wins.
+ */
 function applyDetail(
   adapter: SourceAdapter,
   observation: Observation,
   detail: DetailFacts,
   now: Date,
+  remembered = false,
 ) {
+  const listed = observation.facts as Record<string, unknown>;
   const {
     latitude,
     longitude,
@@ -162,8 +167,11 @@ function applyDetail(
     observation.facts,
     Object.fromEntries(
       Object.entries(facts).filter(
-        ([, value]) =>
-          value !== undefined && value !== null && value !== 'unknown',
+        ([key, value]) =>
+          value !== undefined &&
+          value !== null &&
+          value !== 'unknown' &&
+          (!remembered || listed[key] === null || listed[key] === 'unknown'),
       ),
     ),
   );
@@ -431,7 +439,7 @@ export async function runCollection(
         : undefined;
     if (cached) {
       const { readAt: _readAt, ...stored } = cached;
-      applyDetail(adapter, observation, stored, new Date(deps.now()));
+      applyDetail(adapter, observation, stored, new Date(deps.now()), true);
       detailCached += 1;
       continue;
     }

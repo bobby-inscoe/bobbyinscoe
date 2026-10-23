@@ -66,6 +66,12 @@ export const runMemorySchema = z.strictObject({
       detailFactsSchema.extend({ readAt: z.iso.datetime() }),
     )
     .refine((details) => Object.keys(details).length <= MAX_MEMORY_ENTRIES),
+  // "<source id>:<listing id>" of every home a run staged, with when it was last staged.
+  // Optional so files written before it existed still load.
+  tracked: z
+    .record(z.string().min(3).max(300), z.iso.datetime())
+    .refine((tracked) => Object.keys(tracked).length <= MAX_MEMORY_ENTRIES)
+    .optional(),
 });
 export type RunMemory = z.infer<typeof runMemorySchema>;
 export interface LoadedMemory {
@@ -105,9 +111,17 @@ export function saveMemory(path: string, memory: RunMemory, nowMs: number) {
       .sort(([, a], [, b]) => b.readAt.localeCompare(a.readAt))
       .slice(0, MAX_MEMORY_ENTRIES),
   );
+  const tracked =
+    memory.tracked &&
+    Object.fromEntries(
+      Object.entries(memory.tracked)
+        .filter(([, at]) => Date.parse(at) >= nowMs - MEMORY_MAX_AGE_MS)
+        .sort(([, a], [, b]) => b.localeCompare(a))
+        .slice(0, MAX_MEMORY_ENTRIES),
+    );
   const temp = `${path}.${process.pid}.tmp`;
   try {
-    writeFileSync(temp, JSON.stringify({ ...memory, details }));
+    writeFileSync(temp, JSON.stringify({ ...memory, details, tracked }));
     renameSync(temp, path);
   } catch (error) {
     rmSync(temp, { force: true });
@@ -137,6 +151,32 @@ export function startLiveRun(
   loaded.memory.lastLiveRunAt = new Date(nowMs).toISOString();
   saveMemory(path, loaded.memory, nowMs);
   return loaded;
+}
+
+/**
+ * Whether a run staged this home before. A detail entry also counts: only staged homes get one,
+ * and files written before `tracked` existed have nothing else.
+ */
+export function isTracked(
+  memory: RunMemory,
+  sourceId: string,
+  listingId: string,
+) {
+  return (
+    Object.hasOwn(memory.tracked ?? {}, `${sourceId}:${listingId}`) ||
+    Object.hasOwn(memory.details, listingId)
+  );
+}
+
+export function markTracked(
+  memory: RunMemory,
+  sourceId: string,
+  listingIds: readonly string[],
+  nowMs: number,
+) {
+  const at = new Date(nowMs).toISOString();
+  memory.tracked ??= {};
+  for (const id of listingIds) memory.tracked[`${sourceId}:${id}`] = at;
 }
 
 /** A fresh entry for this listing, or undefined when it must be read again. */
