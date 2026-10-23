@@ -10,6 +10,11 @@ export function useHasEstimate(listing: Listing) {
   return listing.priceEstimate !== undefined;
 }
 
+/** The database's estimate for a home with no asking price, if it has one. */
+export function usePriceEstimate(listing: Listing) {
+  return listing.priceEstimate;
+}
+
 /** "Estimate 2,8M–3,8M likely final 3,4M": the database's guide for a home with no asking price, and its basis. */
 export function EstimateLine({ listing }: { listing: Listing }) {
   const intl = useIntl();

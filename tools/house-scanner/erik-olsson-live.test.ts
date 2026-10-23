@@ -217,12 +217,12 @@ describe('Erik Olsson guarded run', () => {
     expect(result.observations[0].photo).toBeNull();
   });
 
-  it('adds up to three more photos and the floor plan, and keeps them for a home read from memory', async () => {
+  it('adds up to seven more photos and the floor plan, and keeps them for a home read from memory', async () => {
     const photo = (n: number) =>
       `${n}1111111-2222-4333-8444-555555555555`.slice(-36);
     const images = [
       { is_floor_plan: true, cloudflare_image_id: PLAN_ID },
-      ...[1, 2, 3, 4, 5].map((n) => ({
+      ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => ({
         is_floor_plan: false,
         cloudflare_image_id: photo(n),
       })),
@@ -232,7 +232,9 @@ describe('Erik Olsson guarded run', () => {
     const thumb = 'w=640,h=480,fit=cover,quality=80,format=auto';
     const expected = {
       photo: { url: url(photo(1), thumb) },
-      morePhotos: [2, 3, 4].map((n) => ({ url: url(photo(n), thumb) })),
+      morePhotos: [2, 3, 4, 5, 6, 7, 8].map((n) => ({
+        url: url(photo(n), thumb),
+      })),
       floorPlan: {
         url: url(
           PLAN_ID,

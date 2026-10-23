@@ -1,5 +1,6 @@
 import {
   Alert,
+  Box,
   Button,
   FileInput,
   Group,
@@ -115,15 +116,17 @@ export function FeedbackWidget({ visible = true }: { visible?: boolean }) {
   return (
     <>
       {visible && (
-        <Tooltip label={t('hint')}>
-          <Button
-            w="fit-content"
-            leftSection={<MessageCircle size={18} aria-hidden />}
-            onClick={() => setOpened(true)}
-          >
-            {t('send')}
-          </Button>
-        </Tooltip>
+        <Box w="100%" maw="48rem" mt="md">
+          <Tooltip label={t('hint')}>
+            <Button
+              w="50%"
+              leftSection={<MessageCircle size={18} aria-hidden />}
+              onClick={() => setOpened(true)}
+            >
+              {t('send')}
+            </Button>
+          </Tooltip>
+        </Box>
       )}
       <Modal
         opened={opened}

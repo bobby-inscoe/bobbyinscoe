@@ -310,14 +310,14 @@ describe('Stadshem estate record', () => {
     });
   });
 
-  it('names up to four photos in record order and the first floor plan, dropping other hosts and odd paths', () => {
+  it('names up to eight photos in record order and the first floor plan, dropping other hosts and odd paths', () => {
     const keys = (block: unknown) => {
       const { photoKeys, planKey } = facts(record({ images: block }));
       return { photoKeys, planKey };
     };
     const block = images(['A1', 'A2', 'A3', 'A4', 'A5'], ['P1', 'P2']);
     expect(keys(block)).toEqual({
-      photoKeys: ['A1', 'A2', 'A3', 'A4'].map(imageKey),
+      photoKeys: ['A1', 'A2', 'A3', 'A4', 'A5'].map(imageKey),
       planKey: imageKey('P1'),
     });
     // An unusable address is skipped, not taken as the end of the list.

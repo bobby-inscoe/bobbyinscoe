@@ -34,6 +34,13 @@ export const listingUrlSchema = z
     );
   }, 'validation.useAnHTTPSLinkWithoutCredentials');
 
+export const financingSchema = z.strictObject({
+  // Null puts down the 10% minimum on each home.
+  cashSek: money.nullable(),
+  interestRatePercent: z.number().positive().max(20),
+  taxDeduction: z.boolean(),
+});
+
 export const criteriaSchema = z
   .strictObject({
     minAreaM2: z.number().positive().max(10000),
@@ -71,6 +78,8 @@ export const criteriaSchema = z
     }),
     // The sources this household browses. Absent means every source; it never changes collection.
     sourceIds: z.array(sourceId).min(1).max(20).optional(),
+    // The household's numbers for monthly cost estimates. Absent means the typical defaults; it never changes matching.
+    financing: financingSchema.optional(),
   })
   .refine(
     (c) => c.maxAreaM2 === null || c.maxAreaM2 >= c.minAreaM2,
@@ -197,8 +206,8 @@ export const observationSchema = z.strictObject({
   coordinates: coordinateSchema.nullable(),
   evidence: z.array(evidenceSchema).max(50),
   photo: photoSchema.nullable(),
-  // Up to three photos after `photo`, in the source's order, and one floor plan. Left out when there are none.
-  morePhotos: z.array(photoSchema).min(1).max(3).optional(),
+  // Up to seven photos after `photo`, in the source's order, and one floor plan. Left out when there are none.
+  morePhotos: z.array(photoSchema).min(1).max(7).optional(),
   floorPlan: photoSchema.optional(),
   // Future viewings, sorted. The key is left out when there are none, so older readers keep parsing.
   viewings: z.array(viewingSchema).max(10).optional(),
@@ -458,6 +467,7 @@ export const annotationSchema = z.strictObject({
   state: z.enum(['completed', 'deferred', 'invalidated']),
 });
 export type Criteria = z.infer<typeof criteriaSchema>;
+export type Financing = z.infer<typeof financingSchema>;
 export type SearchProfile = z.infer<typeof profileSchema>;
 export type Viewing = z.infer<typeof viewingSchema>;
 export type Listing = z.infer<typeof listingSchema>;

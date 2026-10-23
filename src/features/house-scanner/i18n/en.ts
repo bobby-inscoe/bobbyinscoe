@@ -59,8 +59,8 @@ export const en = {
       maximumRooms: 'Maximum rooms',
       shellterFollowsApartmentsForSaleInGoteborg:
         'Shellter follows apartments for sale in Göteborg.',
-      theSettingsBelowAreYourDefaultFilterForThe:
-        'The settings below are your default filter for the Listings tab. Adjust budget, size, rooms, features and areas to fit what you are looking for.',
+      householdProfileHelp:
+        'The household profile sets the shared search criteria for everyone in your household. Adjust budget, size, rooms, features and areas to fit what you are looking for.',
       filtersOnTheListingsTabAreYoursAloneAnd:
         'Filters on the Listings tab are yours alone and stay in the page URL, including after a reload. Clearing them keeps the shared defaults. Only owners can change these defaults.',
       howDoesThisWork: 'How does this work?',
@@ -105,10 +105,26 @@ export const en = {
         'Only household owners can change shared criteria.',
       profileChangesAreUnavailableInThisView:
         'Profile changes are unavailable in this view.',
-      defaultFilter: 'Default filter',
+      householdProfile: 'Household Profile',
       theseCriteriaAreFictionalEditsAffectThisDemoOnly:
         'These criteria are fictional. Edits affect this demo only.',
       noSearchProfilesYet: 'No search profiles yet.',
+    },
+    financing: {
+      heading: 'Financing',
+      description:
+        "Your household's numbers for the monthly cost of each home. Every member sees the same figures.",
+      cash: 'Cash for the down payment (SEK)',
+      cashDescription: 'Leave empty to put down the 10 % minimum on each home.',
+      rate: 'Interest rate (%)',
+      rateDescription:
+        'Typical rate: {rate} %, the average 3-month rate in {month}.',
+      taxDeduction: 'Show interest after the tax deduction',
+      save: 'Save financing',
+      useTypical: 'Use typical values',
+      usingTypical: 'Using typical values until you save your own.',
+      saved: 'Financing saved.',
+      ownerOnly: 'Only household owners can change financing.',
     },
     household: {
       memberActions: 'Actions for {name}',
@@ -183,7 +199,7 @@ export const en = {
       savedBy: 'Saved by',
       select: 'Select {value0}',
       details: 'Details',
-      openLocationMap: 'Open location on map',
+      openLocationMap: 'Open full map',
       loadingLocationMap: 'Loading location map…',
       locationMapUnavailable:
         'Location map unavailable. Use See on map to try the full map.',
@@ -345,6 +361,31 @@ export const en = {
       savedByMembers:
         'Saved by {count, plural, one {# member} other {# members}}',
     },
+    cost: {
+      heading: 'Monthly cost',
+      price: 'Expected final price (SEK)',
+      cash: 'Cash down (SEK)',
+      rate: 'Interest rate (%)',
+      interest: 'Interest',
+      taxDeduction: 'Tax deduction',
+      amortization: 'Amortization ({percent} %)',
+      fee: 'Monthly fee',
+      total: 'Per month',
+      loan: 'Loan {loan}, {share} % of the price.',
+      shortfall: 'Banks lend at most 90 % of the price. Add {amount} in cash.',
+      noPrice: 'Enter an expected price to see the monthly cost.',
+      feeUnknown: 'Leaves out the monthly fee, which is unknown.',
+      operatingCosts: 'Operating costs',
+      operatingCostsInput: 'Operating costs (SEK/month)',
+      operatingCostsHelp:
+        'Estimate, not collected from the listing. Starts at 1,000 SEK/month; adjust for costs not included in the monthly fee.',
+      includeTaxDeduction: 'Include interest tax relief',
+      oneTime: 'One-time fees: title {title}, mortgage deeds {deeds}.',
+      typical:
+        'Typical rate and 10 % cash, as of {month}. Household owners can set your own numbers in Settings.',
+      scenario: 'Rate scenario for every home, not saved.',
+      reset: 'Reset',
+    },
     map: {
       cardLayout: 'Map card layout',
       classicCard: 'Classic',
@@ -409,6 +450,9 @@ export const en = {
       closeSelectedHome: 'Close selected home',
       selectHome: 'Select home',
       openOriginalListing: 'Open original listing',
+      ctrlScrollToZoom: 'Use Ctrl + scroll to zoom the map',
+      commandScrollToZoom: 'Use ⌘ + scroll to zoom the map',
+      twoFingersToMove: 'Use two fingers to move the map',
       zoomIn: 'Zoom in',
       zoomOut: 'Zoom out',
       resetBearing: 'Drag to rotate map, click to reset north',

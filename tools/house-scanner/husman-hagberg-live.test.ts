@@ -84,7 +84,9 @@ describe('Husman Hagberg guarded run', () => {
       url === estate ? { body: page } : site([numbered(1)])(url);
     const expected = {
       photo: { url: media('MEDP1'), attribution: 'Husman Hagberg' },
-      morePhotos: ['MEDP2', 'MEDP3', 'MEDP4'].map((id) => ({ url: media(id) })),
+      morePhotos: ['MEDP2', 'MEDP3', 'MEDP4', 'MEDP5'].map((id) => ({
+        url: media(id),
+      })),
       floorPlan: { url: media('MEDPLAN1', '1410x940') },
     };
     const memory = emptyMemory();

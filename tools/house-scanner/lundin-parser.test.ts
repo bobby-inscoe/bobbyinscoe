@@ -249,7 +249,7 @@ describe('Lundin list', () => {
 });
 
 describe('Lundin home page', () => {
-  it('reads the first four safe preview photo ids in page order and the first plan, and nothing else', () => {
+  it('reads the first eight safe preview photo ids in page order and the first plan, and nothing else', () => {
     expect(readLundinDetailPage(lundinHomePage())).toEqual({
       kind: 'detail',
       facts: {
@@ -260,6 +260,7 @@ describe('Lundin home page', () => {
           'MED0000000000000000012',
           'MED0000000000000000013',
           'MED0000000000000000014',
+          'MED0000000000000000015',
         ],
         planKey: 'MED0000000000000000021',
       },

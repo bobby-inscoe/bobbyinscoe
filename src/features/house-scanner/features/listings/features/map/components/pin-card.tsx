@@ -8,9 +8,11 @@ import {
   UnstyledButton,
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
+import { useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { FavoriteStar } from '@/features/house-scanner/components/favorite-star';
 import { HideButton } from '@/features/house-scanner/components/hide-button';
+import { ListingGallery } from '@/features/house-scanner/components/listing-gallery';
 import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
 import {
   AlsoOn,
@@ -57,6 +59,14 @@ export function PinCard({
   selection?: { checked: boolean; disabled: boolean; onToggle: () => void };
 }) {
   const intl = useIntl();
+  const [selectionPhoto, setSelectionPhoto] = useState({ id: '', index: 0 });
+  const photos = listing.photos?.length
+    ? listing.photos
+    : listing.photo
+      ? [listing.photo]
+      : [];
+  const photoIndex =
+    selectionPhoto.id === listing.id ? selectionPhoto.index : 0;
 
   const mobile = useMediaQuery('(max-width: 36em)');
   const estimated = useHasEstimate(listing);
@@ -103,11 +113,24 @@ export function PinCard({
         )}
       >
         <div className={classes.photoPinImage}>
-          <ListingPhoto
-            listing={listing}
-            onOpen={onDetails}
-            isNew={listing.isNew}
-          />
+          {photos.length > 1 ? (
+            <ListingGallery
+              key={listing.id}
+              listing={listing}
+              photos={photos}
+              index={photoIndex}
+              onSelect={(index) => setSelectionPhoto({ id: listing.id, index })}
+              onOpen={onDetails}
+            >
+              {null}
+            </ListingGallery>
+          ) : (
+            <ListingPhoto
+              listing={listing}
+              onOpen={onDetails}
+              isNew={listing.isNew}
+            />
+          )}
           <div className={classes.photoPinClose}>{closeButton}</div>
           <Group
             className={classes.photoPinActions}

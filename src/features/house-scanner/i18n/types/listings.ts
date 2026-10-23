@@ -161,6 +161,29 @@ export interface ListingsTranslations {
     roomFacts: string;
     savedByMembers: string;
   };
+  cost: {
+    heading: string;
+    price: string;
+    cash: string;
+    rate: string;
+    interest: string;
+    taxDeduction: string;
+    amortization: string;
+    fee: string;
+    total: string;
+    loan: string;
+    shortfall: string;
+    noPrice: string;
+    feeUnknown: string;
+    operatingCosts: string;
+    operatingCostsInput: string;
+    operatingCostsHelp: string;
+    includeTaxDeduction: string;
+    oneTime: string;
+    typical: string;
+    scenario: string;
+    reset: string;
+  };
   map: {
     cardLayout: string;
     classicCard: string;
@@ -214,6 +237,9 @@ export interface ListingsTranslations {
     closeSelectedHome: string;
     selectHome: string;
     openOriginalListing: string;
+    ctrlScrollToZoom: string;
+    commandScrollToZoom: string;
+    twoFingersToMove: string;
     zoomIn: string;
     zoomOut: string;
     resetBearing: string;

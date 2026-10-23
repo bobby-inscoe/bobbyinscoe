@@ -19,7 +19,7 @@ export function CriteriaPanel({
     <>
       <Flex gap="sm" align="center" wrap="wrap">
         <Title order={2}>
-          <FormattedMessage id="settings.criteria.defaultFilter" />
+          <FormattedMessage id="settings.criteria.householdProfile" />
         </Title>
         <CriteriaHelp />
       </Flex>

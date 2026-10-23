@@ -20,7 +20,7 @@ export interface SettingsTranslations {
     roomsHeading: string;
     maximumRooms: string;
     shellterFollowsApartmentsForSaleInGoteborg: string;
-    theSettingsBelowAreYourDefaultFilterForThe: string;
+    householdProfileHelp: string;
     filtersOnTheListingsTabAreYoursAloneAnd: string;
     howDoesThisWork: string;
     aboutShellter: string;
@@ -56,9 +56,23 @@ export interface SettingsTranslations {
     saveCriteria: string;
     onlyHouseholdOwnersCanChangeSharedCriteria: string;
     profileChangesAreUnavailableInThisView: string;
-    defaultFilter: string;
+    householdProfile: string;
     theseCriteriaAreFictionalEditsAffectThisDemoOnly: string;
     noSearchProfilesYet: string;
+  };
+  financing: {
+    heading: string;
+    description: string;
+    cash: string;
+    cashDescription: string;
+    rate: string;
+    rateDescription: string;
+    taxDeduction: string;
+    save: string;
+    useTypical: string;
+    usingTypical: string;
+    saved: string;
+    ownerOnly: string;
   };
   household: {
     memberActions: string;

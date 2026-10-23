@@ -8,6 +8,9 @@ import { catalogs } from '@/features/house-scanner/i18n/catalogs';
 
 const runtime = vi.hoisted(() => {
   const map = {
+    addControl: vi.fn(),
+    touchZoomRotate: { disableRotation: vi.fn() },
+    keyboard: { disableRotation: vi.fn() },
     on: vi.fn(),
     once: vi.fn(),
     off: vi.fn(),
@@ -18,6 +21,7 @@ const runtime = vi.hoisted(() => {
   marker.setLngLat.mockReturnValue(marker);
   marker.addTo.mockReturnValue(marker);
   return {
+    NavigationControl: vi.fn(function NavigationFixture() {}),
     Map: vi.fn(function MapFixture() {
       return map;
     }),

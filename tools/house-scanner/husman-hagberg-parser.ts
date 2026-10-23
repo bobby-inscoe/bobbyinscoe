@@ -293,7 +293,7 @@ export function readHusmanHagbergDetailPage(
   if (!isRecord(estate)) return { kind: 'failed', reason: 'unexpected-shape' };
   const photoKeys = keysOf(estate.images)
     .filter((image) => image.category !== 'Områdesbild')
-    .slice(0, 4)
+    .slice(0, 8)
     .map((image) => image.key);
   const planKey = keysOf(estate.plans)[0]?.key;
   // The highest published bid: cancelled and hidden bids are left out, and the bidder's alias is never read.

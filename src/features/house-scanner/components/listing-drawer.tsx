@@ -14,6 +14,7 @@ import {
   ReasonChips,
 } from '@/features/house-scanner/components/listing-summary';
 import { LocationPreview } from '@/features/house-scanner/components/location-preview';
+import { MonthlyCost } from '@/features/house-scanner/components/monthly-cost';
 import { EstimateLine } from '@/features/house-scanner/components/price-estimate';
 import type { ListingNotesController } from '@/features/house-scanner/hooks/use-listing-notes';
 import { displayLabel } from '@/features/house-scanner/i18n/display-labels';
@@ -243,6 +244,14 @@ export function ListingDrawer({
                         </Text>
                       )}
                     </>
+                  }
+                  monthlyCost={
+                    // Remount per home and opening to discard price and cash edits on close.
+                    <MonthlyCost
+                      key={`${listing.id}-${opened}`}
+                      listing={listing}
+                      snapshot={snapshot}
+                    />
                   }
                   onSelectPhoto={showPhoto}
                 />

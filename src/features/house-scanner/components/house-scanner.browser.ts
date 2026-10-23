@@ -1998,7 +1998,7 @@ for (const origin of ['Listings', 'Favorites', 'Viewings'] as const) {
       exact: true,
     });
     const preview = dialog.getByRole('button', {
-      name: 'Open location on map',
+      name: 'Open full map',
     });
     await preview.scrollIntoViewIfNeeded();
     await expect(dialog.locator('[data-preview-state]')).toHaveAttribute(
@@ -2077,7 +2077,7 @@ test('location preview returns to the existing full map and releases preview res
       exact: true,
     });
     const preview = dialog.getByRole('button', {
-      name: 'Open location on map',
+      name: 'Open full map',
     });
     await preview.scrollIntoViewIfNeeded();
     await expect(dialog.locator('[data-preview-state]')).toHaveAttribute(
@@ -2153,7 +2153,7 @@ test('failed location preview preserves its size, fallback action and area-only 
       .click();
     const dialog = page.getByRole('dialog', { name, exact: true });
     await expect(
-      dialog.getByRole('button', { name: 'Open location on map' }),
+      dialog.getByRole('button', { name: 'Open full map' }),
     ).toHaveCount(0);
     await dialog.getByRole('button', { name: 'Close listing details' }).click();
     await expect(dialog).toHaveCount(0);
@@ -2201,9 +2201,14 @@ test('reduced-motion location preview keeps translated actions and attribution i
       },
     }),
   );
-  await openDemo(page);
-  await page.getByRole('combobox', { name: 'Language', exact: true }).click();
-  await page.getByRole('option', { name: 'Svenska', exact: true }).click();
+  await page.evaluate(() => localStorage.setItem('shellter.language', 'sv'));
+  await page.reload();
+  await page
+    .getByRole('button', {
+      name: 'Utforska demon med fiktiva uppgifter',
+      exact: true,
+    })
+    .click();
   await page
     .getByRole('article', { name: 'Example detached home', exact: true })
     .getByRole('button', { name: 'Detaljer', exact: true })
@@ -2213,7 +2218,7 @@ test('reduced-motion location preview keeps translated actions and attribution i
     exact: true,
   });
   const preview = dialog.getByRole('button', {
-    name: 'Öppna platsen på kartan',
+    name: 'Öppna hela kartan',
   });
   await preview.scrollIntoViewIfNeeded();
   await expect(dialog.locator('[data-preview-state]')).toHaveAttribute(
@@ -2311,4 +2316,174 @@ test('shared map runtime failure leaves details usable and preserves the full-ma
   await dialog.getByRole('button', { name: 'See on map', exact: true }).click();
   await expect(page.getByRole('alert')).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test('drawer location map pans and zooms without navigating, keeps drawer scrolling, and opens the full map explicitly', async ({
+  page,
+}) => {
+  await page.route('https://tiles.openfreemap.org/styles/liberty', (route) =>
+    route.fulfill({ json: LOCAL_STREET_STYLE }),
+  );
+  await openDemo(page);
+  await page
+    .getByRole('article', { name: 'Example detached home', exact: true })
+    .getByRole('button', { name: 'Details', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Example detached home',
+    exact: true,
+  });
+  const preview = dialog.locator('[data-preview-state]');
+  await preview.scrollIntoViewIfNeeded();
+  await expect(preview).toHaveAttribute('data-preview-state', 'ready');
+  const canvas = preview.locator('canvas');
+  const url = page.url();
+  await canvas.click({ position: { x: 50, y: 50 } });
+  await expect(dialog).toBeVisible();
+  expect(page.url()).toBe(url);
+  const offset = () =>
+    preview.evaluate((element) => {
+      const canvas = element.querySelector('canvas')?.getBoundingClientRect();
+      const marker = element
+        .querySelector('.maplibregl-marker')
+        ?.getBoundingClientRect();
+      if (!canvas || !marker) throw new Error('Missing map geometry');
+      return marker.x + marker.width / 2 - canvas.x - canvas.width / 2;
+    });
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error('Missing map canvas');
+  const x = box.x + box.width * 0.2;
+  const y = box.y + box.height * 0.4;
+  if (test.info().project.name === 'narrow') {
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [
+        { x, y },
+        { x, y: y + 50 },
+      ],
+    });
+    for (let step = 1; step <= 8; step++) {
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [
+          { x: x + step * 10, y },
+          { x: x + step * 10, y: y + 50 },
+        ],
+      });
+      await page.waitForTimeout(25);
+    }
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchEnd',
+      touchPoints: [],
+    });
+    await cdp.detach();
+  } else {
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 80, y, { steps: 8 });
+    await page.mouse.up();
+  }
+  await expect.poll(async () => Math.abs(await offset())).toBeGreaterThan(30);
+  // Wait for pan inertia before comparing the zoom scale of the same home marker.
+  await expect
+    .poll(async () => {
+      const before = await offset();
+      await page.waitForTimeout(100);
+      return Math.abs((await offset()) - before);
+    })
+    .toBeLessThan(1);
+  const panned = Math.abs(await offset());
+  await dialog.getByRole('button', { name: 'Zoom in', exact: true }).click();
+  await expect
+    .poll(async () => Math.abs(await offset()))
+    .toBeGreaterThan(panned * 1.5);
+  await dialog.getByRole('button', { name: 'Zoom out', exact: true }).click();
+  await expect
+    .poll(async () => Math.abs(Math.abs(await offset()) - panned))
+    .toBeLessThan(15);
+  if (test.info().project.name === 'narrow') {
+    await preview.scrollIntoViewIfNeeded();
+    const bounds = await canvas.boundingBox();
+    if (!bounds) throw new Error('Missing touch map');
+    const cx = bounds.x + bounds.width / 2;
+    const cy = bounds.y + bounds.height / 2;
+    const beforePinch = Math.abs(await offset());
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [
+        { x: cx - 20, y: cy },
+        { x: cx + 20, y: cy },
+      ],
+    });
+    for (let step = 1; step <= 8; step++) {
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [
+          { x: cx - 20 - step * 4, y: cy },
+          { x: cx + 20 + step * 4, y: cy },
+        ],
+      });
+      await page.waitForTimeout(25);
+    }
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchEnd',
+      touchPoints: [],
+    });
+    await expect
+      .poll(async () => Math.abs(await offset()))
+      .toBeGreaterThan(beforePinch * 1.5);
+    const beforeSwipe = await dialog.evaluate((element) => element.scrollTop);
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ x: bounds.x + 40, y: cy }],
+    });
+    for (let step = 1; step <= 8; step++) {
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{ x: bounds.x + 40, y: cy - step * 10 }],
+      });
+      await page.waitForTimeout(25);
+    }
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchEnd',
+      touchPoints: [],
+    });
+    await expect
+      .poll(() => dialog.evaluate((element) => element.scrollTop))
+      .toBeGreaterThan(beforeSwipe + 30);
+    await cdp.detach();
+  }
+  await canvas.focus();
+  const beforeKey = await offset();
+  await page.keyboard.press('ArrowRight');
+  await expect
+    .poll(async () => Math.abs((await offset()) - beforeKey))
+    .toBeGreaterThan(30);
+  await preview.scrollIntoViewIfNeeded();
+  const beforeScroll = await dialog.evaluate((element) => element.scrollTop);
+  const wheelBox = await canvas.boundingBox();
+  if (!wheelBox) throw new Error('Missing map canvas');
+  await page.mouse.move(wheelBox.x + 30, wheelBox.y + 30);
+  await page.mouse.wheel(0, 150);
+  await expect
+    .poll(() => dialog.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(beforeScroll + 30);
+  await expect(dialog).toBeVisible();
+  expect(page.url()).toBe(url);
+  await dialog.screenshot({
+    path: `.browser-test-results/interactive-drawer-map-${test.info().project.name}.png`,
+  });
+  await dialog
+    .getByRole('button', { name: 'Open full map', exact: true })
+    .click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByLabel('Listing map')).toBeVisible();
+  await expect(
+    page.getByRole('article', {
+      name: 'Selected home: Example detached home',
+      exact: true,
+    }),
+  ).toBeVisible();
 });

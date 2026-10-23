@@ -1,14 +1,16 @@
-import { Button, Divider, Paper, Stack, Text, Title } from '@mantine/core';
+import { Button, Paper, Stack, Text, Title } from '@mantine/core';
 import { LogOut } from 'lucide-react';
 import { FormattedMessage } from 'react-intl';
 import { LanguageSelect } from '@/features/house-scanner/components/language-select';
 import { CriteriaPanel } from '@/features/house-scanner/features/settings/features/criteria/components/criteria-panel';
+import { FinancingEditor } from '@/features/house-scanner/features/settings/features/financing/components/financing-editor';
 import { HouseholdAccessPanel } from '@/features/house-scanner/features/settings/features/household/components/household-access-panel';
 import type { Snapshot } from '@/features/house-scanner/types/contracts';
 import type {
   HouseholdAccessActions,
   HouseholdActions,
 } from '@/features/house-scanner/types/household';
+import { financingProfile } from '@/features/house-scanner/utils/housing-cost';
 
 interface SettingsPanelProps
   extends Partial<Pick<HouseholdActions, 'onSaveProfile'>> {
@@ -29,6 +31,7 @@ export function SettingsPanel({
   access,
 }: SettingsPanelProps) {
   const member = snapshot.members.find((entry) => entry.userId === userId);
+  const profile = financingProfile(snapshot.profiles);
   return (
     <Stack w="100%" maw="48rem">
       <CriteriaPanel
@@ -37,6 +40,13 @@ export function SettingsPanel({
         synthetic={synthetic}
         onSaveProfile={onSaveProfile}
       />
+      {profile && (
+        <FinancingEditor
+          profile={profile}
+          canEdit={member?.role === 'owner'}
+          onSave={onSaveProfile}
+        />
+      )}
       {access && <HouseholdAccessPanel access={access} userId={userId} />}
       <Paper>
         <Stack>
@@ -47,21 +57,18 @@ export function SettingsPanel({
             <FormattedMessage id="settings.personal.languageDescription" />
           </Text>
           <LanguageSelect label />
+          {onSignOut && (
+            <Button
+              variant="default"
+              w="50%"
+              leftSection={<LogOut size={16} aria-hidden />}
+              onClick={onSignOut}
+            >
+              <FormattedMessage id="navigation.signOut" />
+            </Button>
+          )}
         </Stack>
       </Paper>
-      {onSignOut && (
-        <>
-          <Divider />
-          <Button
-            variant="default"
-            w="fit-content"
-            leftSection={<LogOut size={16} aria-hidden />}
-            onClick={onSignOut}
-          >
-            <FormattedMessage id="navigation.signOut" />
-          </Button>
-        </>
-      )}
     </Stack>
   );
 }

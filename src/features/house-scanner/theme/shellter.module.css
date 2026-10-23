@@ -300,7 +300,6 @@
   height: 1px;
 }
 .card {
-  cursor: pointer;
   position: relative;
   background: var(--shellter-surface);
   border: 1px solid transparent;
@@ -311,6 +310,14 @@
   display: flex;
   flex-direction: column;
   gap: var(--mantine-spacing-xs);
+}
+@media (hover: none) and (pointer: coarse) {
+  .card {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+.card[tabindex="0"] {
+  cursor: pointer;
 }
 /* The photo runs to the card's edges, as on every listing portal. */
 .card > .cardPhoto {
@@ -709,7 +716,7 @@
   position: absolute;
   left: 8px;
   right: 8px;
-  bottom: 28px;
+  bottom: 48px;
 }
 .photoPinActions .star,
 .photoPinActions .hide {
@@ -1054,7 +1061,8 @@
     min-width: 44px;
     min-height: 44px;
   }
-  .map :global(.maplibregl-ctrl-group button) {
+  .map :global(.maplibregl-ctrl-group button),
+  .locationPreviewMap :global(.maplibregl-ctrl-group button) {
     width: 44px;
     height: 44px;
   }
@@ -1228,6 +1236,9 @@
   /* The stepper arrows cannot reach 44 px inside a 44 px field; touch users type the number. */
   .touchControls {
     display: none;
+  }
+  .rateControls {
+    display: flex;
   }
 }
 
@@ -1414,27 +1425,9 @@
   position: absolute;
   inset: 0;
 }
-.locationPreviewMap :global(.maplibregl-canvas) {
-  pointer-events: none;
-}
-.locationPreviewAction {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-}
-/* Attribution links remain separate from the preview's map action. */
-.locationPreviewMap :global(.maplibregl-ctrl-bottom-right) {
-  z-index: 2;
-}
 .locationPreviewMap :global(.maplibregl-ctrl-attrib) {
   font-size: 11px;
   line-height: 16px;
-}
-.locationPreviewAction:focus-visible {
-  outline: 3px solid var(--mantine-primary-color-filled);
-  outline-offset: -3px;
 }
 .locationPreviewStatus {
   position: absolute;
@@ -1444,4 +1437,16 @@
   border-radius: var(--mantine-radius-sm);
   pointer-events: none;
   z-index: 1;
+}
+
+.photoPinImage .photoGallery,
+.photoPinImage .photoSlides {
+  height: 100%;
+}
+
+.photoPinImage .photoGalleryControls,
+.photoPinImage .photoIndicators {
+  height: 100%;
+  max-height: none;
+  aspect-ratio: auto;
 }

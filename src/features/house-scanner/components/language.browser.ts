@@ -61,6 +61,11 @@ test('Swedish is the default and an explicit English choice survives reload', as
   await expect(
     page.getByRole('combobox', { name: 'Language', exact: true }),
   ).toHaveCount(0);
+  await page.getByRole('button', { name: 'Map', exact: true }).click();
+  await expect(
+    page.getByRole('combobox', { name: 'Language', exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole('button', { name: 'List', exact: true }).click();
   await openSettings(page);
   const personal = page.getByRole('heading', {
     name: 'Personal settings',

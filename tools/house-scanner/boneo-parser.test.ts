@@ -260,10 +260,10 @@ describe('Boneo listing page parser', () => {
     });
   });
 
-  it('names up to four photos in page order and the first floor plan, skipping an unsafe name', () => {
+  it('names up to eight photos in page order and the first floor plan, skipping an unsafe name', () => {
     const read = readBoneoDetailPage(fixture('detail-both.html'));
     expect(read).toMatchObject({
-      photoKeys: ['A', 'B', 'C', 'D'].map(
+      photoKeys: ['A', 'B', 'C', 'D', 'E'].map(
         (n) => `9000001-img-FIXTURE${n}.webp`,
       ),
       planKey: '9000001-img-FIXTUREPLAN1.webp',

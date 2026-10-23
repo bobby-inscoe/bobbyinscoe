@@ -203,11 +203,11 @@ describe('Stadshem guarded run', () => {
     expect(first.photo).not.toBeNull();
   });
 
-  it('adds up to three more photos and the floor plan from the record, and keeps them for a home read from memory', async () => {
+  it('adds up to seven more photos and the floor plan from the record, and keeps them for a home read from memory', async () => {
     const url = (name: string) => `${PHOTO_HOST}/${imageKey(name)}`;
     const expected = {
       photo: { url: url('A1'), attribution: 'Stadshem' },
-      morePhotos: ['A2', 'A3', 'A4'].map((name) => ({ url: url(name) })),
+      morePhotos: ['A2', 'A3', 'A4', 'A5'].map((name) => ({ url: url(name) })),
       floorPlan: { url: url('PLAN1'), attribution: 'Stadshem' },
     };
     const detail = () => ({

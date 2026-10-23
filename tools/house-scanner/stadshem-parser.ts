@@ -246,13 +246,13 @@ function imageKeyOf(image: unknown): string | undefined {
   return key.length <= 200 && STADSHEM_IMAGE_KEY.test(key) ? key : undefined;
 }
 
-/** Up to four photos in record order (the first is the primary image) and the first floor plan. */
+/** Up to eight photos in record order (the first is the primary image) and the first floor plan. */
 function imageKeysOf(images: Rec): Pick<DetailFacts, 'photoKeys' | 'planKey'> {
   const other = Array.isArray(images.other) ? images.other : [];
   const photoKeys = other
     .map(imageKeyOf)
     .filter((key) => key !== undefined)
-    .slice(0, 4);
+    .slice(0, 8);
   const planKey = imageKeyOf(
     Array.isArray(images.floorPlans) ? images.floorPlans[0] : undefined,
   );

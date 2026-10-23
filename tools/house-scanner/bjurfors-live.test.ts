@@ -419,6 +419,10 @@ describe('Bjurfors run memory', () => {
         { url: at(photo, 'fixturebild2.jpg?v=1000000002') },
         { url: at(photo, 'fixturebild3.jpg?v=1000000004') },
         { url: at(photo, 'fixturebild4.jpg?v=1000000005') },
+        { url: at(photo, 'fixturebild5.jpg?v=1000000006') },
+        ...[6, 7, 8].map((n) => ({
+          url: at(photo, `fixturebild${n}.jpg?v=10000000${n + 4}`),
+        })),
       ],
       floorPlan: {
         url: at(

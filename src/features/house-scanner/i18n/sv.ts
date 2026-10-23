@@ -59,8 +59,8 @@ export const sv = {
       maximumRooms: 'Högsta antal rum',
       shellterFollowsApartmentsForSaleInGoteborg:
         'Shellter visar lägenheter till salu i Göteborg.',
-      theSettingsBelowAreYourDefaultFilterForThe:
-        'Inställningarna nedan är ditt standardfilter för fliken Bostäder. Anpassa budget, storlek, antal rum, egenskaper och områden efter det du söker.',
+      householdProfileHelp:
+        'Hushållsprofilen anger de gemensamma sökkriterierna för alla i hushållet. Anpassa budget, storlek, antal rum, egenskaper och områden efter det du söker.',
       filtersOnTheListingsTabAreYoursAloneAnd:
         'Filtren på fliken Bostäder gäller bara dig och sparas i sidans webbadress, även när du laddar om. När du rensar dem behålls hushållets grundinställningar. Endast ägare kan ändra grundinställningarna.',
       howDoesThisWork: 'Hur fungerar det?',
@@ -106,10 +106,27 @@ export const sv = {
         'Bara hushållets ägare kan ändra de gemensamma kriterierna.',
       profileChangesAreUnavailableInThisView:
         'Det går inte att ändra profiler i den här vyn.',
-      defaultFilter: 'Standardfilter',
+      householdProfile: 'Hushållsprofil',
       theseCriteriaAreFictionalEditsAffectThisDemoOnly:
         'De här kriterierna är fiktiva. Ändringar gäller bara den här demon.',
       noSearchProfilesYet: 'Inga sökprofiler ännu.',
+    },
+    financing: {
+      heading: 'Finansiering',
+      description:
+        'Hushållets siffror för månadskostnaden för varje bostad. Alla medlemmar ser samma siffror.',
+      cash: 'Kontantinsats (SEK)',
+      cashDescription:
+        'Lämna tomt för att räkna med minsta insatsen, 10 % av priset.',
+      rate: 'Ränta (%)',
+      rateDescription:
+        'Typisk ränta: {rate} %, snitträntan för 3 månader i {month}.',
+      taxDeduction: 'Visa räntan efter ränteavdrag',
+      save: 'Spara finansiering',
+      useTypical: 'Använd typiska värden',
+      usingTypical: 'Typiska värden används tills ni sparar egna.',
+      saved: 'Finansieringen har sparats.',
+      ownerOnly: 'Bara hushållets ägare kan ändra finansieringen.',
     },
     household: {
       memberActions: 'Åtgärder för {name}',
@@ -184,7 +201,7 @@ export const sv = {
       savedBy: 'Sparad av',
       select: 'Välj {value0}',
       details: 'Detaljer',
-      openLocationMap: 'Öppna platsen på kartan',
+      openLocationMap: 'Öppna hela kartan',
       loadingLocationMap: 'Laddar platsens karta…',
       locationMapUnavailable:
         'Platsens karta är inte tillgänglig. Använd Visa på karta för att prova hela kartan.',
@@ -348,6 +365,32 @@ export const sv = {
       savedByMembers:
         'Sparad av {count, plural, one {# medlem} other {# medlemmar}}',
     },
+    cost: {
+      heading: 'Månadskostnad',
+      price: 'Förväntat slutpris (SEK)',
+      cash: 'Kontantinsats (SEK)',
+      rate: 'Ränta (%)',
+      interest: 'Ränta',
+      taxDeduction: 'Ränteavdrag',
+      amortization: 'Amortering ({percent} %)',
+      fee: 'Månadsavgift',
+      total: 'Per månad',
+      loan: 'Lån {loan}, {share} % av priset.',
+      shortfall:
+        'Banker lånar ut högst 90 % av priset. Lägg till {amount} i kontantinsats.',
+      noPrice: 'Ange ett förväntat pris för att se månadskostnaden.',
+      feeUnknown: 'Månadsavgiften är okänd och ingår inte.',
+      operatingCosts: 'Driftkostnad',
+      operatingCostsInput: 'Driftkostnad (SEK/mån)',
+      operatingCostsHelp:
+        'Uppskattning, inte hämtad från annonsen. Börjar på 1 000 SEK/mån; anpassa efter kostnader som inte ingår i månadsavgiften.',
+      includeTaxDeduction: 'Inkludera ränteavdrag',
+      oneTime: 'Engångskostnader: lagfart {title}, pantbrev {deeds}.',
+      typical:
+        'Typisk ränta och 10 % kontantinsats, enligt {month}. Hushållets ägare kan lägga in egna siffror under Inställningar.',
+      scenario: 'Ränteexempel för alla bostäder, sparas inte.',
+      reset: 'Återställ',
+    },
     map: {
       cardLayout: 'Kartkortets layout',
       classicCard: 'Klassisk',
@@ -413,6 +456,9 @@ export const sv = {
       closeSelectedHome: 'Stäng vald bostad',
       selectHome: 'Välj bostad',
       openOriginalListing: 'Öppna originalannonsen',
+      ctrlScrollToZoom: 'Använd Ctrl + rulla för att zooma kartan',
+      commandScrollToZoom: 'Använd ⌘ + rulla för att zooma kartan',
+      twoFingersToMove: 'Använd två fingrar för att flytta kartan',
       zoomIn: 'Zooma in',
       zoomOut: 'Zooma ut',
       resetBearing: 'Dra för att rotera kartan, klicka för att återställa norr',

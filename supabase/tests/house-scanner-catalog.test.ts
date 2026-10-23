@@ -998,6 +998,68 @@ describe('candidates filtered by household criteria', () => {
     ).toContain('fits-both');
   });
 
+  it('saves household financing only in its exact shape, and the rollback strips it', async () => {
+    const revision = async () =>
+      (
+        await db.query<{ revision: number }>(
+          'select revision from hs.profiles where id=$1',
+          [PROFILE_B],
+        )
+      ).rows[0].revision;
+    const save = async (financing: unknown) =>
+      asUser(
+        OWNER_B,
+        'select public.hs_save_profile($1,$2,$3,$4,true,$5::jsonb) as value',
+        [
+          HOUSE_B,
+          PROFILE_B,
+          String(await revision()),
+          'Second profile',
+          JSON.stringify({ ...criteria, financing }),
+        ],
+      );
+    const financing = async () =>
+      (await snapshot(HOUSE_B, OWNER_B)).profiles[0].criteria.financing;
+    const valid = {
+      cashSek: 500000,
+      interestRatePercent: 2.7,
+      taxDeduction: true,
+    };
+    for (const value of [
+      null,
+      {},
+      { ...valid, extra: 1 },
+      { ...valid, cashSek: -1 },
+      { ...valid, cashSek: 1.5 },
+      { ...valid, interestRatePercent: 0 },
+      { ...valid, interestRatePercent: 21 },
+      { ...valid, taxDeduction: 'yes' },
+    ])
+      await expect(save(value)).rejects.toThrow('Invalid profile');
+    await save({ ...valid, cashSek: null });
+    await save(valid);
+    expect(await financing()).toEqual(valid);
+
+    const name = '20261023200000_house_scanner_financing';
+    const run = async (folder: string, file: string) =>
+      db.exec(
+        await readFile(
+          new URL(`../${folder}/${file}.sql`, import.meta.url),
+          'utf8',
+        ),
+      );
+    await run('rollbacks', `${name}_down`);
+    expect(await financing()).toBeUndefined();
+    await expect(save(valid)).rejects.toThrow('Invalid profile');
+    await run('migrations', name);
+    await save(valid);
+    // Leave the profile as the previous test did for the rollback test below.
+    await db.query('update hs.profiles set criteria=$1::jsonb where id=$2', [
+      JSON.stringify({ ...criteria, minAreaM2: 60 }),
+      PROFILE_B,
+    ]);
+  });
+
   it('rolls back delisting, shared hides and the criteria filter, and applies them again', async () => {
     const delisted = '20261020142553_house_scanner_delisted';
     const shared = '20261020133201_house_scanner_shared_hides';
@@ -2962,6 +3024,51 @@ describe('listing gallery', () => {
     }
   });
 
+  it('accepts eight photos, rejects nine, and restores the limit on rollback', async () => {
+    const database = await household();
+    const version = '20261023150017_house_scanner_eight_photos';
+    const check = (count: number) => {
+      const observation = {
+        ...home('eight-photos'),
+        photo: image('lead'),
+        morePhotos: Array.from({ length: count - 1 }, (_, n) =>
+          image(String(n)),
+        ),
+        floorPlan: image('plan'),
+      };
+      return {
+        observation,
+        query: () =>
+          database.query(
+            "select hs.assert_observation(s,$1::jsonb) from hs.sources s where source_id='alpha'",
+            [JSON.stringify(observation)],
+          ),
+      };
+    };
+    try {
+      await database.exec(await migration(`${version}.sql`));
+      const eight = check(8);
+      expect(observationSchema.safeParse(eight.observation).success).toBe(true);
+      await eight.query();
+      const nine = check(9);
+      expect(observationSchema.safeParse(nine.observation).success).toBe(false);
+      await expect(nine.query()).rejects.toThrow('Photo not permitted');
+      await publish([eight.observation], { database });
+      expect((await homes(database))['eight-photos'].photos).toHaveLength(8);
+      expect(await drift(database)).toEqual([]);
+      expect(
+        (await database.query('select * from hs.household_drift()')).rows,
+      ).toEqual([]);
+      await database.exec(await rollback(version));
+      await expect(check(5).query()).rejects.toThrow('Photo not permitted');
+      await check(4).query();
+      await database.exec(await migration(`${version}.sql`));
+      await eight.query();
+    } finally {
+      await database.close();
+    }
+  });
+
   it('refuses images from other hosts, expired ones and extra photos without a lead', async () => {
     const database = await household();
     const check = (observation: Observation) =>
@@ -2993,6 +3100,7 @@ describe('listing gallery', () => {
 // The bidding fact (spec: house-scanner-bidding-flag, S1).
 const BIDDING = '20261023080000_house_scanner_bidding';
 const HIGHEST_BID = '20261023090000_house_scanner_highest_bid';
+const FINANCING = '20261023200000_house_scanner_financing';
 
 describe('bidding flag', () => {
   it('rolls back to exactly the earlier schema and applies again', async () => {
@@ -3350,6 +3458,29 @@ describe('carried-over guards', () => {
   });
 });
 
+// Household financing for monthly cost estimates (spec: shellter-monthly-cost, S1).
+describe('household financing', () => {
+  it('rolls back to exactly the earlier schema and applies again', async () => {
+    const database = await migratedThrough(FINANCING);
+    try {
+      const migrated = await fingerprint(database);
+      await database.exec(await rollback(FINANCING));
+      const earlier = await migratedThrough(
+        '20261023150017_house_scanner_eight_photos',
+      );
+      try {
+        expect(await fingerprint(database)).toEqual(await fingerprint(earlier));
+      } finally {
+        await earlier.close();
+      }
+      await database.exec(await migration(`${FINANCING}.sql`));
+      expect(await fingerprint(database)).toEqual(migrated);
+    } finally {
+      await database.close();
+    }
+  });
+});
+
 describe('price estimates', () => {
   // Baseline 50 000 SEK per m² with no other terms, so expected ranges can be worked out by hand.
   const model = {
@@ -3403,7 +3534,7 @@ describe('price estimates', () => {
     // The source settings block rolls back and reapplies its migration on this database, which brings back the
     // snapshot without priceEstimate; this migration's snapshot definition is applied again.
     const text = await migration(
-      '20261023180000_house_scanner_price_estimates.sql',
+      '20261023200002_house_scanner_price_estimates.sql',
     );
     await db.exec(
       text.slice(
@@ -3480,13 +3611,13 @@ describe('price estimates', () => {
   });
 
   it('rolls back to exactly the earlier schema and applies again', async () => {
-    const ESTIMATES = '20261023180000_house_scanner_price_estimates';
+    const ESTIMATES = '20261023200002_house_scanner_price_estimates';
     const database = await migratedThrough(ESTIMATES);
     try {
       const migrated = await fingerprint(database);
       await database.exec(await rollback(ESTIMATES));
       const earlier = await migratedThrough(
-        '20261023170000_house_scanner_price_models',
+        '20261023200001_house_scanner_price_models',
       );
       try {
         expect(await fingerprint(database)).toEqual(await fingerprint(earlier));

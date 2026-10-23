@@ -1,4 +1,4 @@
--- Rolls back 20261023180000_house_scanner_price_estimates: restores the snapshot without priceEstimate and drops the
+-- Rolls back 20261023200002_house_scanner_price_estimates: restores the snapshot without priceEstimate and drops the
 -- estimates, their refresh and helpers.
 
 drop trigger update_price_estimates on hs.runs;
