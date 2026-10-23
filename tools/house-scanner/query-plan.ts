@@ -36,7 +36,7 @@ export function planQueries(input: z.input<typeof queryPlanInputSchema>) {
   const propertyTypes = [
     ...new Set(enabled.flatMap((profile) => profile.criteria.propertyTypes)),
   ].sort();
-  const gaps = [...capability.policy.capabilities.coverageGaps];
+  const gaps = [...capability.source.capabilities.coverageGaps];
   gaps.push(
     'Municipality partitions do not establish coverage of the full center/radius scope, including areas outside named municipalities.',
   );
@@ -52,13 +52,13 @@ export function planQueries(input: z.input<typeof queryPlanInputSchema>) {
         'The requested cap does not cover the union of enabled profile stretch budgets.',
       );
   }
-  if (!capability.policy.capabilities.unknownPrice)
+  if (!capability.source.capabilities.unknownPrice)
     gaps.push('Unknown-price inventory is not covered.');
-  if (!capability.policy.capabilities.upcoming)
+  if (!capability.source.capabilities.upcoming)
     gaps.push('Upcoming inventory is not covered.');
-  if (!capability.policy.capabilities.knownListingRefresh)
+  if (!capability.source.capabilities.knownListingRefresh)
     gaps.push('Known listings outside discovery cannot be refreshed.');
-  if (!capability.policy.capabilities.pagination)
+  if (!capability.source.capabilities.pagination)
     gaps.push('Pagination completeness is unverified.');
   if (municipalities.length > maxPartitions)
     gaps.push('The partition ceiling omits some municipalities.');
@@ -67,13 +67,8 @@ export function planQueries(input: z.input<typeof queryPlanInputSchema>) {
   const areas = enabled.map((profile) => profile.criteria.maxAreaM2);
   return {
     version: 1 as const,
-    sourceId: capability.policy.sourceId,
-    permission:
-      capability.policy.status === 'approved' &&
-      capability.policy.automatedCollection &&
-      capability.policy.privateDisplay
-        ? ('policy-check-required' as const)
-        : ('denied-no-permission' as const),
+    sourceId: capability.source.sourceId,
+    enabled: capability.source.enabled,
     profileVersions: enabled
       .map(({ id, revision }) => ({ profileId: id, revision }))
       .sort((left, right) => left.profileId.localeCompare(right.profileId)),
@@ -104,7 +99,7 @@ export function planQueries(input: z.input<typeof queryPlanInputSchema>) {
         propertyTypes,
         includeUnknownPrice: true,
         includeUpcoming: true,
-        resultCap: capability.policy.capabilities.resultCap,
+        resultCap: capability.source.capabilities.resultCap,
         cursor: null,
         completion: 'not-executed' as const,
       })),

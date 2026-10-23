@@ -1,10 +1,5 @@
 import { z } from 'zod';
-import {
-  factsSchema,
-  type SourcePolicy,
-  sourcePolicySchema,
-} from '@/features/house-scanner/types/contracts';
-import { assertSourceAllowed } from '@/features/house-scanner/utils/source-policy';
+import { sourceSettingsSchema } from '@/features/house-scanner/types/contracts';
 
 export const DEMO_SOURCE_ID = 'synthetic-demo';
 export const BONEO_SOURCE_ID = 'boneo';
@@ -32,8 +27,19 @@ export const ERIK_OLSSON_ORIGIN = 'https://www.erikolsson.se';
 export const ERIK_OLSSON_IMAGE_ORIGIN = 'https://imagedelivery.net';
 // Photos come from the same host as the listing pages.
 export const BJURFORS_ORIGIN = 'https://www.bjurfors.se';
+// What the collector knows a source can and cannot cover, for the run plan and the coverage note.
+const coverageSchema = z.strictObject({
+  discovery: z.boolean(),
+  knownListingRefresh: z.boolean(),
+  unknownPrice: z.boolean(),
+  upcoming: z.boolean(),
+  pagination: z.boolean(),
+  resultCap: z.number().int().positive().nullable(),
+  coverageGaps: z.array(z.string().max(300)).max(30),
+});
 export const capabilitySchema = z.strictObject({
-  policy: sourcePolicySchema,
+  // The settings the database holds for the source, and its coverage.
+  source: sourceSettingsSchema.extend({ capabilities: coverageSchema }),
   executor: z.enum([
     'demo-only',
     'boneo-personal-read',
@@ -50,9 +56,7 @@ export const capabilitySchema = z.strictObject({
 });
 export type SourceCapability = z.infer<typeof capabilitySchema>;
 
-const reviewedAt = '2026-10-12T00:00:00Z';
-const reviewDueAt = '2027-01-10T00:00:00Z';
-const noCapabilities: SourcePolicy['capabilities'] = {
+const noCapabilities: z.infer<typeof coverageSchema> = {
   discovery: false,
   knownListingRefresh: false,
   unknownPrice: false,
@@ -60,51 +64,28 @@ const noCapabilities: SourcePolicy['capabilities'] = {
   pagination: false,
   resultCap: null,
   coverageGaps: [
-    'Collection and reuse permission is absent; no live inventory coverage.',
+    'No collector reads this source; no live inventory coverage.',
     'Identity, pagination, unknown prices, upcoming inventory and updates are unverified.',
   ],
 };
 
+// Sources looked at but not read; they stay switched off.
 const candidates = [
-  ['alvhem', 'https://www.alvhem.com', 'pending'],
-  ['fastighetsbyran', 'https://www.fastighetsbyran.com', 'disabled'],
-  ['booli', 'https://www.booli.se', 'disabled'],
-  ['hemnet', 'https://www.hemnet.se', 'disabled'],
-  ['norban', 'https://norban.se', 'disabled'],
+  ['alvhem', 'https://www.alvhem.com'],
+  ['fastighetsbyran', 'https://www.fastighetsbyran.com'],
+  ['booli', 'https://www.booli.se'],
+  ['hemnet', 'https://www.hemnet.se'],
+  ['norban', 'https://norban.se'],
 ] as const;
 
 export function sourceRegistry(): SourceCapability[] {
-  const common = {
-    revision: 1,
-    reviewedAt,
-    reviewDueAt,
-    imageOrigins: [],
-    allowedEvidenceSubjects: [],
-    freeOnly: true,
-    imageDisplay: false,
-    imageHotlink: false,
-    modelProcessing: false,
-    emailDigest: false,
-    telegramDigest: false,
-    retentionDays: 30,
-  } as const;
   return [
     capabilitySchema.parse({
-      policy: {
-        ...common,
+      source: {
         sourceId: DEMO_SOURCE_ID,
-        status: 'approved',
+        enabled: true,
         listingOrigins: ['https://example.invalid'],
-        automatedCollection: true,
-        privateDisplay: true,
-        rightsBasis:
-          'Fictional, authored fixture data only. No live-source permission or coverage.',
-        allowedFactFields: factsSchema
-          .keyof()
-          .options.filter(
-            (field) =>
-              !['secondaryAreaM2', 'mandatoryMonthlySek'].includes(field),
-          ),
+        imageOrigins: [],
         capabilities: {
           discovery: true,
           knownListingRefresh: true,
@@ -122,39 +103,11 @@ export function sourceRegistry(): SourceCapability[] {
       geographicPartitioning: 'municipality',
     }),
     capabilitySchema.parse({
-      policy: {
-        ...common,
+      source: {
         sourceId: BONEO_SOURCE_ID,
-        // Pending is not approved: the operator sets approval in the database.
-        status: 'pending',
-        // Revision 2 turned on hotlinked photos from the image host. Revision 3 adds outdoor and glazed. Revision 4 adds groundFloor.
-        // Revision 6 shows up to four photos and the floor plan.
-        revision: 6,
-        viewings: true,
-        retentionDays: 14,
+        enabled: true,
         listingOrigins: [BONEO_ORIGIN],
         imageOrigins: [BONEO_IMAGE_ORIGIN],
-        imageDisplay: true,
-        imageHotlink: true,
-        automatedCollection: false,
-        privateDisplay: false,
-        rightsBasis:
-          'Permission unresolved. The household owner chose to read public search pages for personal use at their own judgment. Technical access is not a reuse license.',
-        allowedFactFields: [
-          'propertyType',
-          'tenure',
-          'purchase',
-          'livingAreaM2',
-          'secondaryAreaM2',
-          'rooms',
-          'askingPriceSek',
-          'municipality',
-          'baseFeeSek',
-          'status',
-          'outdoor',
-          'glazed',
-          'groundFloor',
-        ],
         capabilities: {
           discovery: true,
           knownListingRefresh: false,
@@ -163,7 +116,6 @@ export function sourceRegistry(): SourceCapability[] {
           pagination: false,
           resultCap: null,
           coverageGaps: [
-            'Permission is unresolved and the source is not approved.',
             'Only the Till salu view was observed. Upcoming (Kommande) inventory appears in facet counts but its query is unproven.',
             'Whether listings without a price appear in the default view is unproven.',
             'The page query is accepted but page size and multi-page ordering are unproven. Coverage is never reported complete.',
@@ -181,38 +133,11 @@ export function sourceRegistry(): SourceCapability[] {
       geographicPartitioning: 'unverified',
     }),
     capabilitySchema.parse({
-      policy: {
-        ...common,
+      source: {
         sourceId: BJURFORS_SOURCE_ID,
-        // Revision 3 shows up to four photos and the floor plan.
-        revision: 3,
-        viewings: true,
-        // Pending is not approved: the operator sets approval in the database.
-        status: 'pending',
-        retentionDays: 14,
+        enabled: true,
         listingOrigins: [BJURFORS_ORIGIN],
         imageOrigins: [BJURFORS_ORIGIN],
-        imageDisplay: true,
-        imageHotlink: true,
-        automatedCollection: false,
-        privateDisplay: false,
-        rightsBasis:
-          'Permission unresolved. The household owner chose to read public search pages for personal use at their own judgment. Technical access is not a reuse license.',
-        allowedFactFields: [
-          'propertyType',
-          'tenure',
-          'purchase',
-          'livingAreaM2',
-          'secondaryAreaM2',
-          'rooms',
-          'askingPriceSek',
-          'municipality',
-          'baseFeeSek',
-          'status',
-          'outdoor',
-          'groundFloor',
-          'lift',
-        ],
         capabilities: {
           discovery: true,
           knownListingRefresh: false,
@@ -221,7 +146,6 @@ export function sourceRegistry(): SourceCapability[] {
           pagination: false,
           resultCap: null,
           coverageGaps: [
-            'Permission is unresolved and the source is not approved.',
             'Only the Goteborg municipality search is supported. Other municipalities are not covered.',
             'The search page lists its total and page links, so a full read is detected, but only the default Till salu view was observed. Whether upcoming homes or homes without a price are all included is unproven.',
             'Cards give area, rooms and sometimes a price; the property type is only known from the listing page, so houses are dropped after that page is read.',
@@ -242,39 +166,11 @@ export function sourceRegistry(): SourceCapability[] {
       geographicPartitioning: 'unverified',
     }),
     capabilitySchema.parse({
-      policy: {
-        ...common,
+      source: {
         sourceId: ERIK_OLSSON_SOURCE_ID,
-        // Revision 3 shows up to four photos and the floor plan.
-        revision: 3,
-        viewings: true,
-        // Pending is not approved: the operator sets approval in the database.
-        status: 'pending',
-        retentionDays: 14,
+        enabled: true,
         listingOrigins: [ERIK_OLSSON_ORIGIN],
         imageOrigins: [ERIK_OLSSON_IMAGE_ORIGIN],
-        imageDisplay: true,
-        imageHotlink: true,
-        automatedCollection: false,
-        privateDisplay: false,
-        rightsBasis:
-          'Permission unresolved. The household owner chose to read public search pages for personal use at their own judgment. Its terms grant a personal, non-commercial licence and do not mention automated reading, and limit copying and reproducing. Photos are loaded by the viewer browser from the broker image host, never copied. Technical access is not a reuse license.',
-        allowedFactFields: [
-          'propertyType',
-          'tenure',
-          'purchase',
-          'livingAreaM2',
-          'secondaryAreaM2',
-          'rooms',
-          'askingPriceSek',
-          'municipality',
-          'baseFeeSek',
-          'status',
-          'outdoor',
-          'groundFloor',
-          'lift',
-          'bidding',
-        ],
         capabilities: {
           discovery: true,
           knownListingRefresh: false,
@@ -283,7 +179,6 @@ export function sourceRegistry(): SourceCapability[] {
           pagination: false,
           resultCap: null,
           coverageGaps: [
-            'Permission is unresolved and the source is not approved.',
             'Only the Goteborg municipality search is supported. Other municipalities are not covered.',
             'Pre-market homes (Underhand) show no street and have no page of their own, so they are counted and skipped. They were most of the first result page and a minority of the second.',
             'Result pages hold sixteen cards and carry a total, so a full read is detected, but only the default for-sale search was observed. Whether upcoming homes or homes without an asking price are all included is unproven.',
@@ -302,37 +197,11 @@ export function sourceRegistry(): SourceCapability[] {
       geographicPartitioning: 'unverified',
     }),
     capabilitySchema.parse({
-      policy: {
-        ...common,
+      source: {
         sourceId: STADSHEM_SOURCE_ID,
-        // Revision 3 shows up to four photos and the floor plan.
-        revision: 3,
-        viewings: true,
-        // Pending is not approved: the operator sets approval in the database.
-        status: 'pending',
-        retentionDays: 14,
+        enabled: true,
         listingOrigins: [STADSHEM_ORIGIN],
         imageOrigins: [STADSHEM_IMAGE_ORIGIN],
-        imageDisplay: true,
-        imageHotlink: true,
-        automatedCollection: false,
-        privateDisplay: false,
-        rightsBasis:
-          'Permission unresolved. The household owner chose to read the public estates list for personal use at their own judgment. The site publishes only a privacy policy and no terms of use. Technical access is not a reuse license.',
-        allowedFactFields: [
-          'propertyType',
-          'tenure',
-          'purchase',
-          'livingAreaM2',
-          'rooms',
-          'askingPriceSek',
-          'municipality',
-          'baseFeeSek',
-          'status',
-          'groundFloor',
-          'lift',
-          'bidding',
-        ],
         capabilities: {
           discovery: true,
           knownListingRefresh: false,
@@ -341,7 +210,6 @@ export function sourceRegistry(): SourceCapability[] {
           pagination: false,
           resultCap: null,
           coverageGaps: [
-            'Permission is unresolved and the source is not approved.',
             'Only the Goteborg municipality is supported. The list covers all of Sweden and is filtered by municipality here.',
             'The data is the JSON list that the site pages load (api/estates). It is not a documented public API and can change without notice.',
             'Homes marked coming soon are read too and marked upcoming; many have no asking price. Whether every coming-soon home is listed is unproven.',
@@ -360,35 +228,11 @@ export function sourceRegistry(): SourceCapability[] {
       geographicPartitioning: 'unverified',
     }),
     capabilitySchema.parse({
-      policy: {
-        ...common,
+      source: {
         sourceId: LUNDIN_SOURCE_ID,
-        // 2: each kept home's page is read for photos and the floor plan.
-        revision: 2,
-        // Pending is not approved: the operator sets approval in the database.
-        status: 'pending',
-        retentionDays: 14,
+        enabled: true,
         listingOrigins: [LUNDIN_ORIGIN],
         imageOrigins: [LUNDIN_ORIGIN],
-        imageDisplay: true,
-        imageHotlink: true,
-        automatedCollection: false,
-        privateDisplay: false,
-        rightsBasis:
-          "Permission unresolved. The household owner chose to read the broker's public list and each kept home's public page for personal use at their own judgment. The site publishes only a privacy policy and no terms of use, and its robots.txt disallows file paths only. Technical access is not a reuse license.",
-        allowedFactFields: [
-          'propertyType',
-          'tenure',
-          'purchase',
-          'livingAreaM2',
-          'rooms',
-          'askingPriceSek',
-          'municipality',
-          'baseFeeSek',
-          'status',
-          'bidding',
-          'highestBidSek',
-        ],
         capabilities: {
           discovery: true,
           knownListingRefresh: false,
@@ -397,7 +241,6 @@ export function sourceRegistry(): SourceCapability[] {
           pagination: false,
           resultCap: null,
           coverageGaps: [
-            'Permission is unresolved and the source is not approved.',
             'Göteborg and Mölndal are supported. The list covers every place the broker sells in; the municipality is worked out from the city and district fields, and homes in other places or in unrecognised districts are skipped.',
             'The data is the JSON list that the site page loads (api/list). It is not a documented public API and can change without notice.',
             "Each kept home's public page is read for its photo and floor plan ids only, at most 150 a run and reused from the local cache for 7 days. Floor, lift, balcony and glazing stay unknown. Viewing times are not in the list.",
@@ -415,37 +258,11 @@ export function sourceRegistry(): SourceCapability[] {
       geographicPartitioning: 'unverified',
     }),
     capabilitySchema.parse({
-      policy: {
-        ...common,
+      source: {
         sourceId: HUSMAN_HAGBERG_SOURCE_ID,
-        // Revision 2 reads each kept home's estate page for up to four photos and the floor plan.
-        revision: 2,
-        viewings: true,
-        // Pending is not approved: the operator sets approval in the database.
-        status: 'pending',
-        retentionDays: 14,
+        enabled: true,
         listingOrigins: [HUSMAN_HAGBERG_ORIGIN],
         imageOrigins: [HUSMAN_HAGBERG_IMAGE_ORIGIN],
-        imageDisplay: true,
-        imageHotlink: true,
-        automatedCollection: false,
-        privateDisplay: false,
-        rightsBasis:
-          "Permission unresolved. The household owner chose to read the broker's public list and the public estate page of each kept home for personal use at their own judgment. The terms of use (checked 17 October 2026) say nothing about automated reading and bar copying and spreading protected texts and images without consent, and robots.txt allows everything. Technical access is not a reuse license.",
-        allowedFactFields: [
-          'propertyType',
-          'tenure',
-          'purchase',
-          'livingAreaM2',
-          'rooms',
-          'askingPriceSek',
-          'municipality',
-          'baseFeeSek',
-          'status',
-          'groundFloor',
-          'bidding',
-          'highestBidSek',
-        ],
         capabilities: {
           discovery: true,
           knownListingRefresh: false,
@@ -454,7 +271,6 @@ export function sourceRegistry(): SourceCapability[] {
           pagination: false,
           resultCap: null,
           coverageGaps: [
-            'Permission is unresolved and the source is not approved.',
             'Only Göteborg is supported. The list is a text search on the name Göteborg, so a home in the municipality whose address never says Göteborg may be missed: the broker counted 206 for Göteborg and the search returned 143, and the reason for the gap was not checked.',
             'The data is the JSON list that the site pages load from api.husmanhagberg.se (object/api/objects). It is not a documented public API and can change without notice. That host serves no robots.txt (404), so the run reads the robots.txt of www.husmanhagberg.se, which also covers the estate pages.',
             'The answer holds every match when asked for 200 a page (143 on 17 October) and reports a total, so a list shorter than its total is detected and reported as truncated. A paging parameter was not found.',
@@ -474,38 +290,11 @@ export function sourceRegistry(): SourceCapability[] {
       geographicPartitioning: 'unverified',
     }),
     capabilitySchema.parse({
-      policy: {
-        ...common,
+      source: {
         sourceId: SVENSKFAST_SOURCE_ID,
-        // Revision 2 shows up to four photos.
-        revision: 2,
-        viewings: true,
-        // Pending is not approved: the operator sets approval in the database.
-        status: 'pending',
-        retentionDays: 14,
+        enabled: true,
         listingOrigins: [SVENSKFAST_ORIGIN],
         imageOrigins: [SVENSKFAST_IMAGE_ORIGIN],
-        imageDisplay: true,
-        imageHotlink: true,
-        automatedCollection: false,
-        privateDisplay: false,
-        rightsBasis:
-          "Permission unresolved. The household owner chose to read the broker's public pages for personal use at their own judgment. No clause on automated reading was found (checked 17 October 2026), and robots.txt allows the list and home paths while disallowing some filter query strings. Technical access is not a reuse license.",
-        allowedFactFields: [
-          'propertyType',
-          'tenure',
-          'purchase',
-          'livingAreaM2',
-          'rooms',
-          'askingPriceSek',
-          'municipality',
-          'baseFeeSek',
-          'status',
-          'groundFloor',
-          'lift',
-          'bidding',
-          'highestBidSek',
-        ],
         capabilities: {
           discovery: true,
           knownListingRefresh: false,
@@ -514,7 +303,6 @@ export function sourceRegistry(): SourceCapability[] {
           pagination: true,
           resultCap: null,
           coverageGaps: [
-            'Permission is unresolved and the source is not approved.',
             'Only the Göteborg municipality list is supported. Other municipalities are not covered.',
             'The list pages carry schema.org JSON-LD and a total in the page title, 35 homes a page (607 for Göteborg on 17 October, 18 pages). The pages are the site pages themselves, not an API, and the markup can change without notice.',
             'The list has no price, fee, floor, lift or position. Each kept home page is read for them, up to the per-run cap, and a home page is reused for a week. A full first run is about 18 list pages plus up to 150 home pages of about 300 kB.',
@@ -532,18 +320,13 @@ export function sourceRegistry(): SourceCapability[] {
       nativeNumericFiltersVerified: false,
       geographicPartitioning: 'unverified',
     }),
-    ...candidates.map(([sourceId, origin, status]) =>
+    ...candidates.map(([sourceId, origin]) =>
       capabilitySchema.parse({
-        policy: {
-          ...common,
+        source: {
           sourceId,
-          status,
+          enabled: false,
           listingOrigins: [origin],
-          automatedCollection: false,
-          privateDisplay: false,
-          rightsBasis:
-            'Permission unresolved or restricted. Technical access is not a reuse license.',
-          allowedFactFields: [],
+          imageOrigins: [],
           capabilities: noCapabilities,
         },
         executor: 'none',
@@ -554,49 +337,18 @@ export function sourceRegistry(): SourceCapability[] {
   ];
 }
 
-export function assertDemoExecution(
-  capability: SourceCapability,
-  at: Date,
-): void {
+export function assertDemoExecution(capability: SourceCapability): void {
   const validated = capabilitySchema.parse(capability);
-  assertSourceAllowed(validated.policy, at);
   if (
+    !validated.source.enabled ||
     validated.executor !== 'demo-only' ||
-    validated.policy.sourceId !== DEMO_SOURCE_ID ||
-    validated.policy.listingOrigins.length !== 1 ||
-    validated.policy.listingOrigins[0] !== 'https://example.invalid' ||
-    validated.policy.imageOrigins.length !== 0
+    validated.source.sourceId !== DEMO_SOURCE_ID ||
+    validated.source.listingOrigins.length !== 1 ||
+    validated.source.listingOrigins[0] !== 'https://example.invalid' ||
+    validated.source.imageOrigins.length !== 0
   ) {
     throw new Error(
       'No permitted executor: only the authored synthetic source can execute.',
     );
   }
-}
-
-// The registry keeps real sources pending, so approval is an explicit owner step. This builds
-// the approved policy the owner writes to the database. Valid for 90 days.
-export function approvedPolicy(
-  sourceId: string,
-  now = new Date(),
-): SourcePolicy {
-  const entry = sourceRegistry().find(
-    (item) => item.policy.sourceId === sourceId,
-  );
-  if (!entry) throw new Error('Unknown source.');
-  const day = 24 * 60 * 60 * 1000;
-  return sourcePolicySchema.parse({
-    ...entry.policy,
-    status: 'approved',
-    automatedCollection: true,
-    privateDisplay: true,
-    capabilities: {
-      ...entry.policy.capabilities,
-      coverageGaps: entry.policy.capabilities.coverageGaps.filter(
-        (gap) => !gap.includes('not approved'),
-      ),
-    },
-    // Five minutes back so database clock skew cannot put the review in the future.
-    reviewedAt: new Date(now.getTime() - 5 * 60 * 1000).toISOString(),
-    reviewDueAt: new Date(now.getTime() + 90 * day).toISOString(),
-  });
 }

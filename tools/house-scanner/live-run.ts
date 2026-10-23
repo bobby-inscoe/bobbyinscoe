@@ -41,35 +41,25 @@ export interface LiveRunOptions {
   geocodeCache?: GeocodeCache;
 }
 
-/**
- * Narrower than assertObservationAllowed: it skips the approval status, which
- * is the operator's database step, and checks what this reader controls.
- */
+/** What a reader sends must fit the contract, come from the source's hosts and carry no evidence. */
 export function assertAdapterOutput(
-  policy: SourceCapability['policy'],
+  source: SourceCapability['source'],
   observation: Observation,
 ): void {
   observationSchema.parse(observation);
-  const photoAllowed =
-    observation.photo === null ||
-    (policy.imageDisplay &&
-      policy.imageHotlink &&
-      policy.imageOrigins.includes(new URL(observation.photo.url).origin));
+  const images = [
+    ...(observation.photo ? [observation.photo] : []),
+    ...(observation.morePhotos ?? []),
+    ...(observation.floorPlan ? [observation.floorPlan] : []),
+  ];
   if (
-    !photoAllowed ||
-    (observation.viewings?.length && policy.viewings !== true) ||
+    images.some(
+      (image) => !source.imageOrigins.includes(new URL(image.url).origin),
+    ) ||
     observation.evidence.length > 0 ||
-    !policy.listingOrigins.includes(new URL(observation.sourceUrl).origin)
+    !source.listingOrigins.includes(new URL(observation.sourceUrl).origin)
   )
-    throw new Error('Adapter output is outside the source policy.');
-  for (const [key, value] of Object.entries(observation.facts)) {
-    if (
-      value !== null &&
-      value !== 'unknown' &&
-      !policy.allowedFactFields.some((field) => field === key)
-    )
-      throw new Error('Adapter output includes an unapproved fact field.');
-  }
+    throw new Error("Adapter output is outside the source's hosts.");
 }
 
 export async function prepareLiveRun(options: LiveRunOptions, deps: LiveDeps) {
@@ -99,7 +89,7 @@ export async function prepareLiveRun(options: LiveRunOptions, deps: LiveDeps) {
     options.memory?.memory ?? null,
   );
   for (const observation of result.observations)
-    assertAdapterOutput(options.capability.policy, observation);
+    assertAdapterOutput(options.capability.source, observation);
   // ponytail: the run ceiling counts collected observations, so a run that hits
   // it can lose matching listings to non-matching ones. Move this filter into
   // the page loop if runs ever approach the ceiling.

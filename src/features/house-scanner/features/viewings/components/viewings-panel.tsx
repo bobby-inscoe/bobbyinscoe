@@ -14,14 +14,12 @@ import { ListingCardMenu } from '@/features/house-scanner/components/listing-car
 import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
 import { KeyFacts } from '@/features/house-scanner/components/listing-summary';
 import { CalendarButton } from '@/features/house-scanner/components/viewing-list';
-import { messageValue } from '@/features/house-scanner/i18n/catalogs';
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type {
   Listing,
   Snapshot,
   Viewing,
 } from '@/features/house-scanner/types/contracts';
-import { formatDate } from '@/features/house-scanner/utils/format';
 import {
   formatViewing,
   groupByDay,
@@ -128,23 +126,7 @@ export function ViewingsPanel({
         ))
       )}
       <Text size="sm" c="dimmed">
-        <FormattedMessage
-          id="viewings.aViewingCanBeCancelledOrMovedBetweenScans"
-          values={{
-            value0: messageValue(
-              snapshot.edition
-                ? intl.formatMessage(
-                    { id: 'viewings.updated' },
-                    {
-                      value0: messageValue(
-                        formatDate(snapshot.edition.publishedAt, intl),
-                      ),
-                    },
-                  )
-                : '',
-            ),
-          }}
-        />
+        <FormattedMessage id="viewings.aViewingCanBeCancelledOrMovedBetweenScans" />
       </Text>
     </Stack>
   );

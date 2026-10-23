@@ -28,7 +28,7 @@ client before allowing profiles to save the new field.
 | Households and people | `households`, `members`, `invitations`, `admin_log` | onboarding and settings functions (`hs_invitation_*`, `hs_household_*`, `hs_member_*`) | every member function checks `members`; `admin_log` is for the owner only |
 | Search profiles | `profiles`, `profile_versions` | `hs_save_profile` (each save keeps the old version) | the read-model triggers, the snapshot |
 | Member marks | `favorites`, `hidden_listings`, `notes`, `manual_listings` | `hs_set_favorite(s)`, `hs_set_hidden`, `hs_save_note`, `hs_add_manual`, `hs_update_manual`, `hs_delete_manual` | the snapshot |
-| Catalog and ingest | `source_policies`, `ingest_credentials`, `ingest_nonces`, `runs`, `batches`, `staged_observations`, `editions`, `listings`, `listing_changes`, `observations`, `neighborhoods`, `neighborhood_shapes` | `hs_ingest` (called by the `house-scanner-ingest` Edge Function for the collector), operator policy changes | the read-model triggers |
+| Catalog and ingest | `sources`, `source_policies_archive`, `ingest_credentials`, `ingest_nonces`, `runs`, `batches`, `staged_observations`, `editions`, `listings`, `listing_changes`, `observations`, `neighborhoods`, `neighborhood_shapes` | `hs_ingest` (called by the `house-scanner-ingest` Edge Function for the collector), operator policy changes | the read-model triggers |
 | Read model | `listing_cards`, `household_listings` | triggers only, never written directly | `hs_household_snapshot`, `hs_household_start` |
 
 ## Households, people and member marks
@@ -160,17 +160,19 @@ erDiagram
   home (`manual_listing_id`, together with `household_id`). A check constraint requires exactly one of the two.
 - `invitations.purpose` is `create` (a new household, no `household_id`) or `join` (an existing household, with an
   email). Only the token's hash is stored.
-- `admin_log` has no foreign keys on purpose, so the history outlives what it names. It holds no emails, secrets,
-  criteria or policy text.
+- `admin_log` has no foreign keys on purpose, so the history outlives what it names. It holds no emails, secrets or
+  criteria.
 - `household_listings` belongs to the read model below.
 
 ## Catalog, ingest and read model
 
 ```mermaid
 erDiagram
-  source_policies {
+  sources {
     text source_id PK
-    jsonb policy
+    boolean enabled
+    array listing_origins
+    array image_origins
     text cursor
     uuid latest_run_id FK
   }
@@ -298,7 +300,7 @@ erDiagram
     box outline_metres_box
   }
   runs ||--o{ batches : "run_id"
-  source_policies ||--o{ batches : "source_id"
+  sources ||--o{ batches : "source_id"
   runs ||--o| editions : "run_id"
   ingest_credentials ||--o{ ingest_nonces : "key_id"
   listings ||--o| listing_cards : "listing_id"
@@ -306,14 +308,14 @@ erDiagram
   runs ||--o{ listing_changes : "run_id"
   runs ||--o{ listings : "first_seen_run_id"
   neighborhoods ||--o{ listings : "neighborhood_id"
-  source_policies ||--o{ listings : "source_id"
+  sources ||--o{ listings : "source_id"
   neighborhoods ||--o{ neighborhood_shapes : "neighborhood_id"
   listings ||--o{ observations : "listing_id"
   runs ||--o{ observations : "run_id"
   ingest_credentials ||--o{ runs : "key_id"
-  runs ||--o{ source_policies : "latest_run_id"
+  runs ||--o{ sources : "latest_run_id"
   runs ||--o{ staged_observations : "run_id"
-  source_policies ||--o{ staged_observations : "source_id"
+  sources ||--o{ staged_observations : "source_id"
 ```
 
 - A collector run is `runs` (state `staging`, then `published` or `failed`). Each request body is recorded once in
@@ -324,21 +326,22 @@ erDiagram
   viewings). One home on one source is `(source_id, source_listing_id, episode_id)`; a relisting is a new episode.
 - `observations` is legacy: publish wrote full copies there until 22 October 2026. It is read-only now, replaced by
   `listing_changes`, and due to be dropped.
-- `source_policies.policy` decides what may be shown from each source and until when. `latest_run_id` is kept by a
-  trigger on `runs`.
+- `sources` holds each source's on/off switch (`enabled`) and the hosts its listings and images may come from.
+  `latest_run_id` is kept by a trigger on `runs`. `hs.admin_set_source` adds a source or switches one. The policies
+  they replaced are kept in `source_policies_archive` for the rollback of 20261023150000.
 - `neighborhood_shapes` stores each area's polygons in degrees and in metres, with bounding boxes for the GiST
   pre-filter. A trigger assigns `listings.neighborhood_id` and the candidates when coordinates change.
 
 ## How the read model stays current
 
-`listing_cards` holds one policy-filtered card per listing. `household_listings` holds, per household, each listing it
+`listing_cards` holds one card per listing, keeping only what its source's hosts allow. `household_listings` holds, per household, each listing it
 could see and why: `matches` (passes an enabled profile's hard rules), `touched` (favorited or noted) and `hidden`.
 Both tables are derived. Never write them directly.
 
 | Change | Trigger | Effect |
 | --- | --- | --- |
 | `listings` insert or update | `listing_cards_insert`, `listing_cards_update` | rebuild the changed cards |
-| `source_policies` change | `policy_cards` | rebuild that source's cards |
+| `sources` hosts change | `source_cards` | rebuild that source's cards |
 | `listing_cards` insert or update | `card_households_insert`, `card_households_update` | re-match those listings for every household |
 | `profiles` change | `profile_households` | re-match that household |
 | `favorites`, `notes`, `hidden_listings` change | `favorite_households`, `note_households`, `hide_households` | update `touched` and `hidden` |
@@ -349,7 +352,8 @@ Both tables are derived. Never write them directly.
 - Manual homes have no rows in either table; the snapshot reads them from `manual_listings`.
 - `changed_seq` on both tables stamps each change. Nothing reads it yet; it is there for sending only what changed.
 - Rules that depend on the clock stay in the snapshot query, not in the stored rows: retention, photo expiry, when
-  coordinates and evidence were observed, viewing start times, and the policy review window (`hs.policy_current`).
+  coordinates and evidence were observed, viewing start times, and whether the source is switched on. Retention is
+  14 days for every source (`hs.retention()`).
 - `hs.card_drift()` and `hs.household_drift()` compare the stored rows with a fresh computation. Both must return
   nothing after any migration or data repair that touches these tables.
 
@@ -360,6 +364,6 @@ All are `public.hs_*` functions; the tables are never queried directly by a clie
 | Caller | Functions |
 | --- | --- |
 | Signed-in member (`authenticated`) | `hs_household_start`, `hs_household_snapshot`, `hs_memberships`, `hs_household_access`, `hs_set_favorite`, `hs_set_favorites`, `hs_set_hidden`, `hs_save_note`, `hs_save_profile`, `hs_add_manual`, `hs_update_manual`, `hs_delete_manual`, `hs_household_rename`, `hs_household_leave`, `hs_member_make_owner`, `hs_member_deactivate`, `hs_invitation_create`, `hs_invitation_preview`, `hs_invitation_redeem`, `hs_invitation_revoke` |
-| Edge Functions (`service_role`) | `hs_ingest`, `hs_ingest_credential`, `hs_ingest_policies`, `hs_consume_nonce`, `hs_invitation_reserve` |
+| Edge Functions (`service_role`) | `hs_ingest`, `hs_ingest_credential`, `hs_ingest_sources`, `hs_consume_nonce`, `hs_invitation_reserve` |
 
 The operator's `hs.admin_*` functions are not granted to any API role; the owner runs them from the SQL editor.
