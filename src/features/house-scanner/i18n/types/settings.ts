@@ -4,6 +4,9 @@ export interface SettingsTranslations {
     languageDescription: string;
   };
   criteria: {
+    setupTitle: string;
+    setupIntro: string;
+    keepStarterCriteria: string;
     preferredBudgetDescription: string;
     maximumBudgetDescription: string;
     apartmentRulesDescription: string;

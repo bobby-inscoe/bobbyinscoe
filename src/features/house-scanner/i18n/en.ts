@@ -34,6 +34,10 @@ export const en = {
       languageDescription: 'Language applies only to this browser, for you.',
     },
     criteria: {
+      setupTitle: 'Set up your search',
+      setupIntro:
+        'The homes below use starter criteria. Pick where to look and your maximum budget, or keep them. More options are in Settings.',
+      keepStarterCriteria: 'Keep starter criteria',
       preferredBudgetDescription:
         'Homes at or below this price are grouped as Within budget.',
       maximumBudgetDescription:
@@ -779,8 +783,7 @@ export const en = {
     backToTheWorkshop: 'Back to the workshop',
     householdShortlist: 'Household shortlist',
     thisHouseholdUsesStarterCriteriaApartmentsInGoteborgFrom:
-      'This household uses starter criteria: apartments in Göteborg from 60 m², up to 6M SEK.',
-    adjustThemInSettings: 'Adjust them in Settings',
+      'This household uses starter criteria: apartments in Göteborg from 60 m², up to 6M SEK. An owner can change them in Settings.',
     shortlistSections: 'Shortlist sections',
     listings: 'Listings',
     favorites: 'Favorites',

@@ -34,6 +34,10 @@ export const sv = {
       languageDescription: 'Språkvalet gäller bara dig i den här webbläsaren.',
     },
     criteria: {
+      setupTitle: 'Ställ in er sökning',
+      setupIntro:
+        'Bostäderna nedan följer startkriterier. Välj var ni vill leta och er maxbudget, eller behåll dem. Fler val finns under Inställningar.',
+      keepStarterCriteria: 'Behåll startkriterierna',
       preferredBudgetDescription:
         'Bostäder med ett pris upp till detta belopp visas under Inom budget.',
       maximumBudgetDescription:
@@ -786,8 +790,7 @@ export const sv = {
     backToTheWorkshop: 'Tillbaka till verkstaden',
     householdShortlist: 'Hushållets bostadslista',
     thisHouseholdUsesStarterCriteriaApartmentsInGoteborgFrom:
-      'Hushållet använder startkriterier: lägenheter i Göteborg från 60 m², upp till 6 miljoner SEK.',
-    adjustThemInSettings: 'Ändra dem i Inställningar',
+      'Hushållet använder startkriterier: lägenheter i Göteborg från 60 m², upp till 6 miljoner SEK. En ägare kan ändra dem under Inställningar.',
     shortlistSections: 'Bostadslistans avsnitt',
     listings: 'Bostäder',
     favorites: 'Favoriter',
