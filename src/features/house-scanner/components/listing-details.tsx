@@ -230,6 +230,18 @@ export function ListingDetails({
                 ? null
                 : displayLabel(intl, facts.status),
             ],
+            [
+              intl.formatMessage({ id: 'listings.details.bidding' }),
+              facts.bidding === true
+                ? intl.formatMessage({ id: 'listings.details.biddingUnderWay' })
+                : null,
+            ],
+            [
+              intl.formatMessage({ id: 'listings.details.highestBid' }),
+              facts.highestBidSek == null
+                ? null
+                : formatPrice(facts.highestBidSek, intl),
+            ],
           ]}
         />
         {conflicts.length > 0 && (

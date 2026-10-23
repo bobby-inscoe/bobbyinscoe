@@ -139,6 +139,7 @@ export const ListingCard = memo(function ListingCard({
             )}
           </Box>
           {(showStatus ||
+            listing.facts.bidding === true ||
             listing.origin === 'manual' ||
             delisted ||
             hidden) && (
@@ -150,6 +151,11 @@ export const ListingCard = memo(function ListingCard({
                         id: 'listings.details.statusDisputed',
                       })
                     : displayLabel(intl, listing.facts.status)}
+                </Badge>
+              )}
+              {listing.facts.bidding === true && (
+                <Badge variant="light">
+                  <FormattedMessage id="listings.details.bidding" />
                 </Badge>
               )}
               {listing.origin === 'manual' && (

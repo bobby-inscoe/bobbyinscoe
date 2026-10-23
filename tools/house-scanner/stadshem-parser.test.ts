@@ -373,3 +373,15 @@ describe('Stadshem viewing times', () => {
     },
   );
 });
+
+describe('Stadshem bidding', () => {
+  it('marks bidding only when currentlyBidding is true, shown bids or not', () => {
+    const facts = (over: Record<string, unknown>) =>
+      page(list([estate(over)])).observations[0].facts;
+    expect(facts({ currentlyBidding: true, showBidding: false }).bidding).toBe(
+      true,
+    );
+    for (const value of [false, undefined, 'true'])
+      expect(facts({ currentlyBidding: value }).bidding).toBeNull();
+  });
+});

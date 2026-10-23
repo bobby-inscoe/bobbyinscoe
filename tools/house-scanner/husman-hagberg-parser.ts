@@ -151,6 +151,8 @@ function observationFrom(
     baseFeeSek: positiveInt(numberOf(data.monthlyFee), 1_000_000_000),
     mandatoryMonthlySek: null,
     status,
+    // True while bidding is under way, also when the broker does not publish the bids.
+    bidding: data.bidding === true ? true : null,
   };
   // The list holds every viewing, with a year. Times are Stockholm wall-clock time labelled Z, as Boneo's are
   // (the same home carries identical values in both). Only viewings the broker shows on the internet are kept.
@@ -294,11 +296,21 @@ export function readHusmanHagbergDetailPage(
     .slice(0, 4)
     .map((image) => image.key);
   const planKey = keysOf(estate.plans)[0]?.key;
+  // The highest published bid: cancelled and hidden bids are left out, and the bidder's alias is never read.
+  const bids = record(record(estate.estate).details).bids;
+  const amounts = (Array.isArray(bids) ? bids : [])
+    .filter(
+      (bid) => isRecord(bid) && bid.cancelled !== true && bid.isHidden !== true,
+    )
+    .map((bid) => positiveInt(record(bid).amount, 1_000_000_000))
+    .filter((amount): amount is number => amount !== null);
+  const highestBidSek = amounts.length > 0 ? Math.max(...amounts) : null;
   return {
     kind: 'detail',
     facts: {
       outdoor: null,
       glazed: null,
+      ...(highestBidSek === null ? {} : { highestBidSek }),
       ...(photoKeys.length > 0 ? { photoKeys } : {}),
       ...(planKey === undefined ? {} : { planKey }),
     },

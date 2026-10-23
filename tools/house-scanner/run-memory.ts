@@ -37,6 +37,8 @@ export const detailFactsSchema = z.strictObject({
   askingPriceSek: shape.askingPriceSek.optional(),
   livingAreaM2: shape.livingAreaM2.optional(),
   rooms: shape.rooms.optional(),
+  // Read with the page but never saved: a bid is only true for the run that read it.
+  highestBidSek: shape.highestBidSek.optional(),
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
   // Viewing times a listing page published. Future ones are applied again from memory; past ones are dropped.

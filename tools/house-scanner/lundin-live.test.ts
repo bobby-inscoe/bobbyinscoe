@@ -107,6 +107,41 @@ describe('Lundin guarded run', () => {
     expect(cached.observations[0]).toMatchObject(expected);
   });
 
+  it('reads the page of a home in bidding on every run and never remembers its bid', async () => {
+    const withBid: Reply = {
+      body: lundinHomePage().replace(
+        '</body>',
+        "<dl><dt class='pricebid'>Högsta bud:</dt><dd class='pricebid'> 2 750 000 kr</dd></dl></body>",
+      ),
+    };
+    const bidding = (url: string): Reply =>
+      url.includes('/beskrivning/')
+        ? withBid
+        : site([numbered(1, { HasBidding: true }), numbered(2)])(url);
+    const memory = emptyMemory();
+    await run(goteborg, deps(fakeFetch(bidding).impl), (all) => all, memory);
+    for (const entry of Object.values(memory.details)) {
+      expect(entry).not.toHaveProperty('highestBidSek');
+      entry.readAt = new Date(
+        Date.parse(entry.readAt) - 3_600_000,
+      ).toISOString();
+    }
+    const again = fakeFetch(bidding);
+    const next = await run(goteborg, deps(again.impl), (all) => all, memory);
+    // Only the home in bidding is read again; the other comes from memory.
+    expect(again.calls.map((call) => call.url)).toEqual([
+      'https://www.lundin.se/robots.txt',
+      LIST,
+      'https://www.lundin.se/beskrivning/OBJ0000000000000000001/gata-1',
+    ]);
+    expect(next).toMatchObject({ detailRead: 1, detailCached: 1 });
+    expect(next.observations[0].facts).toMatchObject({
+      bidding: true,
+      highestBidSek: 2_750_000,
+    });
+    expect(next.observations[1].facts.highestBidSek).toBeUndefined();
+  });
+
   it('keeps only the partition municipality from a list that covers the whole region', async () => {
     const { impl } = fakeFetch(
       site([

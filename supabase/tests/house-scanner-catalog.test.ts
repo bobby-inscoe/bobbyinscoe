@@ -1771,7 +1771,12 @@ async function compareWithOld(
     database,
   );
   const parsed = snapshotV2Schema.parse(v2);
-  expect(expandSnapshot(parsed)).toEqual(snapshotSchema.parse(today));
+  // The old snapshot fills every fact from hs.empty_facts(); the client leaves an unknown bidding absent.
+  const old = snapshotSchema.parse(today);
+  for (const listing of old.listings)
+    for (const key of ['bidding', 'highestBidSek'] as const)
+      if (listing.facts[key] === null) delete listing.facts[key];
+  expect(expandSnapshot(parsed)).toEqual(old);
   return parsed;
 }
 
@@ -1979,7 +1984,9 @@ describe('listing cards', () => {
   const AS_SNAPSHOT = `
     select jsonb_build_object(
       'id',c.listing_id,'householdId',$1::uuid,'origin','source','sourceId',c.source_id,'title',c.title,
-      'sourceUrls',jsonb_build_array(c.source_url),'facts',c.facts,'conflicts',c.conflicts,'coordinates',shown.coordinates,
+      'sourceUrls',jsonb_build_array(c.source_url),'conflicts',c.conflicts,'coordinates',shown.coordinates,
+      -- The client leaves an unknown bidding absent.
+      'facts',c.facts-array(select k from unnest(array['bidding','highestBidSek']) k where c.facts->k='null'::jsonb),
       'evidence',coalesce((select jsonb_agg(e order by n) from jsonb_array_elements(c.evidence) with ordinality x(e,n)
         where (e->>'observedAt')::timestamptz>=now()-c.retention),'[]'::jsonb),
       'photo',case when hs.policy_current(p.policy) and (c.photo->>'expiresAt')::timestamptz>now()
@@ -2954,6 +2961,102 @@ describe('listing gallery', () => {
         home('no-lead', { morePhotos: [image('two')] }),
       ])
         await expect(check(refused)).rejects.toThrow('Photo not permitted');
+    } finally {
+      await database.close();
+    }
+  });
+});
+
+// The bidding fact (spec: house-scanner-bidding-flag, S1).
+const BIDDING = '20261023080000_house_scanner_bidding';
+const HIGHEST_BID = '20261023090000_house_scanner_highest_bid';
+
+describe('bidding flag', () => {
+  it('rolls back to exactly the earlier schema and applies again', async () => {
+    const database = await migratedThrough(BIDDING);
+    try {
+      const migrated = await fingerprint(database);
+      await database.exec(await rollback(BIDDING));
+      const earlier = await migratedThrough(GALLERY);
+      try {
+        expect(await fingerprint(database)).toEqual(await fingerprint(earlier));
+      } finally {
+        await earlier.close();
+      }
+      await database.exec(await migration(`${BIDDING}.sql`));
+      expect(await fingerprint(database)).toEqual(migrated);
+    } finally {
+      await database.close();
+    }
+  });
+
+  it('rolls the highest bid back to exactly the earlier schema and applies it again', async () => {
+    const database = await migratedThrough(HIGHEST_BID);
+    try {
+      const migrated = await fingerprint(database);
+      await database.exec(await rollback(HIGHEST_BID));
+      const earlier = await migratedThrough(BIDDING);
+      try {
+        expect(await fingerprint(database)).toEqual(await fingerprint(earlier));
+      } finally {
+        await earlier.close();
+      }
+      await database.exec(await migration(`${HIGHEST_BID}.sql`));
+      expect(await fingerprint(database)).toEqual(migrated);
+    } finally {
+      await database.close();
+    }
+  });
+
+  it('sends bidding only for a home whose source says so and whose policy allows it', async () => {
+    const database = await sourcesOn(await migratedThrough(BIDDING), ['alpha']);
+    try {
+      await database.query('insert into auth.users values($1)', [OWNER_A]);
+      await database.query(
+        "insert into hs.households(id,name) values($1,'Synthetic household')",
+        [HOUSE_A],
+      );
+      await database.query(
+        "insert into hs.members(household_id,user_id,display_name,role) values($1,$2,'Synthetic owner','owner')",
+        [HOUSE_A, OWNER_A],
+      );
+      await database.query(
+        "insert into hs.profiles(id,household_id,name,enabled,criteria,edited_by) values($1,$2,'Synthetic profile',true,$3::jsonb,$4)",
+        [PROFILE_A, HOUSE_A, JSON.stringify(criteria), OWNER_A],
+      );
+      const bidding = home('bidding', {
+        facts: { ...home('bidding').facts, bidding: true },
+      });
+      // A policy that does not name the fact refuses it.
+      await expect(
+        database.query(
+          "select hs.assert_observation(policy,$1::jsonb) from hs.source_policies where source_id='alpha'",
+          [JSON.stringify(bidding)],
+        ),
+      ).rejects.toThrow('Fact field not permitted');
+      await database.query(
+        "update hs.source_policies set policy=jsonb_set(policy,'{allowedFactFields}',(policy->'allowedFactFields')||'[\"bidding\"]') where source_id='alpha'",
+      );
+      await publish([bidding, home('quiet')], { database });
+      const reply = (await as(
+        'authenticated',
+        OWNER_A,
+        () =>
+          rpc(
+            'select public.hs_household_snapshot($1) as value',
+            [HOUSE_A],
+            database,
+          ),
+        database,
+      )) as { listings: { title: string; facts: Record<string, unknown> }[] };
+      const facts = Object.fromEntries(
+        reply.listings.map((item) => [item.title, item.facts]),
+      );
+      expect(facts.bidding).toMatchObject({ bidding: true });
+      expect(facts.quiet).not.toHaveProperty('bidding');
+      expect(
+        (await database.query('select * from hs.card_drift()')).rows,
+      ).toEqual([]);
     } finally {
       await database.close();
     }

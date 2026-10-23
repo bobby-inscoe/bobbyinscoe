@@ -432,9 +432,11 @@ export async function runCollection(
       detailSkipped += 1;
       continue;
     }
-    const cached = memory
-      ? freshDetail(memory, observation.sourceListingId, deps.now())
-      : undefined;
+    // A home in bidding is read again on every run, so its bid is the one the page shows now.
+    const cached =
+      memory && observation.facts.bidding !== true
+        ? freshDetail(memory, observation.sourceListingId, deps.now())
+        : undefined;
     if (cached) {
       const { readAt: _readAt, ...stored } = cached;
       applyDetail(adapter, observation, stored, new Date(deps.now()), true);
@@ -469,11 +471,13 @@ export async function runCollection(
       continue;
     }
     applyDetail(adapter, observation, detail.facts, new Date(deps.now()));
-    if (memory)
+    if (memory) {
+      const { highestBidSek: _bid, ...kept } = detail.facts;
       memory.details[observation.sourceListingId] = {
-        ...detail.facts,
+        ...kept,
         readAt: new Date(deps.now()).toISOString(),
       };
+    }
     detailRead += 1;
   }
   return finish(null);
