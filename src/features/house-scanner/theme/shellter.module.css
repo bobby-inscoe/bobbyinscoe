@@ -300,7 +300,6 @@
   height: 1px;
 }
 .card {
-  cursor: pointer;
   position: relative;
   background: var(--shellter-surface);
   border: 1px solid transparent;
@@ -311,6 +310,14 @@
   display: flex;
   flex-direction: column;
   gap: var(--mantine-spacing-xs);
+}
+@media (hover: none) and (pointer: coarse) {
+  .card {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+.card[tabindex="0"] {
+  cursor: pointer;
 }
 /* The photo runs to the card's edges, as on every listing portal. */
 .card > .cardPhoto {

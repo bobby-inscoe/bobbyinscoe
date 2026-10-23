@@ -59,8 +59,8 @@ export const sv = {
       maximumRooms: 'Högsta antal rum',
       shellterFollowsApartmentsForSaleInGoteborg:
         'Shellter visar lägenheter till salu i Göteborg.',
-      theSettingsBelowAreYourDefaultFilterForThe:
-        'Inställningarna nedan är ditt standardfilter för fliken Bostäder. Anpassa budget, storlek, antal rum, egenskaper och områden efter det du söker.',
+      householdProfileHelp:
+        'Hushållsprofilen anger de gemensamma sökkriterierna för alla i hushållet. Anpassa budget, storlek, antal rum, egenskaper och områden efter det du söker.',
       filtersOnTheListingsTabAreYoursAloneAnd:
         'Filtren på fliken Bostäder gäller bara dig och sparas i sidans webbadress, även när du laddar om. När du rensar dem behålls hushållets grundinställningar. Endast ägare kan ändra grundinställningarna.',
       howDoesThisWork: 'Hur fungerar det?',
@@ -106,7 +106,7 @@ export const sv = {
         'Bara hushållets ägare kan ändra de gemensamma kriterierna.',
       profileChangesAreUnavailableInThisView:
         'Det går inte att ändra profiler i den här vyn.',
-      defaultFilter: 'Standardfilter',
+      householdProfile: 'Hushållsprofil',
       theseCriteriaAreFictionalEditsAffectThisDemoOnly:
         'De här kriterierna är fiktiva. Ändringar gäller bara den här demon.',
       noSearchProfilesYet: 'Inga sökprofiler ännu.',

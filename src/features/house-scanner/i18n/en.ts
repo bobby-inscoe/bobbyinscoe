@@ -59,8 +59,8 @@ export const en = {
       maximumRooms: 'Maximum rooms',
       shellterFollowsApartmentsForSaleInGoteborg:
         'Shellter follows apartments for sale in Göteborg.',
-      theSettingsBelowAreYourDefaultFilterForThe:
-        'The settings below are your default filter for the Listings tab. Adjust budget, size, rooms, features and areas to fit what you are looking for.',
+      householdProfileHelp:
+        'The household profile sets the shared search criteria for everyone in your household. Adjust budget, size, rooms, features and areas to fit what you are looking for.',
       filtersOnTheListingsTabAreYoursAloneAnd:
         'Filters on the Listings tab are yours alone and stay in the page URL, including after a reload. Clearing them keeps the shared defaults. Only owners can change these defaults.',
       howDoesThisWork: 'How does this work?',
@@ -105,7 +105,7 @@ export const en = {
         'Only household owners can change shared criteria.',
       profileChangesAreUnavailableInThisView:
         'Profile changes are unavailable in this view.',
-      defaultFilter: 'Default filter',
+      householdProfile: 'Household Profile',
       theseCriteriaAreFictionalEditsAffectThisDemoOnly:
         'These criteria are fictional. Edits affect this demo only.',
       noSearchProfilesYet: 'No search profiles yet.',
