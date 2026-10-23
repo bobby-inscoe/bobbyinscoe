@@ -46,6 +46,11 @@ export interface FitOptions {
 
 // A level from fewer homes is fitted but never stored, so a stored level never stands for one or two homes.
 export const MIN_LEVEL_HOMES = 5;
+// The gap between final and asking prices is fitted only when both kinds have at least this many homes. Otherwise the
+// smaller kind is left out and the gap is FALLBACK_PREMIUM: the median final over asking price of Stadshem's sold
+// homes on 23 October 2026 (1.053). Lundin's list sometimes carries its sold archive and sometimes not.
+export const MIN_KIND_HOMES = 200;
+export const FALLBACK_PREMIUM = Math.log(1.053);
 
 export function periodOf(date: string): string | null {
   const match = /^(\d{4})-(\d{2})/.exec(date);
@@ -81,6 +86,21 @@ export function fitPriceModel(
   rows: ModelRow[],
   options: FitOptions,
 ): PriceModel {
+  const finals = rows.filter((r) => r.final === true);
+  const asking = rows.filter((r) => r.final !== true);
+  if (Math.min(finals.length, asking.length) >= MIN_KIND_HOMES)
+    return fitRows(rows, options);
+  // One kind only: fit it alone and put the other at the fallback gap.
+  const finalOnly = finals.length > asking.length;
+  const model = fitRows(finalOnly ? finals : asking, options);
+  return {
+    ...model,
+    intercept: finalOnly ? model.intercept - FALLBACK_PREMIUM : model.intercept,
+    finalPremium: FALLBACK_PREMIUM,
+  };
+}
+
+function fitRows(rows: ModelRow[], options: FitOptions): PriceModel {
   const shrink = options.shrink ?? 10;
   const periods = [...new Set(rows.map((r) => r.period))].sort();
   const latest = periods.at(-1);

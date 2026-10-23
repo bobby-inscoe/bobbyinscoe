@@ -11,9 +11,9 @@ import {
 // The file stays on the collector's machine; only the fitted numbers are sent. Rows hold model inputs only: price,
 // area, fee, rooms, half-year, neighbourhood name and whether the price is final. A position is turned into our
 // neighbourhood name and dropped; a source id is kept only as a one-way hash, to merge pages read on different days.
-// Lundin's list is read whole on every collector run and replaces its entry; that entry goes when Lundin has not been
-// read for 14 days. Sold lists (Stadshem, Erik Olsson) are read by hand with `--sold` and merged into theirs, which
-// stay until their rows age out. Rows older than 24 months, counted back from the newest, are dropped.
+// Every read merges into its source's entry, so a Lundin run whose list lacks the sold archive (it comes and goes)
+// keeps the archive rows earlier runs saw. Lundin's entry, read by collector runs, goes when Lundin has not been read
+// for 14 days. Sold lists (Stadshem, Erik Olsson) are read by hand with `--sold`; theirs stay until their rows age out. Rows older than 24 months, counted back from the newest, are dropped.
 export const SOLD_POOL_PATH = 'house-scanner.cache-sold.json';
 export const NEIGHBOURHOODS_PATH =
   'supabase/data/goteborg-neighborhoods.geojson';
@@ -129,7 +129,7 @@ export const poolKey = (sourceId: string, id: string) =>
   createHash('sha256').update(`${sourceId}:${id}`).digest('hex').slice(0, 16);
 
 export interface RefreshOptions {
-  // Rows from a sold list read by hand: merged with the source's earlier rows rather than replacing them.
+  // Rows from a sold list read by hand: kept even when the source is not read for 14 days.
   manual?: boolean;
   shapes?: Shape[];
 }
@@ -155,7 +155,7 @@ export function refreshPriceModel(
   }
   const earlier = pool[sourceId];
   if (Object.keys(fresh).length > 0) {
-    const merged = options.manual ? { ...earlier?.rows, ...fresh } : fresh;
+    const merged = { ...earlier?.rows, ...fresh };
     pool[sourceId] = {
       readAt: now.toISOString(),
       ...(options.manual ? { manual: true as const } : {}),
