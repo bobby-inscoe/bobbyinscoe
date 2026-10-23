@@ -9,7 +9,7 @@ import {
 } from '@mantine/core';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { ArrowLeft } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { HouseholdWorkspace } from '@/features/house-scanner/components/household-workspace';
 import { SyntheticWorkspace } from '@/features/house-scanner/components/synthetic-workspace';
@@ -42,6 +42,14 @@ function HouseScannerContent() {
   const [demo, setDemo] = useState(false);
   const [inviteToken, setInviteToken] = useState(readInviteToken);
   const navigate = useNavigate();
+  // The site title lives in index.html; name Shellter in the tab while this page is open.
+  useEffect(() => {
+    const siteTitle = document.title;
+    document.title = 'Shellter';
+    return () => {
+      document.title = siteTitle;
+    };
+  }, []);
   return (
     <MantineThemeProvider theme={shellterTheme}>
       <Box component="main" className={`${shellterScope} ${classes.page}`}>

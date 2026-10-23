@@ -690,6 +690,10 @@ export const en = {
       'This invitation link is incomplete. Copy the whole link and try again.',
     loadingYourHousehold: 'Loading your household…',
     signIn: 'Sign in',
+    signInIntro:
+      'Shellter follows apartments for sale in Göteborg so a household can look through them together.',
+    signInInviteOnly:
+      'Shellter is invitation only. Ask someone who uses it to send you a link.',
     chooseAHousehold: 'Choose a household.',
     as: '{value0} · as {value1}',
     household: 'Household',

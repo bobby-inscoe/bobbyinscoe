@@ -99,8 +99,14 @@ export function HouseScannerAccess({
       )}
     </SignInForm>
   );
+  const signInPage = state.status === 'signed-out' && inviteToken === null;
   return (
-    <Stack gap="md">
+    <Stack
+      gap="md"
+      w="100%"
+      maw={signInPage ? '22rem' : undefined}
+      mx={signInPage ? 'auto' : undefined}
+    >
       {state.status !== 'loading' &&
         (state.status !== 'authenticated' ||
           session.passwordSetup ||
@@ -169,9 +175,17 @@ export function HouseScannerAccess({
         </Center>
       ) : state.status === 'signed-out' ? (
         signIn(
-          <Title order={2}>
-            <FormattedMessage id="access.signIn" />
-          </Title>,
+          <Stack gap="xs">
+            <Title order={2}>
+              <FormattedMessage id="access.signIn" />
+            </Title>
+            <Text>
+              <FormattedMessage id="access.signInIntro" />
+            </Text>
+            <Text c="dimmed" size="sm">
+              <FormattedMessage id="access.signInInviteOnly" />
+            </Text>
+          </Stack>,
           true,
         )
       ) : state.status === 'choose-household' ? (

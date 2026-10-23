@@ -8,6 +8,8 @@ export interface AccessTranslations {
   thisInvitationLinkIsIncompleteCopyTheWholeLink: string;
   loadingYourHousehold: string;
   signIn: string;
+  signInIntro: string;
+  signInInviteOnly: string;
   chooseAHousehold: string;
   as: string;
   household: string;

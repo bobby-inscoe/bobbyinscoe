@@ -697,6 +697,10 @@ export const sv = {
       'Inbjudningslänken är ofullständig. Kopiera hela länken och försök igen.',
     loadingYourHousehold: 'Laddar ditt hushåll…',
     signIn: 'Logga in',
+    signInIntro:
+      'Shellter följer lägenheter till salu i Göteborg så att ett hushåll kan gå igenom dem tillsammans.',
+    signInInviteOnly:
+      'Shellter kräver en inbjudan. Be någon som använder Shellter att skicka en länk.',
     chooseAHousehold: 'Välj ett hushåll.',
     as: '{value0} · som {value1}',
     household: 'Hushåll',
