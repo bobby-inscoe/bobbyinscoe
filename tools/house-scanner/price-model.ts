@@ -20,6 +20,8 @@ export interface ModelRow {
   final?: boolean;
   // The sale date (YYYY-MM-DD), only when the source gives it; kept for a price timeline of similar homes.
   soldOn?: string;
+  // True when soldOn was interpolated from the row's place in a list sorted by sale date.
+  soldOnEstimated?: boolean;
   // Latitude and longitude, used to find the neighbourhood and dropped before a row is kept.
   position?: [number, number];
 }
@@ -27,6 +29,8 @@ export interface ModelRow {
 /** One page of a sold list: rows by source id, the oldest date on it (ISO), and whether it was the last. */
 export interface SoldPage {
   rows: Record<string, ModelRow>;
+  // Every list row's id in page order, kept rows or not; record keys lose the order when ids are numbers.
+  ids: string[];
   oldest: string | null;
   last: boolean;
 }

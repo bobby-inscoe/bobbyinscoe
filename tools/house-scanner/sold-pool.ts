@@ -32,6 +32,7 @@ const rowSchema = z.strictObject({
   neighbourhood: z.string().min(1).max(100).nullable(),
   final: z.boolean().optional(),
   soldOn: z.iso.date().optional(),
+  soldOnEstimated: z.boolean().optional(),
 });
 const poolSchema = z.record(
   z.string().regex(/^[a-z0-9-]{1,60}$/),

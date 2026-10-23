@@ -318,10 +318,12 @@ export function readStadshemSoldPage(body: string): SoldPage | null {
   }
   if (!isRecord(data) || !Array.isArray(data.estates)) return null;
   const rows: SoldPage['rows'] = {};
+  const ids: string[] = [];
   let oldest: string | null = null;
   for (const item of data.estates) {
     if (!isRecord(item) || typeof item.id !== 'string' || item.id === '')
       continue;
+    ids.push(item.id);
     const changed =
       typeof item.statusLastChanged === 'string'
         ? item.statusLastChanged
@@ -376,6 +378,7 @@ export function readStadshemSoldPage(body: string): SoldPage | null {
   const pages = numberOf(data.num_pages);
   return {
     rows,
+    ids,
     oldest,
     last: page !== null && pages !== null && page >= pages,
   };

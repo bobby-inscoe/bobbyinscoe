@@ -182,9 +182,13 @@ if (finals.length) {
     const test = finals.filter((_, i) => i % 5 === fold);
     const model = fit([...archive, ...train]);
     for (const r of test) {
-      const pooledMiss = Math.abs(Math.exp(baselineLog(model, r, true)) / r.priceSek - 1);
+      const pooledMiss = Math.abs(
+        Math.exp(baselineLog(model, r, true)) / r.priceSek - 1,
+      );
       misses.pooled.push(pooledMiss);
-      misses.lundin.push(Math.abs(Math.exp(baselineLog(asking, r)) / r.priceSek - 1));
+      misses.lundin.push(
+        Math.abs(Math.exp(baselineLog(asking, r)) / r.priceSek - 1),
+      );
       (bySource[r.source] ??= []).push(pooledMiss);
     }
   }

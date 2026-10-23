@@ -1,10 +1,17 @@
-import { readErikOlssonSoldPage } from '@house-scanner-tools/erik-olsson-parser';
+import {
+  readErikOlssonSaleDate,
+  readErikOlssonSoldPage,
+} from '@house-scanner-tools/erik-olsson-parser';
 import {
   MAX_INTERVAL_MS,
   MIN_INTERVAL_MS,
   USER_AGENT,
 } from '@house-scanner-tools/live-reader';
-import type { ModelRow, SoldPage } from '@house-scanner-tools/price-model';
+import {
+  type ModelRow,
+  periodOf,
+  type SoldPage,
+} from '@house-scanner-tools/price-model';
 import { parseRobots, robotsAllows } from '@house-scanner-tools/robots';
 import {
   refreshPriceModel,
@@ -23,7 +30,12 @@ import { readStadshemSoldPage } from '@house-scanner-tools/stadshem-parser';
 // It is not part of a collector run. Each list is read newest first, under robots.txt and the run's 1 to 2 second
 // pacing, until a page reaches back two years, adds nothing new, is the last, or the page cap is hit. Rows go into the
 // local sold pool; nothing is sent.
+// A list sorted by sale date but without dates (Erik Olsson) is dated from anchors: the first home of every fifth page
+// and the last home read are opened for their sale date, and every row gets a date interpolated from its place
+// between them, marked estimated. Sampled on 23 October 2026, the list ran steadily from October 2026 (page 1) to
+// September 2022 (page 39), about 100 sales a month, so the estimate is good to a few weeks.
 export const MAX_SOLD_PAGES = 40;
+export const ANCHOR_EVERY = 5;
 const BACK_MS = 2 * 365 * 24 * 60 * 60 * 1000;
 
 interface SoldList {
@@ -32,6 +44,8 @@ interface SoldList {
   url(page: number): string;
   headers: Record<string, string>;
   read(body: string): SoldPage | null;
+  // Dates a list without sale dates from a few homes' own pages.
+  anchor?: { url(id: string): string; date(body: string): string | null };
 }
 
 export const SOLD_LISTS: SoldList[] = [
@@ -52,6 +66,10 @@ export const SOLD_LISTS: SoldList[] = [
       `${ERIK_OLSSON_ORIGIN}/municipalities/goteborg-166?tab=homes&categories=apartment&statuses=sold&limit=100&page=${page}`,
     headers: { accept: '*/*', rsc: '1' },
     read: readErikOlssonSoldPage,
+    anchor: {
+      url: (id) => `${ERIK_OLSSON_ORIGIN}/homes/x-${id}`,
+      date: readErikOlssonSaleDate,
+    },
   },
 ];
 
@@ -67,6 +85,46 @@ export interface SoldReport {
   pages: number;
   rows: number;
   stopped: string;
+  // Homes opened to date the list.
+  anchors: number;
+}
+
+interface Anchor {
+  at: number;
+  time: number;
+}
+
+/** Gives every row a date interpolated from its place in `order` between the anchors (clamped at the ends). */
+export function dateByPlace(
+  rows: Record<string, ModelRow>,
+  order: string[],
+  anchors: Anchor[],
+) {
+  if (anchors.length === 0) return;
+  const sorted = [...anchors].sort((a, b) => a.at - b.at);
+  order.forEach((id, at) => {
+    const row = rows[id];
+    if (!row) return;
+    const next = sorted.findIndex((a) => a.at >= at);
+    const [a, b] =
+      next === -1
+        ? [sorted.at(-1), sorted.at(-1)]
+        : next === 0
+          ? [sorted[0], sorted[0]]
+          : [sorted[next - 1], sorted[next]];
+    if (!a || !b) return;
+    const time =
+      a.at === b.at
+        ? a.time
+        : a.time + ((b.time - a.time) * (at - a.at)) / (b.at - a.at);
+    const soldOn = new Date(time).toISOString().slice(0, 10);
+    rows[id] = {
+      ...row,
+      soldOn,
+      soldOnEstimated: true,
+      period: periodOf(soldOn) ?? row.period,
+    };
+  });
 }
 
 /** Reads every sold list into the pool and returns what each read. */
@@ -96,12 +154,26 @@ export async function collectSold(
   };
   for (const list of lists) {
     const rows: Record<string, ModelRow> = {};
+    const order: string[] = [];
+    const anchors: Anchor[] = [];
     const since = new Date(deps.now() - BACK_MS).toISOString();
     let pages = 0;
     let stopped = 'page-cap';
     try {
       const robots = await get(`${list.origin}/robots.txt`, {});
       const rules = parseRobots(robots.status === 200 ? robots.body : '');
+      // The sale date of the home at this place in the list, or null when its page is refused or carries none.
+      const anchorAt = async (at: number) => {
+        const id = order[at];
+        if (!list.anchor || id === undefined) return null;
+        const url = new URL(list.anchor.url(id));
+        if (!robotsAllows(rules, `${url.pathname}${url.search}`)) return null;
+        const fetched = await get(url.href, list.headers);
+        const date =
+          fetched.status === 200 ? list.anchor.date(fetched.body) : null;
+        if (date) anchors.push({ at, time: Date.parse(`${date}T12:00:00Z`) });
+        return date;
+      };
       for (let page = 0; page < maxPages; page += 1) {
         const url = new URL(list.url(page));
         if (
@@ -123,19 +195,31 @@ export async function collectSold(
         }
         pages += 1;
         const before = Object.keys(rows).length;
+        const first = order.length;
+        order.push(...read.ids.filter((id) => !order.includes(id)));
         Object.assign(rows, read.rows);
         if (read.last || Object.keys(rows).length === before) {
           stopped = 'end';
           break;
         }
-        if (read.oldest !== null && read.oldest < since) {
+        const anchored =
+          page % ANCHOR_EVERY === 0 ? await anchorAt(first) : null;
+        if (
+          (read.oldest !== null && read.oldest < since) ||
+          (anchored !== null && anchored < since)
+        ) {
           stopped = 'two-years';
           break;
         }
       }
+      if (list.anchor && order.length > 0) await anchorAt(order.length - 1);
     } catch {
       stopped = 'network-error';
     }
+    dateByPlace(rows, order, anchors);
+    // Rows dated before the two years, found when the last page reached past them, are left out.
+    for (const [id, row] of Object.entries(rows))
+      if (row.soldOn && row.soldOn < since.slice(0, 10)) delete rows[id];
     refreshPriceModel(pool, list.sourceId, rows, new Date(deps.now()), {
       manual: true,
       shapes,
@@ -145,6 +229,7 @@ export async function collectSold(
       pages,
       rows: Object.keys(rows).length,
       stopped,
+      anchors: anchors.length,
     });
   }
   return reports;

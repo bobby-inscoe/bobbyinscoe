@@ -29,6 +29,7 @@ const list = (pages: Record<string, unknown>[]) => ({
 });
 const page = (ids: string[], oldest: string, last = false) => ({
   rows: Object.fromEntries(ids.map((id) => [id, row])),
+  ids,
   oldest,
   last,
 });
@@ -57,6 +58,7 @@ describe('collectSold', () => {
       pages: 2,
       rows: 3,
       stopped: 'two-years',
+      anchors: 0,
     });
     expect(Object.keys(pool.stadshem.rows)).toHaveLength(3);
     expect(pool.stadshem.manual).toBe(true);
@@ -80,5 +82,76 @@ describe('collectSold', () => {
     expect(
       (await collectSold({}, [], deps(refused.impl), [list([])]))[0].stopped,
     ).toBe('http-429');
+  });
+});
+
+describe('dating a list by place', () => {
+  it('opens anchor homes, interpolates the rest, and leaves out rows past two years', async () => {
+    const ids = (page: number) =>
+      Array.from({ length: 4 }, (_, i) => `${page}-${i}`);
+    const listPage = (page: number) => ({
+      rows: Object.fromEntries(
+        ids(page).map((id) => [id, { ...row, period: '2025H2' }]),
+      ),
+      ids: ids(page),
+      oldest: null,
+      last: false,
+    });
+    // Sale dates by home: the list loses about a month per row.
+    const dateOf = (id: string) => {
+      const [page, i] = id.split('-').map(Number);
+      return new Date(Date.UTC(2026, 9 - (page * 4 + i), 15))
+        .toISOString()
+        .slice(0, 10);
+    };
+    const { impl, calls } = fakeFetch((url) => {
+      if (url.endsWith('/robots.txt')) return { body: '', type: 'text/plain' };
+      const home = /\/home\/(.+)$/.exec(url);
+      if (home)
+        return { body: `{"agreementDate":"${dateOf(home[1])}T10:00:00"}` };
+      return {
+        body: JSON.stringify(
+          listPage(Number(new URL(url).searchParams.get('page'))),
+        ),
+        type: 'application/json',
+      };
+    });
+    const pool: SoldPool = {};
+    const [report] = await collectSold(
+      pool,
+      [],
+      deps(impl),
+      [
+        {
+          ...list([]),
+          sourceId: 'erik-olsson',
+          anchor: {
+            url: (id: string) => `https://example.invalid/home/${id}`,
+            date: (body: string) =>
+              /"agreementDate":"(\d{4}-\d{2}-\d{2})/.exec(body)?.[1] ?? null,
+          },
+        },
+      ],
+      12,
+    );
+    // Anchors on pages 0, 5 and 10 (which reaches past two years) and the last home read.
+    expect(report).toMatchObject({
+      pages: 11,
+      stopped: 'two-years',
+      anchors: 4,
+    });
+    expect(calls.filter((c) => c.url.includes('/home/'))).toHaveLength(4);
+    const kept = Object.values(pool['erik-olsson'].rows);
+    // 44 rows read; those dated before 2024-10-23 are left out. Interpolation is linear in place and months are not,
+    // so a row at the edge can land a few days either side of the cut.
+    expect(kept.length).toBeGreaterThanOrEqual(22);
+    expect(kept.length).toBeLessThanOrEqual(25);
+    expect(
+      kept.every(
+        (r) => r.soldOnEstimated && r.soldOn && r.soldOn >= '2024-10-23',
+      ),
+    ).toBe(true);
+    expect(kept.map((r) => r.period)).toContain('2026H2');
+    expect(kept.map((r) => r.period)).toContain('2025H1');
   });
 });

@@ -435,6 +435,7 @@ describe('Stadshem sold list', () => {
           position: [57.69, 11.95],
         },
       },
+      ids: ['e1', 'e2', 'e3', 'e4'],
       oldest: '2026-01-02 09:00:00',
       last: true,
     });

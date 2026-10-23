@@ -493,7 +493,8 @@ describe('Erik Olsson sold list', () => {
           position: [57.697906, 11.969571],
         },
       },
-      oldest: '2026-03-01T00:00:00.000Z',
+      ids: ['6007278', '2', '3'],
+      oldest: null,
       last: false,
     });
   });
@@ -501,6 +502,7 @@ describe('Erik Olsson sold list', () => {
   it('ends at a page without rows and fails an answer that is not the list', () => {
     expect(readErikOlssonSoldPage(body([]))).toEqual({
       rows: {},
+      ids: [],
       oldest: null,
       last: true,
     });

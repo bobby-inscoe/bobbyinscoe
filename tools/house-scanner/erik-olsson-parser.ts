@@ -455,13 +455,15 @@ export function readErikOlssonDetailPage(html: string): ErikOlssonDetailRead {
 // The municipality page with categories=apartment&statuses=sold&limit=100&page=N, asked with the `rsc: 1` header,
 // answers as React Server Components text holding the list rows (structure-only look on 23 October 2026). A sold
 // row's `price` is the final price although `price_type` says broker-valuation: on the home checked it equalled the
-// broker system's finalPrice. There is no sale date (only each home's own page has `agreementDate`), so rows carry
-// no soldOn; `updated_at` stands in for the half-year, though many older rows share one bulk update time.
+// broker system's finalPrice (14 of 14 homes sampled on 23 October 2026). The list is sorted by sale date, newest
+// first, but carries no sale date: only each home's page has `agreementDate`. The manual read dates a few homes and
+// interpolates the rest (sold-collect.ts); until then `updated_at` stands in for the half-year, though most older rows
+// share one bulk update time, so the page reports no oldest date.
 const SOLD_ROW = /\{"id":"\d+","title":/g;
 
 export function readErikOlssonSoldPage(body: string): SoldPage | null {
   const rows: SoldPage['rows'] = {};
-  let oldest: string | null = null;
+  const ids: string[] = [];
   let seen = 0;
   for (const match of body.matchAll(SOLD_ROW)) {
     const raw = objectAt(body, match.index);
@@ -479,9 +481,9 @@ export function readErikOlssonSoldPage(body: string): SoldPage | null {
     )
       continue;
     seen += 1;
+    ids.push(item.id);
     const updated =
       typeof item.updated_at === 'string' ? item.updated_at : null;
-    if (updated && (oldest === null || updated < oldest)) oldest = updated;
     const price = positiveInt(item.price, 1_000_000_000);
     const areaM2 = area(item.living_space, 1000);
     const feeSek = positiveInt(item.monthly_fee, 1_000_000);
@@ -516,5 +518,10 @@ export function readErikOlssonSoldPage(body: string): SoldPage | null {
   }
   // A page without list rows is a changed answer, not an empty list.
   if (seen === 0 && !body.includes('"queryParams"')) return null;
-  return { rows, oldest, last: seen === 0 };
+  return { rows, ids, oldest: null, last: seen === 0 };
+}
+
+/** The sale date (YYYY-MM-DD) on a home's page, read as `/homes/x-<id>` with the `rsc: 1` header. */
+export function readErikOlssonSaleDate(body: string): string | null {
+  return /"agreementDate":"(\d{4}-\d{2}-\d{2})/.exec(body)?.[1] ?? null;
 }
