@@ -165,7 +165,6 @@ export interface ListingsTranslations {
     price: string;
     cash: string;
     rate: string;
-    rateChoices: string;
     interest: string;
     taxDeduction: string;
     amortization: string;

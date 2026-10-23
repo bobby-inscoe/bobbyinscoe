@@ -1237,6 +1237,9 @@
   .touchControls {
     display: none;
   }
+  .rateControls {
+    display: flex;
+  }
 }
 
 .photoPrevious,

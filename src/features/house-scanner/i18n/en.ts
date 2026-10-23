@@ -364,7 +364,6 @@ export const en = {
       price: 'Expected final price (SEK)',
       cash: 'Cash down (SEK)',
       rate: 'Interest rate (%)',
-      rateChoices: 'Try another rate',
       interest: 'Interest',
       taxDeduction: 'Tax deduction',
       amortization: 'Amortization ({percent} %)',

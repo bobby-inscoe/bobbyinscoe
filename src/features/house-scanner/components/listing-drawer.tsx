@@ -221,12 +221,6 @@ export function ListingDrawer({
                     </Button>
                   )}
                 </Group>
-                {/* Remounted per home and per opening, so price and cash edits are discarded on close. */}
-                <MonthlyCost
-                  key={`${listing.id}-${opened}`}
-                  listing={listing}
-                  snapshot={snapshot}
-                />
                 <ListingDetails
                   listing={listing}
                   snapshot={snapshot}
@@ -250,6 +244,14 @@ export function ListingDrawer({
                         </Text>
                       )}
                     </>
+                  }
+                  monthlyCost={
+                    // Remount per home and opening to discard price and cash edits on close.
+                    <MonthlyCost
+                      key={`${listing.id}-${opened}`}
+                      listing={listing}
+                      snapshot={snapshot}
+                    />
                   }
                   onSelectPhoto={showPhoto}
                 />

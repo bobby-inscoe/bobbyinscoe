@@ -43,8 +43,6 @@ export function RateScenarioProvider({ children }: { children: ReactNode }) {
   );
 }
 
-const RATE_STEPS = [0, 0.5, 1, 2];
-
 /**
  * What the home would cost each month with the household's financing. Price and cash start from the listing and the
  * household and can be changed here; the caller remounts this per home, which discards those changes.
@@ -219,33 +217,14 @@ export function MonthlyCost({
             value={rate}
             min={0.01}
             max={20}
-            step={0.05}
+            step={0.1}
+            classNames={{ controls: classes.rateControls }}
             decimalScale={2}
             allowNegative={false}
             decimalSeparator={separators.decimalSeparator}
             onChange={(value) => typeof value === 'number' && setRate(value)}
           />
         </SimpleGrid>
-        <Group
-          gap="xs"
-          role="group"
-          aria-label={intl.formatMessage({ id: 'listings.cost.rateChoices' })}
-        >
-          {RATE_STEPS.map((step) => {
-            const value = baseRate + step;
-            return (
-              <Button
-                key={step}
-                size="compact-xs"
-                variant={Math.abs(rate - value) < 0.001 ? 'filled' : 'default'}
-                aria-pressed={Math.abs(rate - value) < 0.001}
-                onClick={() => setRate(value)}
-              >
-                {step === 0 ? `${percent(baseRate)} %` : `+${percent(step)}`}
-              </Button>
-            );
-          })}
-        </Group>
         {scenario !== null && (
           <Group gap="xs">
             <Text size="sm" c="orange.8">
