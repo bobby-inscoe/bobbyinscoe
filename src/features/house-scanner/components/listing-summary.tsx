@@ -1,5 +1,5 @@
-import { Badge, Button, Group, Stack, Text } from '@mantine/core';
-import { ArrowDown, ArrowUp } from 'lucide-react';
+import { Badge, Button, Group, Text } from '@mantine/core';
+import { ArrowDown, ArrowUp, ExternalLink } from 'lucide-react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { messageValue } from '@/features/house-scanner/i18n/catalogs';
 import { displayLabel } from '@/features/house-scanner/i18n/display-labels';
@@ -16,6 +16,7 @@ import {
   reasonChips,
   SECTION_LABELS,
 } from '@/features/house-scanner/utils/match-listing';
+import { sourceName } from '@/features/house-scanner/utils/source-name';
 
 // The lines the list card and the details sheet share.
 export function PriceLine({ listing }: { listing: Listing }) {
@@ -109,7 +110,7 @@ export function AlsoOn({ sites }: { sites?: string[] }) {
     <Text size="sm" c="dimmed">
       <FormattedMessage
         id="listings.details.alsoOn"
-        values={{ value0: messageValue(sites.join(', ')) }}
+        values={{ value0: messageValue(sites.map(sourceName).join(', ')) }}
       />
     </Text>
   );
@@ -154,32 +155,20 @@ export function ReasonChips({ listing }: { listing: Listing }) {
 interface MatchLinesProps {
   listing: Listing;
   snapshot: Snapshot;
-  // Adds the reasons and caveats behind each label.
-  details?: boolean;
 }
 
-export function MatchLines({ listing, snapshot, details }: MatchLinesProps) {
+export function MatchLines({ listing, snapshot }: MatchLinesProps) {
   const intl = useIntl();
 
   const matches = listingMatches(listing, snapshot, intl);
   return (
     <>
       {matches.map(({ profile, result }) => (
-        <Stack key={profile.id} gap={4}>
-          <Text size="sm" fw={600}>
-            {matches.length > 1 && `${profile.name}: `}
-            {SECTION_LABELS(intl)[result.section]}
-            {result.missing.length > 0 && `: ${result.missing.join(', ')}`}
-          </Text>
-          {details && (
-            <>
-              <Text size="sm">{result.reasons.join('; ')}</Text>
-              <Text size="sm" c="dimmed">
-                {result.caveats.join('; ')}
-              </Text>
-            </>
-          )}
-        </Stack>
+        <Text key={profile.id} size="sm" fw={600}>
+          {matches.length > 1 && `${profile.name}: `}
+          {SECTION_LABELS(intl)[result.section]}
+          {result.missing.length > 0 && `: ${result.missing.join(', ')}`}
+        </Text>
       ))}
       {matches.length === 0 && (
         <Text size="sm">
@@ -197,6 +186,7 @@ export function OriginalListingButton({ listing }: { listing: Listing }) {
       size="xs"
       variant="default"
       href={listing.sourceUrls[0]}
+      rightSection={<ExternalLink size={14} aria-hidden />}
       target="_blank"
       rel="noopener noreferrer"
       referrerPolicy="no-referrer"

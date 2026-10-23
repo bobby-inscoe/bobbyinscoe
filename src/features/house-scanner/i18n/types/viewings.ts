@@ -13,7 +13,6 @@ export interface ViewingsTranslations {
   savedBy2: string;
   originalListing: string;
   aViewingCanBeCancelledOrMovedBetweenScans: string;
-  updated: string;
   today: string;
   tomorrow: string;
   calendarTitle: string;

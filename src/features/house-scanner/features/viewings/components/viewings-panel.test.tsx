@@ -151,7 +151,8 @@ it('says what to do when nothing is ahead, and that times can change', () => {
   expect(
     screen.getByText(/No saved home has an upcoming viewing/),
   ).toBeTruthy();
-  expect(screen.getByText(/can be cancelled or moved/)).toBeTruthy();
+  expect(screen.getByText(/Viewing times can change/)).toBeTruthy();
+  expect(screen.queryByText(/^Updated /)).toBeNull();
 });
 
 it('hands the browser a calendar file with a week and a day reminder when Add to calendar is pressed', async () => {
