@@ -220,7 +220,7 @@ export function readLundinDetailPage(
     .filter(([, attrs]) => classes(attrs).includes('object-image'))
     .map(([, attrs]) => /\bdata-id="([^"]*)"/.exec(attrs)?.[1] ?? '')
     .filter((id) => LUNDIN_IMAGE_ID.test(id))
-    .slice(0, 4);
+    .slice(0, 8);
   const plans = html.split(/\bid="section-planimages"/)[1] ?? '';
   const plan = [...plans.matchAll(FIGURE)].find(([, attrs]) =>
     classes(attrs).includes('object-image-plan'),
