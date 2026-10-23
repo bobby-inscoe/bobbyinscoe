@@ -110,6 +110,22 @@ export const en = {
         'These criteria are fictional. Edits affect this demo only.',
       noSearchProfilesYet: 'No search profiles yet.',
     },
+    financing: {
+      heading: 'Financing',
+      description:
+        "Your household's numbers for the monthly cost of each home. Every member sees the same figures.",
+      cash: 'Cash for the down payment (SEK)',
+      cashDescription: 'Leave empty to put down the 10 % minimum on each home.',
+      rate: 'Interest rate (%)',
+      rateDescription:
+        'Typical rate: {rate} %, the average 3-month rate in {month}.',
+      taxDeduction: 'Show interest after the tax deduction',
+      save: 'Save financing',
+      useTypical: 'Use typical values',
+      usingTypical: 'Using typical values until you save your own.',
+      saved: 'Financing saved.',
+      ownerOnly: 'Only household owners can change financing.',
+    },
     household: {
       memberActions: 'Actions for {name}',
       couldNotLoadTheHouseholdMembersReloadToTry:
@@ -342,6 +358,29 @@ export const en = {
         '{area} m²{areaDisputed} · {rooms}{roomsDisputed}{fee}{feeDisputed}{neighborhood}',
       savedByMembers:
         'Saved by {count, plural, one {# member} other {# members}}',
+    },
+    cost: {
+      heading: 'Monthly cost',
+      price: 'Expected final price (SEK)',
+      cash: 'Cash down (SEK)',
+      rate: 'Interest rate (%)',
+      rateChoices: 'Try another rate',
+      interest: 'Interest',
+      taxDeduction: 'Tax deduction',
+      amortization: 'Amortization ({percent} %)',
+      fee: 'Monthly fee',
+      total: 'Per month',
+      loan: 'Loan {loan}, {share} % of the price.',
+      shortfall: 'Banks lend at most 90 % of the price. Add {amount} in cash.',
+      noPrice: 'Enter an expected price to see the monthly cost.',
+      feeUnknown: 'Leaves out the monthly fee, which is unknown.',
+      runningCosts:
+        'Leaves out running costs such as heating, water and insurance.',
+      oneTime: 'One-time fees: title {title}, mortgage deeds {deeds}.',
+      typical:
+        'Typical rate and 10 % cash, as of {month}. Household owners can set your own numbers in Settings.',
+      scenario: 'Rate scenario for every home, not saved.',
+      reset: 'Reset',
     },
     map: {
       cardLayout: 'Map card layout',

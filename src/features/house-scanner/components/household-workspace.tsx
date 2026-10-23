@@ -4,6 +4,7 @@ import { useDeferredValue, useMemo, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { ListingDrawer } from '@/features/house-scanner/components/listing-drawer';
 import { ManualActionsProvider } from '@/features/house-scanner/components/manual-listing-actions';
+import { RateScenarioProvider } from '@/features/house-scanner/components/monthly-cost';
 import { PriceEstimateProvider } from '@/features/house-scanner/components/price-estimate';
 import { AddLinkPanel } from '@/features/house-scanner/features/add-link/components/add-link-panel';
 import { useFavoriteToggle } from '@/features/house-scanner/features/favorites/hooks/use-favorite-toggle';
@@ -171,341 +172,349 @@ export function HouseholdWorkspace({
       : null;
   return (
     <ManualActionsProvider value={manualActions}>
-      <section
-        className={classes.workspace}
-        aria-label={intl.formatMessage({ id: 'navigation.householdShortlist' })}
-      >
-        {/* A new household starts with one profile at revision 1, set to the collector bounds. */}
-        {!synthetic &&
-          tab !== 'settings' &&
-          snapshot.profiles.length === 1 &&
-          snapshot.profiles[0].revision === 1 && (
-            <Group gap={4} role="note">
-              <Text size="sm">
-                <FormattedMessage id="navigation.thisHouseholdUsesStarterCriteriaApartmentsInGoteborgFrom" />
-              </Text>
+      <RateScenarioProvider>
+        <section
+          className={classes.workspace}
+          aria-label={intl.formatMessage({
+            id: 'navigation.householdShortlist',
+          })}
+        >
+          {/* A new household starts with one profile at revision 1, set to the collector bounds. */}
+          {!synthetic &&
+            tab !== 'settings' &&
+            snapshot.profiles.length === 1 &&
+            snapshot.profiles[0].revision === 1 && (
+              <Group gap={4} role="note">
+                <Text size="sm">
+                  <FormattedMessage id="navigation.thisHouseholdUsesStarterCriteriaApartmentsInGoteborgFrom" />
+                </Text>
+                <Button
+                  size="compact-sm"
+                  variant="subtle"
+                  onClick={() => navigation.changeTab('settings')}
+                >
+                  <FormattedMessage id="navigation.adjustThemInSettings" />
+                </Button>
+              </Group>
+            )}
+          <Group
+            component="nav"
+            aria-label={intl.formatMessage({
+              id: 'navigation.shortlistSections',
+            })}
+            gap="xs"
+            wrap="wrap"
+            p={4}
+            className={classes.tabBar}
+            onClickCapture={() => {
+              if (window.matchMedia('(max-width: 35.99375em)').matches) {
+                window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+              }
+            }}
+          >
+            {(['suggestions', 'favorites'] as const).map((value) => (
               <Button
-                size="compact-sm"
-                variant="subtle"
-                onClick={() => navigation.changeTab('settings')}
+                key={value}
+                className={classes.navTab}
+                variant={tab === value ? 'filled' : 'default'}
+                aria-pressed={tab === value}
+                leftSection={
+                  value === 'suggestions' ? (
+                    <House size={20} aria-hidden />
+                  ) : (
+                    <Star
+                      size={20}
+                      fill={tab === value ? 'currentColor' : 'none'}
+                      aria-hidden
+                    />
+                  )
+                }
+                onClick={() => navigation.changeTab(value)}
               >
-                <FormattedMessage id="navigation.adjustThemInSettings" />
+                {value === 'suggestions'
+                  ? intl.formatMessage({ id: 'navigation.listings' })
+                  : intl.formatMessage({ id: 'navigation.favorites' })}
+              </Button>
+            ))}
+            <Button
+              className={classes.navTab}
+              variant={tab === 'viewings' ? 'filled' : 'default'}
+              aria-pressed={tab === 'viewings'}
+              leftSection={
+                <span className={classes.navIcon}>
+                  <CalendarDays size={20} aria-hidden />
+                </span>
+              }
+              onClick={() => navigation.changeTab('viewings')}
+            >
+              <FormattedMessage id="navigation.viewings" />
+            </Button>
+            <Menu position="bottom-end">
+              <Menu.Target>
+                <Button
+                  className={classes.navTab}
+                  leftSection={
+                    <Ellipsis
+                      size={20}
+                      fill={
+                        tab !== 'suggestions' &&
+                        tab !== 'favorites' &&
+                        tab !== 'viewings'
+                          ? 'currentColor'
+                          : 'none'
+                      }
+                      aria-hidden
+                    />
+                  }
+                  variant={
+                    tab !== 'suggestions' &&
+                    tab !== 'favorites' &&
+                    tab !== 'viewings'
+                      ? 'filled'
+                      : 'default'
+                  }
+                >
+                  <FormattedMessage id="navigation.more" />
+                </Button>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Item onClick={() => navigation.changeTab('manual')}>
+                  <FormattedMessage id="navigation.addLink" />
+                </Menu.Item>
+                <Menu.Item onClick={() => navigation.changeTab('settings')}>
+                  <FormattedMessage id="navigation.settings" />
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          </Group>
+          {listingId && !selected && (
+            <Group role="status">
+              <Text>
+                <FormattedMessage id="navigation.thisHomeIsUnavailableInThisHousehold" />
+              </Text>
+              <Button variant="default" onClick={navigation.closeListing}>
+                <FormattedMessage
+                  id="navigation.backTo"
+                  values={{
+                    value0: messageValue(
+                      tab === 'favorites'
+                        ? intl.formatMessage({ id: 'navigation.favorites' })
+                        : intl.formatMessage({
+                            id:
+                              tab === 'viewings'
+                                ? 'navigation.viewings'
+                                : 'navigation.listings',
+                          }),
+                    ),
+                  }}
+                />
               </Button>
             </Group>
           )}
-        <Group
-          component="nav"
-          aria-label={intl.formatMessage({
-            id: 'navigation.shortlistSections',
-          })}
-          gap="xs"
-          wrap="wrap"
-          p={4}
-          className={classes.tabBar}
-          onClickCapture={() => {
-            if (window.matchMedia('(max-width: 35.99375em)').matches) {
-              window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-            }
-          }}
-        >
-          {(['suggestions', 'favorites'] as const).map((value) => (
-            <Button
-              key={value}
-              className={classes.navTab}
-              variant={tab === value ? 'filled' : 'default'}
-              aria-pressed={tab === value}
-              leftSection={
-                value === 'suggestions' ? (
-                  <House size={20} aria-hidden />
-                ) : (
-                  <Star
-                    size={20}
-                    fill={tab === value ? 'currentColor' : 'none'}
-                    aria-hidden
-                  />
-                )
-              }
-              onClick={() => navigation.changeTab(value)}
-            >
-              {value === 'suggestions'
-                ? intl.formatMessage({ id: 'navigation.listings' })
-                : intl.formatMessage({ id: 'navigation.favorites' })}
-            </Button>
-          ))}
-          <Button
-            className={classes.navTab}
-            variant={tab === 'viewings' ? 'filled' : 'default'}
-            aria-pressed={tab === 'viewings'}
-            leftSection={
-              <span className={classes.navIcon}>
-                <CalendarDays size={20} aria-hidden />
-              </span>
-            }
-            onClick={() => navigation.changeTab('viewings')}
-          >
-            <FormattedMessage id="navigation.viewings" />
-          </Button>
-          <Menu position="bottom-end">
-            <Menu.Target>
-              <Button
-                className={classes.navTab}
-                leftSection={
-                  <Ellipsis
-                    size={20}
-                    fill={
-                      tab !== 'suggestions' &&
-                      tab !== 'favorites' &&
-                      tab !== 'viewings'
-                        ? 'currentColor'
-                        : 'none'
-                    }
-                    aria-hidden
-                  />
-                }
-                variant={
-                  tab !== 'suggestions' &&
-                  tab !== 'favorites' &&
-                  tab !== 'viewings'
-                    ? 'filled'
-                    : 'default'
-                }
-              >
-                <FormattedMessage id="navigation.more" />
-              </Button>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Item onClick={() => navigation.changeTab('manual')}>
-                <FormattedMessage id="navigation.addLink" />
-              </Menu.Item>
-              <Menu.Item onClick={() => navigation.changeTab('settings')}>
-                <FormattedMessage id="navigation.settings" />
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
-        </Group>
-        {listingId && !selected && (
-          <Group role="status">
-            <Text>
-              <FormattedMessage id="navigation.thisHomeIsUnavailableInThisHousehold" />
+          {message && (
+            <Text role="status" aria-live="polite">
+              {formatFeedback(intl, message)}
             </Text>
-            <Button variant="default" onClick={navigation.closeListing}>
-              <FormattedMessage
-                id="navigation.backTo"
-                values={{
-                  value0: messageValue(
-                    tab === 'favorites'
-                      ? intl.formatMessage({ id: 'navigation.favorites' })
-                      : intl.formatMessage({
-                          id:
-                            tab === 'viewings'
-                              ? 'navigation.viewings'
-                              : 'navigation.listings',
-                        }),
-                  ),
-                }}
-              />
-            </Button>
-          </Group>
-        )}
-        {message && (
-          <Text role="status" aria-live="polite">
-            {formatFeedback(intl, message)}
-          </Text>
-        )}
-        {tab === 'manual' ? (
-          <AddLinkPanel
-            snapshot={snapshot}
-            userId={userId}
-            duplicate={duplicate}
-            pending={pending}
-            canSave={canSave}
-            notes={notes}
-            onAddManual={onAddManual}
-            onExisting={setDuplicateId}
-            onCloseDuplicate={() => setDuplicateId(null)}
-            onFavorite={favorite}
-          />
-        ) : tab === 'viewings' ? (
-          <>
-            {!detailsOpen && hiddenActions.error && (
-              <Text role="alert">
-                {formatFeedback(intl, hiddenActions.error)}
-              </Text>
-            )}
-            <ViewingsPanel
+          )}
+          {tab === 'manual' ? (
+            <AddLinkPanel
               snapshot={snapshot}
               userId={userId}
-              person={person}
-              onPersonChange={(value) =>
-                navigation.updateSearch({ person: value })
-              }
-              onOpenListing={navigation.openListing}
-              onSeeOnMap={(id) => {
-                setSelectedId(id);
-                navigation.seeSelectedOnMap();
-              }}
+              duplicate={duplicate}
+              pending={pending}
+              canSave={canSave}
+              notes={notes}
+              onAddManual={onAddManual}
+              onExisting={setDuplicateId}
+              onCloseDuplicate={() => setDuplicateId(null)}
+              onFavorite={favorite}
             />
-            <PriceEstimateProvider listings={snapshot.listings}>
-              <ListingDrawer
-                mapStyleUrl={mapStyleUrl}
-                listing={selected}
+          ) : tab === 'viewings' ? (
+            <>
+              {!detailsOpen && hiddenActions.error && (
+                <Text role="alert">
+                  {formatFeedback(intl, hiddenActions.error)}
+                </Text>
+              )}
+              <ViewingsPanel
                 snapshot={snapshot}
                 userId={userId}
-                alsoOn={selected ? alsoOn.get(selected.id) : undefined}
-                opened={detailsOpen && selected !== null}
-                hidden={selected ? hidden.has(selected.id) : false}
-                favorite={{
-                  mine: snapshot.favorites.some(
-                    (entry) =>
-                      entry.listingId === selected?.id &&
-                      entry.userId === userId,
-                  ),
-                  others: snapshot.favorites.some(
-                    (entry) =>
-                      entry.listingId === selected?.id &&
-                      entry.userId !== userId,
-                  ),
-                  canSave: selected ? canSave(selected.id) : false,
-                  busy: selected ? pending.includes(selected.id) : false,
-                }}
-                notes={notes}
-                hideError={formatFeedback(intl, hiddenActions.error)}
-                onToggleHidden={(id) => {
-                  if (hidden.has(id)) unhide(id);
-                  else hide(id);
-                }}
-                onFavorite={favorite}
-                onClose={navigation.closeListing}
-                onSeeOnMap={() => {
-                  setSelectedId(listingId);
+                person={person}
+                onPersonChange={(value) =>
+                  navigation.updateSearch({ person: value })
+                }
+                onOpenListing={navigation.openListing}
+                onSeeOnMap={(id) => {
+                  setSelectedId(id);
                   navigation.seeSelectedOnMap();
                 }}
               />
-            </PriceEstimateProvider>
-          </>
-        ) : tab === 'settings' ? (
-          <SettingsPanel
-            snapshot={snapshot}
-            userId={userId}
-            synthetic={synthetic}
-            onSignOut={onSignOut}
-            onSaveProfile={onSaveProfile}
-            access={access}
-          />
-        ) : (
-          <PriceEstimateProvider listings={snapshot.listings}>
-            <ListingsPanel
-              tab={tab}
+              <PriceEstimateProvider listings={snapshot.listings}>
+                <ListingDrawer
+                  mapStyleUrl={mapStyleUrl}
+                  listing={selected}
+                  snapshot={snapshot}
+                  userId={userId}
+                  alsoOn={selected ? alsoOn.get(selected.id) : undefined}
+                  opened={detailsOpen && selected !== null}
+                  hidden={selected ? hidden.has(selected.id) : false}
+                  favorite={{
+                    mine: snapshot.favorites.some(
+                      (entry) =>
+                        entry.listingId === selected?.id &&
+                        entry.userId === userId,
+                    ),
+                    others: snapshot.favorites.some(
+                      (entry) =>
+                        entry.listingId === selected?.id &&
+                        entry.userId !== userId,
+                    ),
+                    canSave: selected ? canSave(selected.id) : false,
+                    busy: selected ? pending.includes(selected.id) : false,
+                  }}
+                  notes={notes}
+                  hideError={formatFeedback(intl, hiddenActions.error)}
+                  onToggleHidden={(id) => {
+                    if (hidden.has(id)) unhide(id);
+                    else hide(id);
+                  }}
+                  onFavorite={favorite}
+                  onClose={navigation.closeListing}
+                  onSeeOnMap={() => {
+                    setSelectedId(listingId);
+                    navigation.seeSelectedOnMap();
+                  }}
+                />
+              </PriceEstimateProvider>
+            </>
+          ) : tab === 'settings' ? (
+            <SettingsPanel
               snapshot={snapshot}
               userId={userId}
-              mapStyleUrl={mapStyleUrl}
-              person={person}
-              onPersonChange={(value) =>
-                navigation.updateSearch({ person: value })
-              }
-              section={section}
-              onSectionChange={(value) =>
-                navigation.updateSearch({
-                  section: validateBrowseSearch({ section: value }).section,
-                })
-              }
-              filters={filters}
-              hiddenIds={hidden}
-              hiddenCount={hiddenCount}
-              duplicateCount={duplicateCount}
-              alsoOn={alsoOn}
-              onHide={hide}
-              onHideMany={hiddenActions.hideMany}
-              onUndoHide={hiddenActions.undo}
-              hideBusy={hiddenActions.busy}
-              hideError={formatFeedback(intl, hiddenActions.error)}
-              undoHideCount={hiddenActions.undoCount}
-              canHide={hiddenActions.canHide}
-              selecting={search.select}
-              onSelectingChange={(value) =>
-                navigation.setLayer('select', value)
-              }
-              filtersOpen={search.filterOpen}
-              onFiltersOpenChange={(value) =>
-                navigation.setLayer('filterOpen', value)
-              }
-              onUnhide={unhide}
-              onFiltersChange={(value) =>
-                navigation.updateSearch({ filters: value })
-              }
-              filterHosts={filterHosts}
-              total={scoped.length}
-              scoped={scoped}
-              duplicateIds={duplicateIds}
-              visible={visible}
-              selected={selected}
-              selectedId={listingId ?? selectedId}
-              onSelectedIdChange={setSelectedId}
-              detailsOpen={detailsOpen}
-              onOpenListing={(id) => {
-                setSelectedId(id);
-                navigation.openListing(id);
-              }}
-              onCloseListing={navigation.closeListing}
-              onSeeSelectedOnMap={() => {
-                setSelectedId(listingId);
-                navigation.seeSelectedOnMap();
-              }}
-              sort={search.sort}
-              onSortChange={(value) => navigation.updateSearch({ sort: value })}
-              view={view}
-              onViewChange={(value) => navigation.updateSearch({ view: value })}
-              satellite={satellite}
-              onSatelliteChange={setSatellite}
-              pending={pending}
-              mapWarning={
-                stale && !synthetic
-                  ? intl.formatMessage({
-                      id: 'navigation.over36HoursOldSoFactsMayBeStale',
-                    })
-                  : undefined
-              }
-              canSave={canSave}
-              notes={notes}
-              onFavorite={favorite}
-              onSaveMany={onSaveFavorites ? saveMany : undefined}
-              saveBusy={batchBusy}
+              synthetic={synthetic}
+              onSignOut={onSignOut}
+              onSaveProfile={onSaveProfile}
+              access={access}
             />
-          </PriceEstimateProvider>
-        )}
-        {!synthetic && (
-          <FeedbackWidget key={userId} visible={tab === 'settings'} />
-        )}
-        {/* The demo's fixed edition date is always old, so only real editions warn. */}
-        <Text
-          size="sm"
-          mt="md"
-          c={stale && !synthetic ? 'red.8' : 'dimmed'}
-          role="status"
-        >
-          {synthetic
-            ? intl.formatMessage({
-                id: 'navigation.fictionalDemoChangesStayInMemory',
-              })
-            : snapshot.edition
-              ? intl.formatMessage(
-                  { id: 'navigation.updated' },
-                  {
-                    value0: messageValue(
-                      formatDate(snapshot.edition.publishedAt, intl),
-                    ),
-                    value1: messageValue(
-                      stale
-                        ? intl.formatMessage({ id: 'navigation.staleSuffix' })
-                        : '',
-                    ),
-                  },
-                )
-              : intl.formatMessage({
-                  id: 'navigation.noDataHasBeenPublishedYet',
-                })}
-        </Text>
-      </section>
+          ) : (
+            <PriceEstimateProvider listings={snapshot.listings}>
+              <ListingsPanel
+                tab={tab}
+                snapshot={snapshot}
+                userId={userId}
+                mapStyleUrl={mapStyleUrl}
+                person={person}
+                onPersonChange={(value) =>
+                  navigation.updateSearch({ person: value })
+                }
+                section={section}
+                onSectionChange={(value) =>
+                  navigation.updateSearch({
+                    section: validateBrowseSearch({ section: value }).section,
+                  })
+                }
+                filters={filters}
+                hiddenIds={hidden}
+                hiddenCount={hiddenCount}
+                duplicateCount={duplicateCount}
+                alsoOn={alsoOn}
+                onHide={hide}
+                onHideMany={hiddenActions.hideMany}
+                onUndoHide={hiddenActions.undo}
+                hideBusy={hiddenActions.busy}
+                hideError={formatFeedback(intl, hiddenActions.error)}
+                undoHideCount={hiddenActions.undoCount}
+                canHide={hiddenActions.canHide}
+                selecting={search.select}
+                onSelectingChange={(value) =>
+                  navigation.setLayer('select', value)
+                }
+                filtersOpen={search.filterOpen}
+                onFiltersOpenChange={(value) =>
+                  navigation.setLayer('filterOpen', value)
+                }
+                onUnhide={unhide}
+                onFiltersChange={(value) =>
+                  navigation.updateSearch({ filters: value })
+                }
+                filterHosts={filterHosts}
+                total={scoped.length}
+                scoped={scoped}
+                duplicateIds={duplicateIds}
+                visible={visible}
+                selected={selected}
+                selectedId={listingId ?? selectedId}
+                onSelectedIdChange={setSelectedId}
+                detailsOpen={detailsOpen}
+                onOpenListing={(id) => {
+                  setSelectedId(id);
+                  navigation.openListing(id);
+                }}
+                onCloseListing={navigation.closeListing}
+                onSeeSelectedOnMap={() => {
+                  setSelectedId(listingId);
+                  navigation.seeSelectedOnMap();
+                }}
+                sort={search.sort}
+                onSortChange={(value) =>
+                  navigation.updateSearch({ sort: value })
+                }
+                view={view}
+                onViewChange={(value) =>
+                  navigation.updateSearch({ view: value })
+                }
+                satellite={satellite}
+                onSatelliteChange={setSatellite}
+                pending={pending}
+                mapWarning={
+                  stale && !synthetic
+                    ? intl.formatMessage({
+                        id: 'navigation.over36HoursOldSoFactsMayBeStale',
+                      })
+                    : undefined
+                }
+                canSave={canSave}
+                notes={notes}
+                onFavorite={favorite}
+                onSaveMany={onSaveFavorites ? saveMany : undefined}
+                saveBusy={batchBusy}
+              />
+            </PriceEstimateProvider>
+          )}
+          {!synthetic && (
+            <FeedbackWidget key={userId} visible={tab === 'settings'} />
+          )}
+          {/* The demo's fixed edition date is always old, so only real editions warn. */}
+          <Text
+            size="sm"
+            mt="md"
+            c={stale && !synthetic ? 'red.8' : 'dimmed'}
+            role="status"
+          >
+            {synthetic
+              ? intl.formatMessage({
+                  id: 'navigation.fictionalDemoChangesStayInMemory',
+                })
+              : snapshot.edition
+                ? intl.formatMessage(
+                    { id: 'navigation.updated' },
+                    {
+                      value0: messageValue(
+                        formatDate(snapshot.edition.publishedAt, intl),
+                      ),
+                      value1: messageValue(
+                        stale
+                          ? intl.formatMessage({ id: 'navigation.staleSuffix' })
+                          : '',
+                      ),
+                    },
+                  )
+                : intl.formatMessage({
+                    id: 'navigation.noDataHasBeenPublishedYet',
+                  })}
+          </Text>
+        </section>
+      </RateScenarioProvider>
     </ManualActionsProvider>
   );
 }
