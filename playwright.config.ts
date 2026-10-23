@@ -9,6 +9,17 @@ export default defineConfig({
   use: {
     baseURL: process.env.HOUSE_SCANNER_BROWSER_URL ?? 'http://localhost:5183',
     channel: 'msedge',
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: new URL(
+            process.env.HOUSE_SCANNER_BROWSER_URL ?? 'http://localhost:5183',
+          ).origin,
+          localStorage: [{ name: 'shellter.language', value: 'en' }],
+        },
+      ],
+    },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },

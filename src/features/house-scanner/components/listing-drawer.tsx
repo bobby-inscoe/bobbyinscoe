@@ -1,14 +1,6 @@
-import {
-  ActionIcon,
-  Button,
-  Drawer,
-  Group,
-  Modal,
-  Stack,
-  Text,
-} from '@mantine/core';
+import { Button, Drawer, Group, Modal, Stack, Text } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { ChevronLeft, ChevronRight, LayoutTemplate } from 'lucide-react';
+import { LayoutTemplate } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { FavoriteStar } from '@/features/house-scanner/components/favorite-star';
@@ -21,6 +13,7 @@ import {
   PriceLine,
   ReasonChips,
 } from '@/features/house-scanner/components/listing-summary';
+import { LocationPreview } from '@/features/house-scanner/components/location-preview';
 import { EstimateLine } from '@/features/house-scanner/components/price-estimate';
 import type { ListingNotesController } from '@/features/house-scanner/hooks/use-listing-notes';
 import { displayLabel } from '@/features/house-scanner/i18n/display-labels';
@@ -29,7 +22,10 @@ import type {
   Listing,
   Snapshot,
 } from '@/features/house-scanner/types/contracts';
-import { hasPin } from '@/features/house-scanner/utils/listing-position';
+import {
+  estimatedPositionLabel,
+  hasPin,
+} from '@/features/house-scanner/utils/listing-position';
 
 interface ListingDrawerProps {
   // Null while no home is selected; the drawer stays mounted so Mantine can return focus on close.
@@ -49,7 +45,7 @@ interface ListingDrawerProps {
   onToggleHidden: (listingId: string) => void;
   onFavorite: (listingId: string) => void;
   onClose: () => void;
-  // Absent when the map is already showing.
+  mapStyleUrl?: string;
   onSeeOnMap?: () => void;
   alsoOn?: string[];
   hideError?: string;
@@ -68,10 +64,17 @@ export function ListingDrawer({
   onFavorite,
   onClose,
   onSeeOnMap,
+  mapStyleUrl,
   alsoOn,
   hideError,
 }: ListingDrawerProps) {
   const intl = useIntl();
+  const viewport = useRef<HTMLDivElement>(null);
+  const [entered, setEntered] = useState(false);
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  useEffect(() => {
+    if (!opened) setEntered(false);
+  }, [opened]);
   const [fullScreen, setFullScreen] = useState(false);
   useEffect(() => {
     if (!opened || !listing) setFullScreen(false);
@@ -102,6 +105,8 @@ export function ListingDrawer({
     <>
       <Drawer.Root
         opened={opened}
+        onEnterTransitionEnd={() => setEntered(true)}
+        transitionProps={{ duration: reducedMotion ? 0 : 200 }}
         onClose={() => {
           setFullScreen(false);
           onClose();
@@ -112,7 +117,7 @@ export function ListingDrawer({
         size={wide ? 'lg' : '100%'}
       >
         <Drawer.Overlay />
-        <Drawer.Content p={0}>
+        <Drawer.Content p={0} ref={viewport}>
           <Drawer.Header className={classes.drawerHeader}>
             <Drawer.Title className={classes.drawerTitle}>
               {listing?.title}
@@ -145,40 +150,6 @@ export function ListingDrawer({
                     contain={showingFloorPlan}
                     onOpen={() => setFullScreen(true)}
                   >
-                    {photos.length > 1 && !showingFloorPlan && (
-                      <>
-                        <ActionIcon
-                          variant="default"
-                          size="lg"
-                          radius="xl"
-                          className={classes.photoPrevious}
-                          aria-label={intl.formatMessage({
-                            id: 'listings.details.previousPhoto',
-                          })}
-                          onClick={() =>
-                            selectPhoto(
-                              (index - 1 + photos.length) % photos.length,
-                            )
-                          }
-                        >
-                          <ChevronLeft size={22} aria-hidden />
-                        </ActionIcon>
-                        <ActionIcon
-                          variant="default"
-                          size="lg"
-                          radius="xl"
-                          className={classes.photoNext}
-                          aria-label={intl.formatMessage({
-                            id: 'listings.details.nextPhoto',
-                          })}
-                          onClick={() =>
-                            selectPhoto((index + 1) % photos.length)
-                          }
-                        >
-                          <ChevronRight size={22} aria-hidden />
-                        </ActionIcon>
-                      </>
-                    )}
                     {floorPlan && (
                       <Button
                         size="xs"
@@ -255,6 +226,24 @@ export function ListingDrawer({
                   userId={userId}
                   notes={notes}
                   headingOrder={3}
+                  locationPreview={
+                    <>
+                      {opened && hasPin(listing.coordinates) && (
+                        <LocationPreview
+                          coordinates={listing.coordinates}
+                          styleUrl={mapStyleUrl}
+                          ready={entered || !!reducedMotion}
+                          viewport={viewport}
+                          onActivate={onSeeOnMap}
+                        />
+                      )}
+                      {estimatedPositionLabel(listing.coordinates, intl) && (
+                        <Text size="sm">
+                          {estimatedPositionLabel(listing.coordinates, intl)}
+                        </Text>
+                      )}
+                    </>
+                  }
                   onSelectPhoto={showPhoto}
                 />
               </Stack>

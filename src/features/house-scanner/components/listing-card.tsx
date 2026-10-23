@@ -8,12 +8,13 @@ import {
   Title,
   UnstyledButton,
 } from '@mantine/core';
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { FavoriteStar } from '@/features/house-scanner/components/favorite-star';
 import { HideButton } from '@/features/house-scanner/components/hide-button';
 import { ListingCardMenu } from '@/features/house-scanner/components/listing-card-menu';
 import { ListingDetails } from '@/features/house-scanner/components/listing-details';
+import { ListingGallery } from '@/features/house-scanner/components/listing-gallery';
 import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
 import {
   AlsoOn,
@@ -91,6 +92,12 @@ export const ListingCard = memo(function ListingCard({
   onSeeOnMap,
 }: ListingCardProps) {
   const intl = useIntl();
+  const [photoIndex, setPhotoIndex] = useState(0);
+  const photos = listing.photos?.length
+    ? listing.photos
+    : listing.photo
+      ? [listing.photo]
+      : [];
 
   const { saved, mine, summary } = useMemo(() => {
     const saved = snapshot.favorites.filter(
@@ -229,6 +236,24 @@ export const ListingCard = memo(function ListingCard({
       if (!selectionDisabled) onToggleSelection?.(listing.id);
     } else onSelect(listing.id);
   };
+  const photoActions = (
+    <>
+      {onToggleHidden && (
+        <HideButton
+          listingId={listing.id}
+          hidden={hidden === true}
+          onToggle={onToggleHidden}
+        />
+      )}
+      <FavoriteStar
+        mine={mine}
+        others={saved.length > 0}
+        canSave={canSave}
+        busy={busy}
+        onToggle={() => onFavorite(listing.id)}
+      />
+    </>
+  );
   return (
     <article
       className={`${classes.card} ${!details ? classes.compactCard : ''} ${selected || checked ? classes.selected : ''}`}
@@ -247,47 +272,52 @@ export const ListingCard = memo(function ListingCard({
             }
           : undefined
       }
-      onClick={
-        selectionMode
-          ? (event) => {
-              if (
-                !selectionDisabled &&
-                event.target instanceof HTMLElement &&
-                !event.target.closest(
-                  'button, a, input, label, [role="menuitem"]',
-                )
-              )
-                onToggleSelection?.(listing.id);
-            }
-          : undefined
-      }
+      onClick={(event) => {
+        if (details) return;
+        if (
+          event.target instanceof Element &&
+          !event.target.closest('button, a, input, label, [role="menuitem"]')
+        )
+          openPrimary();
+      }}
     >
       <div className={classes.selectionRow} hidden={!selectionMode}>
         {selectionControl}
       </div>
       <div className={`${classes.photoWrap} ${classes.cardPhoto}`}>
-        <ListingPhoto
-          listing={listing}
-          isNew={listing.isNew}
-          onOpen={openPrimary}
-          actionLabel={selectionMode ? selectionLabel : undefined}
-          pressed={selectionMode ? checked === true : undefined}
-          disabled={selectionMode && selectionDisabled}
-        />
-        {onToggleHidden && (
-          <HideButton
-            listingId={listing.id}
-            hidden={hidden === true}
-            onToggle={onToggleHidden}
-          />
+        {!details && !selectionMode && photos.length > 1 ? (
+          <ListingGallery
+            listing={listing}
+            photos={photos}
+            index={Math.min(photoIndex, photos.length - 1)}
+            onSelect={setPhotoIndex}
+            onOpen={openPrimary}
+            actionLabel={intl.formatMessage(
+              { id: 'listings.details.view' },
+              { value0: messageValue(listing.title) },
+            )}
+            showAttribution
+          >
+            {listing.isNew && (
+              <Badge variant="new" className={classes.newFlag}>
+                <FormattedMessage id="listings.details.new" />
+              </Badge>
+            )}
+            {photoActions}
+          </ListingGallery>
+        ) : (
+          <>
+            <ListingPhoto
+              listing={listing}
+              isNew={listing.isNew}
+              onOpen={openPrimary}
+              actionLabel={selectionMode ? selectionLabel : undefined}
+              pressed={selectionMode ? checked === true : undefined}
+              disabled={selectionMode && selectionDisabled}
+            />
+            {photoActions}
+          </>
         )}
-        <FavoriteStar
-          mine={mine}
-          others={saved.length > 0}
-          canSave={canSave}
-          busy={busy}
-          onToggle={() => onFavorite(listing.id)}
-        />
       </div>
       <div className={classes.cardPrice}>
         {estimated && !details ? (

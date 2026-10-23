@@ -326,7 +326,7 @@ test('criteria revisions re-evaluate suggestions and keep favorites', async ({
   ).toBeVisible();
 });
 
-test('map is opt-in and a failed tile request leaves details and list controls usable', async ({
+test('map geography is demand-driven and a failed tile request leaves details and list controls usable', async ({
   page,
 }) => {
   await openDemo(page);
@@ -335,6 +335,7 @@ test('map is opt-in and a failed tile request leaves details and list controls u
     if (new URL(request.url()).hostname !== 'localhost')
       external.push(request.url());
   });
+  await expect.poll(() => page.workers().length).toBeGreaterThan(0);
   expect(external).toEqual([]);
   await page.getByRole('button', { name: 'Map', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText(/map|Map/);
@@ -1876,4 +1877,438 @@ test('the scrolled drawer header meets the top edge and photos open full screen'
   await viewer.getByRole('button', { name: 'Exit full screen' }).click();
   await expect(viewer).toBeHidden();
   await expect(drawer).toBeVisible();
+});
+
+test('listing and favorite cards share swipe galleries and whole-card details', async ({
+  page,
+}) => {
+  await openDemo(page);
+  for (const tab of ['Listings', 'Favorites']) {
+    if (tab === 'Favorites')
+      await page.getByRole('button', { name: tab, exact: true }).click();
+    const card = page.getByRole('article', {
+      name: 'Example balcony home',
+      exact: true,
+    });
+    const photo = card.locator('img:not([inert] img)').first();
+    const next = card.getByRole('button', { name: 'Next photo', exact: true });
+    await expect(
+      card.getByRole('img', { name: 'Photo 1 of 3', exact: true }),
+    ).toBeVisible();
+    await next.click();
+    await expect(
+      card.getByRole('img', { name: 'Photo 2 of 3', exact: true }),
+    ).toBeVisible();
+    await expect(photo).toHaveAttribute('src', /kitchen\.svg(?:\?.*)?$/);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await card
+      .getByRole('button', { name: 'Previous photo', exact: true })
+      .click();
+    await expect(photo).toHaveAttribute('src', /living-room\.svg(?:\?.*)?$/);
+    if (test.info().project.name === 'narrow') {
+      await photo.scrollIntoViewIfNeeded();
+      await swipePhoto(page, photo, -240);
+      await expect(photo).toHaveAttribute('src', /kitchen\.svg(?:\?.*)?$/);
+      await expect(
+        card.getByRole('img', { name: 'Photo 2 of 3', exact: true }),
+      ).toBeVisible();
+      await expect(next).toBeHidden();
+      await expect(
+        card.getByRole('button', { name: 'Save favorite', exact: true }),
+      ).toBeHidden();
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await expect(next).toBeVisible({ timeout: 5000 });
+      await next.click();
+      await expect(photo).toHaveAttribute('src', /balcony\.svg(?:\?.*)?$/);
+      await next.click();
+      await expect(photo).toHaveAttribute('src', /living-room\.svg(?:\?.*)?$/);
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+    }
+    await expect(photo).toBeInViewport({ ratio: 1 });
+    // Tap the summary rather than a link or button.
+    await card.locator('[class*="cardPrice"]').click();
+    const drawer = page.getByRole('dialog', {
+      name: 'Example balcony home',
+      exact: true,
+    });
+    await expect(drawer).toBeVisible();
+    const indicator = drawer.getByRole('img', { name: /^Photo [1-3] of 3$/ });
+    await expect(indicator).toBeVisible();
+    const currentPhoto = Number(
+      (await indicator.getAttribute('aria-label'))?.match(/\d+/)?.[0],
+    );
+    await expect(drawer.locator('img:not([inert] img)').first()).toBeInViewport(
+      { ratio: 1 },
+    );
+    await drawer
+      .getByRole('button', { name: 'Next photo', exact: true })
+      .click();
+    await expect(
+      drawer.getByRole('img', {
+        name: `Photo ${(currentPhoto % 3) + 1} of 3`,
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(drawer.locator('img:not([inert] img)').first()).toBeInViewport(
+      { ratio: 1 },
+    );
+    if (tab === 'Favorites')
+      await drawer.screenshot({
+        path: `.browser-test-results/drawer-gallery-${test.info().project.name}.png`,
+      });
+    await drawer.getByRole('button', { name: 'Close listing details' }).click();
+    await expect(drawer).toBeHidden();
+  }
+  const card = page.getByRole('article', {
+    name: 'Example balcony home',
+    exact: true,
+  });
+  await card.scrollIntoViewIfNeeded();
+  await card.screenshot({
+    path: `.browser-test-results/card-gallery-${test.info().project.name}.png`,
+  });
+});
+
+for (const origin of ['Listings', 'Favorites', 'Viewings'] as const) {
+  test(`${origin} location preview opens the selected home on the map`, async ({
+    page,
+  }) => {
+    await page.route('https://tiles.openfreemap.org/styles/liberty', (route) =>
+      route.fulfill({ json: LOCAL_STREET_STYLE }),
+    );
+    await openDemo(page);
+    if (origin === 'Viewings')
+      await page.getByRole('button', { name: 'Viewings', exact: true }).click();
+    else if (origin === 'Favorites')
+      await page
+        .getByRole('button', { name: 'Favorites', exact: true })
+        .click();
+    const home = page
+      .getByRole('article', {
+        name:
+          origin === 'Viewings'
+            ? /^Example balcony home,/
+            : 'Example balcony home',
+        exact: origin !== 'Viewings',
+      })
+      .first();
+    await home.getByRole('button', { name: 'Details', exact: true }).click();
+    const dialog = page.getByRole('dialog', {
+      name: 'Example balcony home',
+      exact: true,
+    });
+    const preview = dialog.getByRole('button', {
+      name: 'Open location on map',
+    });
+    await preview.scrollIntoViewIfNeeded();
+    await expect(dialog.locator('[data-preview-state]')).toHaveAttribute(
+      'data-preview-state',
+      'ready',
+    );
+    await expect(dialog.locator('.maplibregl-marker')).toBeVisible();
+    const canvas = await dialog.locator('canvas').boundingBox();
+    expect(canvas?.height).toBeGreaterThan(100);
+    if (origin === 'Favorites') {
+      await preview.focus();
+      await page.keyboard.press('Space');
+    } else if (origin === 'Viewings') {
+      await preview.focus();
+      await page.keyboard.press('Enter');
+    } else await preview.click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByLabel('Listing map')).toBeVisible();
+    await expect(
+      page.getByRole('article', {
+        name: 'Selected home: Example balcony home',
+        exact: true,
+      }),
+    ).toBeVisible();
+  });
+}
+
+test('location preview returns to the existing full map and releases preview resources across ten cycles', async ({
+  page,
+}) => {
+  test.setTimeout(60000);
+  await page.addInitScript(() => {
+    let active = 0;
+    const Native = window.IntersectionObserver;
+    window.IntersectionObserver = class extends Native {
+      connected = true;
+      constructor(...args: ConstructorParameters<typeof IntersectionObserver>) {
+        super(...args);
+        active++;
+      }
+      disconnect() {
+        if (this.connected) {
+          active--;
+          this.connected = false;
+        }
+        super.disconnect();
+      }
+    };
+    Object.defineProperty(window, 'previewObserverCount', {
+      get: () => active,
+    });
+  });
+  await page.reload();
+  const observers = () =>
+    page.evaluate(() => Reflect.get(window, 'previewObserverCount'));
+  await page.route('https://tiles.openfreemap.org/styles/liberty', (route) =>
+    route.fulfill({ json: LOCAL_STREET_STYLE }),
+  );
+  await seeDetachedHomeOnMap(page);
+  const fullCanvas = await page
+    .getByLabel('Listing map')
+    .locator('canvas')
+    .elementHandle();
+  const workers = page.workers();
+  const initialObservers = await observers();
+  for (let cycle = 0; cycle < 10; cycle++) {
+    await page
+      .getByRole('article', {
+        name: 'Selected home: Example detached home',
+        exact: true,
+      })
+      .getByRole('button', { name: 'Details', exact: true })
+      .click();
+    const dialog = page.getByRole('dialog', {
+      name: 'Example detached home',
+      exact: true,
+    });
+    const preview = dialog.getByRole('button', {
+      name: 'Open location on map',
+    });
+    await preview.scrollIntoViewIfNeeded();
+    await expect(dialog.locator('[data-preview-state]')).toHaveAttribute(
+      'data-preview-state',
+      'ready',
+    );
+    await expect(page.locator('canvas')).toHaveCount(2);
+    await preview.click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.locator('canvas')).toHaveCount(1);
+    expect(await fullCanvas?.evaluate((canvas) => canvas.isConnected)).toBe(
+      true,
+    );
+    expect(page.workers()).toEqual(workers);
+    expect(await observers()).toBe(initialObservers);
+  }
+  await page.getByRole('button', { name: 'List', exact: true }).click();
+  await page.getByRole('button', { name: 'Leave demo' }).click();
+  await expect(page.locator('canvas')).toHaveCount(0);
+  // Accepted MapLibre 6.14 limit: its global dispatcher retains the shared worker pool.
+  await expect.poll(() => page.workers().length).toBe(workers.length);
+});
+
+test('a late map runtime does not block notes or create a preview after closing', async ({
+  page,
+}) => {
+  let finish!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  await page.route('**/utils/map-runtime-module.ts*', async (route) => {
+    await pending;
+    await route.continue();
+  });
+  await openDemo(page);
+  await page
+    .getByRole('article', { name: 'Example detached home', exact: true })
+    .getByRole('button', { name: 'Details', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Example detached home',
+    exact: true,
+  });
+  await expect(
+    dialog.getByRole('heading', { name: 'Facts', exact: true }),
+  ).toBeVisible();
+  await dialog.getByRole('textbox').fill('Still usable while the map waits');
+  await expect(dialog.getByRole('textbox')).toHaveValue(
+    'Still usable while the map waits',
+  );
+  await dialog.getByRole('button', { name: 'Close listing details' }).click();
+  await expect(dialog).toHaveCount(0);
+  finish();
+  await expect.poll(() => page.workers().length).toBeGreaterThan(0);
+  await expect(page.locator('canvas')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Leave demo' }).click();
+  await expect.poll(() => page.workers().length).toBe(0);
+});
+
+test('failed location preview preserves its size, fallback action and area-only exclusions', async ({
+  page,
+}) => {
+  await openDemo(page);
+  const external: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().startsWith('https://tiles.'))
+      external.push(request.url());
+  });
+  for (const name of ['Example terrace home', 'Example home needing details']) {
+    await page
+      .getByRole('article', { name, exact: true })
+      .getByRole('button', { name: 'Details', exact: true })
+      .click();
+    const dialog = page.getByRole('dialog', { name, exact: true });
+    await expect(
+      dialog.getByRole('button', { name: 'Open location on map' }),
+    ).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Close listing details' }).click();
+    await expect(dialog).toHaveCount(0);
+  }
+  expect(external).toEqual([]);
+  await page
+    .getByRole('article', { name: 'Example detached home', exact: true })
+    .getByRole('button', { name: 'Details', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Example detached home',
+    exact: true,
+  });
+  const preview = dialog.locator('[data-preview-state]');
+  const initial = await preview.boundingBox();
+  await preview.scrollIntoViewIfNeeded();
+  await expect(preview).toHaveAttribute('data-preview-state', 'failed');
+  expect((await preview.boundingBox())?.height).toBe(initial?.height);
+  await expect(
+    dialog.getByRole('button', { name: 'See on map', exact: true }),
+  ).toBeEnabled();
+  await expect(dialog.getByRole('textbox')).toBeEnabled();
+});
+
+test('reduced-motion location preview keeps translated actions and attribution independently accessible', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.route('https://tiles.openfreemap.org/styles/liberty', (route) =>
+    route.fulfill({
+      json: {
+        ...LOCAL_STREET_STYLE,
+        sources: {
+          credit: {
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features: [] },
+            attribution:
+              '<a href="https://example.org/legal">Fixture map credit</a>',
+          },
+        },
+        layers: [
+          ...LOCAL_STREET_STYLE.layers,
+          { id: 'credit', type: 'circle', source: 'credit' },
+        ],
+      },
+    }),
+  );
+  await openDemo(page);
+  await page.getByRole('combobox', { name: 'Language', exact: true }).click();
+  await page.getByRole('option', { name: 'Svenska', exact: true }).click();
+  await page
+    .getByRole('article', { name: 'Example detached home', exact: true })
+    .getByRole('button', { name: 'Detaljer', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Example detached home',
+    exact: true,
+  });
+  const preview = dialog.getByRole('button', {
+    name: 'Öppna platsen på kartan',
+  });
+  await preview.scrollIntoViewIfNeeded();
+  await expect(dialog.locator('[data-preview-state]')).toHaveAttribute(
+    'data-preview-state',
+    'ready',
+  );
+  const credit = dialog.getByRole('link', { name: 'Fixture map credit' });
+  await expect(credit).toBeVisible();
+  await credit.focus();
+  await expect(credit).toBeFocused();
+  expect(
+    await credit.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return element.contains(
+        document.elementFromPoint(
+          rect.x + rect.width / 2,
+          rect.y + rect.height / 2,
+        ),
+      );
+    }),
+  ).toBe(true);
+  await page.keyboard.press('Tab');
+  await expect(preview).toBeFocused();
+  expect(
+    await preview.evaluate((element) => getComputedStyle(element).outlineStyle),
+  ).not.toBe('none');
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await dialog.screenshot({
+    path: `.browser-test-results/location-preview-sv-${test.info().project.name}.png`,
+  });
+});
+
+test('unavailable WebGL settles the location preview while notes and close remain usable', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const getContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (
+      this: HTMLCanvasElement,
+      ...args: Parameters<typeof getContext>
+    ) {
+      if (String(args[0]).startsWith('webgl')) return null;
+      return getContext.apply(this, args);
+    } as typeof getContext;
+  });
+  await page.reload();
+  await openDemo(page);
+  await page
+    .getByRole('article', { name: 'Example detached home', exact: true })
+    .getByRole('button', { name: 'Details', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Example detached home',
+    exact: true,
+  });
+  await dialog.locator('[data-preview-state]').scrollIntoViewIfNeeded();
+  await expect(dialog.locator('[data-preview-state]')).toHaveAttribute(
+    'data-preview-state',
+    'failed',
+  );
+  await dialog.getByRole('textbox').fill('Notes still work without WebGL');
+  await dialog.getByRole('button', { name: 'Close listing details' }).click();
+  await expect(dialog).toHaveCount(0);
+});
+
+test('shared map runtime failure leaves details usable and preserves the full-map error boundary', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.route('**/utils/map-runtime-module.ts*', (route) =>
+    route.abort('failed'),
+  );
+  await openDemo(page);
+  await page
+    .getByRole('article', { name: 'Example detached home', exact: true })
+    .getByRole('button', { name: 'Details', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Example detached home',
+    exact: true,
+  });
+  await dialog.locator('[data-preview-state]').scrollIntoViewIfNeeded();
+  await expect(dialog.locator('[data-preview-state]')).toHaveAttribute(
+    'data-preview-state',
+    'failed',
+  );
+  await dialog
+    .getByRole('textbox')
+    .fill('Runtime failure does not block notes');
+  await dialog.getByRole('button', { name: 'See on map', exact: true }).click();
+  await expect(page.getByRole('alert')).toBeVisible();
+  expect(errors).toEqual([]);
 });

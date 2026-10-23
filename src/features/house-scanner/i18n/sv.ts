@@ -29,6 +29,10 @@ export const sv = {
       'Ange rubrik och beskrivning och välj en tillåten bild på högst 5 MiB.',
   },
   settings: {
+    personal: {
+      heading: 'Personliga inställningar',
+      languageDescription: 'Språkvalet gäller bara dig i den här webbläsaren.',
+    },
     criteria: {
       preferredBudgetDescription:
         'Bostäder med ett pris upp till detta belopp visas under Inom budget.',
@@ -108,6 +112,7 @@ export const sv = {
       noSearchProfilesYet: 'Inga sökprofiler ännu.',
     },
     household: {
+      memberActions: 'Åtgärder för {name}',
       couldNotLoadTheHouseholdMembersReloadToTry:
         'Det gick inte att ladda hushållets medlemmar. Ladda om för att försöka igen.',
       loadingHousehold: 'Laddar hushållet…',
@@ -179,6 +184,10 @@ export const sv = {
       savedBy: 'Sparad av',
       select: 'Välj {value0}',
       details: 'Detaljer',
+      openLocationMap: 'Öppna platsen på kartan',
+      loadingLocationMap: 'Laddar platsens karta…',
+      locationMapUnavailable:
+        'Platsens karta är inte tillgänglig. Använd Visa på karta för att prova hela kartan.',
       seeOnMap: 'Visa på kartan',
       more: 'Mer',
       moreActionsFor: 'Fler åtgärder för {value0}',
@@ -218,6 +227,7 @@ export const sv = {
       fullScreenPhotos: 'Foton i helskärm',
       exitFullScreen: 'Avsluta helskärm',
       viewPhoto: 'Visa foto {value0}',
+      photoPosition: 'Bild {current} av {total}',
       previousPhoto: 'Föregående foto',
       nextPhoto: 'Nästa foto',
       floorPlan: 'Planritning',

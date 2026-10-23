@@ -12,7 +12,6 @@ import { ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { HouseholdWorkspace } from '@/features/house-scanner/components/household-workspace';
-import { LanguageSelect } from '@/features/house-scanner/components/language-select';
 import { SyntheticWorkspace } from '@/features/house-scanner/components/synthetic-workspace';
 import { HouseScannerAccess } from '@/features/house-scanner/features/access/components/house-scanner-access';
 import { ShellterLanguageProvider } from '@/features/house-scanner/i18n/language-provider';
@@ -57,7 +56,6 @@ function HouseScannerContent() {
               Shellter
             </Title>
             <Group gap="xs" wrap="wrap" maw="100%" miw={0}>
-              <LanguageSelect />
               {/* The demo is a local testing aid, so the deployed site never offers it. */}
               {import.meta.env.DEV && (
                 <Button

@@ -14,6 +14,7 @@ import { ViewingsPanel } from '@/features/house-scanner/features/viewings/compon
 import { useBrowseNavigation } from '@/features/house-scanner/hooks/use-browse-navigation';
 import { useHiddenListings } from '@/features/house-scanner/hooks/use-hidden-listings';
 import { useListingNotes } from '@/features/house-scanner/hooks/use-listing-notes';
+import { useMapPreload } from '@/features/house-scanner/hooks/use-map-preload';
 import {
   formatFeedback,
   messageValue,
@@ -60,6 +61,7 @@ export function HouseholdWorkspace({
   access,
 }: HouseholdWorkspaceProps) {
   const intl = useIntl();
+  useMapPreload();
 
   const navigation = useBrowseNavigation();
   const { tab, search, listingId } = navigation;
@@ -340,6 +342,7 @@ export function HouseholdWorkspace({
             />
             <PriceEstimateProvider listings={snapshot.listings}>
               <ListingDrawer
+                mapStyleUrl={mapStyleUrl}
                 listing={selected}
                 snapshot={snapshot}
                 userId={userId}
@@ -377,10 +380,10 @@ export function HouseholdWorkspace({
           </>
         ) : tab === 'settings' ? (
           <SettingsPanel
-            onSignOut={onSignOut}
             snapshot={snapshot}
             userId={userId}
             synthetic={synthetic}
+            onSignOut={onSignOut}
             onSaveProfile={onSaveProfile}
             access={access}
           />

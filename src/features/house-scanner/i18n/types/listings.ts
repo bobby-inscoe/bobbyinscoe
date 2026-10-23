@@ -16,6 +16,9 @@ export interface ListingsTranslations {
     select: string;
     details: string;
     seeOnMap: string;
+    openLocationMap: string;
+    loadingLocationMap: string;
+    locationMapUnavailable: string;
     more: string;
     moreActionsFor: string;
     linkCopied: string;
@@ -52,6 +55,7 @@ export interface ListingsTranslations {
     fullScreenPhotos: string;
     exitFullScreen: string;
     viewPhoto: string;
+    photoPosition: string;
     previousPhoto: string;
     nextPhoto: string;
     floorPlan: string;

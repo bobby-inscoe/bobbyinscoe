@@ -107,6 +107,7 @@ test('review can be cancelled and Back closes map selection without hiding', asy
   );
   await review.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(review).toHaveCount(0);
+  await openOptionsOnPhone(page);
   await capture.click();
   await expect(
     review.getByRole('checkbox', { name: 'Select Example balcony home' }),

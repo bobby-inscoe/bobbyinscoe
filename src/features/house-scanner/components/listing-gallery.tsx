@@ -1,4 +1,6 @@
+import { ActionIcon, Text } from '@mantine/core';
 import { useReducedMotion } from '@mantine/hooks';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   type ReactNode,
   useEffect,
@@ -8,6 +10,7 @@ import {
 } from 'react';
 import { useIntl } from 'react-intl';
 import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
+import { displayLabel } from '@/features/house-scanner/i18n/display-labels';
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type { Listing } from '@/features/house-scanner/types/contracts';
 
@@ -20,6 +23,8 @@ export function ListingGallery({
   children,
   onOpen,
   fullScreen,
+  actionLabel,
+  showAttribution,
 }: {
   listing: Listing;
   photos: NonNullable<Listing['photos']>;
@@ -29,6 +34,8 @@ export function ListingGallery({
   children: ReactNode;
   onOpen?: () => void;
   fullScreen?: boolean;
+  actionLabel?: string;
+  showAttribution?: boolean;
 }) {
   const intl = useIntl();
   const viewport = useRef<HTMLDivElement>(null);
@@ -42,6 +49,8 @@ export function ListingGallery({
   const [controlsHidden, setControlsHidden] = useState(false);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const swiping = useRef(false);
+  const suppressClick = useRef(false);
+  const dotStart = Math.max(0, Math.min(index - 3, photos.length - 7));
   const restoreTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const postponeControls = () => {
     if (restoreTimer.current) clearTimeout(restoreTimer.current);
@@ -94,11 +103,22 @@ export function ListingGallery({
   return (
     <div
       className={`${classes.photoGallery} ${fullScreen ? classes.fullScreenGallery : ''}`}
+      onPointerDownCapture={() => {
+        suppressClick.current = false;
+      }}
+      onClickCapture={(event) => {
+        if (suppressClick.current) {
+          event.preventDefault();
+          event.stopPropagation();
+          suppressClick.current = false;
+        }
+      }}
     >
       <div
         ref={viewport}
         className={classes.photoSlides}
         onTouchStart={(event) => {
+          suppressClick.current = false;
           if (!loop || event.touches.length !== 1) return;
           touchStart.current = {
             x: event.touches[0].clientX,
@@ -113,6 +133,7 @@ export function ListingGallery({
           const dy = Math.abs(event.touches[0].clientY - start.y);
           if (dx > 8 && dx > dy) {
             swiping.current = true;
+            suppressClick.current = true;
             setControlsHidden(true);
             if (restoreTimer.current) clearTimeout(restoreTimer.current);
           }
@@ -159,11 +180,12 @@ export function ListingGallery({
                 linkToListing={!fullScreen}
                 onOpen={onOpen}
                 actionLabel={
-                  onOpen
+                  actionLabel ??
+                  (onOpen
                     ? intl.formatMessage({
                         id: 'listings.details.viewFullScreen',
                       })
-                    : undefined
+                    : undefined)
                 }
               />
             </div>
@@ -178,8 +200,62 @@ export function ListingGallery({
         inert={controlsHidden}
         aria-hidden={controlsHidden || undefined}
       >
+        {loop && !fullScreen && (
+          <>
+            <ActionIcon
+              variant="default"
+              size="lg"
+              radius="xl"
+              className={classes.photoPrevious}
+              aria-label={intl.formatMessage({
+                id: 'listings.details.previousPhoto',
+              })}
+              onClick={() =>
+                onSelect((index - 1 + photos.length) % photos.length)
+              }
+            >
+              <ChevronLeft size={22} aria-hidden />
+            </ActionIcon>
+            <ActionIcon
+              variant="default"
+              size="lg"
+              radius="xl"
+              className={classes.photoNext}
+              aria-label={intl.formatMessage({
+                id: 'listings.details.nextPhoto',
+              })}
+              onClick={() => onSelect((index + 1) % photos.length)}
+            >
+              <ChevronRight size={22} aria-hidden />
+            </ActionIcon>
+          </>
+        )}
         {children}
       </div>
+      {loop && (
+        <div className={classes.photoIndicators}>
+          <div
+            className={classes.photoDots}
+            role="img"
+            aria-label={intl.formatMessage(
+              { id: 'listings.details.photoPosition' },
+              { current: index + 1, total: photos.length },
+            )}
+          >
+            {photos.slice(dotStart, dotStart + 7).map((photo, offset) => (
+              <span
+                key={photo.url}
+                data-active={dotStart + offset === index || undefined}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+      {showAttribution && photos[index] && (
+        <Text size="xs" c="dimmed" className={classes.photoAttribution}>
+          {displayLabel(intl, photos[index].attribution)}
+        </Text>
+      )}
     </div>
   );
 }

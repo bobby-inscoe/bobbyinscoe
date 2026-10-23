@@ -85,6 +85,8 @@ function panelProps(onHideMany: PanelProps['onHideMany']): PanelProps {
 }
 
 beforeEach(() => {
+  HTMLElement.prototype.scrollTo = vi.fn();
+  localStorage.setItem('shellter.language', 'en');
   vi.stubGlobal(
     'ResizeObserver',
     class {
