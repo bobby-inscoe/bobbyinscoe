@@ -1,7 +1,5 @@
-import { Flex, Paper, Stack, Text, Title } from '@mantine/core';
-import { FormattedMessage } from 'react-intl';
-import { CriteriaHelp } from '@/features/house-scanner/features/settings/features/criteria/components/criteria-help';
-import { ProfileEditor } from '@/features/house-scanner/features/settings/features/criteria/components/profile-editor';
+import { Stack } from '@mantine/core';
+import { CriteriaPanel } from '@/features/house-scanner/features/settings/features/criteria/components/criteria-panel';
 import { HouseholdAccessPanel } from '@/features/house-scanner/features/settings/features/household/components/household-access-panel';
 import type { Snapshot } from '@/features/house-scanner/types/contracts';
 import type {
@@ -26,43 +24,14 @@ export function SettingsPanel({
   access,
 }: SettingsPanelProps) {
   const member = snapshot.members.find((entry) => entry.userId === userId);
-  const header = (
-    <>
-      <Flex gap="sm" align="center" wrap="wrap">
-        <Title order={2}>
-          <FormattedMessage id="settings.criteria.defaultFilter" />
-        </Title>
-        <CriteriaHelp />
-      </Flex>
-      {synthetic && (
-        <Text size="sm" c="dimmed">
-          <FormattedMessage id="settings.criteria.theseCriteriaAreFictionalEditsAffectThisDemoOnly" />
-        </Text>
-      )}
-    </>
-  );
   return (
     <Stack w="100%" maw="48rem">
-      {snapshot.profiles.length ? (
-        snapshot.profiles.map((profile) => (
-          <ProfileEditor
-            key={profile.id}
-            header={header}
-            profile={profile}
-            canEdit={member?.role === 'owner'}
-            onSave={onSaveProfile}
-          />
-        ))
-      ) : (
-        <Paper>
-          <Stack>
-            {header}
-            <Text>
-              <FormattedMessage id="settings.criteria.noSearchProfilesYet" />
-            </Text>
-          </Stack>
-        </Paper>
-      )}
+      <CriteriaPanel
+        profiles={snapshot.profiles}
+        canEdit={member?.role === 'owner'}
+        synthetic={synthetic}
+        onSaveProfile={onSaveProfile}
+      />
       {access && <HouseholdAccessPanel access={access} userId={userId} />}
     </Stack>
   );
