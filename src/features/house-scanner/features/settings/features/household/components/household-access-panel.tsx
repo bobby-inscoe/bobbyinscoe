@@ -1,15 +1,18 @@
 import {
+  ActionIcon,
   Alert,
   Badge,
   Button,
   Divider,
   Group,
+  Menu,
   Paper,
   Stack,
   Text,
   TextInput,
   Title,
 } from '@mantine/core';
+import { Ellipsis, UserRoundMinus, UserRoundPlus } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import type { HouseholdAccess } from '@/features/house-scanner/api/household-client';
@@ -21,6 +24,7 @@ import {
   formatFeedback,
   messageValue,
 } from '@/features/house-scanner/i18n/catalogs';
+import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type { HouseholdAccessActions } from '@/features/house-scanner/types/household';
 
 export function HouseholdAccessPanel({
@@ -145,10 +149,10 @@ export function HouseholdAccessPanel({
                 key={member.userId}
                 gap="sm"
                 justify="space-between"
-                wrap="wrap"
+                wrap="nowrap"
                 py="xs"
               >
-                <Group gap="xs" style={{ flex: '1 1 12rem', minWidth: 0 }}>
+                <Group gap="xs" className={classes.memberIdentity}>
                   <Text style={{ overflowWrap: 'anywhere' }}>
                     {member.displayName}
                     {member.userId === userId
@@ -165,47 +169,67 @@ export function HouseholdAccessPanel({
                   )}
                 </Group>
                 {owner && member.userId !== userId && (
-                  <Group gap="xs" ml="auto">
-                    {member.role === 'member' && (
-                      <Button
-                        size="xs"
-                        variant="default"
-                        loading={pending === `owner:${member.userId}`}
-                        onClick={() =>
-                          void perform(`owner:${member.userId}`, async () => {
-                            await actions.current.makeOwner(member.userId);
-                            await load();
-                          })
+                  <Menu position="bottom-end" floatingStrategy="fixed">
+                    <Menu.Target>
+                      <ActionIcon
+                        variant="subtle"
+                        size="lg"
+                        flex="0 0 auto"
+                        loading={
+                          pending === `owner:${member.userId}` ||
+                          pending === `remove:${member.userId}`
                         }
+                        aria-label={intl.formatMessage(
+                          { id: 'settings.household.memberActions' },
+                          { name: member.displayName },
+                        )}
                       >
-                        <FormattedMessage id="settings.household.makeOwner" />
-                      </Button>
-                    )}
-                    <Button
-                      size="xs"
-                      variant="subtle"
-                      color="red"
-                      loading={pending === `remove:${member.userId}`}
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            intl.formatMessage(
-                              {
-                                id: 'settings.household.removeFromThisHouseholdTheirSavesAndNotesStay',
-                              },
-                              { value0: messageValue(member.displayName) },
-                            ),
+                        <Ellipsis size={20} aria-hidden />
+                      </ActionIcon>
+                    </Menu.Target>
+                    <Menu.Dropdown>
+                      {member.role === 'member' && (
+                        <Menu.Item
+                          leftSection={<UserRoundPlus size={16} aria-hidden />}
+                          disabled={pending !== ''}
+                          onClick={() =>
+                            void perform(`owner:${member.userId}`, async () => {
+                              await actions.current.makeOwner(member.userId);
+                              await load();
+                            })
+                          }
+                        >
+                          <FormattedMessage id="settings.household.makeOwner" />
+                        </Menu.Item>
+                      )}
+                      <Menu.Item
+                        leftSection={<UserRoundMinus size={16} aria-hidden />}
+                        color="red"
+                        disabled={pending !== ''}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              intl.formatMessage(
+                                {
+                                  id: 'settings.household.removeFromThisHouseholdTheirSavesAndNotesStay',
+                                },
+                                { value0: messageValue(member.displayName) },
+                              ),
+                            )
                           )
-                        )
-                          void perform(`remove:${member.userId}`, async () => {
-                            await actions.current.deactivate(member.userId);
-                            await load();
-                          });
-                      }}
-                    >
-                      <FormattedMessage id="common.remove" />
-                    </Button>
-                  </Group>
+                            void perform(
+                              `remove:${member.userId}`,
+                              async () => {
+                                await actions.current.deactivate(member.userId);
+                                await load();
+                              },
+                            );
+                        }}
+                      >
+                        <FormattedMessage id="common.remove" />
+                      </Menu.Item>
+                    </Menu.Dropdown>
+                  </Menu>
                 )}
               </Group>
             ))}

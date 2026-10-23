@@ -1849,3 +1849,93 @@ test('the scrolled drawer header meets the top edge and photos open full screen'
   await expect(viewer).toBeHidden();
   await expect(drawer).toBeVisible();
 });
+
+test('listing and favorite cards share swipe galleries and whole-card details', async ({
+  page,
+}) => {
+  await openDemo(page);
+  for (const tab of ['Listings', 'Favorites']) {
+    if (tab === 'Favorites')
+      await page.getByRole('button', { name: tab, exact: true }).click();
+    const card = page.getByRole('article', {
+      name: 'Example balcony home',
+      exact: true,
+    });
+    const photo = card.locator('img:not([inert] img)').first();
+    const next = card.getByRole('button', { name: 'Next photo', exact: true });
+    await expect(
+      card.getByRole('img', { name: 'Photo 1 of 3', exact: true }),
+    ).toBeVisible();
+    await next.click();
+    await expect(
+      card.getByRole('img', { name: 'Photo 2 of 3', exact: true }),
+    ).toBeVisible();
+    await expect(photo).toHaveAttribute('src', /kitchen\.svg(?:\?.*)?$/);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await card
+      .getByRole('button', { name: 'Previous photo', exact: true })
+      .click();
+    await expect(photo).toHaveAttribute('src', /living-room\.svg(?:\?.*)?$/);
+    if (test.info().project.name === 'narrow') {
+      await photo.scrollIntoViewIfNeeded();
+      await swipePhoto(page, photo, -240);
+      await expect(photo).toHaveAttribute('src', /kitchen\.svg(?:\?.*)?$/);
+      await expect(
+        card.getByRole('img', { name: 'Photo 2 of 3', exact: true }),
+      ).toBeVisible();
+      await expect(next).toBeHidden();
+      await expect(
+        card.getByRole('button', { name: 'Save favorite', exact: true }),
+      ).toBeHidden();
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await expect(next).toBeVisible({ timeout: 5000 });
+      await next.click();
+      await expect(photo).toHaveAttribute('src', /balcony\.svg(?:\?.*)?$/);
+      await next.click();
+      await expect(photo).toHaveAttribute('src', /living-room\.svg(?:\?.*)?$/);
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+    }
+    await expect(photo).toBeInViewport({ ratio: 1 });
+    // Tap the summary rather than a link or button.
+    await card.locator('[class*="cardPrice"]').click();
+    const drawer = page.getByRole('dialog', {
+      name: 'Example balcony home',
+      exact: true,
+    });
+    await expect(drawer).toBeVisible();
+    const indicator = drawer.getByRole('img', { name: /^Photo [1-3] of 3$/ });
+    await expect(indicator).toBeVisible();
+    const currentPhoto = Number(
+      (await indicator.getAttribute('aria-label'))?.match(/\d+/)?.[0],
+    );
+    await expect(drawer.locator('img:not([inert] img)').first()).toBeInViewport(
+      { ratio: 1 },
+    );
+    await drawer
+      .getByRole('button', { name: 'Next photo', exact: true })
+      .click();
+    await expect(
+      drawer.getByRole('img', {
+        name: `Photo ${(currentPhoto % 3) + 1} of 3`,
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(drawer.locator('img:not([inert] img)').first()).toBeInViewport(
+      { ratio: 1 },
+    );
+    if (tab === 'Favorites')
+      await drawer.screenshot({
+        path: `.browser-test-results/drawer-gallery-${test.info().project.name}.png`,
+      });
+    await drawer.getByRole('button', { name: 'Close listing details' }).click();
+    await expect(drawer).toBeHidden();
+  }
+  const card = page.getByRole('article', {
+    name: 'Example balcony home',
+    exact: true,
+  });
+  await card.scrollIntoViewIfNeeded();
+  await card.screenshot({
+    path: `.browser-test-results/card-gallery-${test.info().project.name}.png`,
+  });
+});

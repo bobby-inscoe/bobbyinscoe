@@ -184,7 +184,10 @@ describe('household settings section', () => {
     type(/Household name/, 'New name');
     fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
     await waitFor(() => expect(access.rename).toHaveBeenCalledWith('New name'));
-    fireEvent.click(screen.getByRole('button', { name: 'Make owner' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Actions for Robin' }));
+    fireEvent.click(
+      await screen.findByRole('menuitem', { name: 'Make owner', hidden: true }),
+    );
     await waitFor(() => expect(access.makeOwner).toHaveBeenCalledWith(OTHER));
     fireEvent.click(screen.getByRole('button', { name: 'Revoke' }));
     await waitFor(() =>
@@ -260,7 +263,9 @@ describe('household settings section', () => {
     });
     await screen.findByText('Robin');
     expect(screen.queryByLabelText(/Household name/)).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Make owner' })).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Actions for Robin' }),
+    ).toBeNull();
     expect(screen.queryByLabelText(/Invite someone to join/)).toBeNull();
     type(/start their own household/, 'new@example.com');
     fireEvent.click(

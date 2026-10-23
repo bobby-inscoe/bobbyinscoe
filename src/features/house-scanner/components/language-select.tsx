@@ -8,23 +8,32 @@ const languages = [
   { value: 'en', label: 'English', flag: englishFlag },
   { value: 'sv', label: 'Svenska', flag: swedishFlag },
 ];
-export function LanguageSelect() {
+export function LanguageSelect({ label = false }: { label?: boolean }) {
   const intl = useIntl();
   const { language, setLanguage, saved } = useLanguage();
   return (
-    <Stack gap={4} maw="100%" miw={0}>
+    <Stack
+      gap={4}
+      w={label ? { base: '100%', xs: 240 } : 145}
+      maw="100%"
+      miw={0}
+    >
       <Select
+        label={
+          label ? intl.formatMessage({ id: 'navigation.language' }) : undefined
+        }
         aria-label={intl.formatMessage({ id: 'navigation.language' })}
         value={language}
         onChange={(value) => {
           if (value === 'en' || value === 'sv') setLanguage(value);
         }}
         data={languages}
+        comboboxProps={{ keepMounted: false, floatingStrategy: 'fixed' }}
         allowDeselect={false}
-        w={145}
+        w="100%"
         maw="100%"
         miw={0}
-        size="xs"
+        size={label ? 'sm' : 'xs'}
         leftSection={
           <Avatar
             src={language === 'sv' ? swedishFlag : englishFlag}

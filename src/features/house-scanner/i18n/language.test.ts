@@ -7,13 +7,17 @@ import {
 
 afterEach(() => vi.unstubAllGlobals());
 describe('language preference', () => {
-  it.each([null, '', 'en', 'de', 'sv-SE', 'EN'])(
-    'defaults %s to English',
+  it.each([null, '', 'de', 'sv-SE', 'EN'])(
+    'defaults %s to Swedish',
     (value) => {
       vi.stubGlobal('localStorage', { getItem: () => value });
-      expect(readLanguage()).toBe('en');
+      expect(readLanguage()).toBe('sv');
     },
   );
+  it('preserves an explicit English preference', () => {
+    vi.stubGlobal('localStorage', { getItem: () => 'en' });
+    expect(readLanguage()).toBe('en');
+  });
   it('reads Swedish and stores only the language preference', () => {
     const setItem = vi.fn();
     vi.stubGlobal('localStorage', { getItem: () => 'sv', setItem });
@@ -30,7 +34,7 @@ describe('language preference', () => {
         throw new Error('blocked');
       },
     });
-    expect(readLanguage()).toBe('en');
+    expect(readLanguage()).toBe('sv');
     expect(saveLanguage('sv')).toBe(false);
   });
 });

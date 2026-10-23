@@ -2,6 +2,10 @@ import type { Translations } from '@/features/house-scanner/i18n/types/translati
 
 export const en = {
   settings: {
+    personal: {
+      heading: 'Personal settings',
+      languageDescription: 'Language applies only to this browser, for you.',
+    },
     criteria: {
       preferredBudgetDescription:
         'Homes at or below this price are grouped as Within budget.',
@@ -80,6 +84,7 @@ export const en = {
       noSearchProfilesYet: 'No search profiles yet.',
     },
     household: {
+      memberActions: 'Actions for {name}',
       couldNotLoadTheHouseholdMembersReloadToTry:
         'Could not load the household members. Reload to try again.',
       loadingHousehold: 'Loading household…',
@@ -189,6 +194,7 @@ export const en = {
       fullScreenPhotos: 'Full-screen photos',
       exitFullScreen: 'Exit full screen',
       viewPhoto: 'View photo {value0}',
+      photoPosition: 'Photo {current} of {total}',
       previousPhoto: 'Previous photo',
       nextPhoto: 'Next photo',
       floorPlan: 'Floor plan',
