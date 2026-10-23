@@ -290,10 +290,12 @@ export const en = {
       deleteThisLinkForTheWholeHouseholdEveryoneS:
         "Delete this link for the whole household? Everyone's favorites and notes on it are removed too.",
       keepIt: 'Keep it',
-      workedOutFromTheAskingPricesOfTheNearest:
-        'Based on {value0} asking prices within {value1} km, adjusted for size. Excludes fee, floor and condition.',
+      estimateBasis:
+        'Compares similar homes by size, fee and area: a model of recent asking and final prices in Göteborg, adjusted by {value0} priced homes within {value1} km. The range is for the asking price; the likely final price adds the usual bidding gap. Floor and condition are not included.',
+      estimateBasisArea:
+        'Compares similar homes by size, fee and area: a model of recent asking and final prices in Göteborg and this neighbourhood. The range is for the asking price; the likely final price adds the usual bidding gap. Floor and condition are not included.',
       estimate: 'Estimate',
-      fromNearbyAskingPrices: 'from {value0} nearby asking prices',
+      likelyFinalPrice: 'likely final {value0}',
       selectUpTo500HomesThatAreStillAvailable:
         'Select up to 500 homes that are still available.',
       yourFavoriteWasRemovedOtherMembersSavesRemain:

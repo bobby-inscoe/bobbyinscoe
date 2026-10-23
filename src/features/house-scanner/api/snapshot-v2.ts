@@ -92,6 +92,7 @@ const v2Home = z.object({
   neighborhoodId: neighborhoodSchema.shape.id.optional(),
   neighborhoodIds: z.array(neighborhoodSchema.shape.id).max(96).optional(),
   neighborhoodRadiusM: listingSchema.shape.neighborhoodRadiusM,
+  priceEstimate: listingSchema.shape.priceEstimate,
   addedBy: listingSchema.shape.addedBy.unwrap().optional(),
   userTags: listingSchema.shape.userTags.optional(),
 });
@@ -239,6 +240,7 @@ export function expandSnapshot(v2: SnapshotV2): Snapshot {
       ...(home.neighborhoodRadiusM === undefined
         ? {}
         : { neighborhoodRadiusM: home.neighborhoodRadiusM }),
+      ...(home.priceEstimate ? { priceEstimate: home.priceEstimate } : {}),
     };
   });
   return {

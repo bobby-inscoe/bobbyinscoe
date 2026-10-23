@@ -293,10 +293,12 @@ export const sv = {
       deleteThisLinkForTheWholeHouseholdEveryoneS:
         'Ta bort den här länken för hela hushållet? Allas favoriter och anteckningar för den tas också bort.',
       keepIt: 'Behåll',
-      workedOutFromTheAskingPricesOfTheNearest:
-        'Baserat på {value0} utgångspriser inom {value1} km, anpassat efter storlek. Avgift, våning och skick ingår inte.',
+      estimateBasis:
+        'Jämför liknande bostäder efter storlek, avgift och område: en modell av aktuella utgångs- och slutpriser i Göteborg, justerad efter {value0} bostäder med pris inom {value1} km. Spannet gäller utgångspriset; det troliga slutpriset lägger till den vanliga budgivningen. Våning och skick ingår inte.',
+      estimateBasisArea:
+        'Jämför liknande bostäder efter storlek, avgift och område: en modell av aktuella utgångs- och slutpriser i Göteborg och det här området. Spannet gäller utgångspriset; det troliga slutpriset lägger till den vanliga budgivningen. Våning och skick ingår inte.',
       estimate: 'Uppskattning',
-      fromNearbyAskingPrices: 'från {value0} utgångspriser i närheten',
+      likelyFinalPrice: 'troligt slutpris {value0}',
       selectUpTo500HomesThatAreStillAvailable:
         'Välj upp till 500 bostäder som fortfarande är tillgängliga.',
       yourFavoriteWasRemovedOtherMembersSavesRemain:

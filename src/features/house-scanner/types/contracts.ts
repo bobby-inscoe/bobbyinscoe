@@ -307,6 +307,20 @@ export const listingSchema = z.strictObject({
   neighborhoodRadiusM: z
     .union([z.literal(0), z.literal(50), z.literal(250)])
     .optional(),
+  /** The database's estimate for an apartment without an asking price, from similar homes. Absent otherwise. */
+  priceEstimate: z
+    .strictObject({
+      lowSek: money.positive(),
+      highSek: money.positive(),
+      // The likely final price: the midpoint plus the usual gap between final and asking prices.
+      finalSek: money.positive(),
+      // Priced homes within 2 km in other buildings that moved it, and how far the farthest is.
+      nearby: z.number().int().min(0).max(8),
+      farthestM: z.number().int().nonnegative().optional(),
+      // True when the home's neighbourhood had its own level in the model.
+      levelUsed: z.boolean(),
+    })
+    .optional(),
   /** Stable server discovery time for this episode; null when retained history cannot establish it. */
   firstSeenAt: timestamp.nullable().optional(),
   /** Server time of the latest meaningful revision; refreshes, viewings and retention cleanup do not advance it. */
