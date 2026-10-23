@@ -396,7 +396,21 @@ describe('Bjurfors run memory', () => {
       detailCached: 9,
       detailFailed: 0,
     });
-    expect(two.observations).toEqual(one.observations);
+    // Every home gets the same fixture page, so only what the list leaves blank comes back from memory;
+    // the list's own price, area and rooms stay.
+    const pageOnly = (run: typeof one) =>
+      run.observations.map(({ facts, coordinates, viewings }) => ({
+        outdoor: facts.outdoor,
+        glazed: facts.glazed,
+        groundFloor: facts.groundFloor,
+        lift: facts.lift,
+        coordinates,
+        viewings,
+      }));
+    expect(pageOnly(two)).toEqual(pageOnly(one));
+    expect(two.observations.map((o) => o.facts.askingPriceSek)).toContain(
+      1_695_000,
+    );
     // The gallery comes back from memory too, rebuilt through the site's resizer.
     const at = (size: string, name: string) =>
       `https://www.bjurfors.se/cdn-cgi/image/${size}/contentassets/00000000000000000000000000000001/${name}`;
