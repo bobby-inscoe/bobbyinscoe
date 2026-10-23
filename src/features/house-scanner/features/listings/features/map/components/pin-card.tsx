@@ -24,6 +24,7 @@ import {
 } from '@/features/house-scanner/components/price-estimate';
 import { NextViewing } from '@/features/house-scanner/components/viewing-list';
 import { messageValue } from '@/features/house-scanner/i18n/catalogs';
+import { displayLabel } from '@/features/house-scanner/i18n/display-labels';
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type { Listing } from '@/features/house-scanner/types/contracts';
 import { formatPrice } from '@/features/house-scanner/utils/format';
@@ -121,7 +122,6 @@ export function PinCard({
               index={photoIndex}
               onSelect={(index) => setSelectionPhoto({ id: listing.id, index })}
               onOpen={onDetails}
-              showAttribution
             >
               {null}
             </ListingGallery>
@@ -130,6 +130,7 @@ export function PinCard({
               listing={listing}
               onOpen={onDetails}
               isNew={listing.isNew}
+              showAttribution={false}
             />
           )}
           <div className={classes.photoPinClose}>{closeButton}</div>
@@ -145,6 +146,12 @@ export function PinCard({
           </Group>
         </div>
         <div className={classes.photoPinSummary}>
+          {photos[photoIndex] &&
+            Date.parse(photos[photoIndex].expiresAt) > Date.now() && (
+              <Text size="xs" c="dimmed" pb={4}>
+                {displayLabel(intl, photos[photoIndex].attribution)}
+              </Text>
+            )}
           <Title order={3} size="h5">
             <UnstyledButton className={classes.titleButton} onClick={onDetails}>
               {listing.title}

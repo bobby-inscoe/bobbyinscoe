@@ -29,7 +29,7 @@ test.beforeEach(async ({ context, page }) => {
   );
 });
 
-async function openMap(page: Page, count = 4) {
+async function openMap(page: Page, count = 4, gallery = false) {
   await page.route(
     '**/src/features/house-scanner/mock/synthetic-household.ts*',
     async (route) => {
@@ -41,7 +41,7 @@ async function openMap(page: Page, count = 4) {
         ...clusterTemplate,
         id: index === 0 ? clusterTemplate.id : '10000000-0000-4000-8000-' + String(index).padStart(12, '0'),
         title: 'Cluster home ' + (index + 1),
-        photos: undefined,
+        photos: ${gallery ? 'clusterTemplate.photos' : 'undefined'},
         photo: {
           url: 'https://images.example.invalid/map-home.svg',
           attribution: 'Synthetic illustration',
@@ -156,81 +156,114 @@ test('the synthetic demo exposes a nearby cluster', async ({ page }) => {
   ).toBeVisible();
 });
 
-test('card layouts switch an open preview and preserve details, saves and selection', async ({
-  page,
-}) => {
-  await openMap(page);
-  await page.getByRole('button', { name: /^3 homes nearby/ }).click();
-  const pin = page.getByRole('button', { name: /^2 homes at this point/ });
-  await pin.click();
-  const preview = page.getByRole('article', {
-    name: 'Selected home: Cluster home 1',
-    exact: true,
+for (const gallery of [false, true]) {
+  test(`card layouts preserve details, saves and selection with ${gallery ? 'a carousel' : 'one photo'}`, async ({
+    page,
+  }) => {
+    await openMap(page, 4, gallery);
+    await page.getByRole('button', { name: /^3 homes nearby/ }).click();
+    const pin = page.getByRole('button', { name: /^2 homes at this point/ });
+    await pin.click();
+    const preview = page.getByRole('article', {
+      name: 'Selected home: Cluster home 1',
+      exact: true,
+    });
+    await openOptionsOnPhone(page);
+    await expect(
+      page.getByRole('button', { name: 'Classic', exact: true }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    await page.getByRole('button', { name: 'Photo', exact: true }).click();
+    if (test.info().project.name === 'narrow')
+      await page.getByRole('button', { name: 'Map options' }).click();
+    await expect(
+      page.getByRole('dialog', { name: 'Map options', exact: true }),
+    ).toHaveCount(0);
+    await expect(preview).toBeVisible();
+    await expect(
+      preview.getByRole('img', { name: 'Cluster home 1', exact: true }),
+    ).toBeVisible();
+    await expect(
+      preview.getByText(
+        gallery ? 'Shellter demo illustration' : 'Synthetic illustration',
+        { exact: true },
+      ),
+    ).toBeVisible();
+    const image = preview.getByRole('img', {
+      name: 'Cluster home 1',
+      exact: true,
+    });
+    const imageBox = await image.boundingBox();
+    const cardBox = await preview.boundingBox();
+    if (!imageBox || !cardBox) throw new Error('Missing photo card geometry.');
+    expect(imageBox.width / cardBox.width).toBeGreaterThan(0.95);
+    expect(imageBox.width / imageBox.height).toBeCloseTo(1.5, 1);
+    if (test.info().project.name === 'narrow') {
+      expect(cardBox.x + cardBox.width / 2).toBeCloseTo(
+        (page.viewportSize()?.width ?? 0) / 2,
+        0,
+      );
+    }
+    const detailsBox = await preview
+      .getByRole('button', { name: 'Details', exact: true })
+      .boundingBox();
+    if (!detailsBox) throw new Error('Missing photo card actions.');
+    expect(
+      imageBox.y + imageBox.height - detailsBox.y - detailsBox.height,
+    ).toBeCloseTo(8, 0);
+    expect(cardBox.x).toBeGreaterThanOrEqual(0);
+    expect(cardBox.x + cardBox.width).toBeLessThanOrEqual(
+      page.viewportSize()?.width ?? 0,
+    );
+    if (gallery) {
+      const dots = preview.getByRole('img', { name: 'Photo 1 of 3' });
+      const dotsBox = await dots.boundingBox();
+      if (!dotsBox) throw new Error('Missing carousel indicators.');
+      expect(dotsBox.y + dotsBox.height).toBeLessThan(
+        imageBox.y + imageBox.height,
+      );
+      await preview
+        .getByRole('button', { name: 'Next photo', exact: true })
+        .click();
+      await expect(image).toHaveAttribute('src', /kitchen\.svg(?:\?.*)?$/);
+      await expect
+        .poll(async () => (await image.boundingBox())?.x)
+        .toBeCloseTo(imageBox.x, 1);
+    }
+    await expect(pin).toHaveAttribute('aria-pressed', 'true');
+    await page.screenshot({ path: test.info().outputPath('photo-card.png') });
+    await preview.getByRole('button', { name: 'Details', exact: true }).click();
+    const details = page.getByRole('dialog', {
+      name: 'Cluster home 1',
+      exact: true,
+    });
+    await expect(details).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(details).toHaveCount(0);
+    await preview
+      .getByRole('button', { name: 'Save favorite', exact: true })
+      .click();
+    await expect(
+      preview.getByRole('button', { name: 'Remove my favorite', exact: true }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Select', exact: true }).click();
+    await preview
+      .getByRole('button', { name: 'Select home', exact: true })
+      .click();
+    await expect(
+      preview.getByRole('button', { name: 'Selected', exact: true }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    await openOptionsOnPhone(page);
+    await page.getByRole('button', { name: 'Classic', exact: true }).click();
+    if (test.info().project.name === 'narrow')
+      await page.getByRole('button', { name: 'Map options' }).click();
+    await expect(preview).toBeVisible();
+    await expect(
+      preview.getByRole('button', { name: 'Selected', exact: true }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    await preview.getByRole('button', { name: 'Close selected home' }).click();
+    await expect(preview).toHaveCount(0);
   });
-  await openOptionsOnPhone(page);
-  await expect(
-    page.getByRole('button', { name: 'Classic', exact: true }),
-  ).toHaveAttribute('aria-pressed', 'true');
-  await page.getByRole('button', { name: 'Photo', exact: true }).click();
-  if (test.info().project.name === 'narrow')
-    await page.getByRole('button', { name: 'Map options' }).click();
-  await expect(
-    page.getByRole('dialog', { name: 'Map options', exact: true }),
-  ).toHaveCount(0);
-  await expect(preview).toBeVisible();
-  await expect(
-    preview.getByRole('img', { name: 'Cluster home 1', exact: true }),
-  ).toBeVisible();
-  await expect(
-    preview.getByText('Synthetic illustration', { exact: true }),
-  ).toBeVisible();
-  const image = preview.getByRole('button', {
-    name: 'View Cluster home 1',
-    exact: true,
-  });
-  const imageBox = await image.boundingBox();
-  const cardBox = await preview.boundingBox();
-  if (!imageBox || !cardBox) throw new Error('Missing photo card geometry.');
-  expect(imageBox.width / cardBox.width).toBeGreaterThan(0.95);
-  expect(imageBox.height / cardBox.height).toBeGreaterThan(0.7);
-  expect(cardBox.x).toBeGreaterThanOrEqual(0);
-  expect(cardBox.x + cardBox.width).toBeLessThanOrEqual(
-    page.viewportSize()?.width ?? 0,
-  );
-  await expect(pin).toHaveAttribute('aria-pressed', 'true');
-  await page.screenshot({ path: test.info().outputPath('photo-card.png') });
-  await preview.getByRole('button', { name: 'Details', exact: true }).click();
-  const details = page.getByRole('dialog', {
-    name: 'Cluster home 1',
-    exact: true,
-  });
-  await expect(details).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(details).toHaveCount(0);
-  await preview
-    .getByRole('button', { name: 'Save favorite', exact: true })
-    .click();
-  await expect(
-    preview.getByRole('button', { name: 'Remove my favorite', exact: true }),
-  ).toBeVisible();
-  await page.getByRole('button', { name: 'Select', exact: true }).click();
-  await preview
-    .getByRole('button', { name: 'Select home', exact: true })
-    .click();
-  await expect(
-    preview.getByRole('button', { name: 'Selected', exact: true }),
-  ).toHaveAttribute('aria-pressed', 'true');
-  await openOptionsOnPhone(page);
-  await page.getByRole('button', { name: 'Classic', exact: true }).click();
-  if (test.info().project.name === 'narrow')
-    await page.getByRole('button', { name: 'Map options' }).click();
-  await expect(preview).toBeVisible();
-  await expect(
-    preview.getByRole('button', { name: 'Selected', exact: true }),
-  ).toHaveAttribute('aria-pressed', 'true');
-  await preview.getByRole('button', { name: 'Close selected home' }).click();
-  await expect(preview).toHaveCount(0);
-});
+}
 
 test('zooming merges and splits markers while preserving the selected home', async ({
   page,
