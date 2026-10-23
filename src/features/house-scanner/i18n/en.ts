@@ -186,6 +186,8 @@ export const en = {
       viewings: 'Viewings',
       photos: 'Photos',
       floorPlan: 'Floor plan',
+      bidding: 'Bidding',
+      biddingUnderWay: 'Bidding under way',
       buildingAndOutdoor: 'Building and outdoor',
       floor: 'Floor',
       lift: 'Lift',

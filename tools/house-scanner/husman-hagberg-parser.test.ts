@@ -435,3 +435,11 @@ describe('Husman Hagberg estate page', () => {
     });
   });
 });
+
+describe('Husman Hagberg bidding', () => {
+  it('marks bidding only when the list says true', () => {
+    expect(one({ bidding: true }).facts.bidding).toBe(true);
+    for (const value of [false, undefined, 'true'])
+      expect(one({ bidding: value }).facts.bidding).toBeNull();
+  });
+});

@@ -330,6 +330,7 @@ export function sourceRegistry(): SourceCapability[] {
           'status',
           'groundFloor',
           'lift',
+          'bidding',
         ],
         capabilities: {
           discovery: true,
@@ -384,6 +385,7 @@ export function sourceRegistry(): SourceCapability[] {
           'municipality',
           'baseFeeSek',
           'status',
+          'bidding',
         ],
         capabilities: {
           discovery: true,
@@ -439,6 +441,7 @@ export function sourceRegistry(): SourceCapability[] {
           'baseFeeSek',
           'status',
           'groundFloor',
+          'bidding',
         ],
         capabilities: {
           discovery: true,

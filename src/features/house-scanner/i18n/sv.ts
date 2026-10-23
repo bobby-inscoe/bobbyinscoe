@@ -187,6 +187,8 @@ export const sv = {
       viewings: 'Visningar',
       photos: 'Bilder',
       floorPlan: 'Planritning',
+      bidding: 'Budgivning',
+      biddingUnderWay: 'Budgivning pågår',
       buildingAndOutdoor: 'Byggnad och uteplats',
       floor: 'Våning',
       lift: 'Hiss',

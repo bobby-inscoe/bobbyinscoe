@@ -127,6 +127,8 @@ function observationFrom(
     baseFeeSek: positiveInt(numberOf(item.Rent), 1_000_000_000),
     mandatoryMonthlySek: null,
     status,
+    // HasBidding is true once bids have been placed (checked against the public page on 23 October 2026).
+    bidding: item.HasBidding === true ? true : null,
   };
   const parsed = observationSchema.safeParse({
     sourceListingId: id,

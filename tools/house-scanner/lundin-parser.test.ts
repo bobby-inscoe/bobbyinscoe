@@ -276,3 +276,13 @@ describe('Lundin home page', () => {
     });
   });
 });
+
+describe('Lundin bidding', () => {
+  it('marks bidding only when HasBidding is true', () => {
+    const facts = (over: Record<string, unknown>) =>
+      page(lundinList([lundinHome(over)])).observations[0].facts;
+    expect(facts({ HasBidding: true }).bidding).toBe(true);
+    for (const value of [false, undefined, 'true'])
+      expect(facts({ HasBidding: value }).bidding).toBeNull();
+  });
+});

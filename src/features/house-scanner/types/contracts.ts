@@ -160,6 +160,8 @@ export const factsSchema = z.strictObject({
   baseFeeSek: money.nullable(),
   mandatoryMonthlySek: money.nullable(),
   status: z.enum(['upcoming', 'available', 'sold', 'withdrawn', 'unknown']),
+  // True only when the source says bidding is under way; anything else is unknown. Optional so older observations parse.
+  bidding: z.boolean().nullable().optional(),
 });
 export const photoSchema = z.strictObject({
   url: listingUrlSchema,

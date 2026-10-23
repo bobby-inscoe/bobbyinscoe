@@ -48,6 +48,8 @@ export interface ListingsTranslations {
     viewings: string;
     photos: string;
     floorPlan: string;
+    bidding: string;
+    biddingUnderWay: string;
     buildingAndOutdoor: string;
     floor: string;
     lift: string;

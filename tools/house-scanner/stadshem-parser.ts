@@ -137,6 +137,8 @@ function observationFrom(
     baseFeeSek: positiveInt(numberOf(data.monthlyFee), 1_000_000_000),
     mandatoryMonthlySek: null,
     status: statusOf(data.status),
+    // True while bidding is under way, also when the broker does not publish the bids.
+    bidding: data.currentlyBidding === true ? true : null,
   };
   // The list gives only the next viewing, in Stockholm time with no zone.
   const next = viewingFromLocal(data.nextViewing);

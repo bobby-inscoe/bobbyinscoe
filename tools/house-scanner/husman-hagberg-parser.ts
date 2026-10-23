@@ -151,6 +151,8 @@ function observationFrom(
     baseFeeSek: positiveInt(numberOf(data.monthlyFee), 1_000_000_000),
     mandatoryMonthlySek: null,
     status,
+    // True while bidding is under way, also when the broker does not publish the bids.
+    bidding: data.bidding === true ? true : null,
   };
   // The list holds every viewing, with a year. Times are Stockholm wall-clock time labelled Z, as Boneo's are
   // (the same home carries identical values in both). Only viewings the broker shows on the internet are kept.

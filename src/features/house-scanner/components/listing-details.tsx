@@ -230,6 +230,12 @@ export function ListingDetails({
                 ? null
                 : displayLabel(intl, facts.status),
             ],
+            [
+              intl.formatMessage({ id: 'listings.details.bidding' }),
+              facts.bidding === true
+                ? intl.formatMessage({ id: 'listings.details.biddingUnderWay' })
+                : null,
+            ],
           ]}
         />
         {conflicts.length > 0 && (
