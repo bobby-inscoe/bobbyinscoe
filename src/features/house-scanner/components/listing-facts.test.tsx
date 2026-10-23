@@ -17,6 +17,7 @@ import {
 } from '@/features/house-scanner/components/listing-summary';
 import { SettingsPanel } from '@/features/house-scanner/features/settings/components/settings-panel';
 import { catalogs } from '@/features/house-scanner/i18n/catalogs';
+import { ShellterLanguageProvider } from '@/features/house-scanner/i18n/language-provider';
 import {
   DEMO_USER_ID,
   SYNTHETIC_SNAPSHOT,
@@ -63,14 +64,18 @@ const view = (node: React.ReactNode) =>
 
 it('keeps sign out available in Settings through the existing session callback', () => {
   const onSignOut = vi.fn();
+  localStorage.setItem('shellter.language', 'en');
   view(
-    <SettingsPanel
-      snapshot={{ ...SYNTHETIC_SNAPSHOT, profiles: [] }}
-      userId={DEMO_USER_ID}
-      synthetic={false}
-      onSignOut={onSignOut}
-    />,
+    <ShellterLanguageProvider>
+      <SettingsPanel
+        snapshot={{ ...SYNTHETIC_SNAPSHOT, profiles: [] }}
+        userId={DEMO_USER_ID}
+        synthetic={false}
+        onSignOut={onSignOut}
+      />
+    </ShellterLanguageProvider>,
   );
+  localStorage.removeItem('shellter.language');
   fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
   expect(onSignOut).toHaveBeenCalledOnce();
 });
