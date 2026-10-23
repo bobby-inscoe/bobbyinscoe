@@ -99,11 +99,23 @@ describe('invitation page', () => {
     expect(screen.queryByText('Sign-in form')).toBeNull();
   });
 
-  it('lets a new person create an account with email and password, beside the sign-in form', async () => {
+  it('shows one form at a time: create account first, sign in on request', async () => {
     const actions = showInvite(create, false);
     expect(await screen.findByText('Create your own household')).toBeTruthy();
     expect(screen.getByText(/It shares nothing with theirs/)).toBeTruthy();
+    expect(screen.getByText(/starts empty and private/)).toBeTruthy();
+    expect(screen.queryByText('Sign-in form')).toBeNull();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Already have an account? Sign in' }),
+    );
     expect(screen.getByText('Sign-in form')).toBeTruthy();
+    expect(screen.queryByLabelText(/Your email/)).toBeNull();
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'New to Shellter? Create an account',
+      }),
+    );
+    expect(screen.queryByText('Sign-in form')).toBeNull();
     type(/Your email/, 'new@example.com');
     type(/Choose a password/, 'a long password');
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
@@ -133,6 +145,8 @@ describe('invitation page', () => {
       true,
     );
     expect(await screen.findByText('Join Alex home')).toBeTruthy();
+    expect(screen.getByText(/Your saves and your notes/)).toBeTruthy();
+    expect(screen.queryByText(/starts empty and private/)).toBeNull();
     expect(screen.queryByLabelText(/Household name/)).toBeNull();
     type(/Your name/, 'Casey');
     fireEvent.click(screen.getByRole('button', { name: 'Join household' }));

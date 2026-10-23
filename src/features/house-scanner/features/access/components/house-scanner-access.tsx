@@ -135,7 +135,7 @@ export function HouseScannerAccess({
             }}
             signIn={signIn(
               <Title order={3}>
-                <FormattedMessage id="access.alreadyHaveAnAccount" />
+                <FormattedMessage id="access.signIn" />
               </Title>,
               false,
             )}

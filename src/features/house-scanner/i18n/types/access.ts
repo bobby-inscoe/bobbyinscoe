@@ -4,7 +4,6 @@ export interface AccessTranslations {
   exploreDemo: string;
   exploreTheSyntheticDemo: string;
   thatEmailLinkHasExpiredOrWasAlreadyUsed: string;
-  alreadyHaveAnAccount: string;
   thisInvitationLinkIsIncompleteCopyTheWholeLink: string;
   loadingYourHousehold: string;
   signIn: string;
@@ -36,6 +35,15 @@ export interface AccessTranslations {
   chooseAPassword: string;
   '8To72Characters': string;
   createAccount: string;
+  signInInstead: string;
+  createAccountInstead: string;
+  newHouseholdStartsEmpty: string;
+  rulesSharedLabel: string;
+  rulesShared: string;
+  rulesVisibleLabel: string;
+  rulesVisible: string;
+  rulesPersonalLabel: string;
+  rulesPersonal: string;
   theTwoPasswordsDiffer: string;
   chooseYourPassword: string;
   chooseANewPassword: string;

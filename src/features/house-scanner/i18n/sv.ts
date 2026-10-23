@@ -692,7 +692,6 @@ export const sv = {
     exploreTheSyntheticDemo: 'Utforska demon med fiktiva uppgifter',
     thatEmailLinkHasExpiredOrWasAlreadyUsed:
       'E-postlänken har gått ut eller redan använts. Be om en ny inbjudan eller använd Glömt lösenord för att få en ny länk.',
-    alreadyHaveAnAccount: 'Har du redan ett konto?',
     thisInvitationLinkIsIncompleteCopyTheWholeLink:
       'Inbjudningslänken är ofullständig. Kopiera hela länken och försök igen.',
     loadingYourHousehold: 'Laddar ditt hushåll…',
@@ -733,6 +732,17 @@ export const sv = {
     chooseAPassword: 'Välj ett lösenord',
     '8To72Characters': '8 till 72 tecken.',
     createAccount: 'Skapa konto',
+    signInInstead: 'Har du redan ett konto? Logga in',
+    createAccountInstead: 'Ny på Shellter? Skapa ett konto',
+    newHouseholdStartsEmpty:
+      'Ditt nya hushåll börjar tomt och privat. Samma regler gäller för dem du bjuder in senare.',
+    rulesSharedLabel: 'Delas med hushållet',
+    rulesShared:
+      'Sökkriterier och finansiering (ägare ändrar dem), dolda bostäder, inklistrade länkar, visningar.',
+    rulesVisibleLabel: 'Syns för alla, men är dina',
+    rulesVisible: 'Dina favoriter och dina anteckningar.',
+    rulesPersonalLabel: 'Bara dina',
+    rulesPersonal: 'Filter under Bostäder och ditt konto.',
     theTwoPasswordsDiffer: 'Lösenorden stämmer inte överens.',
     chooseYourPassword: 'Välj ditt lösenord',
     chooseANewPassword: 'Välj ett nytt lösenord',

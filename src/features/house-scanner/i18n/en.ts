@@ -685,7 +685,6 @@ export const en = {
     exploreTheSyntheticDemo: 'Explore the synthetic demo',
     thatEmailLinkHasExpiredOrWasAlreadyUsed:
       'That email link has expired or was already used. Ask for a new invitation, or use Forgot password to get a fresh link.',
-    alreadyHaveAnAccount: 'Already have an account?',
     thisInvitationLinkIsIncompleteCopyTheWholeLink:
       'This invitation link is incomplete. Copy the whole link and try again.',
     loadingYourHousehold: 'Loading your household…',
@@ -726,6 +725,17 @@ export const en = {
     chooseAPassword: 'Choose a password',
     '8To72Characters': '8 to 72 characters.',
     createAccount: 'Create account',
+    signInInstead: 'Already have an account? Sign in',
+    createAccountInstead: 'New to Shellter? Create an account',
+    newHouseholdStartsEmpty:
+      'Your new household starts empty and private. The same rules apply to anyone you invite later.',
+    rulesSharedLabel: 'Shared with the household',
+    rulesShared:
+      'Search criteria and financing (owners change them), hidden homes, pasted links, viewings.',
+    rulesVisibleLabel: 'Visible to everyone, but yours',
+    rulesVisible: 'Your saves and your notes.',
+    rulesPersonalLabel: 'Just yours',
+    rulesPersonal: 'Listings filters and your account.',
     theTwoPasswordsDiffer: 'The two passwords differ.',
     chooseYourPassword: 'Choose your password',
     chooseANewPassword: 'Choose a new password',
