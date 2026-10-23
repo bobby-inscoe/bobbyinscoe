@@ -18,7 +18,7 @@ function parseUrl(value: string): URL | null {
     return null;
   }
 }
-const originSchema = z
+export const originSchema = z
   .url()
   .refine((value) => parseUrl(value)?.origin === value);
 export const listingUrlSchema = z
