@@ -710,7 +710,7 @@
   position: absolute;
   top: 8px;
   right: 8px;
-  border-radius: 50%;
+  border-radius: var(--mantine-radius-default);
   background: var(--shellter-surface);
 }
 .photoPinClose :global(.mantine-CloseButton-root) {
