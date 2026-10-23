@@ -1,6 +1,33 @@
 import type { Translations } from '@/features/house-scanner/i18n/types/translations';
 
 export const en = {
+  feedback: {
+    label: 'Feedback',
+    hint: 'Report a bug or suggest a feature',
+    intro: 'Found a problem or have an idea? Tell us how to improve Shellter.',
+    type: 'Type',
+    bug: 'Bug',
+    feature: 'Feature request',
+    title: 'Title',
+    description: 'Description',
+    bugHelp:
+      'Please describe the problem in detail: steps, expected behavior, and what happened instead.',
+    featureHelp:
+      'What would you like to do, and how would this help you? Please describe your idea in detail.',
+    screenshot: 'Screenshot (optional)',
+    imageHelp:
+      'One PNG, JPEG, or WebP, up to 5 MiB. Remove private information before uploading.',
+    remove: 'Remove screenshot',
+    privacy:
+      'Your report includes this page and your account email so the owner can reply.',
+    send: 'Send feedback',
+    cancel: 'Cancel',
+    success: 'Thanks! Your feedback has been accepted for sending.',
+    error:
+      'Could not send feedback. Your draft is saved here. Please try again.',
+    invalid:
+      'Enter a title and description, and choose an allowed image up to 5 MiB.',
+  },
   settings: {
     criteria: {
       preferredBudgetDescription:
