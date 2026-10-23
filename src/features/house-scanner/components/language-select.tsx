@@ -1,4 +1,4 @@
-import { Avatar, NativeSelect, Stack, Text } from '@mantine/core';
+import { Avatar, Select, Stack, Text } from '@mantine/core';
 import { FormattedMessage, useIntl } from 'react-intl';
 import englishFlag from '@/features/house-scanner/assets/flags/gb.svg';
 import swedishFlag from '@/features/house-scanner/assets/flags/se.svg';
@@ -18,14 +18,15 @@ export function LanguageSelect({ label = false }: { label?: boolean }) {
       maw="100%"
       miw={0}
     >
-      <NativeSelect
+      <Select
         label={
           label ? intl.formatMessage({ id: 'navigation.language' }) : undefined
         }
         aria-label={intl.formatMessage({ id: 'navigation.language' })}
         value={language}
-        onChange={(event) => {
-          const value = event.currentTarget.value;
+        allowDeselect={false}
+        comboboxProps={{ floatingStrategy: 'fixed' }}
+        onChange={(value) => {
           if (value === 'en' || value === 'sv') setLanguage(value);
         }}
         data={languages}

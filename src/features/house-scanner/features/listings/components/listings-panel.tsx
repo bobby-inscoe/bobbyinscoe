@@ -751,7 +751,7 @@ export function ListingsPanel({
                         variant="transparent"
                         color="gray"
                         size="sm"
-                        className={classes.matchHelp}
+                        className={`${classes.matchHelp} ${classes.inlineHelp}`}
                         aria-label={intl.formatMessage({
                           id: 'listings.list.whatTheMatchOptionsMean',
                         })}

@@ -367,6 +367,7 @@ it('keeps photo attribution and a working detail target when an image fails', as
     onSelect,
     listing: {
       photos: [],
+      floorPlan: undefined,
       photo: {
         url: 'https://images.example.invalid/synthetic.jpg',
         attribution: 'Synthetic author',

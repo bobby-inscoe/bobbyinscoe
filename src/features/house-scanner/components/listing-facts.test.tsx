@@ -27,6 +27,14 @@ import type { Listing } from '@/features/house-scanner/types/contracts';
 
 beforeEach(() => {
   vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
+  vi.stubGlobal(
     'matchMedia',
     (media: string): MediaQueryList => ({
       media,

@@ -322,7 +322,7 @@
 /* The photo runs to the card's edges, as on every listing portal. */
 .card > .cardPhoto {
   margin: calc(-1 * var(--mantine-spacing-md))
-    calc(-1 * var(--mantine-spacing-md)) var(--mantine-spacing-xs);
+    calc(-1 * var(--mantine-spacing-md)) 0;
 }
 .priceText {
   font-weight: 800;
@@ -402,6 +402,9 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+.photoGallery > .photoAttribution {
+  margin-top: var(--mantine-spacing-xs);
+}
 /* The photo runs to the card's edge, so its credit line needs the card's own padding. */
 .cardPhoto .photoAttribution {
   padding-inline: var(--mantine-spacing-md);
@@ -465,7 +468,7 @@
     padding: 12px;
   }
   .viewingCard > .cardPhoto {
-    margin: -12px -12px 4px;
+    margin: -12px -12px 0;
   }
   .viewingCard .placeholder {
     padding: 0;
@@ -664,16 +667,22 @@
   bottom: 12px;
   width: min(360px, calc(100% - 24px));
   max-height: calc(100% - 24px);
-  height: min(460px, calc(100% - 80px));
   display: flex;
   gap: 0;
   padding: 0;
   border-radius: var(--mantine-radius-lg);
 }
+@media (max-width: 35.99375em) {
+  .pinCard.photoPinCard {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
 .photoPinImage {
   position: relative;
-  flex: 1;
-  min-height: 0;
+  flex: none;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
 }
 .photoPinImage > :global(.mantine-Stack-root) {
   height: 100%;
@@ -683,19 +692,15 @@
   flex: 1;
   min-height: 0;
 }
+.photoPinImage .photo {
+  object-fit: contain;
+  background: var(--shellter-sunk);
+}
 .photoPinImage .photo,
 .photoPinImage .placeholder {
   height: 100%;
   aspect-ratio: auto;
   border-radius: 0;
-}
-.photoPinImage .photoAttribution {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 2px 10px;
-  background: var(--shellter-surface);
 }
 .photoPinImage .newFlag {
   top: 8px;
@@ -705,8 +710,8 @@
   position: absolute;
   top: 8px;
   right: 8px;
-  border-radius: 50%;
-  background: var(--shellter-surface);
+  border-radius: var(--mantine-radius-default);
+  background: color-mix(in srgb, var(--shellter-surface) 55%, transparent);
 }
 .photoPinClose :global(.mantine-CloseButton-root) {
   min-width: 44px;
@@ -716,7 +721,7 @@
   position: absolute;
   left: 8px;
   right: 8px;
-  bottom: 48px;
+  bottom: 8px;
 }
 .photoPinActions .star,
 .photoPinActions .hide {
@@ -726,6 +731,7 @@
 }
 .photoPinActions :global(.mantine-Button-root) {
   min-height: 44px;
+  background: color-mix(in srgb, var(--button-bg) 55%, transparent);
 }
 .photoPinSummary {
   flex-shrink: 0;
@@ -775,6 +781,12 @@
 }
 .toolbarSearch {
   grid-area: search;
+}
+.inlineHelp {
+  flex-shrink: 0;
+}
+.inlineHelp :global(.mantine-ActionIcon-icon) {
+  justify-content: flex-start;
 }
 .matchHelp:hover {
   background: transparent;
@@ -861,7 +873,7 @@
   /* The photo leads the card at full width, like a viewing. */
   .compactCard .cardPhoto {
     min-width: 0;
-    margin: -12px -12px 4px;
+    margin: -12px -12px 0;
   }
   .compactCard .photoAttribution {
     padding: 0 12px;
@@ -1309,10 +1321,13 @@
   opacity: 0;
   visibility: hidden;
 }
+.photoPinActions .star,
+.photoPinActions .hide,
 .photoGalleryControls .star,
 .photoGalleryControls .hide {
   background: color-mix(in srgb, var(--ai-bg) 55%, transparent);
 }
+.photoPinActions .savedByOthers,
 .photoGalleryControls .savedByOthers {
   background: rgb(169 216 210 / 55%);
 }
@@ -1439,6 +1454,8 @@
   z-index: 1;
 }
 
+.photoPinImage .photoSlide,
+.photoPinImage .photoDisplay,
 .photoPinImage .photoGallery,
 .photoPinImage .photoSlides {
   height: 100%;

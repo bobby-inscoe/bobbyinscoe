@@ -49,6 +49,7 @@ const snapshot: Snapshot = {
       ...first,
       title: 'Exempelgatan 1',
       photo,
+      photos: [photo],
       viewings: [
         { startsAt: '2026-10-18T12:00:00Z', endsAt: '2026-10-18T13:00:00Z' },
       ],
@@ -73,6 +74,7 @@ const snapshot: Snapshot = {
 };
 
 beforeEach(() => {
+  HTMLElement.prototype.scrollTo = vi.fn();
   vi.stubGlobal(
     'matchMedia',
     (media: string): MediaQueryList => ({

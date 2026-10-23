@@ -174,8 +174,15 @@ export function ListingGallery({
               aria-hidden={position !== index + (loop ? 1 : 0)}
             >
               <ListingPhoto
-                listing={{ ...listing, photo }}
-                contain={contain}
+                listing={{
+                  ...listing,
+                  photo,
+                  title:
+                    photo.url === listing.floorPlan?.url
+                      ? intl.formatMessage({ id: 'listings.details.floorPlan' })
+                      : listing.title,
+                }}
+                contain={contain || photo.url === listing.floorPlan?.url}
                 showAttribution={false}
                 linkToListing={!fullScreen}
                 onOpen={onOpen}

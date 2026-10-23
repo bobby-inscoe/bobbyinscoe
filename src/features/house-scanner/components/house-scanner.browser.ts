@@ -1683,7 +1683,7 @@ test('the Viewings tab lists saved homes with their times and hands over a calen
   await expect(page.getByText(/^3 homes/)).toBeVisible();
 });
 
-test('drawer cycles photos and thumbnails select the carousel photo', async ({
+test('drawer cycles photos and keeps floor plans accessible', async ({
   page,
 }) => {
   await openDemo(page);
@@ -1746,11 +1746,9 @@ test('drawer cycles photos and thumbnails select the carousel photo', async ({
     .click();
   await expect(photo).toHaveAttribute('src', /floor-plan\.svg(?:\?.*)?$/);
   await expect(photo).toBeInViewport({ ratio: 1 });
-  await drawer
-    .getByRole('button', { name: 'View photo 2', exact: true })
-    .click();
-  await expect(photo).toHaveAttribute('src', /kitchen\.svg(?:\?.*)?$/);
-  await expect(photo).toBeInViewport({ ratio: 1 });
+  await expect(
+    drawer.getByRole('heading', { name: 'Photos', exact: true }),
+  ).toHaveCount(0);
   await expect(
     drawer.locator('a:has(img[width="160"]), a:has(img[width="480"])'),
   ).toHaveCount(0);
@@ -1879,7 +1877,7 @@ test('the scrolled drawer header meets the top edge and photos open full screen'
   await expect(drawer).toBeVisible();
 });
 
-test('listing and favorite cards share swipe galleries and whole-card details', async ({
+test('listing and favorite cards share swipe galleries and open details', async ({
   page,
 }) => {
   await openDemo(page);
@@ -1893,11 +1891,11 @@ test('listing and favorite cards share swipe galleries and whole-card details', 
     const photo = card.locator('img:not([inert] img)').first();
     const next = card.getByRole('button', { name: 'Next photo', exact: true });
     await expect(
-      card.getByRole('img', { name: 'Photo 1 of 3', exact: true }),
+      card.getByRole('img', { name: 'Photo 1 of 4', exact: true }),
     ).toBeVisible();
     await next.click();
     await expect(
-      card.getByRole('img', { name: 'Photo 2 of 3', exact: true }),
+      card.getByRole('img', { name: 'Photo 2 of 4', exact: true }),
     ).toBeVisible();
     await expect(photo).toHaveAttribute('src', /kitchen\.svg(?:\?.*)?$/);
     await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -1910,7 +1908,7 @@ test('listing and favorite cards share swipe galleries and whole-card details', 
       await swipePhoto(page, photo, -240);
       await expect(photo).toHaveAttribute('src', /kitchen\.svg(?:\?.*)?$/);
       await expect(
-        card.getByRole('img', { name: 'Photo 2 of 3', exact: true }),
+        card.getByRole('img', { name: 'Photo 2 of 4', exact: true }),
       ).toBeVisible();
       await expect(next).toBeHidden();
       await expect(
@@ -1921,12 +1919,13 @@ test('listing and favorite cards share swipe galleries and whole-card details', 
       await next.click();
       await expect(photo).toHaveAttribute('src', /balcony\.svg(?:\?.*)?$/);
       await next.click();
+      await expect(photo).toHaveAttribute('src', /floor-plan\.svg(?:\?.*)?$/);
+      await next.click();
       await expect(photo).toHaveAttribute('src', /living-room\.svg(?:\?.*)?$/);
       await expect(page.getByRole('dialog')).toHaveCount(0);
     }
     await expect(photo).toBeInViewport({ ratio: 1 });
-    // Tap the summary rather than a link or button.
-    await card.locator('[class*="cardPrice"]').click();
+    await card.getByRole('button', { name: 'Details', exact: true }).click();
     const drawer = page.getByRole('dialog', {
       name: 'Example balcony home',
       exact: true,

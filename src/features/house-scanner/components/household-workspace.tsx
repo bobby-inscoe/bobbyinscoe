@@ -277,10 +277,16 @@ export function HouseholdWorkspace({
                 </Button>
               </Menu.Target>
               <Menu.Dropdown>
-                <Menu.Item onClick={() => navigation.changeTab('manual')}>
+                <Menu.Item
+                  className={classes.touchTarget}
+                  onClick={() => navigation.changeTab('manual')}
+                >
                   <FormattedMessage id="navigation.addLink" />
                 </Menu.Item>
-                <Menu.Item onClick={() => navigation.changeTab('settings')}>
+                <Menu.Item
+                  className={classes.touchTarget}
+                  onClick={() => navigation.changeTab('settings')}
+                >
                   <FormattedMessage id="navigation.settings" />
                 </Menu.Item>
               </Menu.Dropdown>
