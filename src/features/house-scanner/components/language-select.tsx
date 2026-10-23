@@ -1,4 +1,4 @@
-import { Avatar, Group, Select, Stack, Text } from '@mantine/core';
+import { Avatar, NativeSelect, Stack, Text } from '@mantine/core';
 import { FormattedMessage, useIntl } from 'react-intl';
 import englishFlag from '@/features/house-scanner/assets/flags/gb.svg';
 import swedishFlag from '@/features/house-scanner/assets/flags/se.svg';
@@ -13,14 +13,14 @@ export function LanguageSelect() {
   const { language, setLanguage, saved } = useLanguage();
   return (
     <Stack gap={4} maw="100%" miw={0}>
-      <Select
+      <NativeSelect
         aria-label={intl.formatMessage({ id: 'navigation.language' })}
         value={language}
-        onChange={(value) => {
+        onChange={(event) => {
+          const value = event.currentTarget.value;
           if (value === 'en' || value === 'sv') setLanguage(value);
         }}
         data={languages}
-        allowDeselect={false}
         w={145}
         maw="100%"
         miw={0}
@@ -34,18 +34,6 @@ export function LanguageSelect() {
             aria-hidden
           />
         }
-        renderOption={({ option }) => (
-          <Group gap="xs" wrap="nowrap">
-            <Avatar
-              src={option.value === 'sv' ? swedishFlag : englishFlag}
-              size={20}
-              radius="xl"
-              alt=""
-              aria-hidden
-            />
-            <span lang={option.value}>{option.label}</span>
-          </Group>
-        )}
       />
       {!saved && (
         <Text size="xs" role="status" maw={240}>

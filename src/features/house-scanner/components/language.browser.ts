@@ -17,16 +17,17 @@ test('language persists before sign-in and changes retained UI state', async ({
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('/shellter');
-  await page.getByRole('combobox', { name: 'Language', exact: true }).click();
-  await page.getByRole('option', { name: 'Svenska', exact: true }).click();
+  await page
+    .getByRole('combobox', { name: 'Language', exact: true })
+    .selectOption('sv');
   await expect(page.locator('html')).toHaveAttribute('lang', 'sv');
   await expect(
     page.getByRole('combobox', { name: 'Språk', exact: true }),
-  ).toHaveValue('Svenska');
+  ).toHaveValue('sv');
   await page.reload();
   await expect(
     page.getByRole('combobox', { name: 'Språk', exact: true }),
-  ).toHaveValue('Svenska');
+  ).toHaveValue('sv');
   await page
     .getByRole('button', {
       name: 'Utforska demon med fiktiva uppgifter',
@@ -47,8 +48,9 @@ test('language persists before sign-in and changes retained UI state', async ({
     .getByRole('searchbox', { name: 'Sök på rubrik', exact: true })
     .fill('Example');
   const before = page.url();
-  await page.getByRole('combobox', { name: 'Språk', exact: true }).click();
-  await page.getByRole('option', { name: 'English', exact: true }).click();
+  await page
+    .getByRole('combobox', { name: 'Språk', exact: true })
+    .selectOption('en');
 
   await expect(
     page.getByRole('searchbox', { name: 'Search by title', exact: true }),
@@ -75,8 +77,9 @@ test('language persists before sign-in and changes retained UI state', async ({
   await page
     .getByRole('textbox', { name: 'Maximum budget (SEK)' })
     .fill('3600000');
-  await page.getByRole('combobox', { name: 'Language', exact: true }).click();
-  await page.getByRole('option', { name: 'Svenska', exact: true }).click();
+  await page
+    .getByRole('combobox', { name: 'Language', exact: true })
+    .selectOption('sv');
   await expect(
     page.getByRole('combobox', { name: 'Sökområde', exact: true }),
   ).toHaveValue('Centralstationen');
@@ -87,8 +90,9 @@ test('language persists before sign-in and changes retained UI state', async ({
   await page
     .getByRole('option', { name: 'Göteborg (hela kommunen)', exact: true })
     .click();
-  await page.getByRole('combobox', { name: 'Språk', exact: true }).click();
-  await page.getByRole('option', { name: 'English', exact: true }).click();
+  await page
+    .getByRole('combobox', { name: 'Språk', exact: true })
+    .selectOption('en');
   await expect(
     page.getByRole('combobox', { name: 'Search location', exact: true }),
   ).toHaveValue('Göteborg (whole city)');
@@ -149,8 +153,9 @@ test('map markers and controls change language without replacing the map', async
   const marker = page.getByRole('button', { name: /^2 homes nearby/ });
   await expect(marker).toBeVisible();
   const originalMarker = await marker.elementHandle();
-  await page.getByRole('combobox', { name: 'Language', exact: true }).click();
-  await page.getByRole('option', { name: 'Svenska', exact: true }).click();
+  await page
+    .getByRole('combobox', { name: 'Language', exact: true })
+    .selectOption('sv');
   const translatedMap = page.getByLabel('Bostadskarta', { exact: true });
   await expect(
     translatedMap.locator('.maplibregl-ctrl-zoom-in'),
@@ -182,8 +187,9 @@ test('blocked preference writes keep the chosen language usable and explain pers
     };
   });
   await page.goto('/shellter');
-  await page.getByRole('combobox', { name: 'Language', exact: true }).click();
-  await page.getByRole('option', { name: 'Svenska', exact: true }).click();
+  await page
+    .getByRole('combobox', { name: 'Language', exact: true })
+    .selectOption('sv');
   await expect(
     page.getByText(
       'Ditt språkval kunde inte sparas. Det gäller tills du lämnar sidan.',
@@ -191,11 +197,11 @@ test('blocked preference writes keep the chosen language usable and explain pers
   ).toBeVisible();
   await expect(
     page.getByRole('combobox', { name: 'Språk', exact: true }),
-  ).toHaveValue('Svenska');
+  ).toHaveValue('sv');
   await page.reload();
   await expect(
     page.getByRole('combobox', { name: 'Language', exact: true }),
-  ).toHaveValue('English');
+  ).toHaveValue('en');
 });
 
 test('changing language preserves a panned camera even when a home remains selected', async ({
@@ -236,8 +242,9 @@ test('changing language preserves a panned camera even when a home remains selec
     )
     .toBeGreaterThanOrEqual(3);
   const position = await marker.locator('..').getAttribute('style');
-  await page.getByRole('combobox', { name: 'Language', exact: true }).click();
-  await page.getByRole('option', { name: 'Svenska', exact: true }).click();
+  await page
+    .getByRole('combobox', { name: 'Language', exact: true })
+    .selectOption('sv');
   const translated = page.getByRole('button', {
     name: /^Example balcony home:/,
   });
