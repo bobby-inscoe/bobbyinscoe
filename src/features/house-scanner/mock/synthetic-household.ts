@@ -1,3 +1,7 @@
+import balcony from '@/features/house-scanner/mock/assets/balcony.svg?no-inline';
+import floorPlan from '@/features/house-scanner/mock/assets/floor-plan.svg?no-inline';
+import kitchen from '@/features/house-scanner/mock/assets/kitchen.svg?no-inline';
+import livingRoom from '@/features/house-scanner/mock/assets/living-room.svg?no-inline';
 import { snapshotSchema } from '@/features/house-scanner/types/contracts';
 import {
   type ListingNote,
@@ -9,6 +13,20 @@ export const DEMO_USER_ID = '00000000-0000-4000-8000-000000000002';
 export const DEMO_OTHER_USER_ID = '00000000-0000-4000-8000-000000000003';
 const date = '2026-10-12T10:00:00Z';
 export const STALE_LISTING_ID = '00000000-0000-4000-8000-000000000014';
+const demoPhotos = [livingRoom, kitchen, balcony].map((url) => ({
+  url: new URL(url, globalThis.location?.origin ?? 'http://localhost').href,
+  attribution: 'Shellter demo illustration',
+  rightsBasis: 'Original illustration included with Shellter',
+  expiresAt: '2099-01-01T00:00:00Z',
+  observedAt: date,
+  displayAllowed: true,
+  hotlinkAllowed: true,
+}));
+const demoFloorPlan = {
+  ...demoPhotos[0],
+  url: new URL(floorPlan, globalThis.location?.origin ?? 'http://localhost')
+    .href,
+};
 const baseFacts = {
   propertyType: 'apartment',
   tenure: 'cooperative',
@@ -185,7 +203,13 @@ export const SYNTHETIC_SNAPSHOT = snapshotSchema.parse({
     sourceUrls: [`https://example.invalid/homes/${listing.id}`],
     conflicts: [],
     evidence: [],
-    photo: null,
+    photo:
+      listing.id === '00000000-0000-4000-8000-000000000010'
+        ? demoPhotos[0]
+        : null,
+    ...(listing.id === '00000000-0000-4000-8000-000000000010'
+      ? { photos: demoPhotos, floorPlan: demoFloorPlan }
+      : {}),
     addedBy: null,
     userTags: [],
   })),
