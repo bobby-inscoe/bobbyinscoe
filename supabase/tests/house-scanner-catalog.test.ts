@@ -3349,3 +3349,154 @@ describe('carried-over guards', () => {
     );
   });
 });
+
+describe('price estimates', () => {
+  // Baseline 50 000 SEK per m² with no other terms, so expected ranges can be worked out by hand.
+  const model = {
+    version: 1,
+    fittedAt: new Date().toISOString(),
+    homes: 500,
+    period: '2026H2',
+    intercept: Math.log(50_000),
+    logArea: 1,
+    feePerM2: 0,
+    rooms: 0,
+    finalPremium: Math.log(1.05),
+    typicalFeePerM2: 60,
+    residualSd: 0.2,
+    levels: {},
+  };
+  const at = (north: number, east = 0) => ({
+    latitude: 0.05 + north * 0.001,
+    longitude: east,
+    precision: 'address' as const,
+    source: 'Synthetic coordinates',
+    observedAt: new Date(baseTime).toISOString(),
+  });
+  const flat = (
+    id: string,
+    title: string,
+    askingPriceSek: number | null,
+    coordinates: ReturnType<typeof at>,
+    propertyType: 'apartment' | 'house' = 'apartment',
+  ) =>
+    home(id, {
+      title,
+      coordinates,
+      facts: { ...home(id).facts, askingPriceSek, propertyType },
+    });
+  const estimates = async () =>
+    (
+      await db.query<{
+        id: string;
+        low_sek: number;
+        high_sek: number;
+        final_sek: number;
+        nearby: number;
+      }>(
+        `select l.source_listing_id id,e.low_sek,e.high_sek,e.final_sek,e.nearby
+         from hs.listing_estimates e join hs.listings l on l.id=e.listing_id order by 1`,
+      )
+    ).rows;
+
+  beforeAll(async () => {
+    // The source settings block rolls back and reapplies its migration on this database, which brings back the
+    // snapshot without priceEstimate; this migration's snapshot definition is applied again.
+    const text = await migration(
+      '20261023180000_house_scanner_price_estimates.sql',
+    );
+    await db.exec(
+      text.slice(
+        text.indexOf('CREATE OR REPLACE FUNCTION public.hs_household_snapshot'),
+      ),
+    );
+    await publish([
+      // Six priced neighbours 10% over the baseline, about 110 m apart, each in its own building.
+      ...[1, 2, 3, 4, 5, 6].map((n) =>
+        flat(`pe-n${n}`, `Grannvägen ${n}`, 3_300_000, at(n)),
+      ),
+      // A priced home in the target's building, far over the baseline, which must not count.
+      flat('pe-mate', 'Målgatan 1B', 9_000_000, at(0.1)),
+      flat('pe-target', 'Målgatan 1', null, at(0)),
+      flat('pe-house', 'Husvägen 1', null, at(0.2), 'house'),
+      // An unpriced flat 20 km away with no neighbours and no level.
+      flat('pe-lonely', 'Ensamvägen 1', null, at(0, 0.18)),
+    ]);
+    const run = await db.query<{ id: string }>(
+      "select id from hs.runs where state='published' order by created_at desc limit 1",
+    );
+    await db.query(
+      "insert into hs.price_models(run_id,source_id,fitted_at,homes,model) values($1,'alpha',now(),500,$2::jsonb)",
+      [run.rows[0].id, JSON.stringify(model)],
+    );
+    await db.exec('select hs.refresh_price_estimates()');
+  });
+
+  it('estimates an unpriced flat from the model and its neighbours in other buildings', async () => {
+    const mid = 50_000 * 60 * Math.exp((Math.log(1.1) * 6) / 7);
+    const sd = 0.5 * model.residualSd;
+    expect(await estimates()).toEqual([
+      {
+        id: 'pe-target',
+        low_sek: Math.floor((mid * Math.exp(-1.4 * sd)) / 50_000) * 50_000,
+        high_sek: Math.ceil((mid * Math.exp(1.4 * sd)) / 50_000) * 50_000,
+        final_sek: Math.round((mid * 1.05) / 10_000) * 10_000,
+        nearby: 6,
+      },
+    ]);
+  });
+
+  it('sends the estimate in the snapshot, and stops once the model is older than 30 days', async () => {
+    const row = (await estimates())[0];
+    const raw = await as('authenticated', OWNER_A, () =>
+      rpc('select public.hs_household_snapshot($1) as value', [HOUSE_A]),
+    );
+    const listing = (
+      raw as {
+        listings: { title: string; priceEstimate?: Record<string, unknown> }[];
+      }
+    ).listings.find((l) => l.title === 'Målgatan 1');
+    expect(listing?.priceEstimate).toEqual({
+      lowSek: row.low_sek,
+      highSek: row.high_sek,
+      finalSek: row.final_sek,
+      nearby: 6,
+      farthestM: expect.any(Number),
+      levelUsed: false,
+    });
+    await db.query(
+      "update hs.price_models set fitted_at=now()-interval '31 days'",
+    );
+    const stale = await as('authenticated', OWNER_A, () =>
+      rpc('select public.hs_household_snapshot($1) as value', [HOUSE_A]),
+    );
+    expect(
+      (
+        stale as { listings: { title: string; priceEstimate?: unknown }[] }
+      ).listings.find((l) => l.title === 'Målgatan 1')?.priceEstimate,
+    ).toBeUndefined();
+    await db.exec('select hs.refresh_price_estimates()');
+    expect(await estimates()).toEqual([]);
+  });
+
+  it('rolls back to exactly the earlier schema and applies again', async () => {
+    const ESTIMATES = '20261023180000_house_scanner_price_estimates';
+    const database = await migratedThrough(ESTIMATES);
+    try {
+      const migrated = await fingerprint(database);
+      await database.exec(await rollback(ESTIMATES));
+      const earlier = await migratedThrough(
+        '20261023170000_house_scanner_price_models',
+      );
+      try {
+        expect(await fingerprint(database)).toEqual(await fingerprint(earlier));
+      } finally {
+        await earlier.close();
+      }
+      await database.exec(await migration(`${ESTIMATES}.sql`));
+      expect(await fingerprint(database)).toEqual(migrated);
+    } finally {
+      await database.close();
+    }
+  });
+});
