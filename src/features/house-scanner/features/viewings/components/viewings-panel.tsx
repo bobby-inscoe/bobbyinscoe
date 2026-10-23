@@ -8,9 +8,10 @@ import {
   Title,
   UnstyledButton,
 } from '@mantine/core';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { ListingCardMenu } from '@/features/house-scanner/components/listing-card-menu';
+import { ListingGallery } from '@/features/house-scanner/components/listing-gallery';
 import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
 import { KeyFacts } from '@/features/house-scanner/components/listing-summary';
 import { CalendarButton } from '@/features/house-scanner/components/viewing-list';
@@ -20,6 +21,7 @@ import type {
   Snapshot,
   Viewing,
 } from '@/features/house-scanner/types/contracts';
+import { cardPhotos } from '@/features/house-scanner/utils/card-photos';
 import {
   formatViewing,
   groupByDay,
@@ -146,6 +148,8 @@ function ViewingCard({
   onSeeOnMap: () => void;
 }) {
   const intl = useIntl();
+  const [photoIndex, setPhotoIndex] = useState(0);
+  const photos = cardPhotos(listing);
   return (
     <Box
       component="article"
@@ -153,7 +157,25 @@ function ViewingCard({
       className={`${classes.card} ${classes.viewingCard}`}
     >
       <Box className={classes.cardPhoto}>
-        <ListingPhoto listing={listing} onOpen={onOpen} />
+        {photos.length > 1 ||
+        (listing.floorPlan && photos[0]?.url === listing.floorPlan.url) ? (
+          <ListingGallery
+            listing={listing}
+            photos={photos}
+            index={Math.min(photoIndex, photos.length - 1)}
+            onSelect={setPhotoIndex}
+            onOpen={onOpen}
+            actionLabel={intl.formatMessage(
+              { id: 'listings.details.view' },
+              { value0: listing.title },
+            )}
+            showAttribution
+          >
+            {null}
+          </ListingGallery>
+        ) : (
+          <ListingPhoto listing={listing} onOpen={onOpen} />
+        )}
       </Box>
       <Stack gap={4} className={classes.grow}>
         <Text size="md" fw={800} className={classes.viewingTag}>

@@ -27,6 +27,7 @@ import { messageValue } from '@/features/house-scanner/i18n/catalogs';
 import { displayLabel } from '@/features/house-scanner/i18n/display-labels';
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type { Listing } from '@/features/house-scanner/types/contracts';
+import { cardPhotos } from '@/features/house-scanner/utils/card-photos';
 import { formatPrice } from '@/features/house-scanner/utils/format';
 
 // A compact card for the home chosen on the map: photo, headline facts and the way to the listing.
@@ -61,11 +62,7 @@ export function PinCard({
 }) {
   const intl = useIntl();
   const [selectionPhoto, setSelectionPhoto] = useState({ id: '', index: 0 });
-  const photos = listing.photos?.length
-    ? listing.photos
-    : listing.photo
-      ? [listing.photo]
-      : [];
+  const photos = cardPhotos(listing);
   const photoIndex =
     selectionPhoto.id === listing.id ? selectionPhoto.index : 0;
 
@@ -114,7 +111,8 @@ export function PinCard({
         )}
       >
         <div className={classes.photoPinImage}>
-          {photos.length > 1 ? (
+          {photos.length > 1 ||
+          (listing.floorPlan && photos[0]?.url === listing.floorPlan.url) ? (
             <ListingGallery
               key={listing.id}
               listing={listing}

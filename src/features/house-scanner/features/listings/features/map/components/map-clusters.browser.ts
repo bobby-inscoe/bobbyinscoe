@@ -42,6 +42,7 @@ async function openMap(page: Page, count = 4, gallery = false) {
         id: index === 0 ? clusterTemplate.id : '10000000-0000-4000-8000-' + String(index).padStart(12, '0'),
         title: 'Cluster home ' + (index + 1),
         photos: ${gallery ? 'clusterTemplate.photos' : 'undefined'},
+        floorPlan: ${gallery ? 'clusterTemplate.floorPlan' : 'undefined'},
         photo: {
           url: 'https://images.example.invalid/map-home.svg',
           attribution: 'Synthetic illustration',
@@ -215,7 +216,7 @@ for (const gallery of [false, true]) {
       page.viewportSize()?.width ?? 0,
     );
     if (gallery) {
-      const dots = preview.getByRole('img', { name: 'Photo 1 of 3' });
+      const dots = preview.getByRole('img', { name: 'Photo 1 of 4' });
       const dotsBox = await dots.boundingBox();
       if (!dotsBox) throw new Error('Missing carousel indicators.');
       expect(dotsBox.y + dotsBox.height).toBeLessThan(
@@ -228,6 +229,15 @@ for (const gallery of [false, true]) {
       await expect
         .poll(async () => (await image.boundingBox())?.x)
         .toBeCloseTo(imageBox.x, 1);
+      await preview
+        .getByRole('button', { name: 'Previous photo', exact: true })
+        .click();
+      await preview
+        .getByRole('button', { name: 'Previous photo', exact: true })
+        .click();
+      await expect(
+        preview.getByRole('img', { name: 'Floor plan', exact: true }),
+      ).toHaveAttribute('src', /floor-plan\.svg(?:\?.*)?$/);
     }
     await expect(pin).toHaveAttribute('aria-pressed', 'true');
     await page.screenshot({ path: test.info().outputPath('photo-card.png') });

@@ -38,6 +38,7 @@ import type {
   Listing,
   Snapshot,
 } from '@/features/house-scanner/types/contracts';
+import { cardPhotos } from '@/features/house-scanner/utils/card-photos';
 import {
   estimatedPositionLabel,
   hasPin,
@@ -93,11 +94,7 @@ export const ListingCard = memo(function ListingCard({
 }: ListingCardProps) {
   const intl = useIntl();
   const [photoIndex, setPhotoIndex] = useState(0);
-  const photos = listing.photos?.length
-    ? listing.photos
-    : listing.photo
-      ? [listing.photo]
-      : [];
+  const photos = cardPhotos(listing);
 
   const { saved, mine, summary } = useMemo(() => {
     const saved = snapshot.favorites.filter(
@@ -285,7 +282,10 @@ export const ListingCard = memo(function ListingCard({
         {selectionControl}
       </div>
       <div className={`${classes.photoWrap} ${classes.cardPhoto}`}>
-        {!details && !selectionMode && photos.length > 1 ? (
+        {!details &&
+        !selectionMode &&
+        (photos.length > 1 ||
+          (listing.floorPlan && photos[0]?.url === listing.floorPlan.url)) ? (
           <ListingGallery
             listing={listing}
             photos={photos}
