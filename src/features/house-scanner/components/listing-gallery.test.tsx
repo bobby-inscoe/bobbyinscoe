@@ -132,7 +132,7 @@ it('uses discrete dots without scaling when reduced motion is requested', () => 
   expect(second.style.transform).toBe('');
 });
 
-it('restores overlays 200ms after swipe activity stops, including momentum scrolling', () => {
+it('restores overlays 500ms after swipe activity stops, including momentum scrolling', () => {
   vi.useFakeTimers();
   const { viewport, move } = gallery();
   const controls = viewport.parentElement?.querySelector<HTMLElement>(
@@ -146,7 +146,7 @@ it('restores overlays 200ms after swipe activity stops, including momentum scrol
   fireEvent.touchEnd(viewport, { touches: [] });
   act(() => vi.advanceTimersByTime(100));
   move(0.5);
-  act(() => vi.advanceTimersByTime(199));
+  act(() => vi.advanceTimersByTime(499));
   expect(controls.hasAttribute('data-hidden')).toBe(true);
   act(() => vi.advanceTimersByTime(1));
   expect(controls.hasAttribute('data-hidden')).toBe(false);
