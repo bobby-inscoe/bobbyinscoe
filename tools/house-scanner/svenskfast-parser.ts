@@ -95,6 +95,34 @@ function photoFrom(item: Rec, observedAt: string) {
   };
 }
 
+/**
+ * Ids of the home cards marked "Budgivning pågår": an `object-card` article with the class `search-hit--bidding`
+ * (seen 23 October 2026). The office-suggestion block carries the same class but is not a home card.
+ */
+function biddingIdsOf(html: string): Set<string> {
+  const ids = new Set<string>();
+  for (const [, classes, body] of html.matchAll(
+    /<article class="([^"]*)">([\s\S]*?)<\/article>/g,
+  )) {
+    const names = classes.split(/\s+/);
+    if (
+      !names.includes('object-card') ||
+      !names.includes('search-hit--bidding')
+    )
+      continue;
+    const url = /"url"\s*:\s*"([^"]{1,300})"/.exec(body)?.[1];
+    let path: string;
+    try {
+      path = new URL(url ?? '').pathname;
+    } catch {
+      continue;
+    }
+    const id = LISTING_PATH.exec(path)?.[2];
+    if (id) ids.add(id);
+  }
+  return ids;
+}
+
 function observationFrom(
   item: unknown,
   origin: string,
@@ -188,6 +216,7 @@ export function readSvenskfastSearchPage(
 
   const observedAt = context.observedAt.toISOString();
   const wanted = context.municipality?.trim().toLowerCase();
+  const bidding = biddingIdsOf(html);
   const observations: Observation[] = [];
   const seen = new Set<string>();
   for (const item of items) {
@@ -199,6 +228,10 @@ export function readSvenskfastSearchPage(
       observation.facts.municipality?.toLowerCase() !== wanted
     )
       continue;
+    // Only a card marked "Budgivning pågår" is a fact; anything else stays unknown.
+    observation.facts.bidding = bidding.has(observation.sourceListingId)
+      ? true
+      : null;
     observations.push(observation);
   }
 
@@ -407,5 +440,16 @@ export function readSvenskfastDetailPage(
   if (photoKeys.length > 0) facts.photoKeys = photoKeys;
   const planKey = planKeyOf(html);
   if (planKey) facts.planKey = planKey;
+  // While bids are published the price box is `<div class="bid">` with "Högsta bud: <amount> kr" (seen 23 October 2026).
+  const bidBox = html.indexOf('<div class="bid">');
+  const highestBidSek =
+    bidBox < 0
+      ? null
+      : kronor(
+          /Högsta bud\s*:\s*((?:\d[\s ]?)+)\s*kr/.exec(
+            plain(html.slice(bidBox, bidBox + 2000)),
+          )?.[1],
+        );
+  if (highestBidSek !== null) facts.highestBidSek = highestBidSek;
   return { kind: 'detail', facts };
 }
