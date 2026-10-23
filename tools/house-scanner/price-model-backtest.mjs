@@ -109,17 +109,18 @@ const wmedian = (pairs) => {
   return sorted.at(-1)[0];
 };
 
-// The database's rule (hs.refresh_price_estimates): up to 16 nearby priced homes, weighted 1/(metres+150), and a
-// range no wider than the model's own spread.
+// The database's rule (hs.refresh_price_estimates): up to 32 nearby priced homes, weighted 1/(metres+150)², and a
+// range of ±1.5 spreads no wider than the model's own. The catalog rows carry no address, so the street blend and the
+// street neighbourhood are left out here.
 function modelled(
   model,
   target,
-  { count = 16, z = 1.4, localShrink = 1 } = {},
+  { count = 32, z = 1.5, localShrink = 1 } = {},
 ) {
   const base = baselineLog(model, target);
   const res = near(target, 2000, count).map(({ o, d }) => [
     Math.log(o.price) - baselineLog(model, o),
-    1 / (d + 150),
+    1 / (d + 150) ** 2,
   ]);
   const hasLevel = target.neighbourhood && model.levels[target.neighbourhood];
   if (!hasLevel && res.length < 4) return null;
