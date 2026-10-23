@@ -28,6 +28,8 @@ const labels: Record<string, MessageId> = {
   quietness: 'listings.details.quietness',
   transit: 'listings.details.transit',
   askingPriceSek: 'listings.details.askingPrice',
+  bidding: 'listings.details.bidding',
+  highestBidSek: 'listings.details.highestBid',
   baseFeeSek: 'listings.details.monthlyFee',
   livingAreaM2: 'listings.details.livingArea',
   secondaryAreaM2: 'listings.details.secondaryArea',

@@ -58,6 +58,11 @@ Add Link, so it belongs here rather than inside the List subfeature. Favorites
 uses the same browse panel as Listings; it does not duplicate List or Map.
 Root browser tests cover the shell and navigation across features.
 
+Drawer location previews and the nested interactive map share the lazy MapLibre
+bootstrap at `utils/map-runtime.ts`. The ready workspace schedules code and worker
+preloading through `hooks/use-map-preload.ts`; map style documents and geographic data are
+requested only for visible maps. Each map owns and removes its rendering instance.
+
 The root `api/` remains the household transport and snapshot boundary. Its
 client serves the shared session lifecycle and household actions across tabs;
 moving it into a tab would give that tab ownership of other tabs' data access.

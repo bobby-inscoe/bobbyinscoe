@@ -89,7 +89,7 @@ export const SERVICE_RPC_PROBES: Record<string, Record<string, unknown>> = {
     p_nonce: 'accept-probe',
     p_timestamp: 0,
   },
-  hs_ingest_policies: { p_key_id: 'accept-probe' },
+  hs_ingest_sources: { p_key_id: 'accept-probe' },
   hs_ingest: {
     p_key_id: 'accept-probe',
     p_body_hash: '0'.repeat(64),
@@ -112,7 +112,12 @@ export const ADMIN_PROBES: Record<string, Record<string, unknown>> = {
     p_role: 'member',
     p_active: true,
   },
-  admin_set_source_policy: { p_policy: {} },
+  admin_set_source: {
+    p_source_id: 'Invalid probe',
+    p_enabled: true,
+    p_listing_origins: null,
+    p_image_origins: null,
+  },
   admin_issue_credential: {
     p_key_id: 'accept-probe',
     p_source_ids: ['accept-probe'],

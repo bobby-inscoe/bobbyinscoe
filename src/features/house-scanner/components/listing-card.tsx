@@ -192,13 +192,11 @@ export const ListingCard = memo(function ListingCard({
               )}
             </Group>
           )}
-          <Box {...desktopOnly(details)}>
-            <MatchLines
-              listing={listing}
-              snapshot={snapshot}
-              details={details}
-            />
-          </Box>
+          {!details && (
+            <Box {...desktopOnly(details)}>
+              <MatchLines listing={listing} snapshot={snapshot} />
+            </Box>
+          )}
           {saved.length > 0 && (
             <Text size="sm" {...desktopOnly(details)}>
               <FormattedMessage id="listings.details.savedBy" />{' '}
@@ -322,11 +320,12 @@ export const ListingCard = memo(function ListingCard({
         )}
       </div>
       <div className={classes.cardPrice}>
-        {estimated ? (
+        {estimated && !details ? (
           <EstimateLine listing={listing} />
         ) : (
           <PriceLine listing={listing} />
         )}
+        {estimated && details && <EstimateLine listing={listing} />}
       </div>
       <Title order={3} size="h5" className={classes.cardTitle}>
         <UnstyledButton
@@ -340,9 +339,11 @@ export const ListingCard = memo(function ListingCard({
           {listing.title}
         </UnstyledButton>
       </Title>
-      <Box {...desktopOnly(details)}>
-        <FactsLine listing={listing} />
-      </Box>
+      {!details && (
+        <Box {...desktopOnly(details)}>
+          <FactsLine listing={listing} />
+        </Box>
+      )}
       <Box {...phoneOnly(details)} className={classes.cardFacts}>
         <KeyFacts listing={listing} />
       </Box>

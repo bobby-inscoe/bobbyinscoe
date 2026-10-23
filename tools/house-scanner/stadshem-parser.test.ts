@@ -242,7 +242,7 @@ describe('Stadshem list', () => {
 
   it('produces output that passes the policy check of the registry entry', () => {
     const entry = sourceRegistry().find(
-      (e) => e.policy.sourceId === 'stadshem',
+      (e) => e.source.sourceId === 'stadshem',
     );
     if (!entry) throw new Error('Registry entry missing');
     for (const observation of page(
@@ -256,7 +256,7 @@ describe('Stadshem list', () => {
       ]),
     ).observations)
       expect(() =>
-        assertAdapterOutput(entry.policy, observation),
+        assertAdapterOutput(entry.source, observation),
       ).not.toThrow();
   });
 });

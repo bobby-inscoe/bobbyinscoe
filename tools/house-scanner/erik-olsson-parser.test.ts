@@ -108,6 +108,21 @@ describe('Erik Olsson search page', () => {
     });
   });
 
+  it('marks bidding only for a home the streamed data says is in bidding', () => {
+    // Escaped JSON as the framework streams it; the second home says false, the third is missing.
+    const streamed = (id: string, bidding: boolean) =>
+      `{\\"id\\":\\"${id}\\",\\"title\\":\\"Exempel\\",\\"price_type\\":\\"bidding-active\\",\\"is_bidding_active\\":${bidding},\\"status\\":{}}`;
+    const html = search([APARTMENT, HOUSE, VILLA], 3).replace(
+      '</body>',
+      `<script>self.__next_f.push([1,"{\\"data\\":[${streamed('9000001', true)},${streamed('9000002', false)}]}"])</script></body>`,
+    );
+    const ids = Object.fromEntries(
+      page(html).observations.map((o) => [o.sourceListingId, o.facts.bidding]),
+    );
+    expect(Object.values(ids)).toEqual([true, null, null]);
+    expect(ids['9000001']).toBe(true);
+  });
+
   it('drops a repeated listing on the same page', () => {
     const read = page(search([APARTMENT, APARTMENT], 2));
     expect(read.observations).toHaveLength(1);
@@ -190,13 +205,13 @@ describe('Erik Olsson search page', () => {
 
   it('produces output that passes the policy check of the registry entry', () => {
     const entry = sourceRegistry().find(
-      (e) => e.policy.sourceId === 'erik-olsson',
+      (e) => e.source.sourceId === 'erik-olsson',
     );
     if (!entry) throw new Error('Registry entry missing');
     for (const observation of page(search([APARTMENT, HOUSE, VILLA]))
       .observations)
       expect(() =>
-        assertAdapterOutput(entry.policy, observation),
+        assertAdapterOutput(entry.source, observation),
       ).not.toThrow();
   });
 });

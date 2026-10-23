@@ -1,23 +1,22 @@
 import {
-  Anchor,
+  ActionIcon,
+  Button,
   Divider,
   Group,
   Paper,
+  Popover,
   Stack,
   Text,
   Title,
   UnstyledButton,
 } from '@mantine/core';
+import { ExternalLink, Info } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { FormattedMessage, type IntlShape, useIntl } from 'react-intl';
 import { ListingNotes } from '@/features/house-scanner/components/listing-notes';
 import { ManualListingActions } from '@/features/house-scanner/components/manual-listing-actions';
 import { ViewingRows } from '@/features/house-scanner/components/viewing-list';
 import type { ListingNotesController } from '@/features/house-scanner/hooks/use-listing-notes';
-import {
-  englishIntl,
-  messageValue,
-} from '@/features/house-scanner/i18n/catalogs';
 import { displayLabel } from '@/features/house-scanner/i18n/display-labels';
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type {
@@ -31,6 +30,7 @@ import {
 } from '@/features/house-scanner/utils/format';
 import { listingNeighborhoodLabel } from '@/features/house-scanner/utils/listing-neighborhoods';
 import { hasPin } from '@/features/house-scanner/utils/listing-position';
+import { sourceName } from '@/features/house-scanner/utils/source-name';
 import { upcomingViewings } from '@/features/house-scanner/utils/viewings';
 
 interface ListingDetailsProps {
@@ -38,47 +38,39 @@ interface ListingDetailsProps {
   snapshot: Snapshot;
   userId: string;
   notes?: ListingNotesController;
-  // The level of the section headings, one below the title above them.
   headingOrder?: 3 | 4;
   onSelectPhoto?: (index: number) => void;
+  locationPreview?: ReactNode;
 }
 
-const yesNo = (value: boolean | null, intl: IntlShape = englishIntl) =>
-  value === null
-    ? null
-    : value
-      ? intl.formatMessage({ id: 'common.yes' })
-      : intl.formatMessage({ id: 'common.no' });
+interface FactRow {
+  field?: keyof Listing['facts'];
+  label: string;
+  value: ReactNode | null;
+  disputed?: boolean;
+  note?: ReactNode;
+}
 
-const OUTDOOR = (intl: IntlShape) =>
-  ({
-    balcony: intl.formatMessage({ id: 'listings.details.balcony' }),
-    terrace: intl.formatMessage({ id: 'listings.details.terrace' }),
-    both: intl.formatMessage({ id: 'listings.details.balconyAndTerrace' }),
-    none: intl.formatMessage({ id: 'common.none' }),
-  }) as const;
-
-const TENURE = (intl: IntlShape) =>
-  ({
-    cooperative: intl.formatMessage({
-      id: 'listings.details.cooperativeBostadsratt',
-    }),
-    ownership: intl.formatMessage({ id: 'listings.details.owned' }),
-    rental: intl.formatMessage({ id: 'listings.details.rental' }),
-    unknown: null,
-  }) as const;
-
-// A label and its value on one line each. An unknown value is dimmed, so what is missing stands out.
-function FactList({ rows }: { rows: [string, ReactNode | null][] }) {
+function FactList({ rows }: { rows: FactRow[] }) {
   return (
     <dl className={classes.factList}>
-      {rows.map(([label, value]) => (
+      {rows.map(({ label, value, disputed, note }) => (
         <div key={label} className={classes.factRow}>
           <dt>{label}</dt>
           <dd>
             {value ?? (
-              <Text span size="sm" c="dimmed">
+              <Text span c="orange.8">
                 <FormattedMessage id="common.unknown" />
+              </Text>
+            )}
+            {disputed && (
+              <Text span c="orange.8">
+                <FormattedMessage id="listings.details.disputed" />
+              </Text>
+            )}
+            {note && (
+              <Text component="div" size="sm" c="orange.8">
+                {note}
               </Text>
             )}
           </dd>
@@ -110,6 +102,11 @@ function Section({
   );
 }
 
+const yesNo = (value: boolean | null, intl: IntlShape) =>
+  value === null
+    ? null
+    : intl.formatMessage({ id: value ? 'common.yes' : 'common.no' });
+
 export function ListingDetails({
   listing,
   snapshot,
@@ -117,32 +114,202 @@ export function ListingDetails({
   notes,
   headingOrder = 4,
   onSelectPhoto,
+  locationPreview,
 }: ListingDetailsProps) {
   const intl = useIntl();
-
   const { facts, conflicts } = listing;
   const house = facts.propertyType === 'house';
   const sectionOrder = headingOrder === 3 ? 4 : 5;
+  const fact = (
+    field: keyof Listing['facts'],
+    value: ReactNode | null,
+    note?: ReactNode,
+  ): FactRow => ({
+    field,
+    label: displayLabel(intl, field),
+    value,
+    disputed: conflicts.includes(field),
+    note,
+  });
+  const known = (field: keyof Listing['facts']) =>
+    facts[field] != null || conflicts.includes(field);
+  const profiles = snapshot.profiles.filter((profile) => profile.enabled);
+  const feeWarnings = (total: boolean) => {
+    const baseFee = facts.baseFeeSek;
+    if (
+      facts.propertyType !== 'apartment' ||
+      conflicts.includes('propertyType') ||
+      baseFee === null ||
+      conflicts.includes('baseFeeSek') ||
+      (total &&
+        (facts.mandatoryMonthlySek === null ||
+          conflicts.includes('mandatoryMonthlySek')))
+    )
+      return null;
+    const amount = baseFee + (total ? (facts.mandatoryMonthlySek ?? 0) : 0);
+    const warnings = profiles
+      .filter(
+        ({ criteria }) =>
+          amount > criteria.feeReferenceSek &&
+          (!total || baseFee <= criteria.feeReferenceSek),
+      )
+      .map((profile) => (
+        <span key={profile.id}>
+          {profiles.length > 1 && `${profile.name}: `}
+          {intl.formatMessage(
+            {
+              id: total
+                ? 'listings.details.totalAbovePreference'
+                : 'listings.details.abovePreference',
+            },
+            { value0: formatFee(profile.criteria.feeReferenceSek, intl) },
+          )}
+        </span>
+      ));
+    return warnings.length ? <Stack gap={2}>{warnings}</Stack> : null;
+  };
+  const floor =
+    facts.groundFloor === null
+      ? null
+      : intl.formatMessage({
+          id: facts.groundFloor
+            ? 'listings.details.groundFloor'
+            : 'listings.details.aboveGroundFloor',
+        });
+  const outdoor =
+    facts.outdoor === null
+      ? null
+      : intl.formatMessage({
+          id: (
+            {
+              balcony: 'listings.details.balcony',
+              terrace: 'listings.details.terrace',
+              both: 'listings.details.balconyAndTerrace',
+              none: 'common.none',
+            } as const
+          )[facts.outdoor],
+        });
   const timestamps = [
-    {
-      label: intl.formatMessage({ id: 'listings.details.firstFound' }),
-      value: listing.firstSeenAt,
-    },
     {
       label: intl.formatMessage({ id: 'listings.details.lastChanged' }),
       value: listing.lastChangedAt,
     },
     {
       label: intl.formatMessage({ id: 'listings.details.lastChecked' }),
-      value: listing.lastCheckedAt,
+      value: listing.lastCheckedAt ?? listing.observedAt,
     },
+  ].filter((item): item is { label: string; value: string } => !!item.value);
+  const [primaryTime, ...otherTimes] = timestamps;
+  const floorPlan =
+    listing.floorPlan && Date.parse(listing.floorPlan.expiresAt) > Date.now()
+      ? listing.floorPlan
+      : null;
+  const mainFacts = [
+    fact(
+      'livingAreaM2',
+      facts.livingAreaM2 === null
+        ? null
+        : intl.formatMessage(
+            { id: 'listings.details.m' },
+            { value0: intl.formatNumber(facts.livingAreaM2) },
+          ),
+    ),
+    fact('rooms', facts.rooms === null ? null : intl.formatNumber(facts.rooms)),
+    ...(!house || known('baseFeeSek')
+      ? [
+          fact(
+            'baseFeeSek',
+            facts.baseFeeSek === null
+              ? null
+              : formatFee(facts.baseFeeSek, intl),
+            feeWarnings(false),
+          ),
+        ]
+      : []),
   ];
-  const floor =
-    facts.groundFloor === null
-      ? null
-      : facts.groundFloor
-        ? intl.formatMessage({ id: 'listings.details.groundFloor' })
-        : intl.formatMessage({ id: 'listings.details.aboveGroundFloor' });
+  const activeBidding =
+    facts.bidding === true &&
+    !conflicts.includes('bidding') &&
+    !conflicts.includes('status') &&
+    !listing.delistedAt &&
+    facts.status !== 'sold' &&
+    facts.status !== 'withdrawn';
+  const secondaryFacts = [
+    ...(facts.status !== 'unknown' ||
+    activeBidding ||
+    conflicts.includes('status') ||
+    conflicts.includes('bidding')
+      ? [
+          {
+            ...fact(
+              'status',
+              activeBidding
+                ? intl.formatMessage({ id: 'listings.details.biddingUnderWay' })
+                : facts.status === 'unknown'
+                  ? null
+                  : displayLabel(intl, facts.status),
+            ),
+            disputed:
+              conflicts.includes('status') || conflicts.includes('bidding'),
+          },
+        ]
+      : []),
+    ...(facts.purchase !== true || conflicts.includes('purchase')
+      ? [fact('purchase', yesNo(facts.purchase, intl))]
+      : []),
+    ...(known('mandatoryMonthlySek')
+      ? [
+          fact(
+            'mandatoryMonthlySek',
+            facts.mandatoryMonthlySek === null
+              ? null
+              : formatFee(facts.mandatoryMonthlySek, intl),
+            feeWarnings(true),
+          ),
+        ]
+      : []),
+    ...(facts.highestBidSek != null
+      ? [
+          fact(
+            'highestBidSek',
+            facts.highestBidSek == null
+              ? null
+              : formatPrice(facts.highestBidSek, intl),
+          ),
+        ]
+      : []),
+  ];
+  const buildingFacts = [
+    ...(!house || conflicts.includes('groundFloor')
+      ? [fact('groundFloor', floor)]
+      : []),
+    ...(!house || conflicts.includes('lift')
+      ? [fact('lift', yesNo(facts.lift, intl))]
+      : []),
+    fact('outdoor', outdoor),
+    ...(known('glazed') ? [fact('glazed', yesNo(facts.glazed, intl))] : []),
+    ...(facts.liftServesHome === false || conflicts.includes('liftServesHome')
+      ? [fact('liftServesHome', yesNo(facts.liftServesHome, intl))]
+      : []),
+    ...(facts.stepFree === false || conflicts.includes('stepFree')
+      ? [fact('stepFree', yesNo(facts.stepFree, intl))]
+      : []),
+  ];
+  const displayedFields = new Set<keyof Listing['facts']>([
+    'askingPriceSek',
+    'municipality',
+    'propertyType',
+    'tenure',
+    'bidding',
+    'highestBidSek',
+    ...[...mainFacts, ...secondaryFacts, ...buildingFacts].flatMap((row) =>
+      row.field ? [row.field] : [],
+    ),
+  ]);
+  const otherConflicts = conflicts.filter(
+    (field) => !displayedFields.has(field),
+  );
+
   return (
     <>
       {listing.delistedAt && (
@@ -158,108 +325,51 @@ export function ListingDetails({
             <FormattedMessage
               id="listings.details.noLongerListedSinceTheSourceStoppedShowingIt"
               values={{
-                value0: messageValue(formatDate(listing.delistedAt, intl)),
-                value1: messageValue(formatDate(listing.observedAt, intl)),
+                value0: formatDate(listing.delistedAt, intl),
+                value1: formatDate(listing.observedAt, intl),
               }}
             />
           </Text>
         </Paper>
       )}
       <Title order={headingOrder} size="h4">
-        <FormattedMessage id="listings.details.factsAndSourceEvidence" />
+        <FormattedMessage id="listings.details.facts" />
       </Title>
       <ManualListingActions listing={listing} />
       <Stack gap="md">
-        <FactList
-          rows={[
-            [
-              intl.formatMessage({ id: 'listings.details.askingPrice' }),
-              facts.askingPriceSek === null
-                ? null
-                : formatPrice(facts.askingPriceSek, intl),
-            ],
-            [
-              intl.formatMessage({ id: 'listings.details.monthlyFee' }),
-              house
-                ? intl.formatMessage({
-                    id: 'listings.details.notApplicableToAHouse',
-                  })
-                : facts.baseFeeSek === null
-                  ? null
-                  : formatFee(facts.baseFeeSek, intl),
-            ],
-            ...(house
-              ? []
-              : ([
-                  [
-                    intl.formatMessage({
-                      id: 'listings.details.mandatoryAdditions',
-                    }),
-                    facts.mandatoryMonthlySek === null
-                      ? null
-                      : formatFee(facts.mandatoryMonthlySek, intl),
-                  ],
-                ] as [string, string | null][])),
-            [
-              intl.formatMessage({ id: 'listings.details.livingArea' }),
-              facts.livingAreaM2 === null
-                ? null
-                : intl.formatMessage(
-                    { id: 'listings.details.m' },
-                    {
-                      value0: messageValue(
-                        intl.formatNumber(facts.livingAreaM2),
-                      ),
-                    },
-                  ),
-            ],
-            [
-              intl.formatMessage({ id: 'listings.details.rooms' }),
-              facts.rooms === null ? null : intl.formatNumber(facts.rooms),
-            ],
-            [
-              intl.formatMessage({ id: 'listings.details.homeType' }),
-              facts.propertyType === null
-                ? null
-                : displayLabel(intl, facts.propertyType),
-            ],
-            [
-              intl.formatMessage({ id: 'listings.details.tenure' }),
-              TENURE(intl)[facts.tenure],
-            ],
-            [
-              intl.formatMessage({ id: 'listings.details.status' }),
-              facts.status === 'unknown'
-                ? null
-                : displayLabel(intl, facts.status),
-            ],
-            [
-              intl.formatMessage({ id: 'listings.details.bidding' }),
-              facts.bidding === true
-                ? intl.formatMessage({ id: 'listings.details.biddingUnderWay' })
-                : null,
-            ],
-            [
-              intl.formatMessage({ id: 'listings.details.highestBid' }),
-              facts.highestBidSek == null
-                ? null
-                : formatPrice(facts.highestBidSek, intl),
-            ],
-          ]}
-        />
-        {conflicts.length > 0 && (
-          <Text size="sm">
-            <FormattedMessage
-              id="listings.details.conflictingFields"
-              values={{
-                value0: messageValue(
-                  intl.formatList(
-                    conflicts.map((field) => displayLabel(intl, field)),
-                  ),
-                ),
-              }}
-            />
-          </Text>
+        <FactList rows={mainFacts} />
+        {floorPlan && (
+          <Section
+            title={intl.formatMessage({ id: 'listings.details.floorPlan' })}
+            order={sectionOrder}
+          >
+            {onSelectPhoto ? (
+              <UnstyledButton
+                onClick={() => onSelectPhoto(-1)}
+                aria-label={intl.formatMessage({
+                  id: 'listings.details.viewFloorPlan',
+                })}
+              >
+                <img
+                  src={floorPlan.url}
+                  alt={intl.formatMessage({ id: 'listings.details.floorPlan' })}
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  width={480}
+                  className={classes.floorPlanPreview}
+                />
+              </UnstyledButton>
+            ) : (
+              <img
+                src={floorPlan.url}
+                alt={intl.formatMessage({ id: 'listings.details.floorPlan' })}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                width={480}
+                className={classes.floorPlanPreview}
+              />
+            )}
+          </Section>
         )}
         {upcomingViewings(listing, Date.now()).length > 0 && (
           <Section
@@ -269,6 +379,83 @@ export function ListingDetails({
             <ViewingRows listing={listing} />
           </Section>
         )}
+        {(secondaryFacts.length > 0 || otherConflicts.length > 0) && (
+          <Section
+            title={intl.formatMessage({ id: 'listings.details.details' })}
+            order={sectionOrder}
+          >
+            <FactList
+              rows={[
+                ...secondaryFacts,
+                ...otherConflicts.map((field) =>
+                  fact(
+                    field,
+                    facts[field] == null ? null : String(facts[field]),
+                  ),
+                ),
+              ]}
+            />
+          </Section>
+        )}
+        <Section
+          title={intl.formatMessage({
+            id: 'listings.details.buildingAndOutdoor',
+          })}
+          order={sectionOrder}
+        >
+          <FactList rows={buildingFacts} />
+        </Section>
+        <Section
+          title={intl.formatMessage({ id: 'listings.details.location' })}
+          order={sectionOrder}
+        >
+          <FactList
+            rows={[
+              fact('municipality', facts.municipality),
+              {
+                label: intl.formatMessage({
+                  id: 'listings.details.neighborhood',
+                }),
+                value: listingNeighborhoodLabel(listing),
+              },
+              ...(locationPreview !== undefined
+                ? []
+                : [
+                    {
+                      label: intl.formatMessage({
+                        id: 'listings.details.position',
+                      }),
+                      value: listing.coordinates
+                        ? intl.formatMessage(
+                            { id: 'listings.details.fromObserved' },
+                            {
+                              value0: displayLabel(
+                                intl,
+                                listing.coordinates.precision,
+                              ),
+                              value1: displayLabel(
+                                intl,
+                                listing.coordinates.source,
+                              ),
+                            },
+                          )
+                        : null,
+                    },
+                  ]),
+            ]}
+          />
+          {locationPreview}
+          {listing.coordinates && !hasPin(listing.coordinates) && (
+            <Text size="sm">
+              <FormattedMessage id="listings.details.approximateAreaNoExactPinIsShown" />
+            </Text>
+          )}
+          {!listing.coordinates && (
+            <Text size="sm">
+              <FormattedMessage id="listings.details.listedWithoutAMapPosition" />
+            </Text>
+          )}
+        </Section>
         {listing.photos && listing.photos.length > 1 && (
           <Section
             title={intl.formatMessage({ id: 'listings.details.photos' })}
@@ -306,182 +493,96 @@ export function ListingDetails({
             </Group>
           </Section>
         )}
-        {listing.floorPlan && (
-          <Section
-            title={intl.formatMessage({ id: 'listings.details.floorPlan' })}
-            order={sectionOrder}
-          >
-            <img
-              src={listing.floorPlan.url}
-              alt={intl.formatMessage({ id: 'listings.details.floorPlan' })}
-              loading="lazy"
-              referrerPolicy="no-referrer"
-              width={480}
-              className={classes.floorPlanPreview}
-            />
-          </Section>
-        )}
-        <Section
-          title={intl.formatMessage({
-            id: 'listings.details.buildingAndOutdoor',
-          })}
-          order={sectionOrder}
-        >
-          <FactList
-            rows={[
-              [intl.formatMessage({ id: 'listings.details.floor' }), floor],
-              [
-                intl.formatMessage({ id: 'listings.details.lift' }),
-                yesNo(facts.lift, intl),
-              ],
-              [
-                intl.formatMessage({ id: 'listings.details.outdoorSpace' }),
-                facts.outdoor === null ? null : OUTDOOR(intl)[facts.outdoor],
-              ],
-              [
-                intl.formatMessage({
-                  id: 'listings.details.glazedOutdoorSpace',
-                }),
-                yesNo(facts.glazed, intl),
-              ],
-            ]}
-          />
-        </Section>
-        <Section
-          title={intl.formatMessage({ id: 'listings.details.location' })}
-          order={sectionOrder}
-        >
-          <FactList
-            rows={[
-              [
-                intl.formatMessage({ id: 'listings.details.municipality' }),
-                facts.municipality,
-              ],
-              [
-                intl.formatMessage({ id: 'listings.details.neighborhood' }),
-                listingNeighborhoodLabel(listing),
-              ],
-              [
-                intl.formatMessage({ id: 'listings.details.position' }),
-                listing.coordinates
-                  ? intl.formatMessage(
-                      { id: 'listings.details.fromObserved' },
-                      {
-                        value0: messageValue(
-                          displayLabel(intl, listing.coordinates.precision),
-                        ),
-                        value1: messageValue(
-                          displayLabel(intl, listing.coordinates.source),
-                        ),
-                        value2: messageValue(
-                          formatDate(listing.coordinates.observedAt, intl),
-                        ),
-                      },
-                    )
-                  : null,
-              ],
-            ]}
-          />
-          {listing.coordinates && !hasPin(listing.coordinates) && (
-            <Text size="sm">
-              <FormattedMessage id="listings.details.approximateAreaNoExactPinIsShown" />
-            </Text>
-          )}
-          {!listing.coordinates && (
-            <Text size="sm">
-              <FormattedMessage id="listings.details.listedWithoutAMapPosition" />
-            </Text>
-          )}
-        </Section>
         <Section
           title={intl.formatMessage({ id: 'listings.details.source' })}
           order={sectionOrder}
         >
-          <FactList
-            rows={[
-              [
-                intl.formatMessage({ id: 'listings.details.lastObserved' }),
-                formatDate(listing.observedAt, intl),
-              ],
-              ...(listing.origin === 'manual' &&
-              [
-                facts.propertyType,
-                facts.askingPriceSek,
-                facts.livingAreaM2,
-                facts.rooms,
-                facts.outdoor,
-              ].some((fact) => fact !== null)
-                ? ([
-                    [
-                      intl.formatMessage({ id: 'listings.details.facts' }),
-                      intl.formatMessage({
-                        id: 'listings.details.enteredByAMember',
-                      }),
-                    ],
-                  ] as [string, string][])
-                : []),
-              ...timestamps.flatMap(({ label, value }) =>
-                value
-                  ? ([[label, formatDate(value, intl)]] as [string, string][])
-                  : [],
-              ),
-              ...(listing.userTags.length > 0
-                ? ([
-                    [
-                      intl.formatMessage({ id: 'listings.details.tags' }),
-                      listing.userTags.join(', '),
-                    ],
-                  ] as [string, string][])
-                : []),
-            ]}
-          />
           {listing.sourceUrls.map((url) => (
-            <Anchor
+            <Button
+              component="a"
+              variant="default"
+              size="xs"
+              styles={{
+                label: { lineHeight: 1 },
+                section: { alignItems: 'center' },
+              }}
+              w="fit-content"
+              c="var(--button-color)"
+              td="none"
+              rightSection={
+                <ExternalLink
+                  size={14}
+                  style={{ display: 'block' }}
+                  aria-hidden
+                />
+              }
               key={url}
-              size="sm"
               href={url}
               target="_blank"
               rel="noopener noreferrer"
               referrerPolicy="no-referrer"
             >
-              <FormattedMessage
-                id="listings.details.originalListing"
-                values={{ value0: messageValue(new URL(url).hostname) }}
-              />
-            </Anchor>
+              {sourceName(new URL(url).hostname)}
+            </Button>
           ))}
-        </Section>
-        <Section
-          title={intl.formatMessage({ id: 'listings.details.evidence' })}
-          order={sectionOrder}
-        >
-          {listing.evidence.length ? (
-            listing.evidence.map((evidence) => (
-              <Stack key={evidence.id} gap={4}>
-                <Text size="sm">
-                  {displayLabel(intl, evidence.kind)} ·{' '}
-                  {displayLabel(intl, evidence.subject)}: {evidence.summary}
-                </Text>
-                <Text size="xs">
-                  {formatDate(evidence.observedAt, intl)}
-                  {evidence.method ? ` · ${evidence.method}` : ''}
-                </Text>
-                {evidence.sourceUrl && (
-                  <Anchor
-                    size="sm"
-                    href={evidence.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <FormattedMessage id="listings.details.evidenceSource" />
-                  </Anchor>
-                )}
-              </Stack>
-            ))
-          ) : (
-            <Text size="sm">
-              <FormattedMessage id="listings.details.noSupportingNatureTransitOrOtherEvidenceRecorded" />
+          <Group gap={4} align="center" wrap="nowrap">
+            <Text size="sm" c="dimmed" lh={1}>
+              {primaryTime.label}: {formatDate(primaryTime.value, intl)}
             </Text>
+            {listing.lastChangedAt && (
+              <Popover
+                width={320}
+                position="top"
+                withArrow
+                trapFocus
+                returnFocus
+                middlewares={{ shift: { crossAxis: true, padding: 12 } }}
+              >
+                <Popover.Target>
+                  <ActionIcon
+                    size="xs"
+                    variant="transparent"
+                    c="dimmed"
+                    aria-label={intl.formatMessage({
+                      id: 'listings.details.timestampInfo',
+                    })}
+                  >
+                    <Info
+                      size={14}
+                      strokeWidth={1.5}
+                      style={{
+                        display: 'block',
+                        transform: 'translateY(-1px)',
+                      }}
+                      aria-hidden
+                    />
+                  </ActionIcon>
+                </Popover.Target>
+                <Popover.Dropdown
+                  data-mantine-stop-propagation="true"
+                  maw="calc(100vw - 24px)"
+                >
+                  <Stack gap="xs">
+                    <Text size="sm">
+                      <FormattedMessage id="listings.details.lastChangedScope" />
+                    </Text>
+                    {otherTimes.map(({ label, value }) => (
+                      <Text key={label} size="sm">
+                        <span>{label}</span>: {formatDate(value, intl)}
+                      </Text>
+                    ))}
+                  </Stack>
+                </Popover.Dropdown>
+              </Popover>
+            )}
+          </Group>
+          {listing.origin === 'manual' && (
+            <Text size="sm" c="dimmed">
+              <FormattedMessage id="listings.details.enteredByAMember" />
+            </Text>
+          )}
+          {listing.userTags.length > 0 && (
+            <Text size="sm">{listing.userTags.join(', ')}</Text>
           )}
         </Section>
         <Divider />

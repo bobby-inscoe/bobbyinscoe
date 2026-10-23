@@ -9,12 +9,11 @@ import { ListingDetails } from '@/features/house-scanner/components/listing-deta
 import { ListingGallery } from '@/features/house-scanner/components/listing-gallery';
 import {
   AlsoOn,
-  FactsLine,
-  MatchLines,
   OriginalListingButton,
   PriceLine,
   ReasonChips,
 } from '@/features/house-scanner/components/listing-summary';
+import { LocationPreview } from '@/features/house-scanner/components/location-preview';
 import { EstimateLine } from '@/features/house-scanner/components/price-estimate';
 import type { ListingNotesController } from '@/features/house-scanner/hooks/use-listing-notes';
 import { displayLabel } from '@/features/house-scanner/i18n/display-labels';
@@ -23,7 +22,10 @@ import type {
   Listing,
   Snapshot,
 } from '@/features/house-scanner/types/contracts';
-import { hasPin } from '@/features/house-scanner/utils/listing-position';
+import {
+  estimatedPositionLabel,
+  hasPin,
+} from '@/features/house-scanner/utils/listing-position';
 
 interface ListingDrawerProps {
   // Null while no home is selected; the drawer stays mounted so Mantine can return focus on close.
@@ -43,7 +45,7 @@ interface ListingDrawerProps {
   onToggleHidden: (listingId: string) => void;
   onFavorite: (listingId: string) => void;
   onClose: () => void;
-  // Absent when the map is already showing.
+  mapStyleUrl?: string;
   onSeeOnMap?: () => void;
   alsoOn?: string[];
   hideError?: string;
@@ -62,10 +64,17 @@ export function ListingDrawer({
   onFavorite,
   onClose,
   onSeeOnMap,
+  mapStyleUrl,
   alsoOn,
   hideError,
 }: ListingDrawerProps) {
   const intl = useIntl();
+  const viewport = useRef<HTMLDivElement>(null);
+  const [entered, setEntered] = useState(false);
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  useEffect(() => {
+    if (!opened) setEntered(false);
+  }, [opened]);
   const [fullScreen, setFullScreen] = useState(false);
   useEffect(() => {
     if (!opened || !listing) setFullScreen(false);
@@ -96,6 +105,8 @@ export function ListingDrawer({
     <>
       <Drawer.Root
         opened={opened}
+        onEnterTransitionEnd={() => setEntered(true)}
+        transitionProps={{ duration: reducedMotion ? 0 : 200 }}
         onClose={() => {
           setFullScreen(false);
           onClose();
@@ -106,7 +117,7 @@ export function ListingDrawer({
         size={wide ? 'lg' : '100%'}
       >
         <Drawer.Overlay />
-        <Drawer.Content p={0}>
+        <Drawer.Content p={0} ref={viewport}>
           <Drawer.Header className={classes.drawerHeader}>
             <Drawer.Title className={classes.drawerTitle}>
               {listing?.title}
@@ -180,7 +191,6 @@ export function ListingDrawer({
                 )}
                 <PriceLine listing={listing} />
                 <EstimateLine listing={listing} />
-                <FactsLine listing={listing} />
                 <ReasonChips listing={listing} />
                 <AlsoOn sites={alsoOn} />
                 {snapshot.favorites.some(
@@ -202,7 +212,6 @@ export function ListingDrawer({
                       .join(', ')}
                   </Text>
                 )}
-                <MatchLines listing={listing} snapshot={snapshot} details />
                 <Group>
                   <OriginalListingButton listing={listing} />
                   {onSeeOnMap && hasPin(listing.coordinates) && (
@@ -217,6 +226,24 @@ export function ListingDrawer({
                   userId={userId}
                   notes={notes}
                   headingOrder={3}
+                  locationPreview={
+                    <>
+                      {opened && hasPin(listing.coordinates) && (
+                        <LocationPreview
+                          coordinates={listing.coordinates}
+                          styleUrl={mapStyleUrl}
+                          ready={entered || !!reducedMotion}
+                          viewport={viewport}
+                          onActivate={onSeeOnMap}
+                        />
+                      )}
+                      {estimatedPositionLabel(listing.coordinates, intl) && (
+                        <Text size="sm">
+                          {estimatedPositionLabel(listing.coordinates, intl)}
+                        </Text>
+                      )}
+                    </>
+                  }
                   onSelectPhoto={showPhoto}
                 />
               </Stack>

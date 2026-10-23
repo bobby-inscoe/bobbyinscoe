@@ -8,6 +8,27 @@ import type { ValidationTranslations } from '@/features/house-scanner/i18n/types
 import type { ViewingsTranslations } from '@/features/house-scanner/i18n/types/viewings';
 
 export interface Translations {
+  feedback: {
+    label: string;
+    hint: string;
+    intro: string;
+    type: string;
+    bug: string;
+    feature: string;
+    title: string;
+    description: string;
+    bugHelp: string;
+    featureHelp: string;
+    screenshot: string;
+    imageHelp: string;
+    remove: string;
+    privacy: string;
+    send: string;
+    cancel: string;
+    success: string;
+    error: string;
+    invalid: string;
+  };
   settings: SettingsTranslations;
   listings: ListingsTranslations;
   access: AccessTranslations;

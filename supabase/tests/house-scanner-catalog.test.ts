@@ -14,9 +14,8 @@ import {
   ingestRequestSchema,
   type Observation,
   observationSchema,
-  type SourcePolicy,
+  originSchema,
   snapshotSchema,
-  sourcePolicySchema,
 } from '@/features/house-scanner/types/contracts';
 import {
   HARD_RULE_BASE_FACTS,
@@ -70,9 +69,10 @@ const ingestResultSchema = z.strictObject({
   editionId: z.uuid().nullable().optional(),
 });
 
-function policy(sourceId: string, patch: Partial<SourcePolicy> = {}) {
+// A source policy as the schema before 20261023150000_house_scanner_sources stored it.
+function policy(sourceId: string) {
   return {
-    ...sourcePolicySchema.parse({
+    ...{
       sourceId,
       revision: 1,
       status: 'approved',
@@ -110,7 +110,7 @@ function policy(sourceId: string, patch: Partial<SourcePolicy> = {}) {
         'mandatoryMonthlySek',
         'status',
       ],
-      retentionDays: 30,
+      retentionDays: 14,
       capabilities: {
         discovery: true,
         knownListingRefresh: true,
@@ -120,9 +120,8 @@ function policy(sourceId: string, patch: Partial<SourcePolicy> = {}) {
         resultCap: null,
         coverageGaps: [],
       },
-    }),
+    },
     viewings: true,
-    ...patch,
   };
 }
 
@@ -496,9 +495,10 @@ async function seedHouseholdA(database: PGlite) {
   // Both members hide this one; the shared hides migration keeps the later hide.
   await call(MEMBER_A, hide, [HOUSE_A, idOf('hidden')]);
   await call(MEMBER_A, hide, [HOUSE_A, manual]);
-  // Two homes age out of a one-day window; the saved and noted ones stay visible to this household.
+  // Three homes age past retention; the saved and noted ones stay visible to this household.
   await database.query(
-    "update hs.source_policies set policy=jsonb_set(policy,'{retentionDays}','1') where source_id='alpha'",
+    "update hs.listings set observed_at=$1::timestamptz,value=jsonb_set(value,'{observedAt}',to_jsonb($1::text)) where source_listing_id like '%expired'",
+    [aged(20)],
   );
   return {
     manual,
@@ -824,7 +824,7 @@ describe('ingest into the catalog', () => {
     expect((await snapshot(HOUSE_B, OWNER_B)).listings).toHaveLength(before);
   });
 
-  it('returns credentials without a household and policies by source', async () => {
+  it('returns credentials without a household and each source with its origins', async () => {
     const credential = await as('service_role', null, () =>
       rpc('select public.hs_ingest_credential($1) as value', [KEY]),
     );
@@ -832,14 +832,17 @@ describe('ingest into the catalog', () => {
       sourceIds: ['alpha', 'beta'],
       scopes: ['ingest'],
     });
-    const policies = z
-      .array(z.object({ sourceId: z.string() }))
-      .parse(
-        await as('service_role', null, () =>
-          rpc('select public.hs_ingest_policies($1) as value', [KEY]),
-        ),
-      );
-    expect(policies.map((item) => item.sourceId)).toEqual(['alpha', 'beta']);
+    const settings = await as('service_role', null, () =>
+      rpc('select public.hs_ingest_sources($1) as value', [KEY]),
+    );
+    expect(settings).toEqual(
+      ['alpha', 'beta'].map((sourceId) => ({
+        sourceId,
+        enabled: true,
+        listingOrigins: [ORIGIN],
+        imageOrigins: [ORIGIN],
+      })),
+    );
   });
 });
 
@@ -1016,6 +1019,7 @@ describe('candidates filtered by household criteria', () => {
       "update hs.listings set delisted_at=now(),missed_full_reads=2 where value->>'title'='fits-both'",
     );
     // Rollbacks go newest first: the household rows call the hard rules these migrations replace.
+    await db.exec(await rollback(SOURCES));
     await db.exec(await rollback(DROP_OLD));
     await db.exec(await rollback(SNAPSHOT_V2));
     await db.exec(await rollback(HOUSEHOLDS));
@@ -1049,6 +1053,7 @@ describe('candidates filtered by household criteria', () => {
     await db.exec(await migration(`${HOUSEHOLDS}.sql`));
     await db.exec(await migration(`${SNAPSHOT_V2}.sql`));
     await db.exec(await migration(`${DROP_OLD}.sql`));
+    await db.exec(await migration(`${SOURCES}.sql`));
     expect(await titles()).not.toContain('too-small-for-b');
     expect((await snapshot(HOUSE_A, OWNER_A)).hides).toHaveLength(2);
   });
@@ -1059,6 +1064,7 @@ describe('candidates filtered by household criteria', () => {
       await snapshot(HOUSE_A, OWNER_A, db, 'hs_snapshot_neighborhoods'),
       await snapshot(HOUSE_B, OWNER_B, db, 'hs_snapshot_neighborhoods'),
     ];
+    await db.exec(await rollback(SOURCES));
     await db.exec(await rollback(DROP_OLD));
     await db.exec(await migration(`${speed}.sql`));
     const fast = await both();
@@ -1078,6 +1084,7 @@ describe('candidates filtered by household criteria', () => {
     await db.exec(await migration(`${speed}.sql`));
     expect(await both()).toEqual(fast);
     await db.exec(await migration(`${DROP_OLD}.sql`));
+    await db.exec(await migration(`${SOURCES}.sql`));
   });
 
   // The delisting rollback above re-applied the row-by-row trigger; applying the set-based publish and the listing
@@ -1092,6 +1099,7 @@ describe('candidates filtered by household criteria', () => {
           'utf8',
         ),
       );
+    await db.exec(await rollback(SOURCES));
     await down(history);
     await down(setBased);
     await publish(
@@ -1131,6 +1139,7 @@ describe('candidates filtered by household criteria', () => {
     ];
     const before = await snapshots();
     await db.exec(await migration(`${history}.sql`));
+    await db.exec(await migration(`${SOURCES}.sql`));
     const after = await snapshots();
     const withoutChangeDates = (state: z.infer<typeof snapshotSchema>) => ({
       ...state,
@@ -1298,14 +1307,13 @@ describe('set-based publish', () => {
   // One source and credential on the current schema, or with the listing history and set-based publish rolled back.
   async function catalog(publish: 'rowByRow' | 'setBased' | 'current') {
     const database = await freshDatabase('all');
-    if (publish !== 'current')
+    if (publish !== 'current') {
+      await database.exec(await rollback(SOURCES));
       await database.exec(await readFile(HISTORY_DOWN, 'utf8'));
+    }
     if (publish === 'rowByRow')
       await database.exec(await readFile(SET_BASED_DOWN, 'utf8'));
-    await database.query(
-      'insert into hs.source_policies(source_id,policy) values($1,$2::jsonb)',
-      ['alpha', JSON.stringify(policy('alpha'))],
-    );
+    await addSource(database, 'alpha');
     await database.query(
       "insert into hs.ingest_credentials(key_id,source_ids,expires_at) values($1,array['alpha'],now()+interval '1 day')",
       [KEY],
@@ -1730,8 +1738,33 @@ const CARDS = '20261022103309_house_scanner_listing_cards';
 const HOUSEHOLDS = '20261022105133_house_scanner_household_listings';
 const SNAPSHOT_V2 = '20261022113745_house_scanner_household_snapshot';
 const HOUSEHOLD_START = '20261022124605_house_scanner_household_start';
+const SOURCES = '20261023150000_house_scanner_sources';
 const rollback = (name: string) =>
   readFile(new URL(`../rollbacks/${name}_down.sql`, import.meta.url), 'utf8');
+
+// Adds a source with the test origins, on either side of the sources migration.
+async function addSource(database: PGlite, id: string) {
+  const settled = (
+    await database.query<{ settled: boolean }>(
+      "select to_regclass('hs.sources') is not null as settled",
+    )
+  ).rows[0].settled;
+  if (settled) {
+    await database.query(
+      'insert into hs.sources(source_id,listing_origins,image_origins) values($1,$2,$2)',
+      [id, [ORIGIN]],
+    );
+    // So that a test of an earlier migration can roll this one back.
+    await database.query(
+      'insert into hs.source_policies_archive(source_id,policy) values($1,$2::jsonb)',
+      [id, JSON.stringify(policy(id))],
+    );
+  } else
+    await database.query(
+      'insert into hs.source_policies(source_id,policy) values($1,$2::jsonb)',
+      [id, JSON.stringify(policy(id))],
+    );
+}
 
 // The member's v2 snapshot, expanded by the client adapter, equals the old snapshot. Returns the v2 response. On a
 // database that has dropped the old snapshot, its rollback restores it for the comparison and the drop runs again after.
@@ -1741,11 +1774,17 @@ async function sameAsV2(database: PGlite, household: string, user: string) {
       "select to_regprocedure('public.hs_snapshot_neighborhoods(uuid)') is null as gone",
     )
   ).rows[0].gone;
-  if (dropped) await database.exec(await rollback(DROP_OLD));
+  if (dropped) {
+    await database.exec(await rollback(SOURCES));
+    await database.exec(await rollback(DROP_OLD));
+  }
   try {
     return await compareWithOld(database, household, user);
   } finally {
-    if (dropped) await database.exec(await migration(`${DROP_OLD}.sql`));
+    if (dropped) {
+      await database.exec(await migration(`${DROP_OLD}.sql`));
+      await database.exec(await migration(`${SOURCES}.sql`));
+    }
   }
 }
 async function compareWithOld(
@@ -1810,11 +1849,7 @@ async function sources(...ids: string[]) {
   return sourcesOn(await freshDatabase('all'), ids);
 }
 async function sourcesOn(database: PGlite, ids: string[]) {
-  for (const id of ids)
-    await database.query(
-      'insert into hs.source_policies(source_id,policy) values($1,$2::jsonb)',
-      [id, JSON.stringify(policy(id))],
-    );
+  for (const id of ids) await addSource(database, id);
   await database.query(
     "insert into hs.ingest_credentials(key_id,source_ids,expires_at) values($1,$2,now()+interval '1 day')",
     [KEY, ids],
@@ -1865,17 +1900,19 @@ describe('write-path fixes', () => {
       await snapshot(HOUSE_A, OWNER_A, db, 'hs_snapshot_neighborhoods'),
       await snapshot(HOUSE_B, OWNER_B, db, 'hs_snapshot_neighborhoods'),
     ];
+    await db.exec(await rollback(SOURCES));
     await db.exec(await rollback(DROP_OLD));
     await db.exec(await readFile(WRITE_PATH_DOWN, 'utf8'));
     const scanned = await both();
     await db.exec(await migration(`${WRITE_PATH}.sql`));
     expect(await both()).toEqual(scanned);
     await db.exec(await migration(`${DROP_OLD}.sql`));
+    await db.exec(await migration(`${SOURCES}.sql`));
     expect(
       scanned.flatMap((state) => state.listings).some((item) => item.isNew),
     ).toBe(true);
     const latest = await db.query(
-      `select p.source_id,p.latest_run_id id from hs.source_policies p
+      `select p.source_id,p.latest_run_id id from hs.sources p
        where p.latest_run_id is not null order by 1`,
     );
     expect(latest.rows.length).toBeGreaterThan(0);
@@ -1903,7 +1940,7 @@ describe('write-path fixes', () => {
       for (const step of steps) {
         await publish(...step);
         const recorded = await database.query(
-          'select source_id,latest_run_id id from hs.source_policies where latest_run_id is not null order by 1',
+          'select source_id,latest_run_id id from hs.sources where latest_run_id is not null order by 1',
         );
         expect(recorded.rows).toEqual(
           (await database.query(`select * from (${OLD_LATEST}) x order by 1`))
@@ -1912,7 +1949,7 @@ describe('write-path fixes', () => {
       }
       const fresh = await database.query<{ id: string; fresh: boolean }>(
         `select l.source_listing_id id,l.first_seen_run_id=p.latest_run_id fresh
-         from hs.listings l join hs.source_policies p on p.source_id=l.source_id order by 1`,
+         from hs.listings l join hs.sources p on p.source_id=l.source_id order by 1`,
       );
       expect(fresh.rows).toEqual([
         { id: 'a1', fresh: false },
@@ -1989,7 +2026,7 @@ describe('listing cards', () => {
       'facts',c.facts-array(select k from unnest(array['bidding','highestBidSek']) k where c.facts->k='null'::jsonb),
       'evidence',coalesce((select jsonb_agg(e order by n) from jsonb_array_elements(c.evidence) with ordinality x(e,n)
         where (e->>'observedAt')::timestamptz>=now()-c.retention),'[]'::jsonb),
-      'photo',case when hs.policy_current(p.policy) and (c.photo->>'expiresAt')::timestamptz>now()
+      'photo',case when p.enabled and (c.photo->>'expiresAt')::timestamptz>now()
         and (c.photo->>'observedAt')::timestamptz>=now()-c.retention then c.photo else 'null'::jsonb end,
       'previousAskingPriceSek',case when c.previous_price_observed_at>=now()-c.retention then c.previous_asking_price end,
       'observedAt',c.observed_at,'addedBy',null,'userTags','[]'::jsonb,
@@ -1997,7 +2034,7 @@ describe('listing cards', () => {
       'isNew',coalesce(c.first_seen_run_id=p.latest_run_id,false))
      ||case when c.delisted_at is null then '{}'::jsonb else jsonb_build_object('delistedAt',c.delisted_at) end
      ||coalesce((select jsonb_build_object('viewings',jsonb_agg(x order by x->>'startsAt')) from jsonb_array_elements(c.viewings) x
-        where hs.policy_current(p.policy) and (x->>'startsAt')::timestamptz>now() having count(*)>0),'{}'::jsonb)
+        where p.enabled and (x->>'startsAt')::timestamptz>now() having count(*)>0),'{}'::jsonb)
      ||case when n.id is not null and jsonb_typeof(shown.coordinates)='object' then jsonb_build_object('neighborhood',
         jsonb_build_object('id',n.id,'name',n.name,'method','polygon','datasetVersion',n.dataset_version)) else '{}'::jsonb end
      ||case when jsonb_typeof(shown.coordinates)='object' then jsonb_build_object('neighborhoodCandidates',
@@ -2005,7 +2042,7 @@ describe('listing cards', () => {
          from unnest(c.neighborhood_candidates) with ordinality ids(id,position) join hs.neighborhoods a on a.id=ids.id),'[]'::jsonb))
         ||case when c.neighborhood_radius_m is null then '{}'::jsonb else jsonb_build_object('neighborhoodRadiusM',c.neighborhood_radius_m) end
        else '{}'::jsonb end item
-    from hs.listing_cards c join hs.source_policies p on p.source_id=c.source_id
+    from hs.listing_cards c join hs.sources p on p.source_id=c.source_id
     left join hs.neighborhoods n on n.id=c.neighborhood_id
     cross join lateral (select case when (c.coordinates->>'observedAt')::timestamptz>=now()-c.retention
       and (c.coordinates->>'observedAt')::timestamptz<=now()+interval '5 minutes' then c.coordinates else 'null'::jsonb end coordinates) shown
@@ -2068,7 +2105,7 @@ describe('listing cards', () => {
     expect(counts.rows[0].cards).toBe(counts.rows[0].listings);
   });
 
-  it('follows publishes, delisting, direct edits, the clock and policy changes', async () => {
+  it('follows publishes, delisting, direct edits, the clock and source changes', async () => {
     const database = await sources('alpha');
     try {
       await database.query('insert into auth.users values($1)', [OWNER_A]);
@@ -2184,31 +2221,17 @@ describe('listing cards', () => {
       expect(item('pictured', aged40)?.photo).toBeNull();
       expect(item('pictured', aged40)?.coordinates).toBeNull();
       expect(item('pictured', aged40)?.evidence).toHaveLength(1);
-      // A narrower policy rewrites its source's cards without any listing write.
+      // New image origins rewrite the source's cards without any listing write.
       await database.query(
-        `update hs.source_policies set policy=policy||jsonb_build_object('allowedFactFields',
-          (select jsonb_agg(f) from jsonb_array_elements(policy->'allowedFactFields') f where f #>> '{}' not in ('askingPriceSek','rooms')),
-          'imageDisplay',false,'viewings',false,'allowedEvidenceSubjects','["nearby_nature"]'::jsonb,'retentionDays',10)`,
+        "update hs.sources set image_origins='{https://other.invalid}'",
       );
-      const narrowed = await check();
-      expect(item('cheaper', narrowed)?.facts.askingPriceSek).toBeNull();
-      expect(item('cheaper', narrowed)?.previousAskingPriceSek).toBeNull();
-      expect(item('viewings', narrowed)?.viewings).toBeUndefined();
-      const card = await database.query<{
-        photo: unknown;
-        evidence: unknown[];
-      }>(
-        "select c.photo,c.evidence from hs.listing_cards c join hs.listings l on l.id=c.listing_id where l.source_listing_id='pictured'",
+      await check();
+      const card = await database.query<{ photo: unknown }>(
+        "select c.photo from hs.listing_cards c join hs.listings l on l.id=c.listing_id where l.source_listing_id='pictured'",
       );
       expect(card.rows[0].photo).toBeNull();
-      expect(card.rows[0].evidence).toEqual([
-        expect.objectContaining({ subject: 'nearby_nature' }),
-      ]);
-      // A lapsed review leaves only the saved home.
-      await database.query(
-        `update hs.source_policies set policy=jsonb_set(policy,'{reviewDueAt}',to_jsonb($1::text))`,
-        [hours(-1)],
-      );
+      // A source switched off leaves only the saved home.
+      await database.query('update hs.sources set enabled=false');
       expect((await check()).map((entry) => entry.title)).toEqual(['gone']);
     } finally {
       await database.close();
@@ -2468,9 +2491,9 @@ describe('household rows', () => {
       );
       expect(await rows()).toBe(0);
       expect(await a()).toEqual(['small']);
-      // A policy that no longer lists the origin leaves only the noted home.
+      // A source that no longer lists the origin leaves only the noted home.
       await database.query(
-        `update hs.source_policies set policy=jsonb_set(policy,'{listingOrigins}','["https://elsewhere.invalid"]')`,
+        "update hs.sources set listing_origins='{https://elsewhere.invalid}'",
       );
       expect(await a()).toEqual(['small']);
       expect(await b()).toEqual([]);
@@ -2849,7 +2872,7 @@ describe('listing gallery', () => {
     });
 
   async function household() {
-    const database = await sourcesOn(await migratedThrough(GALLERY), ['alpha']);
+    const database = await sources('alpha');
     await database.query('insert into auth.users values($1)', [OWNER_A]);
     await database.query(
       "insert into hs.households(id,name) values($1,'Synthetic household')",
@@ -2901,7 +2924,7 @@ describe('listing gallery', () => {
     }
   });
 
-  it('sends the extra photos and floor plan its policy allows, and follows policy changes', async () => {
+  it('sends the extra photos and floor plan its origins allow, and follows origin changes', async () => {
     const database = await household();
     try {
       await publish([gallery(), home('plain', { photo: image('only') })], {
@@ -2926,9 +2949,9 @@ describe('listing gallery', () => {
       expect(seen.plain).not.toHaveProperty('floorPlan');
       expect(await drift(database)).toEqual([]);
 
-      // Images from an origin the policy no longer lists leave the cards and the snapshot.
+      // Images from an origin the source no longer lists leave the cards and the snapshot.
       await database.query(
-        "update hs.source_policies set policy=jsonb_set(policy,'{imageOrigins}','[\"https://other.invalid\"]') where source_id='alpha'",
+        "update hs.sources set image_origins='{https://other.invalid}' where source_id='alpha'",
       );
       const moved = await homes(database);
       for (const key of ['photo', 'photos', 'floorPlan'])
@@ -2939,11 +2962,11 @@ describe('listing gallery', () => {
     }
   });
 
-  it('refuses images the policy does not allow, expired ones and extra photos without a lead', async () => {
+  it('refuses images from other hosts, expired ones and extra photos without a lead', async () => {
     const database = await household();
     const check = (observation: Observation) =>
       database.query(
-        "select hs.assert_observation(policy,$1::jsonb) from hs.source_policies where source_id='alpha'",
+        "select hs.assert_observation(s,$1::jsonb) from hs.sources s where source_id='alpha'",
         [JSON.stringify(observation)],
       );
     try {
@@ -3008,8 +3031,8 @@ describe('bidding flag', () => {
     }
   });
 
-  it('sends bidding only for a home whose source says so and whose policy allows it', async () => {
-    const database = await sourcesOn(await migratedThrough(BIDDING), ['alpha']);
+  it('sends bidding only for a home whose source says so', async () => {
+    const database = await sources('alpha');
     try {
       await database.query('insert into auth.users values($1)', [OWNER_A]);
       await database.query(
@@ -3027,16 +3050,6 @@ describe('bidding flag', () => {
       const bidding = home('bidding', {
         facts: { ...home('bidding').facts, bidding: true },
       });
-      // A policy that does not name the fact refuses it.
-      await expect(
-        database.query(
-          "select hs.assert_observation(policy,$1::jsonb) from hs.source_policies where source_id='alpha'",
-          [JSON.stringify(bidding)],
-        ),
-      ).rejects.toThrow('Fact field not permitted');
-      await database.query(
-        "update hs.source_policies set policy=jsonb_set(policy,'{allowedFactFields}',(policy->'allowedFactFields')||'[\"bidding\"]') where source_id='alpha'",
-      );
       await publish([bidding, home('quiet')], { database });
       const reply = (await as(
         'authenticated',
@@ -3063,27 +3076,148 @@ describe('bidding flag', () => {
   });
 });
 
-describe('catalog administration and grants', () => {
-  it('sets source policies and issues and revokes credentials without a household', async () => {
-    const created = await rpc(
-      'select hs.admin_set_source_policy($1::jsonb) as value',
-      [JSON.stringify(policy('gamma'))],
+// Source policies become plain source settings (spec: house-scanner-source-policy-removal, S1).
+describe('source settings', () => {
+  const v2 = (household: string, user: string, database = db) =>
+    as(
+      'authenticated',
+      user,
+      () =>
+        rpc(
+          'select public.hs_household_snapshot($1) as value',
+          [household],
+          database,
+        ),
+      database,
     );
-    expect(created).toMatchObject({ sourceId: 'gamma', created: true });
+
+  it('rolls back to exactly the earlier schema and applies again', async () => {
+    const database = await freshDatabase('all');
+    try {
+      const migrated = await fingerprint(database);
+      await database.exec(await rollback(SOURCES));
+      const earlier = await migratedThrough(HIGHEST_BID);
+      try {
+        expect(await fingerprint(database)).toEqual(await fingerprint(earlier));
+      } finally {
+        await earlier.close();
+      }
+      await database.exec(await migration(`${SOURCES}.sql`));
+      expect(await fingerprint(database)).toEqual(migrated);
+    } finally {
+      await database.close();
+    }
+  });
+
+  it('sends every member of both households the same snapshot before and after', async () => {
+    const all = async () => [
+      await v2(HOUSE_A, OWNER_A),
+      await v2(HOUSE_A, MEMBER_A),
+      await v2(HOUSE_B, OWNER_B),
+    ];
+    const after = await all();
+    await db.exec(await rollback(SOURCES));
+    try {
+      expect(JSON.stringify(await all())).toBe(JSON.stringify(after));
+    } finally {
+      await db.exec(await migration(`${SOURCES}.sql`));
+    }
+    expect((await db.query('select * from hs.card_drift()')).rows).toEqual([]);
+  });
+
+  it('hides a switched-off source at once, except saved homes, and refuses its runs', async () => {
+    const database = await sources('alpha');
+    try {
+      await database.query('insert into auth.users values($1)', [OWNER_A]);
+      await database.query(
+        "insert into hs.households(id,name) values($1,'Synthetic household')",
+        [HOUSE_A],
+      );
+      await database.query(
+        "insert into hs.members(household_id,user_id,display_name,role) values($1,$2,'Synthetic owner','owner')",
+        [HOUSE_A, OWNER_A],
+      );
+      await database.query(
+        "insert into hs.profiles(id,household_id,name,enabled,criteria,edited_by) values($1,$2,'Synthetic profile',true,$3::jsonb,$4)",
+        [PROFILE_A, HOUSE_A, JSON.stringify(criteria), OWNER_A],
+      );
+      await publish([home('kept'), home('plain')], { database });
+      const titles = async () =>
+        (
+          (await v2(HOUSE_A, OWNER_A, database)) as {
+            listings: { title: string }[];
+          }
+        ).listings
+          .map((item) => item.title)
+          .sort();
+      expect(await titles()).toEqual(['kept', 'plain']);
+      const kept = (
+        await database.query<{ id: string }>(
+          "select id from hs.listings where source_listing_id='kept'",
+        )
+      ).rows[0].id;
+      await as(
+        'authenticated',
+        OWNER_A,
+        () =>
+          rpc(
+            'select public.hs_set_favorite($1,$2,true) as value',
+            [HOUSE_A, kept],
+            database,
+          ),
+        database,
+      );
+      await rpc(
+        "select hs.admin_set_source('alpha',false) as value",
+        [],
+        database,
+      );
+      expect(await titles()).toEqual(['kept']);
+      await expect(publish([home('later')], { database })).rejects.toThrow(
+        'Source disabled',
+      );
+      await rpc(
+        "select hs.admin_set_source('alpha',true) as value",
+        [],
+        database,
+      );
+      expect(await titles()).toEqual(['kept', 'plain']);
+    } finally {
+      await database.close();
+    }
+  });
+});
+
+describe('catalog administration and grants', () => {
+  it('adds and switches sources and issues and revokes credentials without a household', async () => {
+    const add =
+      'select hs.admin_set_source($1,$2,$3::text[],$4::text[]) as value';
+    await expect(rpc(add, ['gamma', true, null, null])).rejects.toThrow(
+      'A new source needs its origins',
+    );
     await expect(
-      rpc('select hs.admin_set_source_policy($1::jsonb) as value', [
-        JSON.stringify(policy('gamma')),
-      ]),
-    ).rejects.toThrow('Policy revision must increase');
+      rpc(add, ['gamma', true, '{https://example.invalid:443}', '{}']),
+    ).rejects.toThrow('Invalid origins');
+    expect(await rpc(add, ['gamma', true, `{${ORIGIN}}`, '{}'])).toEqual({
+      sourceId: 'gamma',
+      enabled: true,
+      listingOrigins: [ORIGIN],
+      imageOrigins: [],
+    });
+    expect(await rpc(add, ['gamma', false, null, null])).toMatchObject({
+      enabled: false,
+      listingOrigins: [ORIGIN],
+    });
     await rpc(
       "select hs.admin_issue_credential('gamma-1',array['gamma'],now()+interval '1 day') as value",
     );
     await rpc("select hs.admin_revoke_credential('gamma-1') as value");
     const log = await db.query<{ action: string; household_id: string | null }>(
-      "select action,household_id from hs.admin_log where action in ('set_source_policy','issue_credential','revoke_credential') order by id",
+      "select action,household_id from hs.admin_log where action in ('set_source','issue_credential','revoke_credential') order by id",
     );
     expect(log.rows).toEqual([
-      { action: 'set_source_policy', household_id: null },
+      { action: 'set_source', household_id: null },
+      { action: 'set_source', household_id: null },
       { action: 'issue_credential', household_id: null },
       { action: 'revoke_credential', household_id: null },
     ]);
@@ -3114,51 +3248,41 @@ describe('catalog administration and grants', () => {
 
 // Checks kept from the suites that tested the schema before the shared catalog. Each guards behaviour that still runs.
 describe('carried-over guards', () => {
-  const REMOVE = Symbol('remove');
-  const dbAccepts = async (body: unknown) =>
-    (await rpc('select hs.valid_policy($1::jsonb) as value', [
-      JSON.stringify(body),
+  const dbAccepts = async (origin: string) =>
+    (await rpc('select hs.valid_origins(array[$1],1) as value', [
+      origin,
     ])) as boolean;
   // A URL refinement in the schema can throw rather than fail, which still means rejected.
-  const schemaAccepts = (body: unknown) => {
+  const schemaAccepts = (origin: string) => {
     try {
-      return sourcePolicySchema.safeParse(JSON.parse(JSON.stringify(body)))
-        .success;
+      return originSchema.safeParse(origin).success;
     } catch {
       return false;
     }
   };
 
-  it('validates a source policy exactly as the shared schema does', async () => {
-    const base = policy('alpha');
-    expect(await dbAccepts(base)).toBe(true);
-    const paths = [
-      ...Object.keys(base).map((key) => [key]),
-      ...Object.keys(base.capabilities).map((key) => ['capabilities', key]),
-      ['extra'],
-      ['capabilities', 'extra'],
-    ];
-    for (const path of paths)
-      for (const next of [REMOVE, null, 'text', 42, -1, true, [], {}]) {
-        const [key, inner] = path;
-        const candidate: Record<string, unknown> = structuredClone(base);
-        const target = (inner ? candidate[key] : candidate) as Record<
-          string,
-          unknown
-        >;
-        const field = inner ?? key;
-        if (next === REMOVE) delete target[field];
-        else target[field] = next;
-        expect({
-          path,
-          next: String(next),
-          db: await dbAccepts(candidate),
-        }).toEqual({
-          path,
-          next: String(next),
-          db: schemaAccepts(candidate),
-        });
-      }
+  it('validates an origin exactly as the shared schema does', async () => {
+    for (const origin of [
+      'https://example.invalid',
+      'http://example.invalid:8080',
+      'https://example.invalid:443',
+      'http://example.invalid:80',
+      'https://example.invalid:65536',
+      'https://Example.invalid',
+      'https://example.invalid/',
+      'https://example.invalid/path',
+      'https://192.168.0.1',
+      'https://192.168.0.256',
+      'https://example.123',
+      'https://example.0x1f',
+      'https://xn--exmple-cua.invalid',
+      'https://user@example.invalid',
+      '',
+    ])
+      expect({ origin, db: await dbAccepts(origin) }).toEqual({
+        origin,
+        db: schemaAccepts(origin),
+      });
   });
 
   it('uses each ingest one-time code once, within five minutes, and forgets it after an hour', async () => {

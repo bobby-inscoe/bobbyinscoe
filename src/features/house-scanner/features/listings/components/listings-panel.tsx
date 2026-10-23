@@ -62,14 +62,20 @@ import {
 import { listingNeighborhoods } from '@/features/house-scanner/utils/listing-neighborhoods';
 import { hasPin } from '@/features/house-scanner/utils/listing-position';
 import { mapPoints } from '@/features/house-scanner/utils/listing-view';
+import { loadMapRuntime } from '@/features/house-scanner/utils/map-runtime';
 import { MATCH_CHOICES } from '@/features/house-scanner/utils/match-listing';
 
 const LazyMap = lazy(() =>
-  import(
-    '@/features/house-scanner/features/listings/features/map/components/household-map'
-  ).then((module) => ({
-    default: module.HouseholdMap,
-  })),
+  loadMapRuntime()
+    .then(
+      () =>
+        import(
+          '@/features/house-scanner/features/listings/features/map/components/household-map'
+        ),
+    )
+    .then((module) => ({
+      default: module.HouseholdMap,
+    })),
 );
 
 class MapLoadBoundary extends Component<
@@ -1170,7 +1176,8 @@ export function ListingsPanel({
         onToggleHidden={toggleHidden}
         onFavorite={favoriteListing}
         onClose={onCloseListing}
-        onSeeOnMap={view === 'map' ? undefined : onSeeSelectedOnMap}
+        onSeeOnMap={onSeeSelectedOnMap}
+        mapStyleUrl={mapStyleUrl}
       />
     </section>
   );

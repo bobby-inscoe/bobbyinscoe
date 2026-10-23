@@ -1,6 +1,33 @@
 import type { Translations } from '@/features/house-scanner/i18n/types/translations';
 
 export const sv = {
+  feedback: {
+    label: 'Feedback',
+    hint: 'Rapportera ett fel eller föreslå en funktion',
+    intro:
+      'Hittat ett problem eller har du en idé? Berätta hur vi kan förbättra Shellter.',
+    type: 'Typ',
+    bug: 'Fel',
+    feature: 'Funktionsförslag',
+    title: 'Rubrik',
+    description: 'Beskrivning',
+    bugHelp:
+      'Beskriv problemet i detalj: stegen, vad du förväntade dig och vad som hände i stället.',
+    featureHelp:
+      'Vad vill du kunna göra och hur skulle det hjälpa dig? Beskriv din idé i detalj.',
+    screenshot: 'Skärmbild (valfritt)',
+    imageHelp:
+      'En PNG, JPEG eller WebP, högst 5 MiB. Ta bort privat information före uppladdning.',
+    remove: 'Ta bort skärmbild',
+    privacy:
+      'Rapporten innehåller denna sida och din kontos e-postadress så att ägaren kan svara.',
+    send: 'Skicka feedback',
+    cancel: 'Avbryt',
+    success: 'Tack! Din feedback har tagits emot för att skickas.',
+    error: 'Det gick inte att skicka. Utkastet finns kvar här. Försök igen.',
+    invalid:
+      'Ange rubrik och beskrivning och välj en tillåten bild på högst 5 MiB.',
+  },
   settings: {
     personal: {
       heading: 'Personliga inställningar',
@@ -157,6 +184,10 @@ export const sv = {
       savedBy: 'Sparad av',
       select: 'Välj {value0}',
       details: 'Detaljer',
+      openLocationMap: 'Öppna platsen på kartan',
+      loadingLocationMap: 'Laddar platsens karta…',
+      locationMapUnavailable:
+        'Platsens karta är inte tillgänglig. Använd Visa på karta för att prova hela kartan.',
       seeOnMap: 'Visa på kartan',
       more: 'Mer',
       moreActionsFor: 'Fler åtgärder för {value0}',
@@ -176,19 +207,20 @@ export const sv = {
       groundFloor: 'Bottenvåning',
       aboveGroundFloor: 'Ovanför bottenvåningen',
       noLongerListedSinceTheSourceStoppedShowingIt:
-        'Annonsen finns inte kvar sedan {value0}: källan visade den inte vid två fullständiga avläsningar i rad. Senast sedd {value1}.',
-      factsAndSourceEvidence: 'Fakta och källunderlag',
+        'Annonsen finns inte kvar sedan {value0}. Senast sedd {value1}.',
       askingPrice: 'Utgångspris',
-      monthlyFee: 'Månadsavgift',
-      notApplicableToAHouse: 'Gäller inte för hus',
-      mandatoryAdditions: 'Obligatoriska tillägg',
+      monthlyFee: 'Grundavgift per månad',
+      mandatoryAdditions: 'Obligatoriska månadstillägg',
+      abovePreference: 'Över önskad avgift ({value0})',
+      totalAbovePreference: 'Totalt över önskad avgift ({value0})',
+      timestampInfo: 'Om tidsstämplarna',
+      lastChangedScope: 'Ändringar gäller pris eller tillgänglighet.',
       livingArea: 'Boarea',
       m: '{value0} m²',
       rooms: 'Rum',
       homeType: 'Bostadstyp',
       tenure: 'Upplåtelseform',
       status: 'Status',
-      conflictingFields: 'Motstridiga uppgifter: {value0}',
       viewings: 'Visningar',
       photos: 'Bilder',
       viewFullScreen: 'Visa i helskärm',
@@ -199,6 +231,7 @@ export const sv = {
       previousPhoto: 'Föregående foto',
       nextPhoto: 'Nästa foto',
       floorPlan: 'Planritning',
+      viewFloorPlan: 'Visa planritning',
       bidding: 'Budgivning',
       biddingUnderWay: 'Budgivning pågår',
       highestBid: 'Högsta bud',
@@ -211,7 +244,7 @@ export const sv = {
       municipality: 'Kommun',
       neighborhood: 'Område',
       position: 'Position',
-      fromObserved: '{value0}, från {value1}, observerad {value2}',
+      fromObserved: '{value0} · {value1}',
       approximateAreaNoExactPinIsShown:
         'Ungefärligt område; ingen exakt kartnål visas.',
       listedWithoutAMapPosition: 'Annonsen saknar kartposition.',
@@ -221,10 +254,6 @@ export const sv = {
       enteredByAMember: 'Angiven av en medlem',
       tags: 'Taggar',
       originalListing: '{value0}: originalannons',
-      evidence: 'Underlag',
-      evidenceSource: 'Källa till underlaget',
-      noSupportingNatureTransitOrOtherEvidenceRecorded:
-        'Inget underlag om natur, kollektivtrafik eller annat har registrerats.',
       notes: 'Anteckningar',
       closeListingDetails: 'Stäng bostadsdetaljer',
       sharedNotesAreUnavailableInThisView:
@@ -743,8 +772,7 @@ export const sv = {
     savedBy2: 'Sparad av {value0}',
     originalListing: 'Originalannons',
     aViewingCanBeCancelledOrMovedBetweenScans:
-      '{value0}En visning kan ställas in eller flyttas mellan avläsningarna, så kontrollera tiden på mäklarens sida.',
-    updated: 'Uppdaterad {value0}. ',
+      'Visningstider kan ändras. Kontrollera på mäklarens sida.',
     today: 'I dag',
     tomorrow: 'I morgon',
     calendarTitle: 'Visning: {title}',

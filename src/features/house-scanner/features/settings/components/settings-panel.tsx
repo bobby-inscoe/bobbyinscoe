@@ -1,4 +1,5 @@
-import { Button, Group, Paper, Stack, Text, Title } from '@mantine/core';
+import { Button, Divider, Paper, Stack, Text, Title } from '@mantine/core';
+import { LogOut } from 'lucide-react';
 import { FormattedMessage } from 'react-intl';
 import { LanguageSelect } from '@/features/house-scanner/components/language-select';
 import { CriteriaPanel } from '@/features/house-scanner/features/settings/features/criteria/components/criteria-panel';
@@ -49,11 +50,17 @@ export function SettingsPanel({
         </Stack>
       </Paper>
       {onSignOut && (
-        <Group>
-          <Button variant="default" onClick={onSignOut}>
+        <>
+          <Divider />
+          <Button
+            variant="default"
+            w="fit-content"
+            leftSection={<LogOut size={16} aria-hidden />}
+            onClick={onSignOut}
+          >
             <FormattedMessage id="navigation.signOut" />
           </Button>
-        </Group>
+        </>
       )}
     </Stack>
   );

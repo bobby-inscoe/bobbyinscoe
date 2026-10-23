@@ -25,7 +25,6 @@ import {
 } from '@house-scanner-tools/source-adapters';
 import { sourceRegistry } from '@house-scanner-tools/source-registry';
 import { describe, expect, it } from 'vitest';
-import { assertSourceAllowed } from '@/features/house-scanner/utils/source-policy';
 
 const LIST = 'https://www.lundin.se/api/list?id=1';
 // The shape the real robots.txt has.
@@ -93,7 +92,7 @@ describe('Lundin guarded run', () => {
     expect(read).toMatchObject({ detailRead: 2, stopped: null });
     expect(read.observations[0]).toMatchObject(expected);
     expect(read.observations[0].facts.lift).toBeNull();
-    assertAdapterOutput(lundin().policy, read.observations[0]);
+    assertAdapterOutput(lundin().source, read.observations[0]);
 
     // An hour later, by the next run's clock, the pages fail and the remembered reads fill in.
     for (const entry of Object.values(memory.details))
@@ -241,38 +240,23 @@ describe('Lundin guarded run', () => {
 });
 
 function lundin() {
-  const found = sourceRegistry().find((e) => e.policy.sourceId === 'lundin');
+  const found = sourceRegistry().find((e) => e.source.sourceId === 'lundin');
   if (!found) throw new Error('lundin missing');
   return found;
 }
 
 describe('Lundin registry entry', () => {
-  it('registers a pending source with an honest policy and the right hosts', () => {
-    const { policy, executor } = lundin();
+  it('registers the source as on, with its hosts and coverage notes', () => {
+    const { source, executor } = lundin();
     expect(executor).toBe('lundin-personal-read');
-    expect(policy).toMatchObject({
+    expect(source).toMatchObject({
       sourceId: 'lundin',
-      status: 'pending',
-      automatedCollection: false,
-      privateDisplay: false,
+      enabled: true,
       listingOrigins: ['https://www.lundin.se'],
       imageOrigins: ['https://www.lundin.se'],
-      imageDisplay: true,
-      imageHotlink: true,
-      retentionDays: 14,
     });
-    expect(policy.rightsBasis).toContain('Permission unresolved');
-    expect(policy.allowedFactFields).toEqual(
-      expect.arrayContaining(['livingAreaM2', 'askingPriceSek', 'status']),
-    );
-    // The list does not carry these, so the policy does not allow them.
-    for (const left of ['glazed', 'outdoor', 'lift', 'groundFloor'])
-      expect(policy.allowedFactFields).not.toContain(left);
-    expect(policy.capabilities.coverageGaps.join(' ')).toContain(
-      'not a documented',
-    );
-    expect(() =>
-      assertSourceAllowed(policy, new Date('2026-10-20T00:00:00Z')),
-    ).toThrow();
+    expect(
+      source.capabilities.coverageGaps.every((gap) => gap.length <= 300),
+    ).toBe(true);
   });
 });

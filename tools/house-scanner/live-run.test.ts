@@ -16,11 +16,10 @@ import { emptyMemory } from '@house-scanner-tools/run-memory';
 import { sourceRegistry } from '@house-scanner-tools/source-registry';
 import { describe, expect, it } from 'vitest';
 import { SYNTHETIC_SNAPSHOT } from '@/features/house-scanner/mock/synthetic-household';
-import { assertSourceAllowed } from '@/features/house-scanner/utils/source-policy';
 
 describe('prepared run', () => {
   const capability = sourceRegistry().find(
-    (entry) => entry.policy.sourceId === 'boneo',
+    (entry) => entry.source.sourceId === 'boneo',
   );
   if (!capability) throw new Error('boneo missing');
   const profile = SYNTHETIC_SNAPSHOT.profiles[0];
@@ -54,35 +53,21 @@ describe('prepared run', () => {
   };
   const strict = { ...bounds, minAreaM2: 5000 };
 
-  it('registers boneo as pending with honest capabilities', () => {
-    expect(capability.policy).toMatchObject({
-      status: 'pending',
-      automatedCollection: false,
-      imageDisplay: true,
-      imageHotlink: true,
+  it('registers boneo as on, with its hosts and honest capabilities', () => {
+    expect(capability.source).toMatchObject({
+      enabled: true,
       imageOrigins: ['https://files.boneo.se'],
-      retentionDays: 14,
-      revision: 6,
       capabilities: {
         upcoming: false,
         unknownPrice: false,
         pagination: false,
       },
     });
-    expect(capability.policy.capabilities.coverageGaps.length).toBeGreaterThan(
-      3,
-    );
-    expect(capability.policy.allowedFactFields).toEqual(
-      expect.arrayContaining(['outdoor', 'glazed', 'groundFloor']),
-    );
-    const gaps = capability.policy.capabilities.coverageGaps.join(' ');
+    const gaps = capability.source.capabilities.coverageGaps.join(' ');
     expect(gaps).not.toContain('not structured fields');
     expect(gaps).toContain('Lift and build year are not collected');
-    expect(() =>
-      assertSourceAllowed(capability.policy, new Date('2026-10-13T00:00:00Z')),
-    ).toThrow();
     const plan = planQueries({ ...planning, capability });
-    expect(plan.permission).toBe('denied-no-permission');
+    expect(plan.enabled).toBe(true);
     expect(plan.partitions.map((p) => p.municipality)).toEqual(['Göteborg']);
   });
 
@@ -222,17 +207,8 @@ describe('prepared run', () => {
     const observation = read.observations[0];
     observation.facts.outdoor = 'balcony';
     expect(() =>
-      assertAdapterOutput(capability.policy, observation),
+      assertAdapterOutput(capability.source, observation),
     ).not.toThrow();
-    const narrowed = {
-      ...capability.policy,
-      allowedFactFields: capability.policy.allowedFactFields.filter(
-        (field) => field !== 'outdoor',
-      ),
-    };
-    expect(() => assertAdapterOutput(narrowed, observation)).toThrow(
-      'unapproved fact field',
-    );
   });
 
   it('drops confirmed misfits, counts them by reason and still publishes partial', async () => {

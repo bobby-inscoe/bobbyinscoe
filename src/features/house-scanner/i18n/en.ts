@@ -1,6 +1,33 @@
 import type { Translations } from '@/features/house-scanner/i18n/types/translations';
 
 export const en = {
+  feedback: {
+    label: 'Feedback',
+    hint: 'Report a bug or suggest a feature',
+    intro: 'Found a problem or have an idea? Tell us how to improve Shellter.',
+    type: 'Type',
+    bug: 'Bug',
+    feature: 'Feature request',
+    title: 'Title',
+    description: 'Description',
+    bugHelp:
+      'Please describe the problem in detail: steps, expected behavior, and what happened instead.',
+    featureHelp:
+      'What would you like to do, and how would this help you? Please describe your idea in detail.',
+    screenshot: 'Screenshot (optional)',
+    imageHelp:
+      'One PNG, JPEG, or WebP, up to 5 MiB. Remove private information before uploading.',
+    remove: 'Remove screenshot',
+    privacy:
+      'Your report includes this page and your account email so the owner can reply.',
+    send: 'Send feedback',
+    cancel: 'Cancel',
+    success: 'Thanks! Your feedback has been accepted for sending.',
+    error:
+      'Could not send feedback. Your draft is saved here. Please try again.',
+    invalid:
+      'Enter a title and description, and choose an allowed image up to 5 MiB.',
+  },
   settings: {
     personal: {
       heading: 'Personal settings',
@@ -156,6 +183,10 @@ export const en = {
       savedBy: 'Saved by',
       select: 'Select {value0}',
       details: 'Details',
+      openLocationMap: 'Open location on map',
+      loadingLocationMap: 'Loading location map…',
+      locationMapUnavailable:
+        'Location map unavailable. Use See on map to try the full map.',
       seeOnMap: 'See on map',
       more: 'More',
       moreActionsFor: 'More actions for {value0}',
@@ -175,19 +206,20 @@ export const en = {
       groundFloor: 'Ground floor',
       aboveGroundFloor: 'Above ground floor',
       noLongerListedSinceTheSourceStoppedShowingIt:
-        'No longer listed since {value0}: the source stopped showing it in two full reads in a row. Last seen {value1}.',
-      factsAndSourceEvidence: 'Facts and source evidence',
+        'No longer listed since {value0}. Last seen {value1}.',
       askingPrice: 'Asking price',
-      monthlyFee: 'Monthly fee',
-      notApplicableToAHouse: 'Not applicable to a house',
-      mandatoryAdditions: 'Mandatory additions',
+      monthlyFee: 'Base monthly fee',
+      mandatoryAdditions: 'Required monthly extras',
+      abovePreference: 'Above preference ({value0})',
+      totalAbovePreference: 'Total above preference ({value0})',
+      timestampInfo: 'About these timestamps',
+      lastChangedScope: 'Changes refer to price or availability.',
       livingArea: 'Living area',
       m: '{value0} m²',
       rooms: 'Rooms',
       homeType: 'Home type',
-      tenure: 'Tenure',
+      tenure: 'Ownership',
       status: 'Status',
-      conflictingFields: 'Conflicting fields: {value0}',
       viewings: 'Viewings',
       photos: 'Photos',
       viewFullScreen: 'View full screen',
@@ -198,6 +230,7 @@ export const en = {
       previousPhoto: 'Previous photo',
       nextPhoto: 'Next photo',
       floorPlan: 'Floor plan',
+      viewFloorPlan: 'View floor plan',
       bidding: 'Bidding',
       biddingUnderWay: 'Bidding under way',
       highestBid: 'Highest bid',
@@ -210,7 +243,7 @@ export const en = {
       municipality: 'Municipality',
       neighborhood: 'Neighborhood',
       position: 'Position',
-      fromObserved: '{value0}, from {value1}, observed {value2}',
+      fromObserved: '{value0} · {value1}',
       approximateAreaNoExactPinIsShown:
         'Approximate area; no exact pin is shown.',
       listedWithoutAMapPosition: 'Listed without a map position.',
@@ -220,10 +253,6 @@ export const en = {
       enteredByAMember: 'Entered by a member',
       tags: 'Tags',
       originalListing: '{value0}: original listing',
-      evidence: 'Evidence',
-      evidenceSource: 'Evidence source',
-      noSupportingNatureTransitOrOtherEvidenceRecorded:
-        'No supporting nature, transit or other evidence recorded.',
       notes: 'Notes',
       closeListingDetails: 'Close listing details',
       sharedNotesAreUnavailableInThisView:
@@ -738,8 +767,7 @@ export const en = {
     savedBy2: 'Saved by {value0}',
     originalListing: 'Original listing',
     aViewingCanBeCancelledOrMovedBetweenScans:
-      "{value0}A viewing can be cancelled or moved between scans, so confirm it on the broker's page.",
-    updated: 'Updated {value0}. ',
+      "Viewing times can change. Confirm on the broker's page.",
     today: 'Today',
     tomorrow: 'Tomorrow',
     calendarTitle: 'Viewing: {title}',
