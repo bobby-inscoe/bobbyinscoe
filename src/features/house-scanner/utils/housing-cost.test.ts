@@ -22,6 +22,7 @@ const booli: CostInput = {
   cashSek: 329_500,
   interestRatePercent: 2.97,
   taxDeduction: true,
+  operatingCostsSek: 0,
   feeSek: 7_237,
   ownership: false,
 };
@@ -37,10 +38,37 @@ describe('housingCost', () => {
         deductionSek: 2_202,
         amortizationSek: 4_943,
         feeSek: 7_237,
+        operatingCostsSek: 0,
         totalSek: 17_318,
         titleFeeSek: null,
         deedFeeSek: null,
       },
+    });
+  });
+
+  it.each([0, 1000, 1500])(
+    'adds %s in operating costs without changing the monthly fee',
+    (operatingCostsSek) => {
+      const result = housingCost({ ...booli, operatingCostsSek });
+      expect(result.kind === 'cost' && result.cost).toMatchObject({
+        operatingCostsSek,
+        feeSek: 7237,
+        totalSek: 17318 + operatingCostsSek,
+      });
+    },
+  );
+
+  it('removes tax relief without changing operating costs or the fee', () => {
+    const result = housingCost({
+      ...booli,
+      operatingCostsSek: 1000,
+      taxDeduction: false,
+    });
+    expect(result.kind === 'cost' && result.cost).toMatchObject({
+      deductionSek: 0,
+      operatingCostsSek: 1000,
+      feeSek: 7237,
+      totalSek: 17318 + 1000 + 2202,
     });
   });
 
