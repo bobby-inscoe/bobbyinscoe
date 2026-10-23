@@ -13,7 +13,6 @@ import {
 
 const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
-export const DETAIL_TTL_MS = 7 * DAY_MS;
 export const MIN_RUN_INTERVAL_MS = 6 * HOUR_MS;
 export const MEMORY_MAX_AGE_MS = 30 * DAY_MS;
 export const MAX_MEMORY_ENTRIES = 5000;
@@ -179,8 +178,8 @@ export function markTracked(
   for (const id of listingIds) memory.tracked[`${sourceId}:${id}`] = at;
 }
 
-/** A fresh entry for this listing, or undefined when it must be read again. */
-export function freshDetail(
+/** The last good read of this listing within MEMORY_MAX_AGE_MS, for a run that cannot read its page. */
+export function rememberedDetail(
   memory: RunMemory,
   listingId: string,
   nowMs: number,
@@ -189,5 +188,5 @@ export function freshDetail(
     ? memory.details[listingId]
     : undefined;
   const age = entry ? nowMs - Date.parse(entry.readAt) : Number.NaN;
-  return age >= 0 && age < DETAIL_TTL_MS ? entry : undefined;
+  return age >= 0 && age < MEMORY_MAX_AGE_MS ? entry : undefined;
 }

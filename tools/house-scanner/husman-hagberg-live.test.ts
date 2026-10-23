@@ -72,7 +72,7 @@ describe('Husman Hagberg guarded run', () => {
     });
   });
 
-  it('reads the estate page of each kept home once for its gallery, and reuses it from memory', async () => {
+  it('reads the estate page of each kept home for its gallery, and falls back to memory when it fails', async () => {
     const page = estatePage(
       ['MEDP1', 'MEDP2', 'MEDP3', 'MEDP4', 'MEDP5'].map((id) =>
         estateImage(id),
@@ -100,14 +100,16 @@ describe('Husman Hagberg guarded run', () => {
     expect(read.observations[0]).toMatchObject(expected);
     assertAdapterOutput(husmanHagberg().policy, read.observations[0]);
 
-    // An hour later, by the next run's clock, the remembered page is still fresh.
+    // An hour later, by the next run's clock, the page fails and the remembered read fills in.
     for (const entry of Object.values(memory.details))
       entry.readAt = new Date(
         Date.parse(entry.readAt) - 3_600_000,
       ).toISOString();
-    const again = fakeFetch(reply);
+    const again = fakeFetch((url) =>
+      url === estate ? { status: 404 } : reply(url),
+    );
     const cached = await run(goteborg, deps(again.impl), (all) => all, memory);
-    expect(again.calls).toHaveLength(2);
+    expect(again.calls).toHaveLength(3);
     expect(cached).toMatchObject({ detailCached: 1, detailRead: 0 });
     expect(cached.observations[0]).toMatchObject(expected);
   });

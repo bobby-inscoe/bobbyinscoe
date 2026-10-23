@@ -11,8 +11,8 @@ import {
 import { parseRobots, robotsAllows } from '@house-scanner-tools/robots';
 import {
   type DetailFacts,
-  freshDetail,
   type RunMemory,
+  rememberedDetail,
 } from '@house-scanner-tools/run-memory';
 import type { SourceCapability } from '@house-scanner-tools/source-registry';
 import { finishViewings } from '@house-scanner-tools/viewing-time';
@@ -20,12 +20,13 @@ import type { Observation } from '@/features/house-scanner/types/contracts';
 
 export const USER_AGENT =
   'HouseScannerPersonalReader/0.1 (private household tool)';
-// Each gap is drawn per request between these, so requests do not land in lockstep.
-export const MIN_INTERVAL_MS = 2000;
-export const MAX_INTERVAL_MS = 4000;
+// Each gap is drawn per request between these, counted from the end of the previous response,
+// so requests do not land in lockstep and a slow site slows the run.
+export const MIN_INTERVAL_MS = 1000;
+export const MAX_INTERVAL_MS = 2000;
 export const MAX_PAGES_PER_PARTITION = 40;
-export const MAX_REQUESTS_PER_RUN = 250;
-export const MAX_DETAIL_PAGES_PER_RUN = 150;
+export const MAX_REQUESTS_PER_RUN = 600;
+export const MAX_DETAIL_PAGES_PER_RUN = 500;
 export const REQUEST_TIMEOUT_MS = 15_000;
 export const MAX_BODY_CHARS = 3_000_000;
 
@@ -144,7 +145,7 @@ export interface SourceAdapter {
 
 /**
  * Merges what a listing page supplied; unknown and missing values never overwrite. A remembered
- * page (up to a week old) fills only facts the list left blank, so today's list price wins.
+ * page (one this run could not read) fills only facts the list left blank, so today's list price wins.
  */
 function applyDetail(
   adapter: SourceAdapter,
@@ -209,7 +210,7 @@ export async function runCollection(
   deps: LiveDeps,
   // Picks the observations whose own listing page is read for outdoor and glazed.
   selectKept: (observations: Observation[]) => Observation[] = () => [],
-  // Listing pages read recently are merged from here instead of requested again.
+  // The last good read of each listing page, used for a page this run does not read.
   memory: RunMemory | null = null,
 ): Promise<LiveRunResult> {
   const maxBodyChars = adapter.maxBodyChars ?? MAX_BODY_CHARS;
@@ -420,11 +421,15 @@ export async function runCollection(
     }
   }
 
-  // One request per kept listing, under the same guards, unless the run memory
-  // holds a recent read. A failed page leaves that listing's outdoor and glazed
-  // unknown and is never remembered; 403, 429 and network errors still stop the
-  // whole run.
-  const targets = adapter.listOnly ? [] : selectKept(observations);
+  // One request per kept listing on every run, under the same guards. A page this
+  // run does not read (past a cap, failed, or after a stop) falls back to its last
+  // good read in run memory, counted in detailCached; without one its page facts
+  // stay unknown. Failed pages are never remembered. 403, 429, a network error or a
+  // timeout ends requests to the source, and the rest fall back to memory.
+  const kept = adapter.listOnly ? [] : selectKept(observations);
+  const targets = memory ? readOrder(kept, memory) : kept;
+  let stopped: StopReason | null = null;
+  let detailPages = 0;
   for (const observation of targets) {
     const detailUrl = adapter.detailUrl?.(observation) ?? observation.sourceUrl;
     const url = new URL(detailUrl);
@@ -432,27 +437,27 @@ export async function runCollection(
       detailSkipped += 1;
       continue;
     }
-    // A home in bidding is read again on every run, so its bid is the one the page shows now.
-    const cached =
-      memory && observation.facts.bidding !== true
-        ? freshDetail(memory, observation.sourceListingId, deps.now())
-        : undefined;
-    if (cached) {
-      const { readAt: _readAt, ...stored } = cached;
+    const remembered = memory
+      ? rememberedDetail(memory, observation.sourceListingId, deps.now())
+      : undefined;
+    const fallBack = () => {
+      if (!remembered) return false;
+      const { readAt: _readAt, ...stored } = remembered;
       applyDetail(adapter, observation, stored, new Date(deps.now()), true);
       detailCached += 1;
-      continue;
-    }
-    if (detailRead + detailFailed >= MAX_DETAIL_PAGES_PER_RUN) {
-      detailSkipped += 1;
+      return true;
+    };
+    if (stopped || detailPages >= MAX_DETAIL_PAGES_PER_RUN) {
+      if (!fallBack()) detailSkipped += 1;
       continue;
     }
     const fetched = await request(detailUrl);
+    if (!fetched.ok && fetched.stop === 'request-cap') {
+      if (!fallBack()) detailSkipped += 1;
+      continue;
+    }
+    detailPages += 1;
     if (!fetched.ok) {
-      if (fetched.stop === 'request-cap') {
-        detailSkipped += 1;
-        continue;
-      }
       deps.log({
         event: 'detail-failed',
         status: fetched.status,
@@ -460,14 +465,14 @@ export async function runCollection(
         declaredLength: fetched.declaredLength,
         bodyChars: fetched.bodyChars,
       });
-      if (STOPS_RUN.includes(fetched.stop)) return finish(fetched.stop);
-      detailFailed += 1;
+      if (STOPS_RUN.includes(fetched.stop)) stopped = fetched.stop;
+      if (!fallBack()) detailFailed += 1;
       continue;
     }
     const detail = adapter.readDetailPage(fetched.body, new Date(deps.now()));
     if (detail.kind === 'failed') {
       deps.log({ event: 'detail-failed', status: 200, reason: detail.reason });
-      detailFailed += 1;
+      if (!fallBack()) detailFailed += 1;
       continue;
     }
     applyDetail(adapter, observation, detail.facts, new Date(deps.now()));
@@ -480,5 +485,16 @@ export async function runCollection(
     }
     detailRead += 1;
   }
-  return finish(null);
+  return finish(stopped);
+}
+
+/** Never-read homes first, then homes in bidding, then the oldest reads, so a cap leaves out the freshest. */
+function readOrder(kept: Observation[], memory: RunMemory) {
+  const rank = (observation: Observation) => {
+    const id = observation.sourceListingId;
+    if (!Object.hasOwn(memory.details, id)) return -2;
+    if (observation.facts.bidding === true) return -1;
+    return Date.parse(memory.details[id].readAt);
+  };
+  return [...kept].sort((a, b) => rank(a) - rank(b));
 }

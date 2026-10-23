@@ -3,8 +3,6 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { runCollection } from '@house-scanner-tools/live-reader';
 import {
-  DETAIL_TTL_MS,
-  freshDetail,
   isTracked,
   loadMemory,
   MAX_MEMORY_BYTES,
@@ -14,6 +12,7 @@ import {
   markTracked,
   type RunMemory,
   RunTooSoonError,
+  rememberedDetail,
   saveMemory,
   startLiveRun,
 } from '@house-scanner-tools/run-memory';
@@ -183,19 +182,19 @@ describe('saving', () => {
   });
 });
 
-describe('fresh details', () => {
+describe('remembered details', () => {
   const memory = memoryWith({
-    young: entry(DETAIL_TTL_MS - 1),
-    exact: entry(DETAIL_TTL_MS),
+    young: entry(MEMORY_MAX_AGE_MS - 1),
+    exact: entry(MEMORY_MAX_AGE_MS),
     future: entry(-1),
   });
-  it('uses an entry younger than 7 days only', () => {
-    expect(DETAIL_TTL_MS).toBe(7 * DAY);
-    expect(freshDetail(memory, 'young', NOW)).toBeDefined();
-    expect(freshDetail(memory, 'exact', NOW)).toBeUndefined();
-    expect(freshDetail(memory, 'future', NOW)).toBeUndefined();
-    expect(freshDetail(memory, 'absent', NOW)).toBeUndefined();
-    expect(freshDetail(memory, 'constructor', NOW)).toBeUndefined();
+  it('falls back to an entry younger than 30 days only', () => {
+    expect(MEMORY_MAX_AGE_MS).toBe(30 * DAY);
+    expect(rememberedDetail(memory, 'young', NOW)).toBeDefined();
+    expect(rememberedDetail(memory, 'exact', NOW)).toBeUndefined();
+    expect(rememberedDetail(memory, 'future', NOW)).toBeUndefined();
+    expect(rememberedDetail(memory, 'absent', NOW)).toBeUndefined();
+    expect(rememberedDetail(memory, 'constructor', NOW)).toBeUndefined();
   });
 });
 

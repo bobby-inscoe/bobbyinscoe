@@ -88,8 +88,8 @@ describe('guarded run', () => {
     expect(calls).toHaveLength(1);
   });
 
-  it('draws each gap between 2000 and 4000 ms from the random source', async () => {
-    expect([MIN_INTERVAL_MS, MAX_INTERVAL_MS]).toEqual([2000, 4000]);
+  it('draws each gap between 1000 and 2000 ms from the random source', async () => {
+    expect([MIN_INTERVAL_MS, MAX_INTERVAL_MS]).toEqual([1000, 2000]);
     const draws = [0, 1, 0.5, 0.25, 0.999, 0.0001];
     const stamps: number[] = [];
     const fake = fakeFetch(
@@ -108,7 +108,7 @@ describe('guarded run', () => {
     expect(gaps).toHaveLength(9);
     // One draw per request after the first, in order.
     draws.forEach((draw, i) => {
-      expect(gaps[i]).toBeCloseTo(MIN_INTERVAL_MS + draw * 2000, 2);
+      expect(gaps[i]).toBeCloseTo(MIN_INTERVAL_MS + draw * 1000, 2);
     });
     for (const gap of gaps) {
       expect(gap).toBeGreaterThanOrEqual(MIN_INTERVAL_MS);
@@ -153,18 +153,18 @@ describe('guarded run', () => {
     });
   });
 
-  it('stops at 250 requests per run including robots.txt', async () => {
+  it('stops at 600 requests per run including robots.txt', async () => {
     let id = 0;
     const { impl, calls } = fakeFetch(
       boneoRobotsOr(() => ({ body: nextPage([++id], 500) })),
     );
-    const many = Array.from({ length: 8 }, (_v, index) => ({
+    const many = Array.from({ length: 16 }, (_v, index) => ({
       ...goteborg[0],
       id: `municipality-${index + 1}`,
     }));
     const result = await runBoneoCollection(many, deps(impl));
-    expect(calls).toHaveLength(250);
-    expect(result.requestCount).toBe(250);
+    expect(calls).toHaveLength(600);
+    expect(result.requestCount).toBe(600);
     expect(result.stopped).toBe('request-cap');
   });
 
@@ -380,7 +380,7 @@ describe('listing pages', () => {
     expect(detailCalls(plain.calls)).toHaveLength(0);
   });
 
-  it('waits at least two seconds before every listing page', async () => {
+  it('waits at least one second before every listing page', async () => {
     vi.useFakeTimers();
     const { impl, spy } = fakeFetch(
       boneoRobotsOr(serve(2, () => ({ body: BALCONY }))),
@@ -394,7 +394,7 @@ describe('listing pages', () => {
     expect(spy).toHaveBeenCalledTimes(1);
     // search page, then two listing pages
     for (const expected of [2, 3, 4]) {
-      await vi.advanceTimersByTimeAsync(1999);
+      await vi.advanceTimersByTimeAsync(999);
       expect(spy).toHaveBeenCalledTimes(expected - 1);
       await vi.advanceTimersByTimeAsync(1);
       expect(spy).toHaveBeenCalledTimes(expected);
@@ -421,18 +421,18 @@ describe('listing pages', () => {
     expect(result.observations).toHaveLength(3);
   });
 
-  it('reads at most 150 listing pages per run and counts the rest as skipped', async () => {
-    expect(MAX_DETAIL_PAGES_PER_RUN).toBe(150);
+  it('reads at most 500 listing pages per run and counts the rest as skipped', async () => {
+    expect(MAX_DETAIL_PAGES_PER_RUN).toBe(500);
     const { impl, calls } = fakeFetch(
-      boneoRobotsOr(serve(160, () => ({ body: BALCONY }))),
+      boneoRobotsOr(serve(510, () => ({ body: BALCONY }))),
     );
     const result = await runBoneoCollection(goteborg, deps(impl), keepAll);
-    expect(detailCalls(calls)).toHaveLength(150);
+    expect(detailCalls(calls)).toHaveLength(500);
     expect(result).toMatchObject({
-      detailRead: 150,
+      detailRead: 500,
       detailFailed: 0,
       detailSkipped: 10,
-      requestCount: 158,
+      requestCount: 522,
       stopped: null,
     });
     expect(
@@ -440,25 +440,25 @@ describe('listing pages', () => {
     ).toHaveLength(10);
   });
 
-  it('shares the 250 request cap with search pages and skips what it cannot request', async () => {
-    expect(MAX_REQUESTS_PER_RUN).toBe(250);
+  it('shares the 600 request cap with search pages and skips what it cannot request', async () => {
+    expect(MAX_REQUESTS_PER_RUN).toBe(600);
     let id = 0;
     const { impl, calls } = fakeFetch(
       boneoRobotsOr((url) =>
         isDetail(url) ? { body: BALCONY } : { body: nextPage([++id], 500) },
       ),
     );
-    const four = Array.from({ length: 4 }, (_v, index) => ({
+    const fourteen = Array.from({ length: 14 }, (_v, index) => ({
       ...goteborg[0],
       id: `municipality-${index + 1}`,
     }));
-    const result = await runBoneoCollection(four, deps(impl), keepAll);
-    // robots.txt and 160 search pages leave room for 89 listing pages.
-    expect(calls).toHaveLength(250);
+    const result = await runBoneoCollection(fourteen, deps(impl), keepAll);
+    // robots.txt and 560 search pages leave room for 39 listing pages.
+    expect(calls).toHaveLength(600);
     expect(result).toMatchObject({
-      requestCount: 250,
-      detailRead: 89,
-      detailSkipped: 71,
+      requestCount: 600,
+      detailRead: 39,
+      detailSkipped: 521,
       stopped: null,
     });
   });
@@ -519,7 +519,11 @@ describe('listing pages', () => {
       const result = await runBoneoCollection(goteborg, deps(impl), keepAll);
       expect(result.stopped).toBe(reason);
       expect(detailCalls(calls)).toHaveLength(2);
-      expect(result).toMatchObject({ detailRead: 1, detailFailed: 0 });
+      expect(result).toMatchObject({
+        detailRead: 1,
+        detailFailed: 1,
+        detailSkipped: 2,
+      });
       expect(result.observations.map((o) => o.facts.outdoor)).toEqual([
         'balcony',
         null,
@@ -554,9 +558,8 @@ describe('listing pages', () => {
         ),
       );
 
-    it('merges a recent read without any request for that listing', async () => {
+    it('reads a remembered listing again and replaces its entry', async () => {
       const memory = rememberedIds(3);
-      const before = structuredClone(memory);
       const { impl, calls } = fakeFetch(
         boneoRobotsOr(serve(3, () => ({ body: BALCONY }))),
       );
@@ -566,23 +569,59 @@ describe('listing pages', () => {
         keepAll,
         memory,
       );
-      expect(detailCalls(calls)).toHaveLength(0);
+      expect(detailCalls(calls)).toHaveLength(3);
       expect(result).toMatchObject({
-        detailRead: 0,
-        detailCached: 3,
+        detailRead: 3,
+        detailCached: 0,
         detailFailed: 0,
         detailSkipped: 0,
-        requestCount: 2,
+        requestCount: 5,
+        stopped: null,
+      });
+      expect(result.observations.map((o) => o.facts.outdoor)).toEqual([
+        'balcony',
+        'balcony',
+        'balcony',
+      ]);
+      expect(memory.details['1']).toMatchObject({
+        outdoor: 'balcony',
+        glazed: null,
+      });
+      const age = Date.parse(memory.details['1'].readAt) - NOW;
+      expect(age).toBeGreaterThanOrEqual(0);
+      expect(age).toBeLessThan(60_000);
+    });
+
+    it('falls back to the last good read when a page fails, and keeps that entry', async () => {
+      const memory = memoryOf({ '1': remembered(DAY) });
+      const replies: Reply[] = [
+        { status: 404 },
+        { status: 404 },
+        { body: BALCONY },
+      ];
+      const { impl } = fakeFetch(
+        boneoRobotsOr(serve(3, (id) => replies[id - 1])),
+      );
+      const result = await runBoneoCollection(
+        goteborg,
+        deps(impl),
+        keepAll,
+        memory,
+      );
+      expect(result).toMatchObject({
+        detailRead: 1,
+        detailCached: 1,
+        detailFailed: 1,
         stopped: null,
       });
       expect(
         result.observations.map((o) => [o.facts.outdoor, o.facts.glazed]),
       ).toEqual([
         ['terrace', true],
-        ['terrace', true],
-        ['terrace', true],
+        [null, null],
+        ['balcony', null],
       ]);
-      expect(memory).toEqual(before);
+      expect(memory.details['1']).toEqual(remembered(DAY));
     });
 
     it('lets a remembered page fill only facts the list left blank', async () => {
@@ -590,7 +629,7 @@ describe('listing pages', () => {
         runBoneoCollection(
           goteborg,
           deps(
-            fakeFetch(boneoRobotsOr(serve(1, () => ({ body: BALCONY })))).impl,
+            fakeFetch(boneoRobotsOr(serve(1, () => ({ status: 404 })))).impl,
           ),
           keepAll,
           memory,
@@ -605,38 +644,6 @@ describe('listing pages', () => {
         askingPriceSek: listPrice,
         outdoor: 'terrace',
       });
-    });
-
-    it('reads again an entry older than 7 days and replaces it', async () => {
-      const memory = memoryOf({
-        '1': remembered(8 * DAY),
-        '2': remembered(DAY),
-      });
-      const { impl, calls } = fakeFetch(
-        boneoRobotsOr(serve(2, () => ({ body: BALCONY }))),
-      );
-      const result = await runBoneoCollection(
-        goteborg,
-        deps(impl),
-        keepAll,
-        memory,
-      );
-      expect(detailCalls(calls).map((c) => c.url)).toEqual([
-        'https://www.boneo.se/bostad/fixture-1',
-      ]);
-      expect(result).toMatchObject({ detailRead: 1, detailCached: 1 });
-      expect(result.observations.map((o) => o.facts.outdoor)).toEqual([
-        'balcony',
-        'terrace',
-      ]);
-      expect(memory.details['1']).toMatchObject({
-        outdoor: 'balcony',
-        glazed: null,
-      });
-      const age = Date.parse(memory.details['1'].readAt) - NOW;
-      expect(age).toBeGreaterThanOrEqual(0);
-      expect(age).toBeLessThan(60_000);
-      expect(memory.details['2']).toEqual(remembered(DAY));
     });
 
     it('stores nothing for pages that failed', async () => {
@@ -659,67 +666,74 @@ describe('listing pages', () => {
       expect(Object.keys(memory.details)).toEqual(['3']);
     });
 
-    it('keeps an old entry when the refresh stops the run', async () => {
-      const memory = memoryOf({ '1': remembered(8 * DAY) });
-      const { impl } = fakeFetch(
-        boneoRobotsOr(serve(2, () => ({ status: 403 }))),
-      );
-      const result = await runBoneoCollection(
-        goteborg,
-        deps(impl),
-        keepAll,
-        memory,
-      );
-      expect(result.stopped).toBe('http-403');
-      expect(memory.details).toEqual({ '1': remembered(8 * DAY) });
-    });
-
-    it('does not count remembered pages toward the 150 page cap', async () => {
-      const memory = rememberedIds(100);
+    it('falls back to memory for every home after a stop, and keeps those entries', async () => {
+      const memory = rememberedIds(3);
+      const before = structuredClone(memory);
       const { impl, calls } = fakeFetch(
-        boneoRobotsOr(serve(160, () => ({ body: BALCONY }))),
-      );
-      const result = await runBoneoCollection(
-        goteborg,
-        deps(impl),
-        keepAll,
-        memory,
-      );
-      expect(detailCalls(calls)).toHaveLength(60);
-      expect(result).toMatchObject({
-        detailRead: 60,
-        detailCached: 100,
-        detailSkipped: 0,
-      });
-      expect(Object.keys(memory.details)).toHaveLength(160);
-    });
-
-    it('does not count remembered pages toward the 250 request cap', async () => {
-      const memory = rememberedIds(160);
-      let id = 0;
-      const { impl, calls } = fakeFetch(
-        boneoRobotsOr((url) =>
-          isDetail(url) ? { body: BALCONY } : { body: nextPage([++id], 500) },
+        boneoRobotsOr(
+          serve(4, (id) => (id === 1 ? { status: 429 } : { body: BALCONY })),
         ),
       );
-      const four = Array.from({ length: 4 }, (_v, index) => ({
-        ...goteborg[0],
-        id: `municipality-${index + 1}`,
-      }));
       const result = await runBoneoCollection(
-        four,
+        goteborg,
         deps(impl),
         keepAll,
         memory,
       );
-      // Without the memory, 71 of these 160 listings would be skipped.
-      expect(calls).toHaveLength(161);
+      // The never-read home 4 goes first, then 1 stops the run.
+      expect(detailCalls(calls).map((c) => new URL(c.url).pathname)).toEqual([
+        '/bostad/fixture-4',
+        '/bostad/fixture-1',
+      ]);
       expect(result).toMatchObject({
-        requestCount: 161,
-        detailCached: 160,
-        detailRead: 0,
+        stopped: 'http-429',
+        detailRead: 1,
+        detailCached: 3,
+        detailFailed: 0,
         detailSkipped: 0,
       });
+      expect(result.observations.map((o) => o.facts.outdoor)).toEqual([
+        'terrace',
+        'terrace',
+        'terrace',
+        'balcony',
+      ]);
+      const { '4': _read, ...rest } = memory.details;
+      expect(rest).toEqual(before.details);
+    });
+
+    it('reads never-read homes, then bidding homes, then the oldest reads, up to the cap', async () => {
+      // Homes 1 to 502 were read before, 1 longest ago; 502 is bidding; 503 was never read.
+      const memory = memoryOf(
+        Object.fromEntries(
+          Array.from({ length: 502 }, (_v, i) => [
+            String(i + 1),
+            remembered(DAY - (i + 1) * 1000),
+          ]),
+        ),
+      );
+      const { impl, calls } = fakeFetch(
+        boneoRobotsOr(serve(503, () => ({ body: BALCONY }))),
+      );
+      const keepBidding = (all: Observation[]) => {
+        all[501].facts.bidding = true;
+        return all;
+      };
+      const result = await runBoneoCollection(
+        goteborg,
+        deps(impl),
+        keepBidding,
+        memory,
+      );
+      const read = detailCalls(calls).map((c) => listingId(c.url));
+      expect(read.slice(0, 3)).toEqual([503, 502, 1]);
+      expect(read).toHaveLength(500);
+      expect(result).toMatchObject({ detailRead: 500, detailCached: 3 });
+      expect(
+        result.observations
+          .filter((o) => o.facts.outdoor === 'terrace')
+          .map((o) => o.sourceListingId),
+      ).toEqual(['499', '500', '501']);
     });
 
     it('still skips a listing robots.txt disallows, remembered or not', async () => {

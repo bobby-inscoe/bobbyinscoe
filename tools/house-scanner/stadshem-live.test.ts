@@ -229,9 +229,9 @@ describe('Stadshem guarded run', () => {
       entry.readAt = new Date(
         Date.parse(entry.readAt) - 3_600_000,
       ).toISOString();
-    const again = fakeFetch(site(1, 100));
+    const again = fakeFetch(site(1, 100, () => ({ status: 404 })));
     const cached = await run(goteborg, deps(again.impl), (all) => all, memory);
-    expect(again.calls.filter((call) => isRecord(call.url))).toHaveLength(0);
+    expect(again.calls.filter((call) => isRecord(call.url))).toHaveLength(1);
     expect(cached).toMatchObject({ detailCached: 1 });
     expect(cached.observations[0]).toMatchObject(expected);
   });
