@@ -5,11 +5,13 @@ import { runCollection } from '@house-scanner-tools/live-reader';
 import {
   DETAIL_TTL_MS,
   freshDetail,
+  isTracked,
   loadMemory,
   MAX_MEMORY_BYTES,
   MAX_MEMORY_ENTRIES,
   MEMORY_MAX_AGE_MS,
   MIN_RUN_INTERVAL_MS,
+  markTracked,
   type RunMemory,
   RunTooSoonError,
   saveMemory,
@@ -194,6 +196,29 @@ describe('fresh details', () => {
     expect(freshDetail(memory, 'future', NOW)).toBeUndefined();
     expect(freshDetail(memory, 'absent', NOW)).toBeUndefined();
     expect(freshDetail(memory, 'constructor', NOW)).toBeUndefined();
+  });
+});
+
+describe('tracked homes', () => {
+  it('counts a detail entry from a file written before tracking existed', () => {
+    const path = tempFile();
+    writeFileSync(path, JSON.stringify(memoryWith({ '7': entry(DAY) })));
+    const { memory, reset } = loadMemory(path);
+    expect(reset).toBe(false);
+    expect(isTracked(memory, 'stadshem', '7')).toBe(true);
+    expect(isTracked(memory, 'stadshem', '8')).toBe(false);
+  });
+
+  it('keys by source, survives a save and drops a home unseen for 30 days', () => {
+    const path = tempFile();
+    const memory = memoryWith({});
+    markTracked(memory, 'lundin', ['a'], NOW - MEMORY_MAX_AGE_MS - 1);
+    markTracked(memory, 'lundin', ['b'], NOW - DAY);
+    saveMemory(path, memory, NOW);
+    const loaded = loadMemory(path).memory;
+    expect(isTracked(loaded, 'lundin', 'a')).toBe(false);
+    expect(isTracked(loaded, 'lundin', 'b')).toBe(true);
+    expect(isTracked(loaded, 'boneo', 'b')).toBe(false);
   });
 });
 
