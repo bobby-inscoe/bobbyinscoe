@@ -177,6 +177,19 @@
   place-items: center;
 }
 @media (max-width: 35.99375em) {
+  .page {
+    --shellter-tabbar-height: 48px;
+  }
+  .page:has(.tabBar) .appBar {
+    position: sticky;
+    top: 0;
+    z-index: 90;
+    padding-top: env(safe-area-inset-top);
+  }
+  .page:has(.tabBar) .appBar,
+  .tabBar {
+    transition: transform 180ms ease;
+  }
   /* Room for the tab bar under the last card. */
   .page:has(.tabBar) .content {
     padding-bottom: calc(
@@ -233,7 +246,8 @@
   }
   .navTab :global(.mantine-Button-inner) {
     display: grid;
-    grid-template-rows: 1fr 20px 8px 18px 1fr;
+    grid-template-rows: 1fr;
+    align-items: center;
     justify-items: center;
     height: 100%;
   }
@@ -244,11 +258,22 @@
     border-radius: var(--mantine-radius-xl);
     display: grid;
     place-items: center;
-    grid-row: 2;
+    grid-row: 1;
   }
   .navTab :global(.mantine-Button-label) {
-    grid-row: 4;
-    line-height: 18px;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .page[data-navigation-hidden] .appBar {
+    transform: translateY(-100%);
+  }
+  .page[data-navigation-hidden] .tabBar {
+    transform: translateY(100%);
   }
 }
 
@@ -278,6 +303,10 @@
       4px
     );
     padding-bottom: 12px;
+  }
+  .page[data-navigation-hidden] .selectionBar {
+    bottom: 0;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
   }
 }
 .batchSelect {
@@ -1466,4 +1495,11 @@
   height: 100%;
   max-height: none;
   aspect-ratio: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page:has(.tabBar) .appBar,
+  .tabBar {
+    transition: none;
+  }
 }
