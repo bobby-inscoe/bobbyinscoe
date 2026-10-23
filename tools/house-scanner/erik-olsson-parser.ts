@@ -58,6 +58,26 @@ const withoutStyles = (html: string) =>
 
 // ---- search page ----
 
+// The page's streamed data holds each result as escaped JSON: `\"id\":\"<id>\",\"title\"…` and, before the next
+// result, `\"is_bidding_active\":true` while bidding is under way (seen 23 October 2026).
+const STREAMED_HOME = /\\"id\\":\\"(\d{4,12})\\",\\"title\\"/g;
+const BIDDING_ACTIVE = '\\"is_bidding_active\\":true';
+
+/** Ids of the results the streamed data marks as in bidding. */
+function biddingIdsOf(html: string): Set<string> {
+  const starts = [...html.matchAll(STREAMED_HOME)];
+  const ids = new Set<string>();
+  starts.forEach((match, i) => {
+    const end = Math.min(
+      starts[i + 1]?.index ?? html.length,
+      match.index + 20_000,
+    );
+    if (html.slice(match.index, end).includes(BIDDING_ACTIVE))
+      ids.add(match[1]);
+  });
+  return ids;
+}
+
 // A listing path is /homes/<words>-<id>; the id is the stable identity.
 const LISTING_PATH = /^\/homes\/[A-Za-z0-9._-]{1,200}-(\d{4,12})$/;
 const WISHLIST = 'aria-label="Önskelista"';
@@ -208,6 +228,7 @@ export function readErikOlssonSearchPage(
     return { kind: 'failed', reason: 'inconsistent-count' };
 
   const observedAt = context.observedAt.toISOString();
+  const bidding = biddingIdsOf(html);
   const observations: Observation[] = [];
   const seen = new Set<string>();
   for (const match of links) {
@@ -219,6 +240,10 @@ export function readErikOlssonSearchPage(
     );
     if (observation === null || seen.has(observation.sourceListingId)) continue;
     seen.add(observation.sourceListingId);
+    // Only true is a fact; false or a home missing from the streamed data stays unknown.
+    observation.facts.bidding = bidding.has(observation.sourceListingId)
+      ? true
+      : null;
     observations.push(observation);
   }
 
