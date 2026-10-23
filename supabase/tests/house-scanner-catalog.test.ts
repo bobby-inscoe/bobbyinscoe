@@ -3610,6 +3610,14 @@ describe('price estimates', () => {
     expect(await estimates()).toEqual([]);
   });
 
+  it('lets only the service role recompute estimates', async () => {
+    const refresh = () =>
+      rpc('select public.hs_refresh_price_estimates() as value', []);
+    await expect(as('authenticated', OWNER_A, refresh)).rejects.toThrow();
+    await expect(as('anon', null, refresh)).rejects.toThrow();
+    await as('service_role', null, refresh);
+  });
+
   it('rolls back to exactly the earlier schema and applies again', async () => {
     const ESTIMATES = '20261023200002_house_scanner_price_estimates';
     const database = await migratedThrough(ESTIMATES);

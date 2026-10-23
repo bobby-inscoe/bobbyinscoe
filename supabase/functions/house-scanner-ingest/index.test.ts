@@ -70,6 +70,8 @@ beforeEach(async () => {
       if (name === 'hs_ingest_sources') return { data: [demo], error: null };
       if (name === 'hs_ingest')
         return { data: { runId, state: 'staging' }, error: null };
+      if (name === 'hs_refresh_price_estimates')
+        return { data: null, error: null };
       throw new Error(`Unexpected RPC ${name}`);
     },
   );
@@ -114,6 +116,34 @@ function signedRequest(
 }
 
 describe('signed ingestion trust boundary', () => {
+  it('recomputes price estimates after a publish, and a failed refresh still answers 200', async () => {
+    const original = database.rpc.getMockImplementation();
+    let refreshError: { code: string } | null = null;
+    database.rpc.mockImplementation(async (name, args) =>
+      name === 'hs_ingest'
+        ? { data: { runId, state: 'published' }, error: null }
+        : name === 'hs_refresh_price_estimates'
+          ? { data: null, error: refreshError }
+          : original?.(name, args),
+    );
+    const published = await handler(signedRequest());
+    expect(published.status).toBe(200);
+    expect(database.rpc).toHaveBeenLastCalledWith('hs_refresh_price_estimates');
+    refreshError = { code: '57014' };
+    const second = await handler(
+      signedRequest({ nonce: 'synthetic_nonce_0099' }),
+    );
+    expect(second.status).toBe(200);
+  });
+  it('does not recompute estimates for a run still staging', async () => {
+    await handler(signedRequest());
+    expect(
+      database.rpc.mock.calls.some(
+        ([name]) => name === 'hs_refresh_price_estimates',
+      ),
+    ).toBe(false);
+  });
+
   it('accepts valid raw bytes and binds the database request to the key and digest', async () => {
     const response = await handler(signedRequest());
     expect(response.status).toBe(200);
