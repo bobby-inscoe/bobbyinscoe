@@ -715,9 +715,9 @@ export const sv = {
     join: 'Gå med i {value0}',
     theLinkWorksUntil: '{value0} Länken gäller till {value1}.',
     invitedYouToStartYourOwnShellterHouseholdIt:
-      '{value0} har bjudit in dig att skapa ett eget hushåll i Shellter. Det delar inga uppgifter med avsändarens hushåll.',
+      '{value0} har bjudit in dig att skapa ett eget hushåll. Det börjar tomt och är skilt från avsändarens.',
     invitedYouToJoinTheirHouseholdAndShareIts:
-      '{value0} har bjudit in dig till sitt hushåll och dess bostadslista.',
+      '{value0} har bjudit in dig till sitt hushåll.',
     householdName: 'Hushållets namn',
     membersSeeItWhenTheyPickAHousehold:
       'Medlemmarna ser namnet när de väljer hushåll.',
@@ -734,15 +734,11 @@ export const sv = {
     createAccount: 'Skapa konto',
     signInInstead: 'Har du redan ett konto? Logga in',
     createAccountInstead: 'Ny på Shellter? Skapa ett konto',
-    newHouseholdStartsEmpty:
-      'Ditt nya hushåll börjar tomt och privat. Samma regler gäller för dem du bjuder in senare.',
     rulesSharedLabel: 'Delas med hushållet',
     rulesShared:
-      'Sökkriterier och finansiering (ägare ändrar dem), dolda bostäder, inklistrade länkar, visningar.',
-    rulesVisibleLabel: 'Syns för alla, men är dina',
-    rulesVisible: 'Dina favoriter och dina anteckningar.',
-    rulesPersonalLabel: 'Bara dina',
-    rulesPersonal: 'Filter under Bostäder och ditt konto.',
+      'favoriter, dolda bostäder, anteckningar, länkar och visningar. Ägare bestämmer sökning och finansiering.',
+    rulesPersonalLabel: 'Bara för dig',
+    rulesPersonal: 'filter under Bostäder.',
     theTwoPasswordsDiffer: 'Lösenorden stämmer inte överens.',
     chooseYourPassword: 'Välj ditt lösenord',
     chooseANewPassword: 'Välj ett nytt lösenord',

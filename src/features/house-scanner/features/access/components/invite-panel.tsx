@@ -146,11 +146,6 @@ export function InvitePanel({
             }}
           />
         </Text>
-        {create && (
-          <Text>
-            <FormattedMessage id="access.newHouseholdStartsEmpty" />
-          </Text>
-        )}
         <HouseholdRules />
       </Stack>
       {message && (

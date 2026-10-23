@@ -37,11 +37,8 @@ export interface AccessTranslations {
   createAccount: string;
   signInInstead: string;
   createAccountInstead: string;
-  newHouseholdStartsEmpty: string;
   rulesSharedLabel: string;
   rulesShared: string;
-  rulesVisibleLabel: string;
-  rulesVisible: string;
   rulesPersonalLabel: string;
   rulesPersonal: string;
   theTwoPasswordsDiffer: string;

@@ -708,9 +708,9 @@ export const en = {
     join: 'Join {value0}',
     theLinkWorksUntil: '{value0} The link works until {value1}.',
     invitedYouToStartYourOwnShellterHouseholdIt:
-      '{value0} invited you to start your own Shellter household. It shares nothing with theirs.',
+      '{value0} invited you to start your own household. It starts empty and is separate from theirs.',
     invitedYouToJoinTheirHouseholdAndShareIts:
-      '{value0} invited you to join their household and share its shortlist.',
+      '{value0} invited you to join their household.',
     householdName: 'Household name',
     membersSeeItWhenTheyPickAHousehold:
       'Members see it when they pick a household.',
@@ -727,15 +727,11 @@ export const en = {
     createAccount: 'Create account',
     signInInstead: 'Already have an account? Sign in',
     createAccountInstead: 'New to Shellter? Create an account',
-    newHouseholdStartsEmpty:
-      'Your new household starts empty and private. The same rules apply to anyone you invite later.',
     rulesSharedLabel: 'Shared with the household',
     rulesShared:
-      'Search criteria and financing (owners change them), hidden homes, pasted links, viewings.',
-    rulesVisibleLabel: 'Visible to everyone, but yours',
-    rulesVisible: 'Your saves and your notes.',
-    rulesPersonalLabel: 'Just yours',
-    rulesPersonal: 'Listings filters and your account.',
+      'favorites, hidden homes, notes, links and viewings. Owners set the search and financing.',
+    rulesPersonalLabel: 'Just for you',
+    rulesPersonal: 'Listings filters.',
     theTwoPasswordsDiffer: 'The two passwords differ.',
     chooseYourPassword: 'Choose your password',
     chooseANewPassword: 'Choose a new password',

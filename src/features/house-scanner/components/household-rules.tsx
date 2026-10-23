@@ -3,7 +3,6 @@ import { FormattedMessage } from 'react-intl';
 
 const rules = [
   ['access.rulesSharedLabel', 'access.rulesShared'],
-  ['access.rulesVisibleLabel', 'access.rulesVisible'],
   ['access.rulesPersonalLabel', 'access.rulesPersonal'],
 ] as const;
 

@@ -102,8 +102,7 @@ describe('invitation page', () => {
   it('shows one form at a time: create account first, sign in on request', async () => {
     const actions = showInvite(create, false);
     expect(await screen.findByText('Create your own household')).toBeTruthy();
-    expect(screen.getByText(/It shares nothing with theirs/)).toBeTruthy();
-    expect(screen.getByText(/starts empty and private/)).toBeTruthy();
+    expect(screen.getByText(/It starts empty and is separate/)).toBeTruthy();
     expect(screen.queryByText('Sign-in form')).toBeNull();
     fireEvent.click(
       screen.getByRole('button', { name: 'Already have an account? Sign in' }),
@@ -145,8 +144,8 @@ describe('invitation page', () => {
       true,
     );
     expect(await screen.findByText('Join Alex home')).toBeTruthy();
-    expect(screen.getByText(/Your saves and your notes/)).toBeTruthy();
-    expect(screen.queryByText(/starts empty and private/)).toBeNull();
+    expect(screen.getByText(/favorites, hidden homes, notes/)).toBeTruthy();
+    expect(screen.queryByText(/It starts empty/)).toBeNull();
     expect(screen.queryByLabelText(/Household name/)).toBeNull();
     type(/Your name/, 'Casey');
     fireEvent.click(screen.getByRole('button', { name: 'Join household' }));
