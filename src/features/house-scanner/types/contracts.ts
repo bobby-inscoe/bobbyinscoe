@@ -203,6 +203,28 @@ export const observationSchema = z.strictObject({
   // Future viewings, sorted. The key is left out when there are none, so older readers keep parsing.
   viewings: z.array(viewingSchema).max(10).optional(),
 });
+// A fitted asking-price model for apartments (spec: house-scanner-price-estimates). Numbers only: per-neighbourhood
+// levels carry how many homes they come from, and nothing names or prices a single home.
+const finite = z.number().finite();
+export const priceModelSchema = z.strictObject({
+  version: z.literal(1),
+  fittedAt: timestamp,
+  homes: z.number().int().positive(),
+  // The half-year the intercept speaks for, such as 2026H2.
+  period: z.string().regex(/^\d{4}H[12]$/),
+  intercept: finite,
+  logArea: finite,
+  feePerM2: finite,
+  rooms: finite,
+  typicalFeePerM2: z.number().positive(),
+  residualSd: z.number().positive(),
+  levels: z
+    .record(
+      z.string().min(1).max(100),
+      z.strictObject({ level: finite, homes: z.number().int().min(5) }),
+    )
+    .refine((levels) => Object.keys(levels).length <= 300),
+});
 // How long a home stays in browsing after it was last seen, and how old a photo, position or evidence item may be.
 // The database's hs.retention() holds the same value.
 export const RETENTION_DAYS = 14;
@@ -422,6 +444,7 @@ export type SearchProfile = z.infer<typeof profileSchema>;
 export type Viewing = z.infer<typeof viewingSchema>;
 export type Listing = z.infer<typeof listingSchema>;
 export type Observation = z.infer<typeof observationSchema>;
+export type PriceModel = z.infer<typeof priceModelSchema>;
 export type Evidence = z.infer<typeof evidenceSchema>;
 export type Favorite = z.infer<typeof favoriteSchema>;
 export type SnapshotNote = z.infer<typeof snapshotNoteSchema>;
