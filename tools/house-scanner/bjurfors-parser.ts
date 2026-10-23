@@ -331,13 +331,11 @@ export const BJURFORS_IMAGE_KEY =
   /^\/contentassets\/[0-9a-f]{32}\/[A-Za-z0-9_-]{1,80}\.jpg(?:\?v=\d{1,20})?$/;
 const RESIZED = /^\/cdn-cgi\/image\/[a-z0-9=,-]{1,120}(\/contentassets\/.*)$/;
 
-/**
- * Up to eight home photos and the first floor plan from the gallery JSON. The home's photos, its plan, the agent
- * portrait and the area pictures all sit in one /contentassets/ folder, so the folder does not tell them apart.
- * The home's photos come first, in page order, and a home has far more than eight, so the first eight valid entries
- * are its photos. Captions do not tell them apart: brokers caption their own photos as well as the area pictures.
- */
-function imageKeysOf(html: string): Pick<DetailFacts, 'photoKeys' | 'planKey'> {
+/** Up to eight home photos before the broker portrait or labelled area pictures, plus the first floor plan. */
+function imageKeysOf(
+  html: string,
+  seller: unknown,
+): Pick<DetailFacts, 'photoKeys' | 'planKey'> {
   const match = /\bdata-modaldata=(?:'([^']*)'|"([^"]*)")/.exec(html);
   let data: unknown;
   try {
@@ -347,7 +345,21 @@ function imageKeysOf(html: string): Pick<DetailFacts, 'photoKeys' | 'planKey'> {
   }
   if (!isRecord(data)) return {};
   const images = Array.isArray(data.allImages) ? data.allImages : [];
-  const photoKeys = images
+  const sellerName =
+    isRecord(seller) && typeof seller.name === 'string'
+      ? seller.name.trim().toLowerCase()
+      : '';
+  const boundary = images.findIndex(
+    (image) =>
+      isRecord(image) &&
+      [image.caption, image.altText].some(
+        (text) =>
+          typeof text === 'string' &&
+          (/områdesbild/i.test(text) ||
+            (sellerName !== '' && text.trim().toLowerCase() === sellerName)),
+      ),
+  );
+  const photoKeys = (boundary < 0 ? images : images.slice(0, boundary))
     .map((image) => {
       const full =
         isRecord(image) && isRecord(image.urls) ? image.urls.Full : undefined;
@@ -438,7 +450,7 @@ export function readBjurforsDetailPage(
       100,
     ),
     ...(hasPoint ? { latitude, longitude } : {}),
-    ...imageKeysOf(html),
+    ...imageKeysOf(html, offers.seller),
   };
   const viewings = viewingsFrom(html, now);
   if (viewings) facts.viewings = viewings;

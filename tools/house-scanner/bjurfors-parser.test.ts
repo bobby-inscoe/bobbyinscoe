@@ -292,6 +292,18 @@ describe('Bjurfors listing page', () => {
       expect(text).not.toContain(value);
   });
 
+  it('keeps a short gallery short before the broker portrait and area pictures', () => {
+    const html = fixture('detail-full.html').replace(
+      /,?\{"caption":null,"urls":\{"Full":"[^"\n]*fixturebild[6-9]\.jpg[^"\n]*"\}\}/g,
+      '',
+    );
+    const read = facts(html);
+    expect(read.photoKeys).toHaveLength(5);
+    expect(read.photoKeys?.every((key) => key.includes('fixturebild'))).toBe(
+      true,
+    );
+  });
+
   it('takes the first eight images as the photos, captioned or not, and only valid keys', () => {
     const path = (name: string) =>
       `/contentassets/${'a'.repeat(32)}/${name}.jpg?v=1`;
