@@ -76,7 +76,7 @@ interface Note {
 const SERVICE_ONLY = new Set([
   'hs_ingest_credential',
   'hs_consume_nonce',
-  'hs_ingest_policies',
+  'hs_ingest_sources',
   'hs_ingest',
 ]);
 

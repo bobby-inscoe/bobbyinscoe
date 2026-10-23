@@ -77,22 +77,12 @@ beforeAll(async () => {
     "insert into hs.profiles(household_id,name,enabled,criteria,edited_by) values ($1,'Synthetic profile',true,$2::jsonb,$3)",
     [HOUSE, JSON.stringify(SYNTHETIC_SNAPSHOT.profiles[0].criteria), USER],
   );
-  const policy = {
-    sourceId: 'synthetic',
-    status: 'approved',
-    freeOnly: true,
-    automatedCollection: true,
-    privateDisplay: true,
-    reviewedAt: new Date(Date.now() - 3600000).toISOString(),
-    reviewDueAt: new Date(Date.now() + 86400000).toISOString(),
-    retentionDays: 30,
-    listingOrigins: ['https://example.invalid'],
-    allowedFactFields: Object.keys(SYNTHETIC_SNAPSHOT.listings[0].facts),
-    allowedEvidenceSubjects: [],
-  };
   await db.query(
-    "insert into hs.source_policies(source_id,policy) values ('synthetic',$1::jsonb)",
-    [JSON.stringify(policy)],
+    "insert into hs.sources(source_id,listing_origins,image_origins) values ('synthetic','{https://example.invalid}','{}')",
+  );
+  // What the sources rollback restores, for the write-path test below.
+  await db.query(
+    'insert into hs.source_policies_archive(source_id,policy) values (\'synthetic\',\'{"sourceId":"synthetic","listingOrigins":["https://example.invalid"]}\')',
   );
   const value = {
     ...SYNTHETIC_SNAPSHOT.listings[0],
@@ -335,6 +325,9 @@ describe('official polygon assignments and compatibility', () => {
   });
   it('gives the same answers through the box indexes as the scan of every shape', async () => {
     const WRITE_PATH = '20261022102043_house_scanner_write_path';
+    const SOURCES = '20261023150000_house_scanner_sources';
+    const file = (name: string) =>
+      readFile(new URL(`../${name}.sql`, import.meta.url), 'utf8');
     // A grid over the city and the first corner of every tenth shape, which lies on its border, for an exact source
     // point and both kinds of estimate.
     const answers = async () =>
@@ -379,19 +372,11 @@ describe('official polygon assignments and compatibility', () => {
       },
     ])
       expect(await buffers({ ...coordinates, ...estimate })).toBeLessThan(60);
-    await db.exec(
-      await readFile(
-        new URL(`../rollbacks/${WRITE_PATH}_down.sql`, import.meta.url),
-        'utf8',
-      ),
-    );
+    await db.exec(await file(`rollbacks/${SOURCES}_down`));
+    await db.exec(await file(`rollbacks/${WRITE_PATH}_down`));
     const scanned = await answers();
-    await db.exec(
-      await readFile(
-        new URL(`../migrations/${WRITE_PATH}.sql`, import.meta.url),
-        'utf8',
-      ),
-    );
+    await db.exec(await file(`migrations/${WRITE_PATH}`));
+    await db.exec(await file(`migrations/${SOURCES}`));
     expect(indexed).toEqual(scanned);
     expect(indexed.length).toBeGreaterThan(900);
     // The sample reaches matches, several areas at once and no area.

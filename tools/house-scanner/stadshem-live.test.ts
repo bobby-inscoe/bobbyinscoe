@@ -18,7 +18,6 @@ import {
   record,
 } from '@house-scanner-tools/stadshem-test-pages';
 import { describe, expect, it } from 'vitest';
-import { assertSourceAllowed } from '@/features/house-scanner/utils/source-policy';
 
 const API = 'https://stadshem.se/api/estates';
 const QUERY =
@@ -222,7 +221,7 @@ describe('Stadshem guarded run', () => {
       memory,
     );
     expect(read.observations[0]).toMatchObject(expected);
-    assertAdapterOutput(stadshem().policy, read.observations[0]);
+    assertAdapterOutput(stadshem().source, read.observations[0]);
 
     // An hour later, by the next run's clock, the remembered record is still fresh.
     for (const entry of Object.values(memory.details))
@@ -238,44 +237,23 @@ describe('Stadshem guarded run', () => {
 });
 
 function stadshem() {
-  const found = sourceRegistry().find((e) => e.policy.sourceId === 'stadshem');
+  const found = sourceRegistry().find((e) => e.source.sourceId === 'stadshem');
   if (!found) throw new Error('stadshem missing');
   return found;
 }
 
 describe('Stadshem registry entry', () => {
-  it('registers a pending source with an honest policy and the right hosts', () => {
-    const { policy, executor } = stadshem();
+  it('registers the source as on, with its hosts and coverage notes', () => {
+    const { source, executor } = stadshem();
     expect(executor).toBe('stadshem-personal-read');
-    expect(policy).toMatchObject({
+    expect(source).toMatchObject({
       sourceId: 'stadshem',
-      status: 'pending',
-      automatedCollection: false,
-      privateDisplay: false,
+      enabled: true,
       listingOrigins: ['https://stadshem.se'],
       imageOrigins: ['https://storage.googleapis.com'],
-      imageDisplay: true,
-      imageHotlink: true,
-      retentionDays: 14,
     });
-    expect(policy.rightsBasis).toContain('Permission unresolved');
-    expect(policy.allowedFactFields).toEqual(
-      expect.arrayContaining([
-        'livingAreaM2',
-        'askingPriceSek',
-        'status',
-        'groundFloor',
-        'lift',
-        'tenure',
-      ]),
-    );
-    for (const left of ['glazed', 'outdoor'])
-      expect(policy.allowedFactFields).not.toContain(left);
-    expect(policy.capabilities.coverageGaps.join(' ')).toContain(
-      'not a documented',
-    );
-    expect(() =>
-      assertSourceAllowed(policy, new Date('2026-10-20T00:00:00Z')),
-    ).toThrow();
+    expect(
+      source.capabilities.coverageGaps.every((gap) => gap.length <= 300),
+    ).toBe(true);
   });
 });

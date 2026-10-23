@@ -1,41 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { SYNTHETIC_SNAPSHOT } from '@/features/house-scanner/mock/synthetic-household';
-import {
-  factsSchema,
-  type Observation,
-  type SourcePolicy,
+import type {
+  Observation,
+  SourceSettings,
 } from '@/features/house-scanner/types/contracts';
-import { assertObservationAllowed } from '@/features/house-scanner/utils/source-policy';
+import { assertObservationAllowed } from '@/features/house-scanner/utils/source-settings';
 
 const now = new Date('2026-10-12T12:00:00Z');
-const policy: SourcePolicy = {
+const source: SourceSettings = {
   sourceId: 'synthetic-fixture',
-  revision: 1,
-  status: 'approved',
-  reviewedAt: '2026-10-12T00:00:00Z',
-  reviewDueAt: '2027-01-01T00:00:00Z',
-  rightsBasis: 'Authored local test fixture',
+  enabled: true,
   listingOrigins: ['https://example.invalid'],
-  freeOnly: true,
-  automatedCollection: true,
-  privateDisplay: true,
-  modelProcessing: false,
-  emailDigest: false,
-  telegramDigest: false,
-  allowedFactFields: [...factsSchema.keyof().options],
-  retentionDays: 30,
-  capabilities: {
-    discovery: true,
-    knownListingRefresh: true,
-    unknownPrice: true,
-    upcoming: true,
-    pagination: true,
-    resultCap: null,
-    coverageGaps: ['Synthetic only'],
-  },
-  allowedEvidenceSubjects: ['nature_access'],
-  imageDisplay: true,
-  imageHotlink: true,
   imageOrigins: ['https://images.example.invalid'],
 };
 const listing = SYNTHETIC_SNAPSHOT.listings[0];
@@ -74,10 +49,10 @@ const observation: Observation = {
   },
 };
 
-describe('source content permission', () => {
-  it('accepts current content with explicit field, evidence and image rights', () => {
+describe('source content check', () => {
+  it('accepts current content from the source hosts', () => {
     expect(() =>
-      assertObservationAllowed(policy, observation, now),
+      assertObservationAllowed(source, observation, now),
     ).not.toThrow();
   });
   it.each(['observation', 'coordinates', 'evidence', 'photo'] as const)(
@@ -93,63 +68,64 @@ describe('source content permission', () => {
           stale.coordinates.observedAt = timestamp;
         if (part === 'evidence') stale.evidence[0].observedAt = timestamp;
         if (part === 'photo' && stale.photo) stale.photo.observedAt = timestamp;
-        expect(() => assertObservationAllowed(policy, stale, now)).toThrow(
+        expect(() => assertObservationAllowed(source, stale, now)).toThrow(
           'time window',
         );
       }
     },
   );
-  it.each([
-    { status: 'pending' },
-    { automatedCollection: false },
-    { privateDisplay: false },
-    { reviewDueAt: now.toISOString() },
-    { reviewedAt: '2026-10-13T12:00:00Z' },
-  ] satisfies Partial<SourcePolicy>[])(
-    'fails closed for policy %j',
-    (change) => {
-      expect(() =>
-        assertObservationAllowed({ ...policy, ...change }, observation, now),
-      ).toThrow();
-    },
-  );
-  it('accepts viewing times only for a source whose policy allows them', () => {
-    const withViewings = {
-      ...observation,
-      viewings: [{ startsAt: '2026-10-24T13:00:00Z', endsAt: null }],
-    };
-    expect(() => assertObservationAllowed(policy, withViewings, now)).toThrow(
-      'Viewing times',
-    );
+  it('refuses everything from a switched-off source', () => {
+    expect(() =>
+      assertObservationAllowed({ ...source, enabled: false }, observation, now),
+    ).toThrow('switched off');
+  });
+  it('accepts viewing times and any fact', () => {
     expect(() =>
       assertObservationAllowed(
-        { ...policy, viewings: true },
-        withViewings,
+        source,
+        {
+          ...observation,
+          facts: {
+            ...observation.facts,
+            bidding: true,
+            highestBidSek: 2_000_000,
+          },
+          viewings: [{ startsAt: '2026-10-24T13:00:00Z', endsAt: null }],
+        },
         now,
       ),
-    ).not.toThrow();
-    expect(() =>
-      assertObservationAllowed(policy, { ...observation, viewings: [] }, now),
     ).not.toThrow();
   });
-  it('rejects unapproved fields, image origin, image expiry and evidence origins', () => {
+  it('rejects a listing, image or evidence from another host, and an expired image', () => {
     expect(() =>
       assertObservationAllowed(
-        { ...policy, allowedFactFields: [] },
+        { ...source, listingOrigins: ['https://other.invalid'] },
         observation,
         now,
       ),
-    ).toThrow('fact field');
+    ).toThrow('Listing origin');
     expect(() =>
       assertObservationAllowed(
-        { ...policy, imageOrigins: [] },
+        { ...source, imageOrigins: [] },
         observation,
         now,
       ),
-    ).toThrow('Photo permission');
+    ).toThrow('another host');
+    const photo = observation.photo;
+    if (!photo) throw new Error('Missing fixture photo');
     expect(() =>
       assertObservationAllowed(
-        policy,
+        source,
+        {
+          ...observation,
+          floorPlan: { ...photo, url: 'https://other.invalid/plan.jpg' },
+        },
+        now,
+      ),
+    ).toThrow('another host');
+    expect(() =>
+      assertObservationAllowed(
+        source,
         {
           ...observation,
           photo: observation.photo && {
@@ -159,10 +135,10 @@ describe('source content permission', () => {
         },
         now,
       ),
-    ).toThrow('Photo permission');
+    ).toThrow('another host');
     expect(() =>
       assertObservationAllowed(
-        policy,
+        source,
         {
           ...observation,
           evidence: [
@@ -181,7 +157,7 @@ describe('source content permission', () => {
     (kind) => {
       expect(() =>
         assertObservationAllowed(
-          policy,
+          source,
           { ...observation, evidence: [{ ...observation.evidence[0], kind }] },
           now,
         ),
@@ -193,7 +169,7 @@ describe('source content permission', () => {
     if (!coordinates) throw new Error('Missing fixture coordinate');
     expect(() =>
       assertObservationAllowed(
-        policy,
+        source,
         {
           ...observation,
           coordinates: {

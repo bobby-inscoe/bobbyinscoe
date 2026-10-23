@@ -92,8 +92,11 @@ beforeEach(async () => {
         usedNonces.add(args.p_nonce);
         return { data: null, error: null };
       }
-      if (name === 'hs_ingest_policies')
-        return { data: [sourceRegistry()[0].policy], error: null };
+      if (name === 'hs_ingest_sources') {
+        const { capabilities: _coverage, ...settings } =
+          sourceRegistry()[0].source;
+        return { data: [settings], error: null };
+      }
       if (name === 'hs_ingest')
         return { data: { runId, state: 'staging' }, error: null };
       throw new Error(`Unexpected RPC ${name}`);

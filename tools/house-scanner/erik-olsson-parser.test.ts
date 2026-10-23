@@ -190,13 +190,13 @@ describe('Erik Olsson search page', () => {
 
   it('produces output that passes the policy check of the registry entry', () => {
     const entry = sourceRegistry().find(
-      (e) => e.policy.sourceId === 'erik-olsson',
+      (e) => e.source.sourceId === 'erik-olsson',
     );
     if (!entry) throw new Error('Registry entry missing');
     for (const observation of page(search([APARTMENT, HOUSE, VILLA]))
       .observations)
       expect(() =>
-        assertAdapterOutput(entry.policy, observation),
+        assertAdapterOutput(entry.source, observation),
       ).not.toThrow();
   });
 });

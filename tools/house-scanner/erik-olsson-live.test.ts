@@ -19,7 +19,6 @@ import { emptyMemory } from '@house-scanner-tools/run-memory';
 import { erikOlssonAdapter } from '@house-scanner-tools/source-adapters';
 import { sourceRegistry } from '@house-scanner-tools/source-registry';
 import { describe, expect, it } from 'vitest';
-import { assertSourceAllowed } from '@/features/house-scanner/utils/source-policy';
 
 const BASE = '/municipalities/goteborg-166?tab=homes';
 // The rules the real robots.txt carries, in the shapes it uses.
@@ -207,7 +206,7 @@ describe('Erik Olsson guarded run', () => {
     ).toBe(7 * 24 * 60 * 60 * 1000);
     // The photo is not a fact: it never lands in the facts.
     expect(observation.facts).not.toHaveProperty('photoPath');
-    assertAdapterOutput(erikOlsson().policy, observation);
+    assertAdapterOutput(erikOlsson().source, observation);
   });
 
   it('leaves the photo off when a listing page names no image', async () => {
@@ -248,7 +247,7 @@ describe('Erik Olsson guarded run', () => {
     );
     const read = await run(goteborg, deps(first.impl), (all) => all, memory);
     expect(read.observations[0]).toMatchObject(expected);
-    assertAdapterOutput(erikOlsson().policy, read.observations[0]);
+    assertAdapterOutput(erikOlsson().source, read.observations[0]);
 
     // An hour later, by the next run's clock, the page fails and the remembered read fills in.
     for (const entry of Object.values(memory.details))
@@ -265,41 +264,24 @@ describe('Erik Olsson guarded run', () => {
 
 function erikOlsson() {
   const found = sourceRegistry().find(
-    (e) => e.policy.sourceId === 'erik-olsson',
+    (e) => e.source.sourceId === 'erik-olsson',
   );
   if (!found) throw new Error('erik-olsson missing');
   return found;
 }
 
 describe('Erik Olsson registry entry', () => {
-  it('registers a pending source with an honest policy, hotlinked photos and the right hosts', () => {
-    const { policy, executor } = erikOlsson();
+  it('registers the source as on, with its hosts and coverage notes', () => {
+    const { source, executor } = erikOlsson();
     expect(executor).toBe('erik-olsson-personal-read');
-    expect(policy).toMatchObject({
+    expect(source).toMatchObject({
       sourceId: 'erik-olsson',
-      status: 'pending',
-      automatedCollection: false,
-      privateDisplay: false,
+      enabled: true,
       listingOrigins: ['https://www.erikolsson.se'],
       imageOrigins: ['https://imagedelivery.net'],
-      imageDisplay: true,
-      imageHotlink: true,
-      retentionDays: 14,
     });
-    expect(policy.rightsBasis).toContain('Permission unresolved');
-    expect(policy.allowedFactFields).toEqual(
-      expect.arrayContaining([
-        'livingAreaM2',
-        'askingPriceSek',
-        'outdoor',
-        'lift',
-        'groundFloor',
-      ]),
-    );
-    expect(policy.allowedFactFields).not.toContain('glazed');
-    expect(policy.capabilities.coverageGaps.join(' ')).toContain('Underhand');
-    expect(() =>
-      assertSourceAllowed(policy, new Date('2026-10-20T00:00:00Z')),
-    ).toThrow();
+    expect(
+      source.capabilities.coverageGaps.every((gap) => gap.length <= 300),
+    ).toBe(true);
   });
 });
