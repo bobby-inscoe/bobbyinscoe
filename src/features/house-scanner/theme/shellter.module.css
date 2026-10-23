@@ -711,7 +711,7 @@
   top: 8px;
   right: 8px;
   border-radius: var(--mantine-radius-default);
-  background: var(--shellter-surface);
+  background: color-mix(in srgb, var(--shellter-surface) 55%, transparent);
 }
 .photoPinClose :global(.mantine-CloseButton-root) {
   min-width: 44px;
@@ -731,6 +731,7 @@
 }
 .photoPinActions :global(.mantine-Button-root) {
   min-height: 44px;
+  background: color-mix(in srgb, var(--button-bg) 55%, transparent);
 }
 .photoPinSummary {
   flex-shrink: 0;
@@ -1320,10 +1321,13 @@
   opacity: 0;
   visibility: hidden;
 }
+.photoPinActions .star,
+.photoPinActions .hide,
 .photoGalleryControls .star,
 .photoGalleryControls .hide {
   background: color-mix(in srgb, var(--ai-bg) 55%, transparent);
 }
+.photoPinActions .savedByOthers,
 .photoGalleryControls .savedByOthers {
   background: rgb(169 216 210 / 55%);
 }
