@@ -273,6 +273,7 @@ export function sourceRegistry(): SourceCapability[] {
           'outdoor',
           'groundFloor',
           'lift',
+          'bidding',
         ],
         capabilities: {
           discovery: true,
@@ -502,6 +503,8 @@ export function sourceRegistry(): SourceCapability[] {
           'status',
           'groundFloor',
           'lift',
+          'bidding',
+          'highestBidSek',
         ],
         capabilities: {
           discovery: true,
