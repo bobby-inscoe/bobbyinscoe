@@ -1,24 +1,9 @@
 import { ActionIcon, Button, Group, Popover, Stack, Text } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { Settings2, Star } from 'lucide-react';
-import {
-  Map as MapLibreMap,
-  Marker,
-  NavigationControl,
-  type StyleSpecification,
-  setWorkerUrl,
-} from 'maplibre-gl';
-import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
+import type { StyleSpecification } from 'maplibre-gl';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { FormattedMessage, type IntlShape, useIntl } from 'react-intl';
-import {
-  englishIntl,
-  type Feedback,
-  formatFeedback,
-  messageValue,
-} from '@/features/house-scanner/i18n/catalogs';
-import 'maplibre-gl/dist/maplibre-gl.css';
-
 import { MapPinGuide } from '@/features/house-scanner/features/listings/features/map/components/map-pin-guide';
 import {
   clusterExpansionZoom,
@@ -27,11 +12,23 @@ import {
   type MapGroup,
 } from '@/features/house-scanner/features/listings/features/map/utils/map-clusters';
 import { mapSelectionIds } from '@/features/house-scanner/features/listings/features/map/utils/map-selection';
+import {
+  englishIntl,
+  type Feedback,
+  formatFeedback,
+  messageValue,
+} from '@/features/house-scanner/i18n/catalogs';
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type { MapPoint } from '@/features/house-scanner/utils/listing-view';
-
-// MapLibre resolves its default worker beside import.meta.url, which Vite rewrites.
-setWorkerUrl(workerUrl);
+import {
+  retainMap,
+  STREET_STYLE,
+} from '@/features/house-scanner/utils/map-runtime';
+import {
+  Map as MapLibreMap,
+  Marker,
+  NavigationControl,
+} from '@/features/house-scanner/utils/map-runtime-module';
 
 const MAX_STACK_BUTTONS = 6;
 // Room kept around a pin so its marker is not clipped, and between the card and the map edge.
@@ -175,7 +172,7 @@ export function HouseholdMap({
   selectionMode = false,
   checkedIds = NO_CHECKED_IDS,
   selectionDisabled = false,
-  styleUrl = 'https://tiles.openfreemap.org/styles/liberty',
+  styleUrl = STREET_STYLE,
   satellite = false,
   fillMobile = false,
   overlay,
@@ -256,6 +253,7 @@ export function HouseholdMap({
     if (!container.current || error) return;
     const phoneLayout = window.matchMedia('(max-width: 36em)').matches;
     let instance: MapLibreMap | null = null;
+    const release = retainMap();
     try {
       const savedCamera = camera?.current;
       instance = new MapLibreMap({
@@ -313,6 +311,7 @@ export function HouseholdMap({
       for (const { marker } of markers.current) marker.remove();
       markers.current = [];
       instance?.remove();
+      release();
       map.current = null;
     };
   }, [styleUrl, centerLongitude, centerLatitude, bounds, error, camera]);

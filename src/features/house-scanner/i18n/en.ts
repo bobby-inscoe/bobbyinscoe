@@ -151,6 +151,10 @@ export const en = {
       savedBy: 'Saved by',
       select: 'Select {value0}',
       details: 'Details',
+      openLocationMap: 'Open location on map',
+      loadingLocationMap: 'Loading location map…',
+      locationMapUnavailable:
+        'Location map unavailable. Use See on map to try the full map.',
       seeOnMap: 'See on map',
       more: 'More',
       moreActionsFor: 'More actions for {value0}',
