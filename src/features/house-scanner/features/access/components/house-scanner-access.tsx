@@ -101,9 +101,10 @@ export function HouseScannerAccess({
   );
   return (
     <Stack gap="md">
-      {(state.status !== 'authenticated' ||
-        session.passwordSetup ||
-        inviteToken !== null) && <LanguageSelect />}
+      {state.status !== 'loading' &&
+        (state.status !== 'authenticated' ||
+          session.passwordSetup ||
+          inviteToken !== null) && <LanguageSelect />}
       {message && <Alert role="alert">{formatFeedback(intl, message)}</Alert>}
       {session.linkError && (
         <Alert role="alert">

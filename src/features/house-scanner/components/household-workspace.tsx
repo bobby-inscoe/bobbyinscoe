@@ -202,6 +202,11 @@ export function HouseholdWorkspace({
           wrap="wrap"
           p={4}
           className={classes.tabBar}
+          onClickCapture={() => {
+            if (window.matchMedia('(max-width: 35.99375em)').matches) {
+              window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+            }
+          }}
         >
           {(['suggestions', 'favorites'] as const).map((value) => (
             <Button
