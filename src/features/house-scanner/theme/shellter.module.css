@@ -1342,8 +1342,8 @@
 
 .photoGalleryControls {
   transition:
-    opacity 400ms ease,
-    visibility 400ms ease;
+    opacity 200ms ease,
+    visibility 200ms ease;
 }
 .photoGalleryControls[data-hidden] {
   transition-duration: 150ms;
@@ -1437,13 +1437,25 @@
   border-radius: 999px;
   background: rgb(20 38 36 / 45%);
 }
-.photoDots span {
+.photoDotViewport {
+  position: relative;
+  height: 9px;
+  overflow: hidden;
+}
+.photoDotTrack {
+  position: absolute;
+  left: 1px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  width: max-content;
+}
+.photoDotTrack span {
+  flex: 0 0 5px;
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: rgb(255 255 255 / 45%);
-}
-.photoDots span[data-active] {
   background: white;
 }
 .cardPhoto .photoGalleryControls,
