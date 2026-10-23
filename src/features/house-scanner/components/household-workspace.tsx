@@ -272,11 +272,6 @@ export function HouseholdWorkspace({
               <Menu.Item onClick={() => navigation.changeTab('settings')}>
                 <FormattedMessage id="navigation.settings" />
               </Menu.Item>
-              {onSignOut && (
-                <Menu.Item onClick={onSignOut}>
-                  <FormattedMessage id="navigation.signOut" />
-                </Menu.Item>
-              )}
             </Menu.Dropdown>
           </Menu>
         </Group>
@@ -381,6 +376,7 @@ export function HouseholdWorkspace({
           </>
         ) : tab === 'settings' ? (
           <SettingsPanel
+            onSignOut={onSignOut}
             snapshot={snapshot}
             userId={userId}
             synthetic={synthetic}

@@ -194,7 +194,7 @@ test('favorites preserve the other member save and filters identify the saver', 
         'Within preferred budget; Living area and rooms meet profile',
         { exact: true },
       ),
-    ).toBeVisible();
+    ).toHaveCount(0);
     await page.keyboard.press('Escape');
   } else {
     await expect(
@@ -433,7 +433,7 @@ test('a locally served map style groups overlapping homes and keeps map selectio
       detachedDetails.getByRole('link', { name: 'Open original listing' }),
     ).toHaveAttribute('target', '_blank');
   await expect(
-    detachedDetails.getByText('Facts and source evidence', { exact: true }),
+    detachedDetails.getByRole('heading', { name: 'Facts', exact: true }),
   ).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -832,8 +832,23 @@ test('Details opens a dialog named for the home without reflowing the grid, and 
   await expect(dialog).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(1);
   await expect(
-    dialog.getByText('Facts and source evidence', { exact: true }),
+    dialog.getByRole('heading', { name: 'Facts', exact: true }),
   ).toBeVisible();
+  await expect(
+    dialog.getByRole('heading', { name: 'Evidence', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    dialog.getByText(
+      /Details need confirmation|total incomplete|Unknown or disputed/,
+    ),
+  ).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'About these timestamps' }).click();
+  await expect(page.getByText('Last checked', { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('dialog', { name: 'About these timestamps', exact: true }),
+  ).toBeInViewport({ ratio: 1 });
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeVisible();
   // The card keeps its place, so the grid does not jump.
   expect(await boxes()).toEqual(before);
   const viewport = page.viewportSize();
@@ -1634,7 +1649,7 @@ test('the Viewings tab lists saved homes with their times and hands over a calen
     ).toHaveAttribute('aria-pressed', 'true');
     await expect(page).toHaveURL(/from=viewings/);
     await page.getByRole('button', { name: 'Close listing details' }).click();
-    await expect(dialog).not.toBeVisible();
+    await expect(dialog).toHaveCount(0);
     await expect(trigger).toBeFocused();
     await expect(page.getByRole('combobox', { name: 'Saved by' })).toHaveValue(
       'Demo Morgan',
@@ -1663,7 +1678,8 @@ test('the Viewings tab lists saved homes with their times and hands over a calen
   await page.getByRole('button', { name: 'Listings', exact: true }).click();
   await page.getByRole('button', { name: /^Filters(?: \(\d+\))?$/ }).click();
   await choose(page, 'Viewing within', 'Next 7 days');
-  await expect(page.getByText('Showing 2 of', { exact: false })).toBeVisible();
+  await applyFilters(page);
+  await expect(page.getByText(/^3 homes/)).toBeVisible();
 });
 
 test('drawer cycles photos and thumbnails select the carousel photo', async ({
@@ -1679,6 +1695,13 @@ test('drawer cycles photos and thumbnails select the carousel photo', async ({
     exact: true,
   });
   const photo = drawer.locator('img:not([inert] img)').first();
+  const headings = await drawer.getByRole('heading').allTextContents();
+  expect(headings.indexOf('Floor plan')).toBeGreaterThan(
+    headings.indexOf('Facts'),
+  );
+  expect(headings.indexOf('Floor plan')).toBeLessThan(
+    headings.indexOf('Details'),
+  );
   await expect(photo).toHaveAttribute('src', /living-room\.svg(?:\?.*)?$/);
   await drawer.getByRole('button', { name: 'Previous photo' }).click();
   await expect(photo).toHaveAttribute('src', /balcony\.svg(?:\?.*)?$/);
@@ -1717,6 +1740,11 @@ test('drawer cycles photos and thumbnails select the carousel photo', async ({
   await expect(
     drawer.getByRole('button', { name: 'Floor plan', exact: true }),
   ).toHaveCount(1);
+  await drawer
+    .getByRole('button', { name: 'View floor plan', exact: true })
+    .click();
+  await expect(photo).toHaveAttribute('src', /floor-plan\.svg(?:\?.*)?$/);
+  await expect(photo).toBeInViewport({ ratio: 1 });
   await drawer
     .getByRole('button', { name: 'View photo 2', exact: true })
     .click();

@@ -17,8 +17,6 @@ import { ListingDetails } from '@/features/house-scanner/components/listing-deta
 import { ListingGallery } from '@/features/house-scanner/components/listing-gallery';
 import {
   AlsoOn,
-  FactsLine,
-  MatchLines,
   OriginalListingButton,
   PriceLine,
   ReasonChips,
@@ -222,7 +220,6 @@ export function ListingDrawer({
                 )}
                 <PriceLine listing={listing} />
                 <EstimateLine listing={listing} />
-                <FactsLine listing={listing} />
                 <ReasonChips listing={listing} />
                 <AlsoOn sites={alsoOn} />
                 {snapshot.favorites.some(
@@ -244,7 +241,6 @@ export function ListingDrawer({
                       .join(', ')}
                   </Text>
                 )}
-                <MatchLines listing={listing} snapshot={snapshot} details />
                 <Group>
                   <OriginalListingButton listing={listing} />
                   {onSeeOnMap && hasPin(listing.coordinates) && (

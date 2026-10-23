@@ -27,6 +27,7 @@ import {
   type HiddenView,
   type ListingFilters,
 } from '@/features/house-scanner/utils/listing-filters';
+import { sourceName } from '@/features/house-scanner/utils/source-name';
 
 const HIDDEN_VIEWS = (
   intl: IntlShape,
@@ -296,7 +297,7 @@ export function ListingFilterPanel({
             onChange={(selected) => onChange({ ...filters, hosts: selected })}
             data={hosts.map((value) => ({
               value,
-              label: displayLabel(intl, value),
+              label: displayLabel(intl, sourceName(value)),
             }))}
             flex="1 1 15rem"
           />
