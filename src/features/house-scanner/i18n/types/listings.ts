@@ -16,6 +16,9 @@ export interface ListingsTranslations {
     select: string;
     details: string;
     seeOnMap: string;
+    openLocationMap: string;
+    loadingLocationMap: string;
+    locationMapUnavailable: string;
     more: string;
     moreActionsFor: string;
     linkCopied: string;

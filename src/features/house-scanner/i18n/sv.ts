@@ -179,6 +179,10 @@ export const sv = {
       savedBy: 'Sparad av',
       select: 'Välj {value0}',
       details: 'Detaljer',
+      openLocationMap: 'Öppna platsen på kartan',
+      loadingLocationMap: 'Laddar platsens karta…',
+      locationMapUnavailable:
+        'Platsens karta är inte tillgänglig. Använd Visa på karta för att prova hela kartan.',
       seeOnMap: 'Visa på kartan',
       more: 'Mer',
       moreActionsFor: 'Fler åtgärder för {value0}',

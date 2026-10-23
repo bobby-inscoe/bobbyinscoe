@@ -40,6 +40,7 @@ interface ListingDetailsProps {
   notes?: ListingNotesController;
   headingOrder?: 3 | 4;
   onSelectPhoto?: (index: number) => void;
+  locationPreview?: ReactNode;
 }
 
 interface FactRow {
@@ -113,6 +114,7 @@ export function ListingDetails({
   notes,
   headingOrder = 4,
   onSelectPhoto,
+  locationPreview,
 }: ListingDetailsProps) {
   const intl = useIntl();
   const { facts, conflicts } = listing;
@@ -416,23 +418,33 @@ export function ListingDetails({
                 }),
                 value: listingNeighborhoodLabel(listing),
               },
-              {
-                label: intl.formatMessage({ id: 'listings.details.position' }),
-                value: listing.coordinates
-                  ? intl.formatMessage(
-                      { id: 'listings.details.fromObserved' },
-                      {
-                        value0: displayLabel(
-                          intl,
-                          listing.coordinates.precision,
-                        ),
-                        value1: displayLabel(intl, listing.coordinates.source),
-                      },
-                    )
-                  : null,
-              },
+              ...(locationPreview !== undefined
+                ? []
+                : [
+                    {
+                      label: intl.formatMessage({
+                        id: 'listings.details.position',
+                      }),
+                      value: listing.coordinates
+                        ? intl.formatMessage(
+                            { id: 'listings.details.fromObserved' },
+                            {
+                              value0: displayLabel(
+                                intl,
+                                listing.coordinates.precision,
+                              ),
+                              value1: displayLabel(
+                                intl,
+                                listing.coordinates.source,
+                              ),
+                            },
+                          )
+                        : null,
+                    },
+                  ]),
             ]}
           />
+          {locationPreview}
           {listing.coordinates && !hasPin(listing.coordinates) && (
             <Text size="sm">
               <FormattedMessage id="listings.details.approximateAreaNoExactPinIsShown" />
