@@ -1,6 +1,7 @@
 import {
   readErikOlssonDetailPage,
   readErikOlssonSearchPage,
+  readErikOlssonSoldPage,
 } from '@house-scanner-tools/erik-olsson-parser';
 import { assertAdapterOutput } from '@house-scanner-tools/live-run';
 import {
@@ -445,5 +446,69 @@ describe('Erik Olsson viewing times', () => {
       expect(
         page(search([withViewing(line)], 1)).observations[0],
       ).not.toHaveProperty('viewings');
+  });
+});
+
+describe('Erik Olsson sold list', () => {
+  const home = (over: Record<string, unknown> = {}) => ({
+    id: '6007278',
+    title: null,
+    street: 'Exempelgatan 1',
+    municipality: 'Göteborg',
+    category: 'apartment',
+    rooms: '2',
+    latitude: '57.697906',
+    longitude: '11.969571',
+    living_space: '59',
+    monthly_fee: '4108',
+    area: { id: 161, name: 'Linné' },
+    price: '4500000',
+    price_type: 'broker-valuation',
+    is_price_hidden: false,
+    updated_at: '2026-10-22T18:35:07.772Z',
+    ...over,
+  });
+  const body = (homes: unknown[]) =>
+    `0:["$","div",null,{"homes":${JSON.stringify(homes)},"queryParams":"categories=apartment&limit=100&page=0&statuses=sold"}]`;
+
+  it('reads list rows from the component text as final-price rows', () => {
+    const read = readErikOlssonSoldPage(
+      body([
+        home(),
+        home({ id: '2', category: 'house' }),
+        home({
+          id: '3',
+          is_price_hidden: true,
+          updated_at: '2026-03-01T00:00:00.000Z',
+        }),
+      ]),
+    );
+    expect(read).toEqual({
+      rows: {
+        '6007278': {
+          priceSek: 4_500_000,
+          areaM2: 59,
+          feeSek: 4108,
+          rooms: 2,
+          period: '2026H2',
+          neighbourhood: 'linné',
+          final: true,
+          position: [57.697906, 11.969571],
+        },
+      },
+      ids: ['6007278', '2', '3'],
+      oldest: null,
+      last: false,
+    });
+  });
+
+  it('ends at a page without rows and fails an answer that is not the list', () => {
+    expect(readErikOlssonSoldPage(body([]))).toEqual({
+      rows: {},
+      ids: [],
+      oldest: null,
+      last: true,
+    });
+    expect(readErikOlssonSoldPage('<html>changed</html>')).toBeNull();
   });
 });

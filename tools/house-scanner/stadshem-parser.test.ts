@@ -6,6 +6,7 @@ import {
 import {
   readStadshemDetailPage,
   readStadshemSearchPage,
+  readStadshemSoldPage,
 } from '@house-scanner-tools/stadshem-parser';
 import {
   estate,
@@ -383,5 +384,61 @@ describe('Stadshem bidding', () => {
     );
     for (const value of [false, undefined, 'true'])
       expect(facts({ currentlyBidding: value }).bidding).toBeNull();
+  });
+});
+
+describe('Stadshem sold list', () => {
+  const estate = (over: Record<string, unknown> = {}) => ({
+    id: 'e1',
+    type: 'lägenhet',
+    price: { startingPrice: 3_000_000, finalPrice: 3_250_000 },
+    livingSpace: 61.5,
+    monthlyFee: 3900,
+    numberOfRooms: 2,
+    statusLastChanged: '2026-10-20 12:00:00',
+    address: {
+      municipality: 'Göteborg',
+      area: { name: 'Linnéstaden' },
+      coordinates: { latitude: '57.69', longitude: '11.95' },
+    },
+    ...over,
+  });
+
+  it('keeps Göteborg and Mölndal apartments with a final price as final-price rows', () => {
+    const read = readStadshemSoldPage(
+      JSON.stringify({
+        page: 1,
+        num_pages: 1,
+        estates: [
+          estate(),
+          estate({ id: 'e2', type: 'hus' }),
+          estate({ id: 'e3', address: { municipality: 'Stockholm' } }),
+          estate({
+            id: 'e4',
+            monthlyFee: 0,
+            statusLastChanged: '2026-01-02 09:00:00',
+          }),
+        ],
+      }),
+    );
+    expect(read).toEqual({
+      rows: {
+        e1: {
+          priceSek: 3_250_000,
+          areaM2: 61.5,
+          feeSek: 3900,
+          rooms: 2,
+          period: '2026H2',
+          neighbourhood: 'linnéstaden',
+          final: true,
+          soldOn: '2026-10-20',
+          position: [57.69, 11.95],
+        },
+      },
+      ids: ['e1', 'e2', 'e3', 'e4'],
+      oldest: '2026-01-02 09:00:00',
+      last: true,
+    });
+    expect(readStadshemSoldPage('<html>')).toBeNull();
   });
 });

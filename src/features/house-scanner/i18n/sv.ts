@@ -310,10 +310,12 @@ export const sv = {
       deleteThisLinkForTheWholeHouseholdEveryoneS:
         'Ta bort den här länken för hela hushållet? Allas favoriter och anteckningar för den tas också bort.',
       keepIt: 'Behåll',
-      workedOutFromTheAskingPricesOfTheNearest:
-        'Baserat på {value0} utgångspriser inom {value1} km, anpassat efter storlek. Avgift, våning och skick ingår inte.',
+      estimateBasis:
+        'Från liknande bostäder efter storlek, avgift och område, och {value0} bostäder med pris inom {value1} km. Spannet är det troliga utgångspriset.',
+      estimateBasisArea:
+        'Från liknande bostäder efter storlek, avgift och område. Spannet är det troliga utgångspriset.',
       estimate: 'Uppskattning',
-      fromNearbyAskingPrices: 'från {value0} utgångspriser i närheten',
+      likelyFinalPrice: 'troligt slutpris {value0}',
       selectUpTo500HomesThatAreStillAvailable:
         'Välj upp till 500 bostäder som fortfarande är tillgängliga.',
       yourFavoriteWasRemovedOtherMembersSavesRemain:

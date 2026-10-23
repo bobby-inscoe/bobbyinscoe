@@ -18,6 +18,10 @@ import {
   type LoadedMemory,
   markTracked,
 } from '@house-scanner-tools/run-memory';
+import {
+  refreshPriceModel,
+  type SoldPool,
+} from '@house-scanner-tools/sold-pool';
 import { adapterFor } from '@house-scanner-tools/source-adapters';
 import type { SourceCapability } from '@house-scanner-tools/source-registry';
 import type { z } from 'zod';
@@ -39,6 +43,8 @@ export interface LiveRunOptions {
   memory?: LoadedMemory;
   // Estimated positions for kept homes the source gave none for; updated in place.
   geocodeCache?: GeocodeCache;
+  // Sold apartments pooled across sources for the price model; updated in place.
+  soldPool?: SoldPool;
 }
 
 /** What a reader sends must fit the contract, come from the source's hosts and carry no evidence. */
@@ -105,6 +111,14 @@ export async function prepareLiveRun(options: LiveRunOptions, deps: LiveDeps) {
     ? await geocodeMissing(kept, options.geocodeCache, deps)
     : null;
   const droppedCount = Object.values(dropped).reduce((a, b) => a + b, 0);
+  const priceModel = options.soldPool
+    ? refreshPriceModel(
+        options.soldPool,
+        adapter.sourceId,
+        result.sold,
+        new Date(deps.now()),
+      )
+    : null;
 
   const pages = result.partitions.reduce((sum, p) => sum + p.pages, 0);
   const runId = options.runId ?? randomUUID();
@@ -171,6 +185,7 @@ export async function prepareLiveRun(options: LiveRunOptions, deps: LiveDeps) {
             sourceListingId,
             episodeId,
           })),
+          ...(priceModel && !failed ? { priceModel } : {}),
         },
       ],
     }),

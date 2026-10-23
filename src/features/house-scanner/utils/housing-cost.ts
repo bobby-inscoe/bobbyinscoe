@@ -3,7 +3,6 @@ import type {
   Listing,
   SearchProfile,
 } from '@/features/house-scanner/types/contracts';
-import type { PriceEstimate } from '@/features/house-scanner/utils/price-estimate';
 
 // The median average 3-month rate customers paid at Swedish banks in September 2026. Average rather than list
 // rates, because few buyers pay the list rate. Update both together; saved household rates never follow it.
@@ -46,7 +45,7 @@ export function startingCash(priceSek: number, financing: Financing): number {
 // estimate. Disputed amounts are not used.
 export function startingPrice(
   listing: Listing,
-  estimate?: PriceEstimate,
+  estimate?: Listing['priceEstimate'],
 ): number | null {
   const { facts, conflicts } = listing;
   const asking = conflicts.includes('askingPriceSek')
@@ -57,7 +56,8 @@ export function startingPrice(
     : (facts.highestBidSek ?? null);
   if (bid !== null && (asking === null || bid > asking)) return bid;
   if (asking !== null) return asking;
-  return estimate ? (estimate.lowSek + estimate.highSek) / 2 : null;
+  // Without an asking price, the database's likely final price is the nearest guess of what a buyer pays.
+  return estimate ? estimate.finalSek : null;
 }
 
 // The monthly fee with any known required additions. Null when the fee is unknown or disputed.

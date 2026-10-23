@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   coordinateSchema,
+  ingestRequestSchema,
   listingUrlSchema,
   type SourceSettings,
   snapshotSchema,
@@ -114,6 +115,53 @@ describe('viewings', () => {
     ).toBe(false);
     expect(
       viewingSchema.safeParse({ ...viewing, startsAt: 'Sat 24 Oct' }).success,
+    ).toBe(false);
+  });
+});
+
+describe('price model in a publish result', () => {
+  const model = {
+    version: 1,
+    fittedAt: '2026-10-23T12:00:00.000Z',
+    homes: 1985,
+    period: '2026H2',
+    intercept: 12.1,
+    logArea: 0.715,
+    feePerM2: -0.0042,
+    rooms: 0,
+    finalPremium: 0.05,
+    typicalFeePerM2: 70,
+    residualSd: 0.177,
+    levels: { majorna: { level: 0.2, homes: 40 } },
+  };
+  const publish = (priceModel: unknown) =>
+    ingestRequestSchema.safeParse({
+      action: 'publish',
+      contractVersion: 1,
+      runId: '00000000-0000-4000-8000-000000000001',
+      results: [
+        {
+          sourceId: 'lundin',
+          status: 'partial',
+          coverageNote: '',
+          cursor: null,
+          priceModel,
+        },
+      ],
+    }).success;
+
+  it('accepts fitted numbers and refuses a small level or anything naming a home', () => {
+    expect(publish(model)).toBe(true);
+    expect(publish(undefined)).toBe(true);
+    expect(
+      publish({ ...model, levels: { majorna: { level: 0.2, homes: 4 } } }),
+    ).toBe(false);
+    expect(publish({ ...model, address: 'Exempelgatan 1' })).toBe(false);
+    expect(
+      publish({
+        ...model,
+        levels: { majorna: { level: 0.2, homes: 40, priceSek: 1 } },
+      }),
     ).toBe(false);
   });
 });

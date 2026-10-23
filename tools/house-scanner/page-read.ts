@@ -1,3 +1,4 @@
+import type { ModelRow } from '@house-scanner-tools/price-model';
 import type { Observation } from '@/features/house-scanner/types/contracts';
 
 export const MAX_HTML_CHARS = 3_000_000;
@@ -37,6 +38,8 @@ export type PageRead =
       /** listData.count. Page two of a five-result search kept count 5 with no items, so it is the total. */
       total: number | null;
       more: MorePages;
+      /** Sold apartments for the price model, by source id. Never observations. */
+      sold?: Record<string, ModelRow>;
     }
   | { kind: 'failed'; reason: PageFailure };
 

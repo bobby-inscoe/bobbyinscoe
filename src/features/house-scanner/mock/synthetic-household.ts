@@ -155,6 +155,14 @@ export const SYNTHETIC_SNAPSHOT = snapshotSchema.parse({
       facts: { ...baseFacts, askingPriceSek: null, lift: null, glazed: null },
       coordinates: null,
       previousAskingPriceSek: null,
+      priceEstimate: {
+        lowSek: 2_800_000,
+        highSek: 3_750_000,
+        finalSek: 3_420_000,
+        nearby: 6,
+        farthestM: 660,
+        levelUsed: true,
+      },
     },
     {
       id: '00000000-0000-4000-8000-000000000013',

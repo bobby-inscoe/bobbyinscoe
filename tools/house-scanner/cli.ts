@@ -19,6 +19,14 @@ import {
   startLiveRun,
 } from '@house-scanner-tools/run-memory';
 import { senderConfig, sendRequests } from '@house-scanner-tools/sender';
+import { collectSold } from '@house-scanner-tools/sold-collect';
+import {
+  loadNeighbourhoodShapes,
+  loadSoldPool,
+  NEIGHBOURHOODS_PATH,
+  SOLD_POOL_PATH,
+  saveSoldPool,
+} from '@house-scanner-tools/sold-pool';
 import { adapterFor } from '@house-scanner-tools/source-adapters';
 import {
   BJURFORS_SOURCE_ID,
@@ -68,6 +76,7 @@ type Values = {
   'batch-id'?: string;
   cache?: string;
   force: boolean;
+  live?: boolean;
 };
 
 const LIVE_SOURCES = [
@@ -115,6 +124,8 @@ async function live(values: Values) {
   const memory = startLiveRun(cachePath, Date.now(), values.force);
   const geocodePath = resolve(GEOCODE_CACHE_PATH);
   const geocodeCache = loadGeocodeCache(geocodePath);
+  const soldPoolPath = resolve(SOLD_POOL_PATH);
+  const soldPool = loadSoldPool(soldPoolPath);
   const events: LiveEvent[] = [];
   const prepared = await prepareLiveRun(
     {
@@ -124,6 +135,7 @@ async function live(values: Values) {
       planning: { profiles, collectionPriceCapSek: null, maxPartitions: 5 },
       memory,
       geocodeCache,
+      soldPool,
     },
     defaultLiveDeps((event) => events.push(event)),
   );
@@ -135,6 +147,7 @@ async function live(values: Values) {
   }
   try {
     saveGeocodeCache(geocodePath, geocodeCache);
+    saveSoldPool(soldPoolPath, soldPool);
   } catch {
     cacheSaved = false;
   }
@@ -175,6 +188,31 @@ async function live(values: Values) {
   if (delivery?.stopped) process.exitCode = 1;
 }
 
+// A one-off read of the sold lists into the local sold pool, run by hand. Nothing is sent.
+async function sold(values: Values) {
+  if (!values['confirm-personal-read'])
+    throw new Error('Reading sold lists needs --confirm-personal-read.');
+  if (values.live || values.send)
+    throw new Error('--sold runs on its own, without --live or --send.');
+  const path = resolve(SOLD_POOL_PATH);
+  const pool = loadSoldPool(path);
+  const shapes = loadNeighbourhoodShapes(resolve(NEIGHBOURHOODS_PATH));
+  const reports = await collectSold(pool, shapes, {
+    fetch,
+    sleep: (ms) => new Promise((done) => setTimeout(done, ms)),
+    now: Date.now,
+    random: Math.random,
+  });
+  saveSoldPool(path, pool);
+  console.info(
+    JSON.stringify(
+      { mode: 'sold-read', neighbourhoods: shapes.length, reports },
+      null,
+      2,
+    ),
+  );
+}
+
 async function main() {
   const { values } = parseArgs({
     options: {
@@ -191,10 +229,12 @@ async function main() {
       'confirm-send': { type: 'boolean', default: false },
       cache: { type: 'string' },
       force: { type: 'boolean', default: false },
+      sold: { type: 'boolean', default: false },
     },
     allowPositionals: false,
     strict: true,
   });
+  if (values.sold) return sold(values);
   if (values.mode !== 'fixture') throw new Error('Only fixture mode exists.');
   if (values['confirm-personal-read'] && !values.live)
     throw new Error('The confirmation flag applies to live reads only.');

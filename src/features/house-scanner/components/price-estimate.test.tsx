@@ -3,38 +3,24 @@ import { MantineProvider } from '@mantine/core';
 import { cleanup, render, screen } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import {
-  EstimateLine,
-  PriceEstimateProvider,
-} from '@/features/house-scanner/components/price-estimate';
+import { EstimateLine } from '@/features/house-scanner/components/price-estimate';
 import { catalogs } from '@/features/house-scanner/i18n/catalogs';
 import { SYNTHETIC_SNAPSHOT } from '@/features/house-scanner/mock/synthetic-household';
 import type { Listing } from '@/features/house-scanner/types/contracts';
 
 const base = SYNTHETIC_SNAPSHOT.listings[0];
-let counter = 0;
-function flat(title: string, east: number, price: number | null): Listing {
-  counter += 1;
-  return {
-    ...base,
-    id: `00000000-0000-4000-8000-${String(counter).padStart(12, '0')}`,
-    title,
-    conflicts: [],
-    coordinates: {
-      latitude: 57.7,
-      longitude: 11.95 + east / (111_320 * Math.cos((57.7 * Math.PI) / 180)),
-      precision: 'address',
-      source: 'test',
-      observedAt: base.observedAt,
-    },
-    facts: {
-      ...base.facts,
-      propertyType: 'apartment',
-      livingAreaM2: 100,
-      askingPriceSek: price,
-    },
-  };
-}
+const target: Listing = {
+  ...base,
+  facts: { ...base.facts, askingPriceSek: null },
+  priceEstimate: {
+    lowSek: 2_800_000,
+    highSek: 3_750_000,
+    finalSek: 3_420_000,
+    nearby: 6,
+    farthestM: 660,
+    levelUsed: false,
+  },
+};
 
 beforeEach(() => {
   vi.stubGlobal(
@@ -56,30 +42,40 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const neighbours = Array.from({ length: 8 }, (_v, i) =>
-  flat(`Grannvägen ${i + 1}`, 100 * (i + 1), i < 4 ? 5_000_000 : 6_000_000),
-);
-const target = flat('Målgatan 1', 0, null);
-
-function show(listing: Listing, others: Listing[]) {
+function show(listing: Listing, language: 'en' | 'sv' = 'en') {
   render(
     <MantineProvider>
       <IntlProvider
-        locale="en-GB"
+        locale={language === 'en' ? 'en-GB' : 'sv-SE'}
         defaultLocale="en-GB"
         timeZone="Europe/Stockholm"
-        messages={catalogs.en}
+        messages={catalogs[language]}
       >
-        <PriceEstimateProvider listings={[...others, listing]}>
-          <EstimateLine listing={listing} />
-        </PriceEstimateProvider>
+        <EstimateLine listing={listing} />
       </IntlProvider>
     </MantineProvider>,
   );
 }
 
-it('shows the range and what it rests on for a home with no price', () => {
-  show(target, neighbours);
-  expect(screen.getByText(/Estimate 4.3M–6.9M/)).toBeTruthy();
-  expect(screen.getByText(/from 8 nearby asking prices/)).toBeTruthy();
+it('shows the database range and the likely final price', () => {
+  show(target);
+  expect(screen.getByText(/Estimate 2.8M–3.8M/)).toBeTruthy();
+  expect(screen.getByText(/likely final 3.4M/)).toBeTruthy();
+});
+
+it('says the same in Swedish', () => {
+  show(target, 'sv');
+  expect(screen.getByText(/Uppskattning/)).toBeTruthy();
+  expect(screen.getByText(/troligt slutpris/)).toBeTruthy();
+});
+
+it('shows nothing for a home without an estimate', () => {
+  const { container } = render(
+    <MantineProvider>
+      <IntlProvider locale="en-GB" messages={catalogs.en}>
+        <EstimateLine listing={{ ...target, priceEstimate: undefined }} />
+      </IntlProvider>
+    </MantineProvider>,
+  );
+  expect(container.querySelector('p')).toBeNull();
 });

@@ -212,6 +212,30 @@ export const observationSchema = z.strictObject({
   // Future viewings, sorted. The key is left out when there are none, so older readers keep parsing.
   viewings: z.array(viewingSchema).max(10).optional(),
 });
+// A fitted asking-price model for apartments (spec: house-scanner-price-estimates). Numbers only: per-neighbourhood
+// levels carry how many homes they come from, and nothing names or prices a single home.
+const finite = z.number().finite();
+export const priceModelSchema = z.strictObject({
+  version: z.literal(1),
+  fittedAt: timestamp,
+  homes: z.number().int().positive(),
+  // The half-year the intercept speaks for, such as 2026H2.
+  period: z.string().regex(/^\d{4}H[12]$/),
+  intercept: finite,
+  logArea: finite,
+  feePerM2: finite,
+  rooms: finite,
+  // Log gap between a final sale price and an asking price; 0 when the model saw only one kind.
+  finalPremium: finite,
+  typicalFeePerM2: z.number().positive(),
+  residualSd: z.number().positive(),
+  levels: z
+    .record(
+      z.string().min(1).max(100),
+      z.strictObject({ level: finite, homes: z.number().int().min(5) }),
+    )
+    .refine((levels) => Object.keys(levels).length <= 300),
+});
 // How long a home stays in browsing after it was last seen, and how old a photo, position or evidence item may be.
 // The database's hs.retention() holds the same value.
 export const RETENTION_DAYS = 14;
@@ -291,6 +315,20 @@ export const listingSchema = z.strictObject({
   /** Heuristic browsing radius in local metres: source point 0, address estimate 50, street estimate 250. Not measured accuracy. */
   neighborhoodRadiusM: z
     .union([z.literal(0), z.literal(50), z.literal(250)])
+    .optional(),
+  /** The database's estimate for an apartment without an asking price, from similar homes. Absent otherwise. */
+  priceEstimate: z
+    .strictObject({
+      lowSek: money.positive(),
+      highSek: money.positive(),
+      // The likely final price: the midpoint plus the usual gap between final and asking prices.
+      finalSek: money.positive(),
+      // Priced homes within 2 km in other buildings that moved it, and how far the farthest is.
+      nearby: z.number().int().min(0).max(8),
+      farthestM: z.number().int().nonnegative().optional(),
+      // True when the home's neighbourhood had its own level in the model.
+      levelUsed: z.boolean(),
+    })
     .optional(),
   /** Stable server discovery time for this episode; null when retained history cannot establish it. */
   firstSeenAt: timestamp.nullable().optional(),
@@ -398,6 +436,8 @@ export const ingestRequestSchema = z.discriminatedUnion('action', [
           cursor: z.string().max(2000).nullable(),
           // True when every search page was read to its end and reached the source's own total.
           fullRead: z.boolean().optional(),
+          // Fitted from sold apartments the collector pooled; numbers only.
+          priceModel: priceModelSchema.optional(),
           // Every home on the search pages, including those the collector bounds drop.
           seen: z
             .array(
@@ -432,6 +472,7 @@ export type SearchProfile = z.infer<typeof profileSchema>;
 export type Viewing = z.infer<typeof viewingSchema>;
 export type Listing = z.infer<typeof listingSchema>;
 export type Observation = z.infer<typeof observationSchema>;
+export type PriceModel = z.infer<typeof priceModelSchema>;
 export type Evidence = z.infer<typeof evidenceSchema>;
 export type Favorite = z.infer<typeof favoriteSchema>;
 export type SnapshotNote = z.infer<typeof snapshotNoteSchema>;

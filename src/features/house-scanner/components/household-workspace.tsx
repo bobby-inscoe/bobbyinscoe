@@ -5,7 +5,6 @@ import { FormattedMessage, useIntl } from 'react-intl';
 import { ListingDrawer } from '@/features/house-scanner/components/listing-drawer';
 import { ManualActionsProvider } from '@/features/house-scanner/components/manual-listing-actions';
 import { RateScenarioProvider } from '@/features/house-scanner/components/monthly-cost';
-import { PriceEstimateProvider } from '@/features/house-scanner/components/price-estimate';
 import { AddLinkPanel } from '@/features/house-scanner/features/add-link/components/add-link-panel';
 import { useFavoriteToggle } from '@/features/house-scanner/features/favorites/hooks/use-favorite-toggle';
 import { FeedbackWidget } from '@/features/house-scanner/features/feedback/components/feedback-widget';
@@ -349,43 +348,41 @@ export function HouseholdWorkspace({
                   navigation.seeSelectedOnMap();
                 }}
               />
-              <PriceEstimateProvider listings={snapshot.listings}>
-                <ListingDrawer
-                  mapStyleUrl={mapStyleUrl}
-                  listing={selected}
-                  snapshot={snapshot}
-                  userId={userId}
-                  alsoOn={selected ? alsoOn.get(selected.id) : undefined}
-                  opened={detailsOpen && selected !== null}
-                  hidden={selected ? hidden.has(selected.id) : false}
-                  favorite={{
-                    mine: snapshot.favorites.some(
-                      (entry) =>
-                        entry.listingId === selected?.id &&
-                        entry.userId === userId,
-                    ),
-                    others: snapshot.favorites.some(
-                      (entry) =>
-                        entry.listingId === selected?.id &&
-                        entry.userId !== userId,
-                    ),
-                    canSave: selected ? canSave(selected.id) : false,
-                    busy: selected ? pending.includes(selected.id) : false,
-                  }}
-                  notes={notes}
-                  hideError={formatFeedback(intl, hiddenActions.error)}
-                  onToggleHidden={(id) => {
-                    if (hidden.has(id)) unhide(id);
-                    else hide(id);
-                  }}
-                  onFavorite={favorite}
-                  onClose={navigation.closeListing}
-                  onSeeOnMap={() => {
-                    setSelectedId(listingId);
-                    navigation.seeSelectedOnMap();
-                  }}
-                />
-              </PriceEstimateProvider>
+              <ListingDrawer
+                mapStyleUrl={mapStyleUrl}
+                listing={selected}
+                snapshot={snapshot}
+                userId={userId}
+                alsoOn={selected ? alsoOn.get(selected.id) : undefined}
+                opened={detailsOpen && selected !== null}
+                hidden={selected ? hidden.has(selected.id) : false}
+                favorite={{
+                  mine: snapshot.favorites.some(
+                    (entry) =>
+                      entry.listingId === selected?.id &&
+                      entry.userId === userId,
+                  ),
+                  others: snapshot.favorites.some(
+                    (entry) =>
+                      entry.listingId === selected?.id &&
+                      entry.userId !== userId,
+                  ),
+                  canSave: selected ? canSave(selected.id) : false,
+                  busy: selected ? pending.includes(selected.id) : false,
+                }}
+                notes={notes}
+                hideError={formatFeedback(intl, hiddenActions.error)}
+                onToggleHidden={(id) => {
+                  if (hidden.has(id)) unhide(id);
+                  else hide(id);
+                }}
+                onFavorite={favorite}
+                onClose={navigation.closeListing}
+                onSeeOnMap={() => {
+                  setSelectedId(listingId);
+                  navigation.seeSelectedOnMap();
+                }}
+              />
             </>
           ) : tab === 'settings' ? (
             <SettingsPanel
@@ -397,89 +394,83 @@ export function HouseholdWorkspace({
               access={access}
             />
           ) : (
-            <PriceEstimateProvider listings={snapshot.listings}>
-              <ListingsPanel
-                tab={tab}
-                snapshot={snapshot}
-                userId={userId}
-                mapStyleUrl={mapStyleUrl}
-                person={person}
-                onPersonChange={(value) =>
-                  navigation.updateSearch({ person: value })
-                }
-                section={section}
-                onSectionChange={(value) =>
-                  navigation.updateSearch({
-                    section: validateBrowseSearch({ section: value }).section,
-                  })
-                }
-                filters={filters}
-                hiddenIds={hidden}
-                hiddenCount={hiddenCount}
-                duplicateCount={duplicateCount}
-                alsoOn={alsoOn}
-                onHide={hide}
-                onHideMany={hiddenActions.hideMany}
-                onUndoHide={hiddenActions.undo}
-                hideBusy={hiddenActions.busy}
-                hideError={formatFeedback(intl, hiddenActions.error)}
-                undoHideCount={hiddenActions.undoCount}
-                canHide={hiddenActions.canHide}
-                selecting={search.select}
-                onSelectingChange={(value) =>
-                  navigation.setLayer('select', value)
-                }
-                filtersOpen={search.filterOpen}
-                onFiltersOpenChange={(value) =>
-                  navigation.setLayer('filterOpen', value)
-                }
-                onUnhide={unhide}
-                onFiltersChange={(value) =>
-                  navigation.updateSearch({ filters: value })
-                }
-                filterHosts={filterHosts}
-                total={scoped.length}
-                scoped={scoped}
-                duplicateIds={duplicateIds}
-                visible={visible}
-                selected={selected}
-                selectedId={listingId ?? selectedId}
-                onSelectedIdChange={setSelectedId}
-                detailsOpen={detailsOpen}
-                onOpenListing={(id) => {
-                  setSelectedId(id);
-                  navigation.openListing(id);
-                }}
-                onCloseListing={navigation.closeListing}
-                onSeeSelectedOnMap={() => {
-                  setSelectedId(listingId);
-                  navigation.seeSelectedOnMap();
-                }}
-                sort={search.sort}
-                onSortChange={(value) =>
-                  navigation.updateSearch({ sort: value })
-                }
-                view={view}
-                onViewChange={(value) =>
-                  navigation.updateSearch({ view: value })
-                }
-                satellite={satellite}
-                onSatelliteChange={setSatellite}
-                pending={pending}
-                mapWarning={
-                  stale && !synthetic
-                    ? intl.formatMessage({
-                        id: 'navigation.over36HoursOldSoFactsMayBeStale',
-                      })
-                    : undefined
-                }
-                canSave={canSave}
-                notes={notes}
-                onFavorite={favorite}
-                onSaveMany={onSaveFavorites ? saveMany : undefined}
-                saveBusy={batchBusy}
-              />
-            </PriceEstimateProvider>
+            <ListingsPanel
+              tab={tab}
+              snapshot={snapshot}
+              userId={userId}
+              mapStyleUrl={mapStyleUrl}
+              person={person}
+              onPersonChange={(value) =>
+                navigation.updateSearch({ person: value })
+              }
+              section={section}
+              onSectionChange={(value) =>
+                navigation.updateSearch({
+                  section: validateBrowseSearch({ section: value }).section,
+                })
+              }
+              filters={filters}
+              hiddenIds={hidden}
+              hiddenCount={hiddenCount}
+              duplicateCount={duplicateCount}
+              alsoOn={alsoOn}
+              onHide={hide}
+              onHideMany={hiddenActions.hideMany}
+              onUndoHide={hiddenActions.undo}
+              hideBusy={hiddenActions.busy}
+              hideError={formatFeedback(intl, hiddenActions.error)}
+              undoHideCount={hiddenActions.undoCount}
+              canHide={hiddenActions.canHide}
+              selecting={search.select}
+              onSelectingChange={(value) =>
+                navigation.setLayer('select', value)
+              }
+              filtersOpen={search.filterOpen}
+              onFiltersOpenChange={(value) =>
+                navigation.setLayer('filterOpen', value)
+              }
+              onUnhide={unhide}
+              onFiltersChange={(value) =>
+                navigation.updateSearch({ filters: value })
+              }
+              filterHosts={filterHosts}
+              total={scoped.length}
+              scoped={scoped}
+              duplicateIds={duplicateIds}
+              visible={visible}
+              selected={selected}
+              selectedId={listingId ?? selectedId}
+              onSelectedIdChange={setSelectedId}
+              detailsOpen={detailsOpen}
+              onOpenListing={(id) => {
+                setSelectedId(id);
+                navigation.openListing(id);
+              }}
+              onCloseListing={navigation.closeListing}
+              onSeeSelectedOnMap={() => {
+                setSelectedId(listingId);
+                navigation.seeSelectedOnMap();
+              }}
+              sort={search.sort}
+              onSortChange={(value) => navigation.updateSearch({ sort: value })}
+              view={view}
+              onViewChange={(value) => navigation.updateSearch({ view: value })}
+              satellite={satellite}
+              onSatelliteChange={setSatellite}
+              pending={pending}
+              mapWarning={
+                stale && !synthetic
+                  ? intl.formatMessage({
+                      id: 'navigation.over36HoursOldSoFactsMayBeStale',
+                    })
+                  : undefined
+              }
+              canSave={canSave}
+              notes={notes}
+              onFavorite={favorite}
+              onSaveMany={onSaveFavorites ? saveMany : undefined}
+              saveBusy={batchBusy}
+            />
           )}
           {!synthetic && (
             <FeedbackWidget key={userId} visible={tab === 'settings'} />

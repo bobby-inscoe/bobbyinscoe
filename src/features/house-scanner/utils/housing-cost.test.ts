@@ -112,7 +112,7 @@ describe('housingCost', () => {
 });
 
 describe('listing inputs', () => {
-  it('starts from the higher of bid and asking price, then the estimate middle', () => {
+  it('starts from the higher of bid and asking price, then the likely final price', () => {
     expect(
       startingPrice(
         home({ askingPriceSek: 3_000_000, highestBidSek: 3_200_000 }),
@@ -125,18 +125,20 @@ describe('listing inputs', () => {
       startingPrice(home({ askingPriceSek: 3_000_000, highestBidSek: null }), {
         lowSek: 1,
         highSek: 2,
-        basedOn: 6,
-        farthestM: 1,
+        finalSek: 2,
+        nearby: 6,
+        levelUsed: false,
       }),
     ).toBe(3_000_000);
     expect(
       startingPrice(home({ askingPriceSek: null, highestBidSek: null }), {
         lowSek: 2_000_000,
         highSek: 3_000_000,
-        basedOn: 6,
-        farthestM: 1,
+        finalSek: 2_650_000,
+        nearby: 6,
+        levelUsed: false,
       }),
-    ).toBe(2_500_000);
+    ).toBe(2_650_000);
     expect(
       startingPrice(
         home({ askingPriceSek: 3_000_000, highestBidSek: null }, [

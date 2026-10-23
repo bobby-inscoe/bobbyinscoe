@@ -115,9 +115,10 @@ export interface ListingsTranslations {
     deleteListing: string;
     deleteThisLinkForTheWholeHouseholdEveryoneS: string;
     keepIt: string;
-    workedOutFromTheAskingPricesOfTheNearest: string;
+    estimateBasis: string;
+    estimateBasisArea: string;
     estimate: string;
-    fromNearbyAskingPrices: string;
+    likelyFinalPrice: string;
     selectUpTo500HomesThatAreStillAvailable: string;
     yourFavoriteWasRemovedOtherMembersSavesRemain: string;
     favoriteSaved: string;
