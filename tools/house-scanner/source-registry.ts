@@ -362,8 +362,8 @@ export function sourceRegistry(): SourceCapability[] {
       policy: {
         ...common,
         sourceId: LUNDIN_SOURCE_ID,
-        // 2: each kept home's page is read for photos and the floor plan. 3: bidding and the highest bid.
-        revision: 3,
+        // 2: each kept home's page is read for photos and the floor plan.
+        revision: 2,
         // Pending is not approved: the operator sets approval in the database.
         status: 'pending',
         retentionDays: 14,
@@ -417,9 +417,8 @@ export function sourceRegistry(): SourceCapability[] {
       policy: {
         ...common,
         sourceId: HUSMAN_HAGBERG_SOURCE_ID,
-        // Revision 2 reads each kept home's estate page for up to four photos and the floor plan. Revision 3 adds
-        // bidding and the highest bid.
-        revision: 3,
+        // Revision 2 reads each kept home's estate page for up to four photos and the floor plan.
+        revision: 2,
         viewings: true,
         // Pending is not approved: the operator sets approval in the database.
         status: 'pending',
