@@ -242,5 +242,16 @@ Deno.serve(async (request: Request) => {
     return response(409, {
       error: 'Run conflict, invalid scope, profile revision or publication',
     });
+  // Price estimates are recomputed in a statement of their own after a publish, so they can never time out or fail
+  // the publish itself. A failure only leaves the previous estimates in place.
+  if (result.data.state === 'published') {
+    const { error: refreshError } = await database.rpc(
+      'hs_refresh_price_estimates',
+    );
+    if (refreshError)
+      console.error(
+        `house-scanner-ingest price estimates: ${refreshError.code ?? 'error'}`,
+      );
+  }
   return response(200, result.data);
 });
