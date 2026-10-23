@@ -86,7 +86,7 @@ export function hotlinked(
   };
 }
 
-/** The lead photo, up to three more and the floor plan, from addresses in page order. Empty keys are left out. */
+/** The lead photo, up to seven more and the floor plan, from addresses in page order. Empty keys are left out. */
 export function imagesOf(
   photoUrls: string[],
   planUrl: string | undefined,
@@ -94,7 +94,7 @@ export function imagesOf(
   observedAt: string,
 ): Images {
   const [photo, ...more] = photoUrls
-    .slice(0, 4)
+    .slice(0, 8)
     .map((url) => hotlinked(url, attribution, observedAt));
   return {
     ...(photo ? { photo } : {}),

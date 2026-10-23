@@ -367,3 +367,5 @@ All are `public.hs_*` functions; the tables are never queried directly by a clie
 | Edge Functions (`service_role`) | `hs_ingest`, `hs_ingest_credential`, `hs_ingest_sources`, `hs_consume_nonce`, `hs_invitation_reserve` |
 
 The operator's `hs.admin_*` functions are not granted to any API role; the owner runs them from the SQL editor.
+
+Migration 20261023150017_house_scanner_eight_photos raises hs.assert_observation to accept a lead photo plus seven additional photos (eight total), with a separate floor plan. Its rollback restores the four-photo ingest limit without deleting stored galleries. Deploy the app contract before the migration and update the collector after it.

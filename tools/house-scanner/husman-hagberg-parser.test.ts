@@ -386,7 +386,7 @@ describe('Husman Hagberg viewing times', () => {
 });
 
 describe('Husman Hagberg estate page', () => {
-  it('names up to four photos in display order without area pictures, and the first plan', () => {
+  it('names up to eight photos in display order without area pictures, and the first plan', () => {
     const read = readHusmanHagbergDetailPage(
       estatePage(
         [
@@ -416,7 +416,7 @@ describe('Husman Hagberg estate page', () => {
       facts: {
         outdoor: null,
         glazed: null,
-        photoKeys: ['MEDP1', 'MEDP2', 'MEDP3', 'MEDP4'].map(
+        photoKeys: ['MEDP1', 'MEDP2', 'MEDP3', 'MEDP4', 'MEDP5'].map(
           (id) => `${FOLDER}/${id}`,
         ),
         planKey: `${FOLDER}/MEDPLAN1`,

@@ -358,7 +358,7 @@ const IMAGE_ACCOUNT = /https:\/\/imagedelivery\.net\/([A-Za-z0-9_-]{10,40})\//;
 export const ERIK_OLSSON_IMAGE_KEY =
   /^[A-Za-z0-9_-]{10,40}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
-/** "<account>/<image id>" of up to four photos in page order and the first floor plan. */
+/** "<account>/<image id>" of up to eight photos in page order and the first floor plan. */
 function imageKeysOf(
   html: string,
   home: Rec,
@@ -374,7 +374,7 @@ function imageKeysOf(
   const key = (image: Rec) => `${account}/${image.cloudflare_image_id}`;
   const photoKeys = images
     .filter((image) => image.is_floor_plan === false)
-    .slice(0, 4)
+    .slice(0, 8)
     .map(key);
   const plan = images.find((image) => image.is_floor_plan === true);
   return {

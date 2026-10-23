@@ -370,7 +370,7 @@ const NEGATION = /\b(?:ej|inte|icke)\s+(?:[^\s.,;!?]+\s+)?$/i;
 const isFlag = (value: unknown) =>
   typeof value === 'boolean' || value === null || value === undefined;
 
-/** File names of up to four photos in page order and the first floor plan. Unsafe names are skipped. */
+/** File names of up to eight photos in page order and the first floor plan. Unsafe names are skipped. */
 function imageKeysOf(images: unknown): {
   photoKeys?: string[];
   planKey?: string;
@@ -383,7 +383,7 @@ function imageKeysOf(images: unknown): {
   );
   const photoKeys = named
     .filter((image) => image.field_image_category === 'Other')
-    .slice(0, 4)
+    .slice(0, 8)
     .map((image) => String(image.resize_image));
   const plan = named.find(
     (image) => image.field_image_category === 'Planlösning',

@@ -355,7 +355,7 @@ function viewingsFrom(html: string, now: Date) {
   return finishViewings(found, now);
 }
 
-/** Up to four distinct collage photos in page order, as keys. The floor plan is not in the collage. */
+/** Up to eight distinct collage photos in page order, as keys. The floor plan is not in the collage. */
 function photoKeysOf(html: string): string[] {
   const start = html.indexOf('id="collageWrapper"');
   if (start < 0) return [];
@@ -367,7 +367,7 @@ function photoKeysOf(html: string): string[] {
     const match = src === undefined ? null : KEY_OF_IMAGE.exec(decode(src));
     const key = match === null ? '' : `${match[1]}/${match[2]}`;
     if (SVENSKFAST_IMAGE_KEY.test(key)) keys.add(key);
-    if (keys.size === 4) break;
+    if (keys.size === 8) break;
   }
   return [...keys];
 }

@@ -332,9 +332,9 @@ export const BJURFORS_IMAGE_KEY =
 const RESIZED = /^\/cdn-cgi\/image\/[a-z0-9=,-]{1,120}(\/contentassets\/.*)$/;
 
 /**
- * Up to four home photos and the first floor plan from the gallery JSON. The home's photos, its plan, the agent
+ * Up to eight home photos and the first floor plan from the gallery JSON. The home's photos, its plan, the agent
  * portrait and the area pictures all sit in one /contentassets/ folder, so the folder does not tell them apart.
- * The home's photos come first, in page order, and a home has far more than four, so the first four valid entries
+ * The home's photos come first, in page order, and a home has far more than eight, so the first eight valid entries
  * are its photos. Captions do not tell them apart: brokers caption their own photos as well as the area pictures.
  */
 function imageKeysOf(html: string): Pick<DetailFacts, 'photoKeys' | 'planKey'> {
@@ -356,7 +356,7 @@ function imageKeysOf(html: string): Pick<DetailFacts, 'photoKeys' | 'planKey'> {
     .filter(
       (key): key is string => key !== undefined && BJURFORS_IMAGE_KEY.test(key),
     )
-    .slice(0, 4);
+    .slice(0, 8);
   const plan = (Array.isArray(data.floorPlans) ? data.floorPlans : [])
     .map((entry) => (isRecord(entry) ? entry.originalUrl : undefined))
     .find(
