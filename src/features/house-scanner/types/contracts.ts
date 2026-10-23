@@ -216,6 +216,8 @@ export const priceModelSchema = z.strictObject({
   logArea: finite,
   feePerM2: finite,
   rooms: finite,
+  // Log gap between a final sale price and an asking price; 0 when the model saw only one kind.
+  finalPremium: finite,
   typicalFeePerM2: z.number().positive(),
   residualSd: z.number().positive(),
   levels: z

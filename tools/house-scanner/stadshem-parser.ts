@@ -10,6 +10,7 @@ import {
   positiveInt,
   type ReadContext,
 } from '@house-scanner-tools/page-read';
+import { periodOf, type SoldPage } from '@house-scanner-tools/price-model';
 import type { DetailFacts } from '@house-scanner-tools/run-memory';
 import {
   finishViewings,
@@ -298,5 +299,84 @@ export function readStadshemDetailPage(body: string): StadshemDetailRead {
       ...(tenure === undefined ? {} : { tenure }),
       ...imageKeysOf(record(record(data).images)),
     },
+  };
+}
+
+// ---- sold list ----
+
+// The same estates route with status[]=sald (structure-only look on 23 October 2026): `price.finalPrice` is the final
+// sale price, `statusLastChanged` the sale time, and the address carries coordinates. Göteborg and Mölndal apartments
+// with a final price, a living area and a fee become model rows; the rest are left out.
+const SOLD_MUNICIPALITIES = new Set(['göteborg', 'mölndal']);
+
+export function readStadshemSoldPage(body: string): SoldPage | null {
+  let data: unknown;
+  try {
+    data = JSON.parse(body);
+  } catch {
+    return null;
+  }
+  if (!isRecord(data) || !Array.isArray(data.estates)) return null;
+  const rows: SoldPage['rows'] = {};
+  let oldest: string | null = null;
+  for (const item of data.estates) {
+    if (!isRecord(item) || typeof item.id !== 'string' || item.id === '')
+      continue;
+    const changed =
+      typeof item.statusLastChanged === 'string'
+        ? item.statusLastChanged
+        : null;
+    if (changed && (oldest === null || changed < oldest)) oldest = changed;
+    const price = isRecord(item.price)
+      ? positiveInt(item.price.finalPrice, 1_000_000_000)
+      : null;
+    const address = isRecord(item.address) ? item.address : {};
+    const coordinates = isRecord(address.coordinates)
+      ? address.coordinates
+      : {};
+    const latitude = numberOf(coordinates.latitude);
+    const longitude = numberOf(coordinates.longitude);
+    const areaM2 = area(item.livingSpace, 1000);
+    const feeSek = positiveInt(item.monthlyFee, 1_000_000);
+    const period = changed ? periodOf(changed) : null;
+    const municipality =
+      typeof address.municipality === 'string'
+        ? address.municipality.toLowerCase()
+        : '';
+    if (
+      propertyTypeOf(item.type) !== 'apartment' ||
+      !SOLD_MUNICIPALITIES.has(municipality) ||
+      price === null ||
+      areaM2 === null ||
+      feeSek === null ||
+      period === null
+    )
+      continue;
+    const district =
+      isRecord(address.area) && typeof address.area.name === 'string'
+        ? address.area.name
+        : '';
+    rows[item.id] = {
+      priceSek: price,
+      areaM2,
+      feeSek,
+      rooms: area(item.numberOfRooms, 100),
+      period,
+      neighbourhood: district.trim().toLowerCase().slice(0, 100) || null,
+      final: true,
+      ...(/^\d{4}-\d{2}-\d{2}/.test(changed ?? '')
+        ? { soldOn: (changed ?? '').slice(0, 10) }
+        : {}),
+      ...(latitude !== null && longitude !== null
+        ? { position: [latitude, longitude] as [number, number] }
+        : {}),
+    };
+  }
+  const page = numberOf(data.page);
+  const pages = numberOf(data.num_pages);
+  return {
+    rows,
+    oldest,
+    last: page !== null && pages !== null && page >= pages,
   };
 }

@@ -115,7 +115,7 @@ export async function prepareLiveRun(options: LiveRunOptions, deps: LiveDeps) {
     ? refreshPriceModel(
         options.soldPool,
         adapter.sourceId,
-        Object.values(result.sold),
+        result.sold,
         new Date(deps.now()),
       )
     : null;

@@ -4,7 +4,8 @@ import type { PriceModel } from '@/features/house-scanner/types/contracts';
 // log(price) = intercept + logArea·log(m²) + feePerM2·(monthly fee per m²) [+ rooms·rooms] + period + neighbourhood.
 // Neighbourhood levels are fitted jointly with the rest, with a ridge penalty that pulls a level built from few
 // homes toward the city baseline (the same shrinkage as sum / (n + k) for a lone level). Period terms bring older
-// asking prices to the newest half-year's level, so the stored intercept already speaks for today.
+// asking prices to the newest half-year's level, so the stored intercept already speaks for today. Rows with a final
+// sale price share every term and add one more, finalPremium: the log gap between a final and an asking price.
 
 export interface ModelRow {
   priceSek: number;
@@ -15,6 +16,19 @@ export interface ModelRow {
   period: string;
   // Lower-case neighbourhood name, or null when the source's district matches none.
   neighbourhood: string | null;
+  // True when priceSek is a final sale price rather than an asking price.
+  final?: boolean;
+  // The sale date (YYYY-MM-DD), only when the source gives it; kept for a price timeline of similar homes.
+  soldOn?: string;
+  // Latitude and longitude, used to find the neighbourhood and dropped before a row is kept.
+  position?: [number, number];
+}
+
+/** One page of a sold list: rows by source id, the oldest date on it (ISO), and whether it was the last. */
+export interface SoldPage {
+  rows: Record<string, ModelRow>;
+  oldest: string | null;
+  last: boolean;
 }
 
 export interface FitOptions {
@@ -72,14 +86,20 @@ export function fitPriceModel(
     if (r.neighbourhood)
       homes.set(r.neighbourhood, (homes.get(r.neighbourhood) ?? 0) + 1);
   const names = [...homes.keys()].sort();
-  const base = options.useRooms ? 4 : 3;
+  // The premium is only identified when both kinds of price are present.
+  const kinds = new Set(rows.map((r) => r.final === true));
+  const premium = kinds.size === 2;
+  const roomsAt = 3;
+  const premiumAt = options.useRooms ? 4 : 3;
+  const base = premiumAt + (premium ? 1 : 0);
   const width = base + olderPeriods.length + names.length;
   const features = (r: ModelRow) => {
     const x = new Array<number>(width).fill(0);
     x[0] = 1;
     x[1] = Math.log(r.areaM2);
     x[2] = r.feeSek / r.areaM2;
-    if (options.useRooms) x[3] = r.rooms ?? r.areaM2 / 25;
+    if (options.useRooms) x[roomsAt] = r.rooms ?? r.areaM2 / 25;
+    if (premium && r.final) x[premiumAt] = 1;
     const p = olderPeriods.indexOf(r.period);
     if (p >= 0) x[base + p] = 1;
     if (r.neighbourhood)
@@ -123,7 +143,8 @@ export function fitPriceModel(
     intercept: beta[0],
     logArea: beta[1],
     feePerM2: beta[2],
-    rooms: options.useRooms ? beta[3] : 0,
+    rooms: options.useRooms ? beta[roomsAt] : 0,
+    finalPremium: premium ? beta[premiumAt] : 0,
     typicalFeePerM2: median(rows.map((r) => r.feeSek / r.areaM2)),
     residualSd: Math.sqrt(
       residuals.reduce((s, e) => s + e * e, 0) / rows.length,
@@ -132,8 +153,8 @@ export function fitPriceModel(
   };
 }
 
-// The model's log asking price for a home today. A missing fee uses the typical fee per m²; an unknown or unstored
-// neighbourhood uses the city baseline.
+// The model's log asking price for a home today, or its log final price when `final` is set. A missing fee uses the
+// typical fee per m²; an unknown or unstored neighbourhood uses the city baseline.
 export function baselineLog(
   model: PriceModel,
   home: {
@@ -142,6 +163,7 @@ export function baselineLog(
     rooms: number | null;
     neighbourhood: string | null;
   },
+  final = false,
 ): number {
   const feePerM2 =
     home.feeSek === null ? model.typicalFeePerM2 : home.feeSek / home.areaM2;
@@ -153,6 +175,7 @@ export function baselineLog(
     model.logArea * Math.log(home.areaM2) +
     model.feePerM2 * feePerM2 +
     model.rooms * (home.rooms ?? home.areaM2 / 25) +
-    level
+    level +
+    (final ? model.finalPremium : 0)
   );
 }

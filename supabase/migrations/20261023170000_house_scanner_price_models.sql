@@ -7,12 +7,12 @@
 
 create function hs.valid_price_model(m jsonb) returns boolean language sql immutable set search_path=pg_catalog as $$
  select coalesce(jsonb_typeof(m)='object'
-  and m ?& array['version','fittedAt','homes','period','intercept','logArea','feePerM2','rooms','typicalFeePerM2','residualSd','levels']
-  and (select count(*) from jsonb_object_keys(m))=11
+  and m ?& array['version','fittedAt','homes','period','intercept','logArea','feePerM2','rooms','finalPremium','typicalFeePerM2','residualSd','levels']
+  and (select count(*) from jsonb_object_keys(m))=12
   and m->'version'='1'::jsonb and jsonb_typeof(m->'homes')='number' and (m->>'homes')::numeric>=1
   and m->>'period' ~ '^\d{4}H[12]$'
   and jsonb_typeof(m->'intercept')='number' and jsonb_typeof(m->'logArea')='number' and jsonb_typeof(m->'feePerM2')='number'
-  and jsonb_typeof(m->'rooms')='number' and jsonb_typeof(m->'typicalFeePerM2')='number' and jsonb_typeof(m->'residualSd')='number'
+  and jsonb_typeof(m->'rooms')='number' and jsonb_typeof(m->'finalPremium')='number' and jsonb_typeof(m->'typicalFeePerM2')='number' and jsonb_typeof(m->'residualSd')='number'
   and jsonb_typeof(m->'levels')='object' and (select count(*) from jsonb_object_keys(m->'levels'))<=300
   and not exists(select 1 from jsonb_each(m->'levels') l where case when jsonb_typeof(l.value)<>'object' then true
    else not (l.value ?& array['level','homes']) or (select count(*) from jsonb_object_keys(l.value))<>2

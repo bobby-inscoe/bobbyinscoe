@@ -1,5 +1,5 @@
 // Backtest for the price model (spec: house-scanner-price-estimates, S1). Not part of any run.
-// Usage: node tools/house-scanner/price-model-backtest.mjs <lundin list.json> <catalog.json>
+// Usage: node tools/house-scanner/price-model-backtest.mjs <lundin list.json> <catalog.json> [sold pool.json]
 // The Lundin list is a saved /api/list?id=1 answer. The catalog is {names: {code: name}, rows: [[latitude, longitude,
 // area, fee, rooms, askingPrice, neighbourhood code]]} of priced catalog apartments. Both stay outside the repository.
 // Each catalog home is estimated from the model and from the other catalog homes, leaving out its own building, and
@@ -141,30 +141,59 @@ function score(label, estimate, set) {
 }
 
 const fittedAt = new Date().toISOString();
+// Optional fourth argument: a sold pool file (house-scanner.cache-sold.json) with final-price rows.
+const poolPath = process.argv[4];
+const finals = poolPath
+  ? Object.entries(JSON.parse(readFileSync(poolPath, 'utf8'))).flatMap(
+      ([source, entry]) =>
+        Object.values(entry.rows)
+          .filter((r) => r.final)
+          .map((r) => ({ ...r, source })),
+    )
+  : [];
+const fit = (rows, useRooms = false) =>
+  fitPriceModel(rows, { fittedAt, useRooms, storeLevel: (n) => names.has(n) });
+const describeModel = (label, model) =>
+  console.log(
+    `
+${label}: homes ${model.homes}, logArea ${model.logArea.toFixed(3)}, feePerM2 ${model.feePerM2.toFixed(4)}, ` +
+      `finalPremium ${(Math.expm1(model.finalPremium) * 100).toFixed(1)}%, residualSd ${model.residualSd.toFixed(3)}, ` +
+      `levels ${Object.keys(model.levels).length}`,
+  );
 console.log(
   `archive rows ${archive.length} (since ${cutoff}), with a neighbourhood ${archive.filter((r) => names.has(r.neighbourhood)).length}`,
 );
-console.log(`catalog homes ${homes.length}`);
+console.log(`catalog homes ${homes.length}, final-price rows ${finals.length}`);
 const both = homes.filter((h) => current(h));
-for (const useRooms of [false, true]) {
-  const model = fitPriceModel(archive, {
-    fittedAt,
-    useRooms,
-    storeLevel: (n) => names.has(n),
-  });
-  console.log(
-    `\nmodel${useRooms ? ' with rooms' : ''}: logArea ${model.logArea.toFixed(3)}, feePerM2 ${model.feePerM2.toFixed(4)}, ` +
-      `rooms ${model.rooms.toFixed(3)}, residualSd ${model.residualSd.toFixed(3)}, levels ${Object.keys(model.levels).length}`,
-  );
-  score('today (homes today can estimate)', current, both);
-  for (const opts of [
-    { local: false, z: 1.15, localShrink: 2 },
-    { local: true, z: 1.4, localShrink: 2 },
-    { local: true, z: 1.4, localShrink: 1 },
-    { local: true, z: 1.4, localShrink: 0.5 },
-  ]) {
-    const label = `model${opts.local ? ' + nearby' : ' only'} z${opts.z} m${opts.localShrink}`;
-    score(`${label} (same homes)`, (h) => modelled(model, h, opts), both);
-    score(`${label} (all homes)`, (h) => modelled(model, h, opts), homes);
+const chosen = { local: true, z: 1.4, localShrink: 1 };
+const asking = fit(archive);
+describeModel('Lundin only', asking);
+score('today (homes today can estimate)', current, both);
+score('Lundin model + nearby', (h) => modelled(asking, h, chosen), both);
+if (finals.length) {
+  const pooled = fit([...archive, ...finals]);
+  describeModel('Lundin + sold lists', pooled);
+  score('pooled model + nearby', (h) => modelled(pooled, h, chosen), both);
+  // Final prices of sold homes, each fifth predicted by a model fitted without it.
+  const misses = { lundin: [], pooled: [] };
+  const bySource = {};
+  for (let fold = 0; fold < 5; fold += 1) {
+    const train = finals.filter((_, i) => i % 5 !== fold);
+    const test = finals.filter((_, i) => i % 5 === fold);
+    const model = fit([...archive, ...train]);
+    for (const r of test) {
+      const pooledMiss = Math.abs(Math.exp(baselineLog(model, r, true)) / r.priceSek - 1);
+      misses.pooled.push(pooledMiss);
+      misses.lundin.push(Math.abs(Math.exp(baselineLog(asking, r)) / r.priceSek - 1));
+      (bySource[r.source] ??= []).push(pooledMiss);
+    }
   }
+  console.log(
+    `
+final prices of held-out sold homes (${finals.length}): Lundin asking model misses ${(median(misses.lundin) * 100).toFixed(1)}%, ` +
+      `pooled model misses ${(median(misses.pooled) * 100).toFixed(1)}% ` +
+      `(${Object.entries(bySource)
+        .map(([source, v]) => `${source} ${(median(v) * 100).toFixed(1)}%`)
+        .join(', ')})`,
+  );
 }

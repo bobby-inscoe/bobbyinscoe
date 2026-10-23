@@ -10,6 +10,7 @@ import {
   positiveInt,
   type ReadContext,
 } from '@house-scanner-tools/page-read';
+import { periodOf, type SoldPage } from '@house-scanner-tools/price-model';
 import type { DetailFacts } from '@house-scanner-tools/run-memory';
 import {
   finishViewings,
@@ -447,4 +448,73 @@ export function readErikOlssonDetailPage(html: string): ErikOlssonDetailRead {
     ...imageKeysOf(html, found.home),
   };
   return { kind: 'detail', facts };
+}
+
+// ---- sold list ----
+
+// The municipality page with categories=apartment&statuses=sold&limit=100&page=N, asked with the `rsc: 1` header,
+// answers as React Server Components text holding the list rows (structure-only look on 23 October 2026). A sold
+// row's `price` is the final price although `price_type` says broker-valuation: on the home checked it equalled the
+// broker system's finalPrice. There is no sale date (only each home's own page has `agreementDate`), so rows carry
+// no soldOn; `updated_at` stands in for the half-year, though many older rows share one bulk update time.
+const SOLD_ROW = /\{"id":"\d+","title":/g;
+
+export function readErikOlssonSoldPage(body: string): SoldPage | null {
+  const rows: SoldPage['rows'] = {};
+  let oldest: string | null = null;
+  let seen = 0;
+  for (const match of body.matchAll(SOLD_ROW)) {
+    const raw = objectAt(body, match.index);
+    if (raw === null) continue;
+    let item: unknown;
+    try {
+      item = JSON.parse(raw);
+    } catch {
+      continue;
+    }
+    if (
+      !isRecord(item) ||
+      typeof item.id !== 'string' ||
+      !('price_type' in item)
+    )
+      continue;
+    seen += 1;
+    const updated =
+      typeof item.updated_at === 'string' ? item.updated_at : null;
+    if (updated && (oldest === null || updated < oldest)) oldest = updated;
+    const price = positiveInt(item.price, 1_000_000_000);
+    const areaM2 = area(item.living_space, 1000);
+    const feeSek = positiveInt(item.monthly_fee, 1_000_000);
+    const latitude = numberOf(item.latitude);
+    const longitude = numberOf(item.longitude);
+    const period = updated ? periodOf(updated) : null;
+    if (
+      item.category !== 'apartment' ||
+      item.is_price_hidden === true ||
+      price === null ||
+      areaM2 === null ||
+      feeSek === null ||
+      period === null
+    )
+      continue;
+    const district =
+      isRecord(item.area) && typeof item.area.name === 'string'
+        ? item.area.name
+        : '';
+    rows[item.id] = {
+      priceSek: price,
+      areaM2,
+      feeSek,
+      rooms: area(item.rooms, 100),
+      period,
+      neighbourhood: district.trim().toLowerCase().slice(0, 100) || null,
+      final: true,
+      ...(latitude !== null && longitude !== null
+        ? { position: [latitude, longitude] as [number, number] }
+        : {}),
+    };
+  }
+  // A page without list rows is a changed answer, not an empty list.
+  if (seen === 0 && !body.includes('"queryParams"')) return null;
+  return { rows, oldest, last: seen === 0 };
 }

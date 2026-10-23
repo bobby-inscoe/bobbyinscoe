@@ -129,6 +129,7 @@ describe('price model in a publish result', () => {
     logArea: 0.715,
     feePerM2: -0.0042,
     rooms: 0,
+    finalPremium: 0.05,
     typicalFeePerM2: 70,
     residualSd: 0.177,
     levels: { majorna: { level: 0.2, homes: 40 } },
