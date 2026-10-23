@@ -1,5 +1,9 @@
 export interface SettingsTranslations {
   personal: {
+    installHeading: string;
+    installDescription: string;
+    installIphone: string;
+    installAndroid: string;
     heading: string;
     languageDescription: string;
   };

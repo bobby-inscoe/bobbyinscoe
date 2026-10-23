@@ -2586,3 +2586,24 @@ test('mobile bottom navigation recedes while reading and the header stays at pag
   await expect(shell).toHaveAttribute('data-navigation-hidden');
   await expect(selectionBar).toHaveCSS('bottom', '0px');
 });
+
+test('Shellter installation guidance is available in Settings and hidden in the installed app', async ({
+  page,
+}) => {
+  await openDemo(page);
+  await openSection(page, 'Settings');
+  await expect(
+    page.getByRole('heading', { name: 'Install Shellter' }),
+  ).toBeVisible();
+  await expect(page.getByText(/^iPhone: open Share/)).toBeVisible();
+  await expect(page.getByText(/^Android: open the Chrome/)).toBeVisible();
+  await page.addInitScript(() =>
+    Object.defineProperty(navigator, 'standalone', { value: true }),
+  );
+  await page.goto('/shellter/listings');
+  await openDemo(page);
+  await openSection(page, 'Settings');
+  await expect(
+    page.getByRole('heading', { name: 'Install Shellter' }),
+  ).toHaveCount(0);
+});

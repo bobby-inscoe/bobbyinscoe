@@ -30,6 +30,13 @@ export const en = {
   },
   settings: {
     personal: {
+      installHeading: 'Install Shellter',
+      installDescription:
+        'Open Shellter from your Home Screen without browser toolbars. An internet connection is still required.',
+      installIphone:
+        'iPhone: open Share, then Add to Home Screen in Safari. If shown, keep Open as Web App switched on.',
+      installAndroid:
+        'Android: open the Chrome or Samsung Internet menu and choose Install app or Add to Home screen. Choose the app installation option if offered.',
       heading: 'Personal settings',
       languageDescription: 'Language applies only to this browser, for you.',
     },
@@ -764,6 +771,8 @@ export const en = {
     clear: 'Clear',
   },
   navigation: {
+    offline:
+      'You’re offline. Connect to the internet to load or update homes. Changes cannot be saved while offline.',
     leaveDemo: 'Leave demo',
     demo: 'Demo',
     backToTheWorkshop: 'Back to the workshop',

@@ -1,6 +1,7 @@
 import { Button, Paper, Stack, Text, Title } from '@mantine/core';
 import { LogOut } from 'lucide-react';
 import { FormattedMessage } from 'react-intl';
+import { InstallShellter } from '@/features/house-scanner/components/install-shellter';
 import { LanguageSelect } from '@/features/house-scanner/components/language-select';
 import { CriteriaPanel } from '@/features/house-scanner/features/settings/features/criteria/components/criteria-panel';
 import { FinancingEditor } from '@/features/house-scanner/features/settings/features/financing/components/financing-editor';
@@ -57,6 +58,7 @@ export function SettingsPanel({
             <FormattedMessage id="settings.personal.languageDescription" />
           </Text>
           <LanguageSelect label />
+          <InstallShellter />
           {onSignOut && (
             <Button
               variant="default"

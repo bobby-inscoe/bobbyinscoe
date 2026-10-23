@@ -118,6 +118,19 @@ the parameter erases the literal path types used by links and navigation.
 Keep the parent-to-child dependency direction. When adding a route, follow the
 nearest route tree and verify navigation and not-found behavior.
 
+## Shellter Home Screen app
+
+`src/app/app-metadata.ts` selects Shellter’s manifest, icons, title, and browser
+color on initial load and route changes. Other routes retain Workshop metadata.
+`public/shellter/` owns the Shellter manifest, app icons, service worker, and
+standalone offline page. Its manifest and worker are scoped to `/shellter/`.
+The worker registers only in production and caches only the public offline page;
+household API responses, photos, and application assets are not stored in its
+cache. Settings explains Home Screen installation; installed mode hides that guide.
+Production browser checks run against `npm run preview` with
+`HOUSE_SCANNER_BROWSER_URL` set to its URL. Physical phone installation requires
+HTTPS, rather than a local-network HTTP preview.
+
 ## Data and verification
 
 House Scanner's client contract and schemas live under
