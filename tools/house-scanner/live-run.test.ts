@@ -163,14 +163,16 @@ describe('prepared run', () => {
     });
   });
 
-  it('reuses remembered listing pages on a second run and reports it', async () => {
-    const serveAll = () =>
+  it('falls back to remembered listing pages when they fail on a second run and reports it', async () => {
+    const serveAll = (pages: 'ok' | 'fail' = 'ok') =>
       fakeFetch(
-        boneoRobotsOr((url) => ({
-          body: url.includes('/bostad/')
-            ? boneoFixture('detail-glazed.html')
-            : boneoFixture('search-page.html'),
-        })),
+        boneoRobotsOr((url) =>
+          !url.includes('/bostad/')
+            ? { body: boneoFixture('search-page.html') }
+            : pages === 'ok'
+              ? { body: boneoFixture('detail-glazed.html') }
+              : { status: 404 },
+        ),
       );
     const memory = { memory: emptyMemory(), reset: true };
     const one = await prepareLiveRun(
@@ -185,12 +187,14 @@ describe('prepared run', () => {
       entry.readAt = new Date(
         Date.parse(entry.readAt) - 86_400_000,
       ).toISOString();
-    const second = serveAll();
+    const second = serveAll('fail');
     const two = await prepareLiveRun(
       { capability, planning, bounds, memory: { ...memory, reset: false } },
       deps(second.impl),
     );
-    expect(second.calls.filter((c) => c.url.includes('/bostad/'))).toEqual([]);
+    expect(second.calls.filter((c) => c.url.includes('/bostad/'))).toHaveLength(
+      kept,
+    );
     expect(two.result).toMatchObject({ detailRead: 0, detailCached: kept });
     expect(two.cacheReset).toBe(false);
     const note = (run: typeof one) => {

@@ -250,15 +250,15 @@ describe('Erik Olsson guarded run', () => {
     expect(read.observations[0]).toMatchObject(expected);
     assertAdapterOutput(erikOlsson().policy, read.observations[0]);
 
-    // An hour later, by the next run's clock, the remembered page is still fresh.
+    // An hour later, by the next run's clock, the page fails and the remembered read fills in.
     for (const entry of Object.values(memory.details))
       entry.readAt = new Date(
         Date.parse(entry.readAt) - 3_600_000,
       ).toISOString();
-    const again = fakeFetch(site(1, 1));
+    const again = fakeFetch(site(1, 1, () => ({ status: 404 })));
     const cached = await run(goteborg, deps(again.impl), (all) => all, memory);
-    expect(again.calls.filter((call) => isListing(call.url))).toHaveLength(0);
-    expect(cached).toMatchObject({ detailCached: 1 });
+    expect(again.calls.filter((call) => isListing(call.url))).toHaveLength(1);
+    expect(cached).toMatchObject({ detailCached: 1, detailFailed: 0 });
     expect(cached.observations[0]).toMatchObject(expected);
   });
 });

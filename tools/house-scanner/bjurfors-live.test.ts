@@ -368,7 +368,7 @@ describe('Bjurfors run memory', () => {
     details,
   });
 
-  it('stores what the listing page supplied and reuses it for a week', async () => {
+  it('stores what the listing page supplied and falls back to it when the page fails', async () => {
     const memory = memoryOf();
     const first = fakeFetch(fixtureSite());
     const one = await run(goteborg, deps(first.impl), keepAll, memory);
@@ -388,9 +388,9 @@ describe('Bjurfors run memory', () => {
     });
     for (const entry of Object.values(memory.details))
       entry.readAt = new Date(Date.parse(entry.readAt) - DAY).toISOString();
-    const second = fakeFetch(fixtureSite());
+    const second = fakeFetch(fixtureSite('<html></html>'));
     const two = await run(goteborg, deps(second.impl), keepAll, memory);
-    expect(detailCalls(second.calls)).toHaveLength(0);
+    expect(detailCalls(second.calls)).toHaveLength(9);
     expect(two).toMatchObject({
       detailRead: 0,
       detailCached: 9,
@@ -794,7 +794,7 @@ describe('Bjurfors viewing times in a run', () => {
     expect(Object.values(memory.details)[0].viewings).toEqual(coming);
   });
 
-  it('applies remembered viewings without a request, and drops those that have passed', async () => {
+  it('applies remembered viewings when the page fails, and drops those that have passed', async () => {
     const memory = { ...emptyMemory(), details: {} } as RunMemory;
     await run(
       goteborg,
@@ -802,19 +802,19 @@ describe('Bjurfors viewing times in a run', () => {
       keepAll,
       memory,
     );
-    const again = fakeFetch(fixtureSite(page));
+    const again = fakeFetch(fixtureSite('<html></html>'));
     for (const entry of Object.values(memory.details))
       entry.readAt = new Date(
         Date.parse(entry.readAt) - 86_400_000,
       ).toISOString();
     const cached = await run(goteborg, deps(again.impl), keepAll, memory);
-    expect(detailCalls(again.calls)).toHaveLength(0);
+    expect(cached.detailCached).toBe(9);
     expect(cached.observations[0].viewings).toEqual(coming);
     for (const entry of Object.values(memory.details))
       entry.viewings = [{ startsAt: '2025-10-01T08:00:00.000Z', endsAt: null }];
     const stale = await run(
       goteborg,
-      deps(fakeFetch(fixtureSite(page)).impl),
+      deps(fakeFetch(fixtureSite('<html></html>')).impl),
       keepAll,
       memory,
     );

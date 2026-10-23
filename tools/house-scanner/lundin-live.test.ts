@@ -72,7 +72,7 @@ describe('Lundin guarded run', () => {
     });
   });
 
-  it("reads each kept home's page once for its gallery, and a home reused from memory makes no page request but keeps it", async () => {
+  it("reads each kept home's page for its gallery, and a home whose page fails keeps it from memory", async () => {
     const dc = (n: number, query: string) =>
       `https://www.lundin.se/dc/MED00000000000000000${n}.jpg?${query}`;
     const thumb = 'mode=max&w=640&h=480&scale=down';
@@ -95,19 +95,23 @@ describe('Lundin guarded run', () => {
     expect(read.observations[0].facts.lift).toBeNull();
     assertAdapterOutput(lundin().policy, read.observations[0]);
 
-    // An hour later, by the next run's clock, the remembered pages are still fresh.
+    // An hour later, by the next run's clock, the pages fail and the remembered reads fill in.
     for (const entry of Object.values(memory.details))
       entry.readAt = new Date(
         Date.parse(entry.readAt) - 3_600_000,
       ).toISOString();
-    const again = fakeFetch(site([numbered(1), numbered(2)]));
+    const again = fakeFetch((url) =>
+      url.includes('/beskrivning/')
+        ? { status: 404 }
+        : site([numbered(1), numbered(2)])(url),
+    );
     const cached = await run(goteborg, deps(again.impl), (all) => all, memory);
-    expect(again.calls).toHaveLength(2);
+    expect(again.calls).toHaveLength(4);
     expect(cached).toMatchObject({ detailCached: 2, detailRead: 0 });
     expect(cached.observations[0]).toMatchObject(expected);
   });
 
-  it('reads the page of a home in bidding on every run and never remembers its bid', async () => {
+  it('reads the bid from this run only and never remembers it', async () => {
     const withBid: Reply = {
       body: lundinHomePage().replace(
         '</body>',
@@ -126,14 +130,11 @@ describe('Lundin guarded run', () => {
         Date.parse(entry.readAt) - 3_600_000,
       ).toISOString();
     }
-    const again = fakeFetch(bidding);
+    // Home 2's page fails, so it comes from memory, which holds no bid.
+    const again = fakeFetch((url) =>
+      url.endsWith('/gata-2') ? { status: 404 } : bidding(url),
+    );
     const next = await run(goteborg, deps(again.impl), (all) => all, memory);
-    // Only the home in bidding is read again; the other comes from memory.
-    expect(again.calls.map((call) => call.url)).toEqual([
-      'https://www.lundin.se/robots.txt',
-      LIST,
-      'https://www.lundin.se/beskrivning/OBJ0000000000000000001/gata-1',
-    ]);
     expect(next).toMatchObject({ detailRead: 1, detailCached: 1 });
     expect(next.observations[0].facts).toMatchObject({
       bidding: true,
