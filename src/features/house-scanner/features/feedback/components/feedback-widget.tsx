@@ -16,9 +16,8 @@ import { MessageCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { createHouseholdClient } from '@/features/house-scanner/api/household-client';
-import { classes } from '@/features/house-scanner/theme/shellter-theme';
 
-export function FeedbackWidget() {
+export function FeedbackWidget({ visible = true }: { visible?: boolean }) {
   const intl = useIntl();
   const t = (
     key: keyof typeof import('@/features/house-scanner/i18n/en').en.feedback,
@@ -115,15 +114,17 @@ export function FeedbackWidget() {
   }
   return (
     <>
-      <Tooltip label={t('hint')}>
-        <Button
-          className={classes.feedbackLauncher}
-          leftSection={<MessageCircle size={18} aria-hidden />}
-          onClick={() => setOpened(true)}
-        >
-          {t('label')}
-        </Button>
-      </Tooltip>
+      {visible && (
+        <Tooltip label={t('hint')}>
+          <Button
+            w="fit-content"
+            leftSection={<MessageCircle size={18} aria-hidden />}
+            onClick={() => setOpened(true)}
+          >
+            {t('send')}
+          </Button>
+        </Tooltip>
+      )}
       <Modal
         opened={opened}
         onClose={() => {
@@ -191,6 +192,17 @@ export function FeedbackWidget() {
                   value={file}
                   disabled={busy}
                   onChange={(value) => {
+                    if (
+                      value &&
+                      (value.size > 5 * 1024 * 1024 ||
+                        !['image/png', 'image/jpeg', 'image/webp'].includes(
+                          value.type,
+                        ))
+                    ) {
+                      setFile(null);
+                      setStatus('invalid');
+                      return;
+                    }
                     setFile(value);
                     setStatus(null);
                   }}
@@ -200,6 +212,10 @@ export function FeedbackWidget() {
                     <img
                       src={preview}
                       alt={t('screenshot')}
+                      onError={() => {
+                        setFile(null);
+                        setStatus('invalid');
+                      }}
                       style={{
                         maxWidth: '100%',
                         maxHeight: 200,

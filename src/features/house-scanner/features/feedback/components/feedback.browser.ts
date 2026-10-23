@@ -21,26 +21,40 @@ test('retains a failed draft and sends a retry on desktop and mobile', async ({
     }),
   );
   await page.goto('/feedback-test');
-  await page.getByRole('button', { name: 'Feedback', exact: true }).click();
+  await page
+    .locator('#root')
+    .getByRole('button', { name: 'Send feedback', exact: true })
+    .click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
+  await page.locator('input[type="file"]').setInputFiles({
+    name: 'notes.txt',
+    mimeType: 'text/plain',
+    buffer: Buffer.from('not an image'),
+  });
+  await expect(page.getByRole('alert')).toContainText('allowed image');
+  await expect(page.getByText('notes.txt', { exact: true })).toHaveCount(0);
+
   await page
     .getByRole('textbox', { name: 'Title', exact: true })
     .fill('Save failed');
   await page
     .getByRole('textbox', { name: 'Description', exact: true })
     .fill('I edited a home and pressed save.');
-  await page.getByRole('button', { name: 'Send feedback' }).click();
+  await dialog.getByRole('button', { name: 'Send feedback' }).click();
   await expect(page.getByRole('alert')).toContainText('Could not send');
   await page
     .getByRole('button', { name: 'Cancel', exact: true })
     .last()
     .click();
-  await page.getByRole('button', { name: 'Feedback', exact: true }).click();
+  await page
+    .locator('#root')
+    .getByRole('button', { name: 'Send feedback', exact: true })
+    .click();
   await expect(
     page.getByRole('textbox', { name: 'Title', exact: true }),
   ).toHaveValue('Save failed');
-  await page.getByRole('button', { name: 'Send feedback' }).click();
+  await dialog.getByRole('button', { name: 'Send feedback' }).click();
   await expect(page.getByRole('status')).toContainText('accepted for sending');
   await expect(
     page.getByRole('textbox', { name: 'Title', exact: true }),

@@ -7,6 +7,7 @@ import { ManualActionsProvider } from '@/features/house-scanner/components/manua
 import { PriceEstimateProvider } from '@/features/house-scanner/components/price-estimate';
 import { AddLinkPanel } from '@/features/house-scanner/features/add-link/components/add-link-panel';
 import { useFavoriteToggle } from '@/features/house-scanner/features/favorites/hooks/use-favorite-toggle';
+import { FeedbackWidget } from '@/features/house-scanner/features/feedback/components/feedback-widget';
 import { ListingsPanel } from '@/features/house-scanner/features/listings/components/listings-panel';
 import { SettingsPanel } from '@/features/house-scanner/features/settings/components/settings-panel';
 import { ViewingsPanel } from '@/features/house-scanner/features/viewings/components/viewings-panel';
@@ -463,6 +464,9 @@ export function HouseholdWorkspace({
               saveBusy={batchBusy}
             />
           </PriceEstimateProvider>
+        )}
+        {!synthetic && (
+          <FeedbackWidget key={userId} visible={tab === 'settings'} />
         )}
         {/* The demo's fixed edition date is always old, so only real editions warn. */}
         <Text

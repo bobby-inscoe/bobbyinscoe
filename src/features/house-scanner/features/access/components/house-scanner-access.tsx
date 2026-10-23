@@ -14,7 +14,6 @@ import { InvitePanel } from '@/features/house-scanner/features/access/components
 import { SetPasswordForm } from '@/features/house-scanner/features/access/components/set-password-form';
 import { SignInForm } from '@/features/house-scanner/features/access/components/sign-in-form';
 import { useHouseholdSession } from '@/features/house-scanner/features/access/hooks/use-household-session';
-import { FeedbackWidget } from '@/features/house-scanner/features/feedback/components/feedback-widget';
 import {
   errorFeedback,
   type Feedback,
@@ -101,15 +100,6 @@ export function HouseScannerAccess({
   return (
     <Stack gap="md">
       {message && <Alert role="alert">{formatFeedback(intl, message)}</Alert>}
-      {signedIn && (
-        <FeedbackWidget
-          key={
-            session.state.status === 'authenticated'
-              ? session.state.userId
-              : 'signed-in'
-          }
-        />
-      )}
       {session.linkError && (
         <Alert role="alert">
           <FormattedMessage id="access.thatEmailLinkHasExpiredOrWasAlreadyUsed" />
