@@ -25,6 +25,7 @@ import {
 } from '@/features/house-scanner/components/listing-summary';
 import { EstimateLine } from '@/features/house-scanner/components/price-estimate';
 import type { ListingNotesController } from '@/features/house-scanner/hooks/use-listing-notes';
+import { displayLabel } from '@/features/house-scanner/i18n/display-labels';
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type {
   Listing,
@@ -212,6 +213,11 @@ export function ListingDrawer({
                 {hideError && (
                   <Text role="alert" size="sm">
                     {hideError}
+                  </Text>
+                )}
+                {photos[0] && (
+                  <Text size="sm" c="dimmed">
+                    {displayLabel(intl, photos[0].attribution)}
                   </Text>
                 )}
                 <PriceLine listing={listing} />
