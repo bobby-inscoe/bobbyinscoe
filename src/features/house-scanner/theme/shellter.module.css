@@ -1054,7 +1054,8 @@
     min-width: 44px;
     min-height: 44px;
   }
-  .map :global(.maplibregl-ctrl-group button) {
+  .map :global(.maplibregl-ctrl-group button),
+  .locationPreviewMap :global(.maplibregl-ctrl-group button) {
     width: 44px;
     height: 44px;
   }
@@ -1414,27 +1415,9 @@
   position: absolute;
   inset: 0;
 }
-.locationPreviewMap :global(.maplibregl-canvas) {
-  pointer-events: none;
-}
-.locationPreviewAction {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-}
-/* Attribution links remain separate from the preview's map action. */
-.locationPreviewMap :global(.maplibregl-ctrl-bottom-right) {
-  z-index: 2;
-}
 .locationPreviewMap :global(.maplibregl-ctrl-attrib) {
   font-size: 11px;
   line-height: 16px;
-}
-.locationPreviewAction:focus-visible {
-  outline: 3px solid var(--mantine-primary-color-filled);
-  outline-offset: -3px;
 }
 .locationPreviewStatus {
   position: absolute;

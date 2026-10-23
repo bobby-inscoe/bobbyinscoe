@@ -183,7 +183,7 @@ export const en = {
       savedBy: 'Saved by',
       select: 'Select {value0}',
       details: 'Details',
-      openLocationMap: 'Open location on map',
+      openLocationMap: 'Open full map',
       loadingLocationMap: 'Loading location map…',
       locationMapUnavailable:
         'Location map unavailable. Use See on map to try the full map.',
@@ -407,6 +407,9 @@ export const en = {
       closeSelectedHome: 'Close selected home',
       selectHome: 'Select home',
       openOriginalListing: 'Open original listing',
+      ctrlScrollToZoom: 'Use Ctrl + scroll to zoom the map',
+      commandScrollToZoom: 'Use ⌘ + scroll to zoom the map',
+      twoFingersToMove: 'Use two fingers to move the map',
       zoomIn: 'Zoom in',
       zoomOut: 'Zoom out',
       resetBearing: 'Drag to rotate map, click to reset north',

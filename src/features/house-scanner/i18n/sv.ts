@@ -184,7 +184,7 @@ export const sv = {
       savedBy: 'Sparad av',
       select: 'Välj {value0}',
       details: 'Detaljer',
-      openLocationMap: 'Öppna platsen på kartan',
+      openLocationMap: 'Öppna hela kartan',
       loadingLocationMap: 'Laddar platsens karta…',
       locationMapUnavailable:
         'Platsens karta är inte tillgänglig. Använd Visa på karta för att prova hela kartan.',
@@ -411,6 +411,9 @@ export const sv = {
       closeSelectedHome: 'Stäng vald bostad',
       selectHome: 'Välj bostad',
       openOriginalListing: 'Öppna originalannonsen',
+      ctrlScrollToZoom: 'Använd Ctrl + rulla för att zooma kartan',
+      commandScrollToZoom: 'Använd ⌘ + rulla för att zooma kartan',
+      twoFingersToMove: 'Använd två fingrar för att flytta kartan',
       zoomIn: 'Zooma in',
       zoomOut: 'Zooma ut',
       resetBearing: 'Dra för att rotera kartan, klicka för att återställa norr',

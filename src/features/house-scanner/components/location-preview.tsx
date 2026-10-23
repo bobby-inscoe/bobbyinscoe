@@ -1,4 +1,4 @@
-import { Text, UnstyledButton } from '@mantine/core';
+import { Button, Stack, Text } from '@mantine/core';
 import type { Map as MapLibreMap, Marker } from 'maplibre-gl';
 import {
   type RefObject,
@@ -32,6 +32,27 @@ export function LocationPreview({
   onActivate,
 }: LocationPreviewProps) {
   const intl = useIntl();
+  const initialLocale = useRef({
+    'Map.Title': intl.formatMessage({ id: 'listings.details.location' }),
+    'NavigationControl.ZoomIn': intl.formatMessage({
+      id: 'listings.map.zoomIn',
+    }),
+    'NavigationControl.ZoomOut': intl.formatMessage({
+      id: 'listings.map.zoomOut',
+    }),
+    'AttributionControl.ToggleAttribution': intl.formatMessage({
+      id: 'listings.map.toggleAttribution',
+    }),
+    'CooperativeGesturesHandler.WindowsHelpText': intl.formatMessage({
+      id: 'listings.map.ctrlScrollToZoom',
+    }),
+    'CooperativeGesturesHandler.MacHelpText': intl.formatMessage({
+      id: 'listings.map.commandScrollToZoom',
+    }),
+    'CooperativeGesturesHandler.MobileHelpText': intl.formatMessage({
+      id: 'listings.map.twoFingersToMove',
+    }),
+  });
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
   const marker = useRef<Marker | null>(null);
@@ -89,11 +110,20 @@ export function LocationPreview({
           style: styleUrl,
           center: [longitude, latitude],
           zoom: 14,
-          interactive: false,
+          interactive: true,
+          cooperativeGestures: true,
+          dragRotate: false,
+          touchPitch: false,
+          locale: initialLocale.current,
           attributionControl: { compact: false },
           fadeDuration: 0,
         });
         map.current = instance;
+        instance.touchZoomRotate.disableRotation();
+        instance.keyboard.disableRotation();
+        instance.addControl(
+          new runtime.NavigationControl({ showCompass: false }),
+        );
         marker.current = new runtime.Marker({
           color: 'var(--mantine-primary-color-filled)',
         })
@@ -154,28 +184,30 @@ export function LocationPreview({
   }, [coordinates.longitude, coordinates.latitude]);
 
   return (
-    <div className={classes.locationPreview} data-preview-state={status}>
-      <div ref={container} className={classes.locationPreviewMap} />
+    <Stack gap="xs">
+      <div className={classes.locationPreview} data-preview-state={status}>
+        <div ref={container} className={classes.locationPreviewMap} />
+        {status !== 'ready' && (
+          <Text
+            className={classes.locationPreviewStatus}
+            size="sm"
+            role="status"
+          >
+            <FormattedMessage
+              id={
+                status === 'failed'
+                  ? 'listings.details.locationMapUnavailable'
+                  : 'listings.details.loadingLocationMap'
+              }
+            />
+          </Text>
+        )}
+      </div>
       {onActivate && (
-        <UnstyledButton
-          className={classes.locationPreviewAction}
-          onClick={onActivate}
-          aria-label={intl.formatMessage({
-            id: 'listings.details.openLocationMap',
-          })}
-        />
+        <Button variant="default" size="xs" onClick={onActivate}>
+          <FormattedMessage id="listings.details.openLocationMap" />
+        </Button>
       )}
-      {status !== 'ready' && (
-        <Text className={classes.locationPreviewStatus} size="sm" role="status">
-          <FormattedMessage
-            id={
-              status === 'failed'
-                ? 'listings.details.locationMapUnavailable'
-                : 'listings.details.loadingLocationMap'
-            }
-          />
-        </Text>
-      )}
-    </div>
+    </Stack>
   );
 }
