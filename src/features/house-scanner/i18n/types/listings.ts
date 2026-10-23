@@ -47,6 +47,9 @@ export interface ListingsTranslations {
     conflictingFields: string;
     viewings: string;
     photos: string;
+    viewPhoto: string;
+    previousPhoto: string;
+    nextPhoto: string;
     floorPlan: string;
     bidding: string;
     biddingUnderWay: string;

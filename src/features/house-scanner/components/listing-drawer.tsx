@@ -1,10 +1,12 @@
-import { Button, Drawer, Group, Stack, Text } from '@mantine/core';
+import { ActionIcon, Button, Drawer, Group, Stack, Text } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
+import { ChevronLeft, ChevronRight, LayoutTemplate } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { FavoriteStar } from '@/features/house-scanner/components/favorite-star';
 import { HideButton } from '@/features/house-scanner/components/hide-button';
 import { ListingDetails } from '@/features/house-scanner/components/listing-details';
-import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
+import { ListingGallery } from '@/features/house-scanner/components/listing-gallery';
 import {
   AlsoOn,
   FactsLine,
@@ -64,6 +66,26 @@ export function ListingDrawer({
 }: ListingDrawerProps) {
   const intl = useIntl();
 
+  const [selection, setSelection] = useState({ listingId: '', index: 0 });
+  const photoRef = useRef<HTMLDivElement>(null);
+  const photos = listing?.photos?.length
+    ? listing.photos
+    : listing?.photo
+      ? [listing.photo]
+      : [];
+  const index = selection.listingId === listing?.id ? selection.index : 0;
+  const floorPlan =
+    listing?.floorPlan && Date.parse(listing.floorPlan.expiresAt) > Date.now()
+      ? listing.floorPlan
+      : null;
+  const showingFloorPlan = index === -1 && !!floorPlan;
+  const selectPhoto = (next: number) => {
+    if (listing) setSelection({ listingId: listing.id, index: next });
+  };
+  const showPhoto = (index: number) => {
+    selectPhoto(index);
+    photoRef.current?.scrollIntoView({ block: 'start' });
+  };
   const wide = useMediaQuery('(min-width: 48em)');
   return (
     <Drawer
@@ -76,7 +98,7 @@ export function ListingDrawer({
         }),
       }}
       position={wide ? 'right' : 'bottom'}
-      size={wide ? 'lg' : '85%'}
+      size={wide ? 'lg' : '100%'}
       classNames={{
         title: classes.drawerTitle,
         header: classes.drawerHeader,
@@ -85,17 +107,82 @@ export function ListingDrawer({
     >
       {listing && (
         <Stack gap="sm" className={classes.drawerBody}>
-          <div className={classes.photoWrap}>
-            <ListingPhoto listing={listing} />
-            <HideButton
-              listingId={listing.id}
-              hidden={hidden}
-              onToggle={onToggleHidden}
-            />
-            <FavoriteStar
-              {...favorite}
-              onToggle={() => onFavorite(listing.id)}
-            />
+          <div ref={photoRef} className={classes.photoWrap}>
+            <ListingGallery
+              key={`${listing.id}-${showingFloorPlan}`}
+              listing={
+                showingFloorPlan
+                  ? {
+                      ...listing,
+                      title: intl.formatMessage({
+                        id: 'listings.details.floorPlan',
+                      }),
+                    }
+                  : listing
+              }
+              photos={showingFloorPlan ? [floorPlan] : photos}
+              index={showingFloorPlan ? 0 : index}
+              onSelect={showingFloorPlan ? () => {} : selectPhoto}
+              contain={showingFloorPlan}
+            >
+              {photos.length > 1 && !showingFloorPlan && (
+                <>
+                  <ActionIcon
+                    variant="default"
+                    size="lg"
+                    radius="xl"
+                    className={classes.photoPrevious}
+                    aria-label={intl.formatMessage({
+                      id: 'listings.details.previousPhoto',
+                    })}
+                    onClick={() =>
+                      selectPhoto((index - 1 + photos.length) % photos.length)
+                    }
+                  >
+                    <ChevronLeft size={22} aria-hidden />
+                  </ActionIcon>
+                  <ActionIcon
+                    variant="default"
+                    size="lg"
+                    radius="xl"
+                    className={classes.photoNext}
+                    aria-label={intl.formatMessage({
+                      id: 'listings.details.nextPhoto',
+                    })}
+                    onClick={() => selectPhoto((index + 1) % photos.length)}
+                  >
+                    <ChevronRight size={22} aria-hidden />
+                  </ActionIcon>
+                </>
+              )}
+              {floorPlan && (
+                <Button
+                  size="xs"
+                  variant="default"
+                  className={classes.photoFloorPlan}
+                  leftSection={<LayoutTemplate size={16} aria-hidden />}
+                  onClick={() => selectPhoto(showingFloorPlan ? 0 : -1)}
+                  aria-pressed={showingFloorPlan}
+                >
+                  <FormattedMessage
+                    id={
+                      showingFloorPlan
+                        ? 'listings.details.photos'
+                        : 'listings.details.floorPlan'
+                    }
+                  />
+                </Button>
+              )}
+              <HideButton
+                listingId={listing.id}
+                hidden={hidden}
+                onToggle={onToggleHidden}
+              />
+              <FavoriteStar
+                {...favorite}
+                onToggle={() => onFavorite(listing.id)}
+              />
+            </ListingGallery>
           </div>
           {hideError && (
             <Text role="alert" size="sm">
@@ -141,6 +228,7 @@ export function ListingDrawer({
             userId={userId}
             notes={notes}
             headingOrder={3}
+            onSelectPhoto={showPhoto}
           />
         </Stack>
       )}

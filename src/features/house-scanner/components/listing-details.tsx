@@ -6,6 +6,7 @@ import {
   Stack,
   Text,
   Title,
+  UnstyledButton,
 } from '@mantine/core';
 import type { ReactNode } from 'react';
 import { FormattedMessage, type IntlShape, useIntl } from 'react-intl';
@@ -39,6 +40,7 @@ interface ListingDetailsProps {
   notes?: ListingNotesController;
   // The level of the section headings, one below the title above them.
   headingOrder?: 3 | 4;
+  onSelectPhoto?: (index: number) => void;
 }
 
 const yesNo = (value: boolean | null, intl: IntlShape = englishIntl) =>
@@ -114,6 +116,7 @@ export function ListingDetails({
   userId,
   notes,
   headingOrder = 4,
+  onSelectPhoto,
 }: ListingDetailsProps) {
   const intl = useIntl();
 
@@ -272,15 +275,10 @@ export function ListingDetails({
             order={sectionOrder}
           >
             <Group gap="xs">
-              {listing.photos.map((photo) => (
-                <a
-                  key={photo.url}
-                  href={listing.sourceUrls[0]}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  referrerPolicy="no-referrer"
-                >
+              {listing.photos.map((photo, index) => {
+                const image = (
                   <img
+                    key={photo.url}
                     src={photo.url}
                     alt={listing.title}
                     loading="lazy"
@@ -289,8 +287,22 @@ export function ListingDetails({
                     height={107}
                     style={{ objectFit: 'cover' }}
                   />
-                </a>
-              ))}
+                );
+                return onSelectPhoto ? (
+                  <UnstyledButton
+                    key={photo.url}
+                    onClick={() => onSelectPhoto(index)}
+                    aria-label={intl.formatMessage(
+                      { id: 'listings.details.viewPhoto' },
+                      { value0: index + 1 },
+                    )}
+                  >
+                    {image}
+                  </UnstyledButton>
+                ) : (
+                  <div key={photo.url}>{image}</div>
+                );
+              })}
             </Group>
           </Section>
         )}
@@ -299,21 +311,14 @@ export function ListingDetails({
             title={intl.formatMessage({ id: 'listings.details.floorPlan' })}
             order={sectionOrder}
           >
-            <a
-              href={listing.sourceUrls[0]}
-              target="_blank"
-              rel="noopener noreferrer"
+            <img
+              src={listing.floorPlan.url}
+              alt={intl.formatMessage({ id: 'listings.details.floorPlan' })}
+              loading="lazy"
               referrerPolicy="no-referrer"
-            >
-              <img
-                src={listing.floorPlan.url}
-                alt={intl.formatMessage({ id: 'listings.details.floorPlan' })}
-                loading="lazy"
-                referrerPolicy="no-referrer"
-                width={480}
-                style={{ maxWidth: '100%', height: 'auto' }}
-              />
-            </a>
+              width={480}
+              style={{ maxWidth: '100%', height: 'auto' }}
+            />
           </Section>
         )}
         <Section

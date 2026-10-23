@@ -15,6 +15,7 @@ export function ListingPhoto({
   disabled,
   pressed,
   isNew,
+  contain,
 }: {
   listing: Listing;
   onOpen?: () => void;
@@ -23,6 +24,7 @@ export function ListingPhoto({
   pressed?: boolean;
   // Flags a fresh find in the photo's bottom-left corner, clear of the credit line below.
   isNew?: boolean;
+  contain?: boolean;
 }) {
   const intl = useIntl();
 
@@ -47,6 +49,7 @@ export function ListingPhoto({
   const content = permitted ? (
     <img
       className={classes.photo}
+      style={contain ? { objectFit: 'contain' } : undefined}
       src={photo.url}
       alt={listing.title}
       loading="lazy"
