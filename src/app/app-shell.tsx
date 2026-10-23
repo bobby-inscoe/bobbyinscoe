@@ -1,7 +1,13 @@
 import { Anchor, Stack, Text, Title } from '@mantine/core';
-import { Link, Outlet } from '@tanstack/react-router';
+import { Link, Outlet, useRouterState } from '@tanstack/react-router';
+import { useLayoutEffect } from 'react';
+import { applyAppMetadata } from '@/app/app-metadata';
 
 export function AppShell() {
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+  useLayoutEffect(() => applyAppMetadata(pathname), [pathname]);
   return <Outlet />;
 }
 

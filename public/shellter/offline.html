@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0f6e6a" />
+  <title>Shellter</title>
+  <link rel="manifest" href="/shellter/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <style>
+    body { margin: 0; background: #eef5f3; color: #142624; font-family: system-ui, sans-serif; }
+    header { background: #0f6e6a; color: white; padding: 20px; font-size: 24px; font-weight: 800; }
+    main { max-width: 32rem; margin: 12vh auto; padding: 24px; }
+    h1 { font-size: 28px; }
+    p { line-height: 1.6; }
+    button { background: #0f6e6a; color: white; border: 0; border-radius: 8px; padding: 12px 20px; font: inherit; cursor: pointer; min-height: 44px; }
+    button:focus-visible { outline: 3px solid #142624; outline-offset: 3px; }
+  </style>
+</head>
+<body>
+  <header>Shellter</header>
+  <main>
+    <h1>You’re offline</h1>
+    <p>Connect to the internet to load your homes, favorites, and viewings.</p>
+    <button type="button">Try again</button>
+  </main>
+  <script>
+    let language;
+    try { language = localStorage.getItem('shellter.language'); } catch {}
+    if (language === 'sv' || (!language && navigator.language.startsWith('sv'))) {
+      document.documentElement.lang = 'sv';
+      document.querySelector('h1').textContent = 'Du är offline';
+      document.querySelector('p').textContent = 'Anslut till internet för att läsa in bostäder, favoriter och visningar.';
+      document.querySelector('button').textContent = 'Försök igen';
+    }
+    document.querySelector('button').addEventListener('click', () => location.reload());
+  </script>
+</body>
+</html>

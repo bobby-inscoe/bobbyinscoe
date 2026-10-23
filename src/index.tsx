@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client';
 // The root theme's global CSS loads before the app so project stylesheets cascade after it.
 import '@/app/theme.css';
 import { App } from '@/app/app';
+import { applyAppMetadata } from '@/app/app-metadata';
+
+applyAppMetadata(window.location.pathname);
 
 const root = document.getElementById('root');
 

@@ -1,4 +1,5 @@
 export interface NavigationTranslations {
+  offline: string;
   leaveDemo: string;
   demo: string;
   backToTheWorkshop: string;

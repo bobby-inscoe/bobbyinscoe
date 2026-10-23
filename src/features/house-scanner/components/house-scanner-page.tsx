@@ -1,4 +1,5 @@
 import {
+  Alert,
   Anchor,
   Box,
   Button,
@@ -7,6 +8,7 @@ import {
   Stack,
   Title,
 } from '@mantine/core';
+import { useNetwork } from '@mantine/hooks';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
@@ -15,6 +17,7 @@ import { HouseholdWorkspace } from '@/features/house-scanner/components/househol
 import { SyntheticWorkspace } from '@/features/house-scanner/components/synthetic-workspace';
 import { HouseScannerAccess } from '@/features/house-scanner/features/access/components/house-scanner-access';
 import { useMobileNavigation } from '@/features/house-scanner/hooks/use-mobile-navigation';
+import { useShellterPwa } from '@/features/house-scanner/hooks/use-shellter-pwa';
 import { ShellterLanguageProvider } from '@/features/house-scanner/i18n/language-provider';
 import {
   classes,
@@ -40,6 +43,8 @@ export function HouseScannerPage() {
 function HouseScannerContent() {
   const intl = useIntl();
   const pageRef = useMobileNavigation();
+  useShellterPwa();
+  const { online } = useNetwork();
 
   const [demo, setDemo] = useState(false);
   const [inviteToken, setInviteToken] = useState(readInviteToken);
@@ -92,6 +97,11 @@ function HouseScannerContent() {
           </Group>
         </header>
         <Stack className={classes.content} gap="xs">
+          {!online && (
+            <Alert color="orange">
+              <FormattedMessage id="navigation.offline" />
+            </Alert>
+          )}
           {demo ? (
             <SyntheticWorkspace />
           ) : (

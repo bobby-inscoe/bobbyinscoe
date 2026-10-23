@@ -1,0 +1,24 @@
+{
+  "id": "/shellter/",
+  "name": "Shellter",
+  "short_name": "Shellter",
+  "description": "Your household\u2019s homes, favorites, and viewings.",
+  "start_url": "/shellter/listings",
+  "scope": "/shellter/",
+  "display": "standalone",
+  "theme_color": "#0f6e6a",
+  "background_color": "#eef5f3",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

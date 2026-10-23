@@ -30,6 +30,13 @@ export const sv = {
   },
   settings: {
     personal: {
+      installHeading: 'Installera Shellter',
+      installDescription:
+        'Öppna Shellter från hemskärmen utan webbläsarens verktygsfält. Du behöver fortfarande en internetanslutning.',
+      installIphone:
+        'iPhone: öppna Dela och sedan Lägg till på hemskärmen i Safari. Låt Öppna som webbapp vara på om alternativet visas.',
+      installAndroid:
+        'Android: öppna menyn i Chrome eller Samsung Internet och välj Installera app eller Lägg till på hemskärmen. Välj appinstallationen om alternativet finns.',
       heading: 'Personliga inställningar',
       languageDescription: 'Språkvalet gäller bara dig i den här webbläsaren.',
     },
@@ -771,6 +778,8 @@ export const sv = {
     clear: 'Rensa',
   },
   navigation: {
+    offline:
+      'Du är offline. Anslut till internet för att läsa in eller uppdatera bostäder. Ändringar kan inte sparas offline.',
     leaveDemo: 'Lämna demon',
     demo: 'Demo',
     backToTheWorkshop: 'Tillbaka till verkstaden',
