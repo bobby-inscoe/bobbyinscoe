@@ -151,7 +151,7 @@ const finals = poolPath
           .map((r) => ({ ...r, source })),
     )
   : [];
-const fit = (rows, useRooms = false) =>
+const fitModel = (rows, useRooms = false) =>
   fitPriceModel(rows, { fittedAt, useRooms, storeLevel: (n) => names.has(n) });
 const describeModel = (label, model) =>
   console.log(
@@ -166,12 +166,12 @@ console.log(
 console.log(`catalog homes ${homes.length}, final-price rows ${finals.length}`);
 const both = homes.filter((h) => current(h));
 const chosen = { local: true, z: 1.4, localShrink: 1 };
-const asking = fit(archive);
+const asking = fitModel(archive);
 describeModel('Lundin only', asking);
 score('today (homes today can estimate)', current, both);
 score('Lundin model + nearby', (h) => modelled(asking, h, chosen), both);
 if (finals.length) {
-  const pooled = fit([...archive, ...finals]);
+  const pooled = fitModel([...archive, ...finals]);
   describeModel('Lundin + sold lists', pooled);
   score('pooled model + nearby', (h) => modelled(pooled, h, chosen), both);
   // Final prices of sold homes, each fifth predicted by a model fitted without it.
@@ -180,7 +180,7 @@ if (finals.length) {
   for (let fold = 0; fold < 5; fold += 1) {
     const train = finals.filter((_, i) => i % 5 !== fold);
     const test = finals.filter((_, i) => i % 5 === fold);
-    const model = fit([...archive, ...train]);
+    const model = fitModel([...archive, ...train]);
     for (const r of test) {
       const pooledMiss = Math.abs(
         Math.exp(baselineLog(model, r, true)) / r.priceSek - 1,
@@ -189,7 +189,7 @@ if (finals.length) {
       misses.lundin.push(
         Math.abs(Math.exp(baselineLog(asking, r)) / r.priceSek - 1),
       );
-      (bySource[r.source] ??= []).push(pooledMiss);
+      bySource[r.source] = [...(bySource[r.source] ?? []), pooledMiss];
     }
   }
   console.log(
