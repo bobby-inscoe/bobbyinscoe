@@ -50,7 +50,24 @@ export function ListingGallery({
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const swiping = useRef(false);
   const suppressClick = useRef(false);
-  const dotStart = Math.max(0, Math.min(index - 3, photos.length - 7));
+  const [scrollPosition, setScrollPosition] = useState(index);
+  const progress = reducedMotion ? Math.round(scrollPosition) : scrollPosition;
+  // Long galleries crossfade their end windows instead of sweeping through every dot on a loop.
+  const dotLayers =
+    photos.length > 7 && (progress < 0 || progress > photos.length - 1)
+      ? [
+          {
+            key: 'last',
+            position: photos.length - 1,
+            opacity: progress < 0 ? -progress : photos.length - progress,
+          },
+          {
+            key: 'first',
+            position: 0,
+            opacity: progress < 0 ? 1 + progress : progress - photos.length + 1,
+          },
+        ]
+      : [{ key: 'current', position: progress, opacity: 1 }];
   const restoreTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const postponeControls = () => {
     if (restoreTimer.current) clearTimeout(restoreTimer.current);
@@ -146,7 +163,19 @@ export function ListingGallery({
           touchStart.current = null;
           if (swiping.current) postponeControls();
         }}
-        onScroll={() => {
+        onScroll={(event) => {
+          const element = event.currentTarget;
+          if (element.clientWidth) {
+            setScrollPosition(
+              Math.max(
+                -1,
+                Math.min(
+                  photos.length,
+                  element.scrollLeft / element.clientWidth - (loop ? 1 : 0),
+                ),
+              ),
+            );
+          }
           if (swiping.current && !touchStart.current) postponeControls();
         }}
         onScrollEnd={(event) => {
@@ -162,6 +191,7 @@ export function ListingGallery({
             });
           }
           slot.current = next;
+          setScrollPosition(loop ? next - 1 : next);
           onSelect(loop ? next - 1 : next);
         }}
       >
@@ -249,12 +279,40 @@ export function ListingGallery({
               { current: index + 1, total: photos.length },
             )}
           >
-            {photos.slice(dotStart, dotStart + 7).map((photo, offset) => (
-              <span
-                key={photo.url}
-                data-active={dotStart + offset === index || undefined}
-              />
-            ))}
+            <div
+              className={classes.photoDotViewport}
+              style={{ width: Math.min(photos.length, 7) * 9 - 2 }}
+            >
+              {dotLayers.map(({ key, position, opacity }) => (
+                <div
+                  key={key}
+                  className={classes.photoDotTrack}
+                  style={{
+                    opacity,
+                    transform: `translateX(${-Math.max(0, Math.min(position - 3, photos.length - 7)) * 9}px)`,
+                  }}
+                >
+                  {photos.map((photo, dot) => {
+                    const distance = Math.abs(position - dot);
+                    const active = Math.max(
+                      0,
+                      1 - Math.min(distance, photos.length - distance),
+                    );
+                    return (
+                      <span
+                        key={photo.url}
+                        style={{
+                          opacity: 0.45 + active * 0.55,
+                          transform: reducedMotion
+                            ? undefined
+                            : `scale(${1 + active * 0.3})`,
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
