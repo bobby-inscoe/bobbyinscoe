@@ -30,7 +30,6 @@ import {
   useState,
 } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { LanguageSelect } from '@/features/house-scanner/components/language-select';
 import { ListingCard } from '@/features/house-scanner/components/listing-card';
 import { ListingDrawer } from '@/features/house-scanner/components/listing-drawer';
 import { ListingFilterPanel } from '@/features/house-scanner/features/listings/components/listing-filter-panel';
@@ -452,7 +451,6 @@ export function ListingsPanel({
       </VisuallyHidden>
       {mobileMap && (
         <header className={classes.mobileMapHeader}>
-          <LanguageSelect />
           <Group gap="xs" wrap="wrap">
             <Button variant="default" onClick={() => onViewChange('list')}>
               <FormattedMessage id="listings.list.list" />
