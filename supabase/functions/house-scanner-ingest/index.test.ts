@@ -1,7 +1,16 @@
 import { createHash, createHmac } from 'node:crypto';
-import { sourceRegistry } from '@house-scanner-tools/source-registry';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { sourcePolicySchema } from '@/features/house-scanner/types/contracts';
+import {
+  type SourceSettings,
+  sourceSettingsSchema,
+} from '@/features/house-scanner/types/contracts';
+
+const demo: SourceSettings = {
+  sourceId: 'synthetic-demo',
+  enabled: true,
+  listingOrigins: ['https://example.invalid'],
+  imageOrigins: [],
+};
 
 const database = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock('@supabase/supabase-js', () => ({ createClient: () => database }));
@@ -58,8 +67,7 @@ beforeEach(async () => {
         usedNonces.add(args.p_nonce);
         return { data: null, error: null };
       }
-      if (name === 'hs_ingest_policies')
-        return { data: [sourceRegistry()[0].policy], error: null };
+      if (name === 'hs_ingest_sources') return { data: [demo], error: null };
       if (name === 'hs_ingest')
         return { data: { runId, state: 'staging' }, error: null };
       throw new Error(`Unexpected RPC ${name}`);
@@ -196,10 +204,10 @@ describe('signed ingestion trust boundary', () => {
       ).toBe(false);
     },
   );
-  it('fails closed when the post-nonce policy lookup loses authorization', async () => {
+  it('fails closed when the post-nonce source lookup loses authorization', async () => {
     const original = database.rpc.getMockImplementation();
     database.rpc.mockImplementation(async (name, args) =>
-      name === 'hs_ingest_policies'
+      name === 'hs_ingest_sources'
         ? { data: null, error: { message: 'revoked household' } }
         : original?.(name, args),
     );
@@ -212,23 +220,20 @@ describe('signed ingestion trust boundary', () => {
   });
   // This host used to make the schema's origin refinement throw out of
   // safeParse. The schema now rejects it cleanly, and the handler also guards
-  // the parse, so a bad stored policy is a 403 and never an unhandled 500.
-  it('answers 403 when a stored policy fails the schema parse', async () => {
-    const unparseable = {
-      ...sourceRegistry()[0].policy,
-      listingOrigins: ['https://example.123'],
-    };
-    expect(sourcePolicySchema.safeParse(unparseable).success).toBe(false);
+  // the parse, so a bad stored source is a 403 and never an unhandled 500.
+  it('answers 403 when a stored source fails the schema parse', async () => {
+    const unparseable = { ...demo, listingOrigins: ['https://example.123'] };
+    expect(sourceSettingsSchema.safeParse(unparseable).success).toBe(false);
     const original = database.rpc.getMockImplementation();
     database.rpc.mockImplementation(async (name, args) =>
-      name === 'hs_ingest_policies'
+      name === 'hs_ingest_sources'
         ? { data: [unparseable], error: null }
         : original?.(name, args),
     );
     const response = await handler(signedRequest());
     expect(response.status).toBe(403);
     expect(await response.json()).toEqual({
-      error: 'Source permissions unavailable',
+      error: 'Source settings unavailable',
     });
     expect(database.rpc.mock.calls.some(([name]) => name === 'hs_ingest')).toBe(
       false,

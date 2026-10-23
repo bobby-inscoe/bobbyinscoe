@@ -89,8 +89,8 @@ describe('Husman Hagberg list', () => {
 
   it('passes the contract and the Husman Hagberg policy checks', () => {
     const policy = sourceRegistry().find(
-      (entry) => entry.policy.sourceId === 'husman-hagberg',
-    )?.policy;
+      (entry) => entry.source.sourceId === 'husman-hagberg',
+    )?.source;
     if (!policy) throw new Error('Husman Hagberg is not in the registry.');
     const [observation] = page(hhList([hhHome()])).observations;
     expect(() => assertAdapterOutput(policy, observation)).not.toThrow();

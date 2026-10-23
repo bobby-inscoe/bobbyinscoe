@@ -21,7 +21,6 @@ import {
 import { senderConfig, sendRequests } from '@house-scanner-tools/sender';
 import { adapterFor } from '@house-scanner-tools/source-adapters';
 import {
-  approvedPolicy,
   BJURFORS_SOURCE_ID,
   BONEO_SOURCE_ID,
   DEMO_SOURCE_ID,
@@ -96,7 +95,7 @@ async function live(values: Values) {
   if (values.at !== undefined)
     throw new Error('Live reads use the fetch time; --at does not apply.');
   const capability = sourceRegistry().find(
-    (entry) => entry.policy.sourceId === values.source,
+    (entry) => entry.source.sourceId === values.source,
   );
   if (!capability) throw new Error('Unknown source.');
   // The planner reads only the municipality and home types from this; collector bounds decide what is kept.
@@ -176,15 +175,6 @@ async function live(values: Values) {
   if (delivery?.stopped) process.exitCode = 1;
 }
 
-// Prints the SQL that approves a source for the shared catalog. Review the source's rights first.
-function printPolicySql(source: string | undefined) {
-  if (source === undefined || !LIVE_SOURCES.includes(source))
-    throw new Error(
-      '--print-policy-sql supports --source=boneo, --source=bjurfors, --source=erik-olsson, --source=stadshem, --source=lundin, --source=husman-hagberg and --source=svenskfast only.',
-    );
-  const json = JSON.stringify(approvedPolicy(source)).replaceAll("'", "''");
-  console.log(`select hs.admin_set_source_policy('${json}'::jsonb);`);
-}
 async function main() {
   const { values } = parseArgs({
     options: {
@@ -199,14 +189,12 @@ async function main() {
       profiles: { type: 'string' },
       send: { type: 'boolean', default: false },
       'confirm-send': { type: 'boolean', default: false },
-      'print-policy-sql': { type: 'boolean', default: false },
       cache: { type: 'string' },
       force: { type: 'boolean', default: false },
     },
     allowPositionals: false,
     strict: true,
   });
-  if (values['print-policy-sql']) return printPolicySql(values.source);
   if (values.mode !== 'fixture') throw new Error('Only fixture mode exists.');
   if (values['confirm-personal-read'] && !values.live)
     throw new Error('The confirmation flag applies to live reads only.');
@@ -218,7 +206,7 @@ async function main() {
     throw new Error('Sending applies to live reads only.');
   if (values.live) return live(values);
   const capability = sourceRegistry().find(
-    (entry) => entry.policy.sourceId === values.source,
+    (entry) => entry.source.sourceId === values.source,
   );
   if (!capability) throw new Error('Unknown source.');
   const criteria = fixtureCriteria(['Example municipality']);

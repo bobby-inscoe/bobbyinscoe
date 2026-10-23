@@ -3,12 +3,9 @@ import { z } from 'zod';
 
 import {
   ingestRequestSchema,
-  sourcePolicySchema,
+  sourceSettingsSchema,
 } from '@/features/house-scanner/types/contracts.ts';
-import {
-  assertObservationAllowed,
-  assertSourceAllowed,
-} from '@/features/house-scanner/utils/source-policy.ts';
+import { assertObservationAllowed } from '@/features/house-scanner/utils/source-settings.ts';
 
 const MAX_BYTES = 1024 * 1024;
 const encoder = new TextEncoder();
@@ -32,8 +29,8 @@ function response(status: number, body: object) {
     },
   });
 }
-function parsePolicies(data: unknown) {
-  return z.array(sourcePolicySchema).max(20).safeParse(data);
+function parseSources(data: unknown) {
+  return z.array(sourceSettingsSchema).max(20).safeParse(data);
 }
 function hex(bytes: ArrayBuffer) {
   return Array.from(new Uint8Array(bytes), (byte) =>
@@ -173,20 +170,20 @@ Deno.serve(async (request: Request) => {
   if (replayError)
     return response(409, { error: 'Request replayed or credential invalid' });
   // This RPC checks revocation again after nonce consumption. hs_ingest checks it once more in its transaction.
-  const { data: policyData, error: policyError } = await database.rpc(
-    'hs_ingest_policies',
+  const { data: sourceData, error: sourceError } = await database.rpc(
+    'hs_ingest_sources',
     { p_key_id: keyId },
   );
-  // The schema's origin refinement calls new URL(), which can throw instead of failing. A stored policy that makes
-  // it throw is an unusable policy, not a server fault, and the nonce is already consumed.
-  let policies: ReturnType<typeof parsePolicies> | null = null;
+  // The schema's origin refinement calls new URL(), which can throw instead of failing. A stored source that makes
+  // it throw is an unusable source, not a server fault, and the nonce is already consumed.
+  let sources: ReturnType<typeof parseSources> | null = null;
   try {
-    policies = parsePolicies(policyData);
+    sources = parseSources(sourceData);
   } catch {
-    policies = null;
+    sources = null;
   }
-  if (policyError || !policies?.success)
-    return response(403, { error: 'Source permissions unavailable' });
+  if (sourceError || !sources?.success)
+    return response(403, { error: 'Source settings unavailable' });
   let input: z.infer<typeof ingestRequestSchema>;
   try {
     input = ingestRequestSchema.parse(
@@ -212,24 +209,23 @@ Deno.serve(async (request: Request) => {
       throw new Error('Duplicate profile');
     const now = new Date();
     for (const sourceId of sourceIds) {
-      // Failed results publish no source content, so permission loss can be reported without replacing its prior data.
+      // Failed results publish no source content, so a switched-off source can still report one.
       if (
         input.action === 'publish' &&
         input.results.find((result) => result.sourceId === sourceId)?.status ===
           'failed'
       )
         continue;
-      const policy = policies.data.find(
+      const source = sources.data.find(
         (candidate) => candidate.sourceId === sourceId,
       );
-      if (!policy) throw new Error('Missing source policy');
-      assertSourceAllowed(policy, now);
+      if (!source?.enabled) throw new Error('Source missing or switched off');
       if (input.action === 'stage')
         for (const observation of input.observations)
-          assertObservationAllowed(policy, observation, now);
+          assertObservationAllowed(source, observation, now);
     }
   } catch {
-    return response(422, { error: 'Invalid batch or source permission' });
+    return response(422, { error: 'Invalid batch or source' });
   }
   const { data, error } = await database.rpc('hs_ingest', {
     p_key_id: keyId,

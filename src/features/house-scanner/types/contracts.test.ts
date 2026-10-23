@@ -2,47 +2,22 @@ import { describe, expect, it } from 'vitest';
 
 import {
   coordinateSchema,
-  factsSchema,
   listingUrlSchema,
-  type SourcePolicy,
+  type SourceSettings,
   snapshotSchema,
-  sourcePolicySchema,
+  sourceSettingsSchema,
   viewingSchema,
 } from '@/features/house-scanner/types/contracts';
 
-const policy: SourcePolicy = {
+const source: SourceSettings = {
   sourceId: 'synthetic-fixture',
-  revision: 1,
-  status: 'approved',
-  reviewedAt: '2026-10-12T00:00:00Z',
-  reviewDueAt: '2027-01-01T00:00:00Z',
-  rightsBasis: 'Authored local test fixture',
+  enabled: true,
   listingOrigins: ['https://example.invalid'],
-  freeOnly: true,
-  automatedCollection: true,
-  privateDisplay: true,
-  modelProcessing: false,
-  emailDigest: false,
-  telegramDigest: false,
-  allowedFactFields: [...factsSchema.keyof().options],
-  retentionDays: 30,
-  capabilities: {
-    discovery: true,
-    knownListingRefresh: true,
-    unknownPrice: true,
-    upcoming: true,
-    pagination: true,
-    resultCap: null,
-    coverageGaps: ['Synthetic only'],
-  },
-  allowedEvidenceSubjects: ['nature_access'],
-  imageDisplay: true,
-  imageHotlink: true,
   imageOrigins: ['https://images.example.invalid'],
 };
 
 // Hosts that z.url() accepts but the URL constructor refuses. They used to
-// throw out of safeParse, which turned a bad stored policy into a server error.
+// throw out of safeParse, which turned a bad stored source into a server error.
 const HOSTS_THAT_THROW = [
   'https://example.123',
   'https://a.b.c.4',
@@ -53,8 +28,8 @@ const HOSTS_THAT_THROW = [
 const HOSTS_THAT_NORMALIZE = ['https://0x7f000001', 'https://0x7f.0.0.1'];
 
 describe('URL refinements fail validation instead of throwing', () => {
-  it('accepts the plain synthetic policy', () => {
-    expect(sourcePolicySchema.safeParse(policy).success).toBe(true);
+  it('accepts the plain synthetic source', () => {
+    expect(sourceSettingsSchema.safeParse(source).success).toBe(true);
   });
 
   it.each(HOSTS_THAT_THROW)('listing url %s', (value) => {
@@ -63,11 +38,11 @@ describe('URL refinements fail validation instead of throwing', () => {
   });
 
   it.each([...HOSTS_THAT_THROW, ...HOSTS_THAT_NORMALIZE])(
-    'policy origins %s',
+    'source origins %s',
     (value) => {
       for (const key of ['listingOrigins', 'imageOrigins'] as const) {
         const attempt = () =>
-          sourcePolicySchema.safeParse({ ...policy, [key]: [value] });
+          sourceSettingsSchema.safeParse({ ...source, [key]: [value] });
         expect(attempt).not.toThrow();
         expect(attempt().success).toBe(false);
       }
@@ -139,16 +114,6 @@ describe('viewings', () => {
     ).toBe(false);
     expect(
       viewingSchema.safeParse({ ...viewing, startsAt: 'Sat 24 Oct' }).success,
-    ).toBe(false);
-  });
-
-  it('is optional on a policy, defaulting to not allowed', () => {
-    expect(sourcePolicySchema.safeParse(policy).success).toBe(true);
-    expect(
-      sourcePolicySchema.safeParse({ ...policy, viewings: true }).success,
-    ).toBe(true);
-    expect(
-      sourcePolicySchema.safeParse({ ...policy, viewings: 'yes' }).success,
     ).toBe(false);
   });
 });
