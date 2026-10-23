@@ -169,7 +169,7 @@ export const photoSchema = z.strictObject({
   url: listingUrlSchema,
   attribution: z.string().min(1).max(300),
   rightsBasis: z.string().min(1).max(500),
-  /** Latest time the source policy permits displaying this photo. */
+  /** Latest time the photo may be shown; the source sets it from how long its image addresses stay valid. */
   expiresAt: timestamp,
   /** When the collector saw this photo, used for retention. */
   observedAt: timestamp,
@@ -203,39 +203,15 @@ export const observationSchema = z.strictObject({
   // Future viewings, sorted. The key is left out when there are none, so older readers keep parsing.
   viewings: z.array(viewingSchema).max(10).optional(),
 });
-export const sourcePolicySchema = z.strictObject({
+// How long a home stays in browsing after it was last seen, and how old a photo, position or evidence item may be.
+// The database's hs.retention() holds the same value.
+export const RETENTION_DAYS = 14;
+// What ingest needs to know about a source: whether it is on, and the hosts its listings and images come from.
+export const sourceSettingsSchema = z.strictObject({
   sourceId,
-  revision: z.number().int().positive(),
-  status: z.enum(['disabled', 'pending', 'approved']),
-  /** When source collection/display permissions were reviewed. */
-  reviewedAt: timestamp,
-  /** Deadline for renewing that policy review. */
-  reviewDueAt: timestamp,
-  rightsBasis: z.string().min(1).max(2000),
+  enabled: z.boolean(),
   listingOrigins: z.array(originSchema).min(1).max(20),
   imageOrigins: z.array(originSchema).max(20),
-  allowedEvidenceSubjects: z.array(evidenceSchema.shape.subject).max(10),
-  freeOnly: z.literal(true),
-  automatedCollection: z.boolean(),
-  privateDisplay: z.boolean(),
-  imageDisplay: z.boolean(),
-  imageHotlink: z.boolean(),
-  modelProcessing: z.boolean(),
-  emailDigest: z.boolean(),
-  telegramDigest: z.boolean(),
-  // Whether this source's viewing times may be shown. Absent means no.
-  viewings: z.boolean().optional(),
-  allowedFactFields: z.array(factsSchema.keyof()).max(20),
-  retentionDays: z.number().int().positive().max(180),
-  capabilities: z.strictObject({
-    discovery: z.boolean(),
-    knownListingRefresh: z.boolean(),
-    unknownPrice: z.boolean(),
-    upcoming: z.boolean(),
-    pagination: z.boolean(),
-    resultCap: z.number().int().positive().nullable(),
-    coverageGaps: z.array(z.string().max(300)).max(30),
-  }),
 });
 export const memberSchema = z.strictObject({
   householdId: id,
@@ -317,7 +293,7 @@ export const listingSchema = z.strictObject({
   delistedAt: timestamp.optional(),
   /** First found in this source's latest successful/partial published run. Not an unread flag. */
   isNew: z.boolean().optional(),
-  // Future viewings the policy allows, sorted. Left out when there are none.
+  // Future viewings, sorted. Left out when there are none.
   viewings: z.array(viewingSchema).max(10).optional(),
 });
 export const snapshotSchema = z.strictObject({
@@ -451,7 +427,7 @@ export type Favorite = z.infer<typeof favoriteSchema>;
 export type SnapshotNote = z.infer<typeof snapshotNoteSchema>;
 export type Member = z.infer<typeof memberSchema>;
 export type Snapshot = z.infer<typeof snapshotSchema>;
-export type SourcePolicy = z.infer<typeof sourcePolicySchema>;
+export type SourceSettings = z.infer<typeof sourceSettingsSchema>;
 export type IngestRequest = z.infer<typeof ingestRequestSchema>;
 export type ManualSubmission = z.infer<typeof manualSubmissionSchema>;
 export type ManualEdit = z.infer<typeof manualEditSchema>;
