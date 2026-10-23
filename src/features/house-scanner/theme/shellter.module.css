@@ -181,12 +181,8 @@
     --shellter-tabbar-height: 48px;
   }
   .page:has(.tabBar) .appBar {
-    position: sticky;
-    top: 0;
-    z-index: 90;
     padding-top: env(safe-area-inset-top);
   }
-  .page:has(.tabBar) .appBar,
   .tabBar {
     transition: transform 180ms ease;
   }
@@ -268,9 +264,6 @@
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
-  }
-  .page[data-navigation-hidden] .appBar {
-    transform: translateY(-100%);
   }
   .page[data-navigation-hidden] .tabBar {
     transform: translateY(100%);
@@ -1510,7 +1503,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .page:has(.tabBar) .appBar,
   .tabBar {
     transition: none;
   }
