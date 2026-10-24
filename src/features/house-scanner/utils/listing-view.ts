@@ -106,10 +106,11 @@ export function mapPoints(
           coordinates: listing.coordinates,
           // Compact pin text; the label and card carry the full price or dispute.
           markerText:
-            listing.facts.askingPriceSek === null ||
-            listing.conflicts.includes('askingPriceSek')
-              ? price
-              : compactPrice(listing.facts.askingPriceSek, intl),
+            listing.facts.askingPriceSek === null
+              ? '?'
+              : listing.conflicts.includes('askingPriceSek')
+                ? price
+                : compactPrice(listing.facts.askingPriceSek, intl),
           label: `${listing.title}: ${price} · ${status}${saveLabel}${hiddenNote}`,
           dimmed,
           savedByMe: savedByMe || undefined,
