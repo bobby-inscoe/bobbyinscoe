@@ -206,6 +206,13 @@ export function matchListing(
   if (listing.conflicts.includes('status')) missing.push('status');
   required('askingPriceSek');
   if (
+    criteria.hideUnknownPrice &&
+    (f.askingPriceSek === null || listing.conflicts.includes('askingPriceSek'))
+  )
+    excluded.push(
+      intl.formatMessage({ id: 'listings.filters.unknownPriceHidden' }),
+    );
+  if (
     !listing.conflicts.includes('askingPriceSek') &&
     f.askingPriceSek !== null &&
     f.askingPriceSek > criteria.stretchPriceSek

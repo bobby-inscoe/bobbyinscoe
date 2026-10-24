@@ -796,11 +796,6 @@
 .toolbarControls {
   grid-area: controls;
 }
-.toolbarSortControls {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--mantine-spacing-sm);
-}
 .toolbarSearch {
   grid-area: search;
 }
@@ -830,15 +825,6 @@
   }
   .toolbar .toolbarControls > * {
     width: 100%;
-    min-width: 0;
-  }
-  .toolbarSortControls {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: end;
-  }
-  .toolbar .toolbarSortControls > * {
-    width: auto;
     min-width: 0;
   }
 }

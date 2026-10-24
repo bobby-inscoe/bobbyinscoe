@@ -334,6 +334,36 @@ describe('applyListingFilters', () => {
     expect(passes(disputed, { ...filters, includeUnknown: false })).toBe(false);
   });
 
+  it('hides unknown and disputed prices on their own, and counts as one filter', () => {
+    const hide = { hideUnknownPrice: true };
+    expect(passes(home({ askingPriceSek: null }), hide)).toBe(false);
+    expect(passes(home({}, { conflicts: ['askingPriceSek'] }), hide)).toBe(
+      false,
+    );
+    expect(passes(home({ askingPriceSek: 2_500_000 }), hide)).toBe(true);
+    expect(activeFilterCount({ ...emptyFilters, ...hide })).toBe(1);
+  });
+
+  it('searches neighborhood names as well as the title', () => {
+    const [first] = neighborhoods;
+    const listing = home(
+      {},
+      {
+        title: 'Plain title',
+        neighborhoodCandidates: [
+          {
+            ...first,
+            method: 'polygon' as const,
+            datasetVersion: 'goteborg-primary-areas-2025' as const,
+          },
+        ],
+      },
+    );
+    expect(passes(listing, { titleQuery: first.name })).toBe(true);
+    expect(passes(listing, { titleQuery: first.name.slice(0, -1) })).toBe(true);
+    expect(passes(listing, { titleQuery: 'zzqqxx' })).toBe(false);
+  });
+
   it('does not hide unknown values when their filter is not active', () => {
     expect(
       passes(home({ askingPriceSek: null }), {

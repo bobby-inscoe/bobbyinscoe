@@ -67,6 +67,7 @@ const urlSchema = z.object({
   // The yes/no "only" filters share one list, e.g. only=lift,glazed.
   only: list.catch([]),
   unknown: z.boolean().catch(true),
+  noprice: flag,
   hidden: z.enum(['only', 'both']).optional().catch(undefined),
   dupes: flag,
   viewing: number,
@@ -118,6 +119,7 @@ export function validateBrowseSearch(
       glazedOnly: url.only.includes('glazed'),
       notOnMapOnly: url.only.includes('off-map'),
       includeUnknown: url.unknown,
+      hideUnknownPrice: url.noprice,
       hidden:
         url.hidden === 'only' ? 'hidden-only' : (url.hidden ?? 'not-hidden'),
       showDuplicates: url.dupes,
@@ -154,6 +156,7 @@ function encode({ filters, ...search }: BrowseSearch): BrowseUrlSearch {
     unassigned: filters.includeUnassignedNeighborhoods,
     only: only.join(','),
     unknown: filters.includeUnknown,
+    noprice: filters.hideUnknownPrice,
     hidden: filters.hidden === 'hidden-only' ? 'only' : filters.hidden,
     dupes: filters.showDuplicates,
     viewing: filters.viewingWithinDays,

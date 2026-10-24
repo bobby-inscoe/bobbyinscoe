@@ -551,71 +551,6 @@ export function ListingsPanel({
                 ]}
               />
             )}
-            <div className={classes.toolbarSortControls}>
-              <Select
-                label={intl.formatMessage({ id: 'listings.list.sort' })}
-                aria-label={intl.formatMessage({
-                  id: 'listings.list.sortHomes',
-                })}
-                value={sort}
-                onChange={(value) =>
-                  onSortChange((value as ListingSort) ?? 'newest')
-                }
-                data={[
-                  {
-                    value: 'newest',
-                    label: intl.formatMessage({ id: 'listings.list.newest' }),
-                  },
-                  {
-                    value: 'oldest',
-                    label: intl.formatMessage({ id: 'listings.list.oldest' }),
-                  },
-                  {
-                    value: 'next-viewing',
-                    label: intl.formatMessage({
-                      id: 'listings.list.nextViewing',
-                    }),
-                  },
-                  {
-                    value: 'alphabetical',
-                    label: intl.formatMessage({
-                      id: 'listings.list.alphabetical',
-                    }),
-                  },
-                  {
-                    value: 'price-asc',
-                    label: intl.formatMessage({
-                      id: 'listings.list.priceLowToHigh',
-                    }),
-                  },
-                  {
-                    value: 'price-desc',
-                    label: intl.formatMessage({
-                      id: 'listings.list.priceHighToLow',
-                    }),
-                  },
-                ]}
-                w={{ base: 140, sm: 180 }}
-              />
-              <Button
-                variant="default"
-                aria-expanded={filtersOpen}
-                aria-controls="listing-filters"
-                onClick={() => {
-                  setDraft(filters);
-                  onFiltersOpenChange(true);
-                }}
-              >
-                <FormattedMessage
-                  id="listings.list.filters"
-                  values={{
-                    value0: messageValue(
-                      filtersActive > 0 ? ` (${filtersActive})` : '',
-                    ),
-                  }}
-                />
-              </Button>
-            </div>
           </Flex>
           <TextInput
             type="search"
@@ -694,6 +629,24 @@ export function ListingsPanel({
                   <FormattedMessage id="listings.list.map" />
                 </Button>
               </Group>
+              <Button
+                variant="default"
+                aria-expanded={filtersOpen}
+                aria-controls="listing-filters"
+                onClick={() => {
+                  setDraft(filters);
+                  onFiltersOpenChange(true);
+                }}
+              >
+                <FormattedMessage
+                  id="listings.list.filters"
+                  values={{
+                    value0: messageValue(
+                      filtersActive > 0 ? ` (${filtersActive})` : '',
+                    ),
+                  }}
+                />
+              </Button>
               {canSelect && (
                 <Button
                   variant="default"
@@ -729,6 +682,11 @@ export function ListingsPanel({
             filters={draft}
             onChange={setDraft}
             hosts={filterHosts}
+            householdHidesUnknownPrice={snapshot.profiles.some(
+              (profile) => profile.enabled && profile.criteria.hideUnknownPrice,
+            )}
+            sort={sort}
+            onSortChange={onSortChange}
             shown={draftCount}
             total={total}
             match={
