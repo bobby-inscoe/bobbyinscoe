@@ -1,6 +1,6 @@
 import { Button, Group, Menu, Text } from '@mantine/core';
 import { CalendarDays, Ellipsis, House, Star } from 'lucide-react';
-import { Activity, useDeferredValue, useMemo, useState } from 'react';
+import { Activity, useDeferredValue, useMemo, useRef, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { ListingDrawer } from '@/features/house-scanner/components/listing-drawer';
 import { ManualActionsProvider } from '@/features/house-scanner/components/manual-listing-actions';
@@ -93,6 +93,122 @@ function useListView(
   return { scoped, visible, duplicateCount, hiddenCount };
 }
 
+// Holds its own pressed state, so a tap repaints only the bar before the route change starts.
+function TabBar({
+  tab,
+  onChange,
+}: {
+  tab: WorkspaceTab;
+  onChange: (value: WorkspaceTab) => void;
+}) {
+  const intl = useIntl();
+  // A tapped tab shows as pressed in the next paint; the route change starts after that paint.
+  const [pressedTab, setPressedTab] = useState<WorkspaceTab | null>(null);
+  const latestPress = useRef<WorkspaceTab | null>(null);
+  const barTab = pressedTab ?? tab;
+  const pressTab = (value: WorkspaceTab) => {
+    latestPress.current = value;
+    setPressedTab(value);
+    requestAnimationFrame(() =>
+      setTimeout(() => {
+        // Only the latest tap changes the route, so quick taps never land out of order or twice.
+        if (latestPress.current !== value) return;
+        latestPress.current = null;
+        onChange(value);
+        setPressedTab(null);
+      }),
+    );
+  };
+  const more =
+    barTab !== 'suggestions' && barTab !== 'favorites' && barTab !== 'viewings';
+  return (
+    <Group
+      component="nav"
+      aria-label={intl.formatMessage({
+        id: 'navigation.shortlistSections',
+      })}
+      gap="xs"
+      wrap="wrap"
+      p={4}
+      className={classes.tabBar}
+      onClickCapture={() => {
+        if (window.matchMedia('(max-width: 35.99375em)').matches) {
+          window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        }
+      }}
+    >
+      {(['suggestions', 'favorites'] as const).map((value) => (
+        <Button
+          key={value}
+          className={classes.navTab}
+          variant={barTab === value ? 'filled' : 'default'}
+          aria-pressed={barTab === value}
+          leftSection={
+            value === 'suggestions' ? (
+              <House size={20} aria-hidden />
+            ) : (
+              <Star
+                size={20}
+                fill={barTab === value ? 'currentColor' : 'none'}
+                aria-hidden
+              />
+            )
+          }
+          onClick={() => pressTab(value)}
+        >
+          {value === 'suggestions'
+            ? intl.formatMessage({ id: 'navigation.listings' })
+            : intl.formatMessage({ id: 'navigation.favorites' })}
+        </Button>
+      ))}
+      <Button
+        className={classes.navTab}
+        variant={barTab === 'viewings' ? 'filled' : 'default'}
+        aria-pressed={barTab === 'viewings'}
+        leftSection={
+          <span className={classes.navIcon}>
+            <CalendarDays size={20} aria-hidden />
+          </span>
+        }
+        onClick={() => pressTab('viewings')}
+      >
+        <FormattedMessage id="navigation.viewings" />
+      </Button>
+      <Menu position="bottom-end">
+        <Menu.Target>
+          <Button
+            className={classes.navTab}
+            leftSection={
+              <Ellipsis
+                size={20}
+                fill={more ? 'currentColor' : 'none'}
+                aria-hidden
+              />
+            }
+            variant={more ? 'filled' : 'default'}
+          >
+            <FormattedMessage id="navigation.more" />
+          </Button>
+        </Menu.Target>
+        <Menu.Dropdown>
+          <Menu.Item
+            className={classes.touchTarget}
+            onClick={() => onChange('manual')}
+          >
+            <FormattedMessage id="navigation.addLink" />
+          </Menu.Item>
+          <Menu.Item
+            className={classes.touchTarget}
+            onClick={() => onChange('settings')}
+          >
+            <FormattedMessage id="navigation.settings" />
+          </Menu.Item>
+        </Menu.Dropdown>
+      </Menu>
+    </Group>
+  );
+}
+
 // Any action may be missing, which turns its control off.
 export interface HouseholdWorkspaceProps extends Partial<HouseholdActions> {
   snapshot: Snapshot;
@@ -125,19 +241,7 @@ export function HouseholdWorkspace({
   const navigation = useBrowseNavigation();
   const { tab: urgentTab, search, listingId } = navigation;
   // The tab bar answers the tap at once; the panels follow in a render that yields to the browser.
-  const tab = useDeferredValue(urgentTab);
-  // A tapped tab shows as pressed in the next paint; the route change starts after that paint.
-  const [pressedTab, setPressedTab] = useState<WorkspaceTab | null>(null);
-  const barTab = pressedTab ?? urgentTab;
-  const pressTab = (value: WorkspaceTab) => {
-    setPressedTab(value);
-    requestAnimationFrame(() =>
-      setTimeout(() => {
-        navigation.changeTab(value);
-        setPressedTab(null);
-      }),
-    );
-  };
+  const tab = urgentTab;
   const { person, section, filters, view } = search;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const detailsOpen = listingId !== null;
@@ -237,102 +341,7 @@ export function HouseholdWorkspace({
               onSave={onSaveProfile}
             />
           )}
-          <Group
-            component="nav"
-            aria-label={intl.formatMessage({
-              id: 'navigation.shortlistSections',
-            })}
-            gap="xs"
-            wrap="wrap"
-            p={4}
-            className={classes.tabBar}
-            onClickCapture={() => {
-              if (window.matchMedia('(max-width: 35.99375em)').matches) {
-                window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-              }
-            }}
-          >
-            {(['suggestions', 'favorites'] as const).map((value) => (
-              <Button
-                key={value}
-                className={classes.navTab}
-                variant={barTab === value ? 'filled' : 'default'}
-                aria-pressed={barTab === value}
-                leftSection={
-                  value === 'suggestions' ? (
-                    <House size={20} aria-hidden />
-                  ) : (
-                    <Star
-                      size={20}
-                      fill={barTab === value ? 'currentColor' : 'none'}
-                      aria-hidden
-                    />
-                  )
-                }
-                onClick={() => pressTab(value)}
-              >
-                {value === 'suggestions'
-                  ? intl.formatMessage({ id: 'navigation.listings' })
-                  : intl.formatMessage({ id: 'navigation.favorites' })}
-              </Button>
-            ))}
-            <Button
-              className={classes.navTab}
-              variant={barTab === 'viewings' ? 'filled' : 'default'}
-              aria-pressed={barTab === 'viewings'}
-              leftSection={
-                <span className={classes.navIcon}>
-                  <CalendarDays size={20} aria-hidden />
-                </span>
-              }
-              onClick={() => pressTab('viewings')}
-            >
-              <FormattedMessage id="navigation.viewings" />
-            </Button>
-            <Menu position="bottom-end">
-              <Menu.Target>
-                <Button
-                  className={classes.navTab}
-                  leftSection={
-                    <Ellipsis
-                      size={20}
-                      fill={
-                        barTab !== 'suggestions' &&
-                        barTab !== 'favorites' &&
-                        barTab !== 'viewings'
-                          ? 'currentColor'
-                          : 'none'
-                      }
-                      aria-hidden
-                    />
-                  }
-                  variant={
-                    barTab !== 'suggestions' &&
-                    barTab !== 'favorites' &&
-                    barTab !== 'viewings'
-                      ? 'filled'
-                      : 'default'
-                  }
-                >
-                  <FormattedMessage id="navigation.more" />
-                </Button>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Item
-                  className={classes.touchTarget}
-                  onClick={() => navigation.changeTab('manual')}
-                >
-                  <FormattedMessage id="navigation.addLink" />
-                </Menu.Item>
-                <Menu.Item
-                  className={classes.touchTarget}
-                  onClick={() => navigation.changeTab('settings')}
-                >
-                  <FormattedMessage id="navigation.settings" />
-                </Menu.Item>
-              </Menu.Dropdown>
-            </Menu>
-          </Group>
+          <TabBar tab={urgentTab} onChange={navigation.changeTab} />
           {listingId && !selected && (
             <Group role="status">
               <Text>
