@@ -389,11 +389,13 @@ export function ListingsPanel({
     [visible, hiddenIds, snapshot.favorites, userId, intl],
   );
   // One handler per action, shared by every card, so unchanged cards skip rendering.
-  // The favorite handler is rebuilt on every render, so the latest one is read through a ref.
+  // The favorite, open and view handlers are rebuilt on every render, so the latest ones are read through refs.
   const favorite = useRef(onFavorite);
   favorite.current = onFavorite;
   const openListing = useRef(onOpenListing);
   openListing.current = onOpenListing;
+  const viewChange = useRef(onViewChange);
+  viewChange.current = onViewChange;
   const selectListing = useCallback(
     (listingId: string) => openListing.current(listingId),
     [],
@@ -401,9 +403,9 @@ export function ListingsPanel({
   const showOnMap = useCallback(
     (listingId: string) => {
       onSelectedIdChange(listingId);
-      onViewChange('map');
+      viewChange.current('map');
     },
-    [onSelectedIdChange, onViewChange],
+    [onSelectedIdChange],
   );
   const hiddenRef = useRef(hiddenIds);
   hiddenRef.current = hiddenIds;

@@ -1,7 +1,14 @@
 import { Button, Drawer, Group, Modal, Stack, Text } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { LayoutTemplate } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import {
+  type ComponentProps,
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { FavoriteStar } from '@/features/house-scanner/components/favorite-star';
 import { HideButton } from '@/features/house-scanner/components/hide-button';
@@ -52,6 +59,40 @@ interface ListingDrawerProps {
   hideError?: string;
 }
 
+// True once the sheet has slid in, or at once with reduced motion.
+const DrawerEntered = createContext(false);
+
+// Owns the slide-in state, so its changes re-render only what reads it instead of the whole sheet.
+function DrawerRoot({
+  opened,
+  children,
+  ...props
+}: ComponentProps<typeof Drawer.Root>) {
+  const [entered, setEntered] = useState(false);
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  useEffect(() => {
+    if (!opened) setEntered(false);
+  }, [opened]);
+  return (
+    <DrawerEntered.Provider value={entered || !!reducedMotion}>
+      <Drawer.Root
+        {...props}
+        opened={opened}
+        onEnterTransitionEnd={() => setEntered(true)}
+        transitionProps={{ duration: reducedMotion ? 0 : 200 }}
+      >
+        {children}
+      </Drawer.Root>
+    </DrawerEntered.Provider>
+  );
+}
+
+function DrawerLocationPreview(
+  props: Omit<ComponentProps<typeof LocationPreview>, 'ready'>,
+) {
+  return <LocationPreview {...props} ready={useContext(DrawerEntered)} />;
+}
+
 // A side sheet on wide screens and a bottom sheet on narrow ones.
 export function ListingDrawer({
   listing,
@@ -71,11 +112,6 @@ export function ListingDrawer({
 }: ListingDrawerProps) {
   const intl = useIntl();
   const viewport = useRef<HTMLDivElement>(null);
-  const [entered, setEntered] = useState(false);
-  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
-  useEffect(() => {
-    if (!opened) setEntered(false);
-  }, [opened]);
   const [fullScreen, setFullScreen] = useState(false);
   useEffect(() => {
     if (!opened || !listing) setFullScreen(false);
@@ -95,7 +131,9 @@ export function ListingDrawer({
       : null;
   const showingFloorPlan = index === -1 && !!floorPlan;
   const selectPhoto = (next: number) => {
-    if (listing) setSelection({ listingId: listing.id, index: next });
+    // The gallery reports its first position on mount; an unchanged photo must not re-render the sheet.
+    if (listing && next !== index)
+      setSelection({ listingId: listing.id, index: next });
   };
   const showPhoto = (index: number) => {
     selectPhoto(index);
@@ -104,10 +142,8 @@ export function ListingDrawer({
   const wide = useMediaQuery('(min-width: 48em)');
   return (
     <>
-      <Drawer.Root
+      <DrawerRoot
         opened={opened}
-        onEnterTransitionEnd={() => setEntered(true)}
-        transitionProps={{ duration: reducedMotion ? 0 : 200 }}
         onClose={() => {
           setFullScreen(false);
           onClose();
@@ -230,10 +266,9 @@ export function ListingDrawer({
                   locationPreview={
                     <>
                       {opened && hasPin(listing.coordinates) && (
-                        <LocationPreview
+                        <DrawerLocationPreview
                           coordinates={listing.coordinates}
                           styleUrl={mapStyleUrl}
-                          ready={entered || !!reducedMotion}
                           viewport={viewport}
                           onActivate={onSeeOnMap}
                         />
@@ -259,7 +294,7 @@ export function ListingDrawer({
             )}
           </Drawer.Body>
         </Drawer.Content>
-      </Drawer.Root>
+      </DrawerRoot>
       <Modal.Root
         opened={fullScreen && opened && !!listing}
         onClose={() => setFullScreen(false)}
