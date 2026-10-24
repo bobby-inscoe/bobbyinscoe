@@ -791,6 +791,21 @@ export const en = {
       'You’re offline. Connect to the internet to load or update homes. Changes cannot be saved while offline.',
     leaveDemo: 'Leave demo',
     demo: 'Demo',
+    demoScreen: 'Demo screen',
+    hideDemoControls: 'Hide demo controls',
+    showDemoControls: 'Show demo controls',
+    restartDemoScreen: 'Restart screen',
+    demoPreviewNotice:
+      'Preview with fictional data. Forms work without real credentials. No accounts are created or emails sent. Switching or restarting clears changes.',
+    demoScreens: {
+      app: 'Existing household',
+      'signed-out': 'Signed out',
+      create: 'Invitation: create a household',
+      join: 'Invitation: join a household',
+      'new-household': 'New household setup',
+      recovery: 'Set a new password',
+      nonmember: 'Account without a household',
+    },
     backToTheWorkshop: 'Back to the workshop',
     householdShortlist: 'Household shortlist',
     thisHouseholdUsesStarterCriteriaApartmentsInGoteborgFrom:

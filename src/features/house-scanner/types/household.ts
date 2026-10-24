@@ -26,7 +26,7 @@ export interface HouseholdActions {
   onSaveNote: SaveNote;
 }
 
-/** Household settings actions; only a signed-in session has them, never the demo. */
+/** Household settings actions, backed by the session or the in-memory demo. */
 export interface HouseholdAccessActions {
   load: () => Promise<HouseholdAccess>;
   /** Makes a fresh link for an address, replacing its older one. Sends nothing; returns the link. */

@@ -20,7 +20,7 @@ interface SettingsPanelProps
   userId: string;
   synthetic: boolean;
   onSignOut?: () => void;
-  // Members and links; absent in the demo.
+  // Members and links, including simulated actions in the demo.
   access?: HouseholdAccessActions;
 }
 

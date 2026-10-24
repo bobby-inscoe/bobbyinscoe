@@ -46,8 +46,13 @@ function HouseScannerContent() {
   useShellterPwa();
   const { online } = useNetwork();
 
-  const [demo, setDemo] = useState(false);
+  const [demo, setDemo] = useState(
+    () =>
+      import.meta.env.DEV &&
+      new URLSearchParams(window.location.search).has('demo'),
+  );
   const [inviteToken, setInviteToken] = useState(readInviteToken);
+  const [demoControlsOpen, setDemoControlsOpen] = useState(true);
   const navigate = useNavigate();
   // The site title lives in index.html; name Shellter in the tab while this page is open.
   useEffect(() => {
@@ -75,6 +80,23 @@ function HouseScannerContent() {
               Shellter
             </Title>
             <Group gap="xs" wrap="wrap" maw="100%" miw={0}>
+              {import.meta.env.DEV && demo && (
+                <Button
+                  size="compact-sm"
+                  variant="white"
+                  aria-expanded={demoControlsOpen}
+                  aria-controls="shellter-demo-controls"
+                  onClick={() => setDemoControlsOpen((open) => !open)}
+                >
+                  <FormattedMessage
+                    id={
+                      demoControlsOpen
+                        ? 'navigation.hideDemoControls'
+                        : 'navigation.showDemoControls'
+                    }
+                  />
+                </Button>
+              )}
               {/* The demo is a local testing aid, so the deployed site never offers it. */}
               {import.meta.env.DEV && (
                 <Button
@@ -110,8 +132,8 @@ function HouseScannerContent() {
               <FormattedMessage id="navigation.offline" />
             </Alert>
           )}
-          {demo ? (
-            <SyntheticWorkspace />
+          {import.meta.env.DEV && demo ? (
+            <SyntheticWorkspace controlsOpen={demoControlsOpen} />
           ) : (
             <HouseScannerAccess
               onDemo={import.meta.env.DEV ? () => setDemo(true) : undefined}

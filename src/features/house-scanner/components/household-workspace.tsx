@@ -179,7 +179,7 @@ export function HouseholdWorkspace({
             id: 'navigation.householdShortlist',
           })}
         >
-          {!synthetic && tab !== 'settings' && (
+          {tab !== 'settings' && (
             <StarterSetup
               snapshot={snapshot}
               userId={userId}
