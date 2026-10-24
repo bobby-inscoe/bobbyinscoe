@@ -1,14 +1,18 @@
 import { ActionIcon, Affix, Transition } from '@mantine/core';
-import { useScrollDirection, useWindowScroll } from '@mantine/hooks';
+import { useScrollDirection, useWindowEvent } from '@mantine/hooks';
 import { ArrowUp } from 'lucide-react';
+import { useState } from 'react';
 import { useIntl } from 'react-intl';
 
 // Shown only while the reader scrolls up, past the first screen of the list.
 export function ScrollToTop() {
   const intl = useIntl();
-
-  const [scroll, scrollTo] = useWindowScroll();
-  const show = useScrollDirection() === 'up' && scroll.y > 400;
+  // Read only in scroll events: reading the position at mount forced a layout on every tab reveal.
+  const [past, setPast] = useState(false);
+  useWindowEvent('scroll', () => setPast(window.scrollY > 400), {
+    passive: true,
+  });
+  const show = useScrollDirection() === 'up' && past;
   return (
     <Affix
       position={{
@@ -25,7 +29,7 @@ export function ScrollToTop() {
             radius="xl"
             variant="default"
             aria-label={intl.formatMessage({ id: 'navigation.backToTop' })}
-            onClick={() => scrollTo({ y: 0 })}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           >
             <ArrowUp size={20} aria-hidden />
           </ActionIcon>
