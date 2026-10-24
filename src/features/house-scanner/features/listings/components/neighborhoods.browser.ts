@@ -2,7 +2,10 @@ import { expect, test } from '@playwright/test';
 import neighborhoods from '@/features/house-scanner/assets/neighborhoods.json' with {
   type: 'json',
 };
-import { SYNTHETIC_SNAPSHOT } from '@/features/house-scanner/mock/synthetic-household';
+import type { SYNTHETIC_SNAPSHOT as Snapshot } from '@/features/house-scanner/mock/synthetic-household';
+
+// The demo module imports SVG assets, so only Vite can load it.
+let SYNTHETIC_SNAPSHOT: typeof Snapshot;
 
 test.beforeEach(async ({ context, page }) => {
   await context.route('**/*', async (route) => {
@@ -11,6 +14,10 @@ test.beforeEach(async ({ context, page }) => {
     else await route.abort('blockedbyclient');
   });
   await page.goto('/shellter/listings');
+  SYNTHETIC_SNAPSHOT = await page.evaluate(async () => {
+    const path = '/src/features/house-scanner/mock/synthetic-household.ts';
+    return (await import(/* @vite-ignore */ path)).SYNTHETIC_SNAPSHOT;
+  });
   await page
     .getByRole('button', { name: 'Explore the synthetic demo' })
     .click();
