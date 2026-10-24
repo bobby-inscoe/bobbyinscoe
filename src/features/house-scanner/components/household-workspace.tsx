@@ -1,6 +1,6 @@
 import { Button, Group, Menu, Text } from '@mantine/core';
 import { CalendarDays, Ellipsis, House, Star } from 'lucide-react';
-import { useDeferredValue, useMemo, useState } from 'react';
+import { Activity, useDeferredValue, useMemo, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { ListingDrawer } from '@/features/house-scanner/components/listing-drawer';
 import { ManualActionsProvider } from '@/features/house-scanner/components/manual-listing-actions';
@@ -25,15 +25,73 @@ import type { Snapshot } from '@/features/house-scanner/types/contracts';
 import type {
   HouseholdAccessActions,
   HouseholdActions,
+  WorkspaceTab,
 } from '@/features/house-scanner/types/household';
 import { validateBrowseSearch } from '@/features/house-scanner/utils/browse-search';
 import { findDuplicates } from '@/features/house-scanner/utils/duplicates';
 import { formatDate } from '@/features/house-scanner/utils/format';
 import {
   applyListingFilters,
+  type ListingFilters,
   listingHost,
 } from '@/features/house-scanner/utils/listing-filters';
 import { scopeListings } from '@/features/house-scanner/utils/listing-view';
+
+const LIST_TABS = ['suggestions', 'favorites'] as const;
+
+// One list tab's homes and counts; both tabs keep theirs so each panel can stay mounted.
+function useListView(
+  snapshot: Snapshot,
+  listTab: (typeof LIST_TABS)[number],
+  scope: { person: string; section: string; userId: string },
+  filters: ListingFilters,
+  hidden: ReadonlySet<string>,
+  duplicateIds: ReadonlySet<string>,
+) {
+  const { person, section, userId } = scope;
+  // Favorites keep hidden homes in view, marked on the card, so a member's save never disappears.
+  const tabFilters = useMemo(
+    () =>
+      listTab === 'favorites'
+        ? { ...filters, hidden: 'both' as const }
+        : filters,
+    [listTab, filters],
+  );
+  const scoped = useMemo(
+    () => scopeListings(snapshot, { tab: listTab, person, section, userId }),
+    [snapshot, listTab, person, userId, section],
+  );
+  const visible = useMemo(
+    () => applyListingFilters(scoped, tabFilters, hidden, duplicateIds),
+    [scoped, tabFilters, hidden, duplicateIds],
+  );
+  // Cross-posted copies the filters leave out, so the count line can say they were folded.
+  const duplicateCount = useMemo(
+    () =>
+      tabFilters.showDuplicates
+        ? 0
+        : applyListingFilters(
+            scoped,
+            { ...tabFilters, showDuplicates: true },
+            hidden,
+          ).length - visible.length,
+    [scoped, tabFilters, hidden, visible],
+  );
+  // Hidden homes the filters leave out, so the count line can say they exist.
+  const hiddenCount = useMemo(
+    () =>
+      tabFilters.hidden === 'not-hidden'
+        ? applyListingFilters(
+            scoped,
+            { ...tabFilters, hidden: 'hidden-only' },
+            hidden,
+            duplicateIds,
+          ).length
+        : 0,
+    [scoped, tabFilters, hidden, duplicateIds],
+  );
+  return { scoped, visible, duplicateCount, hiddenCount };
+}
 
 // Any action may be missing, which turns its control off.
 export interface HouseholdWorkspaceProps extends Partial<HouseholdActions> {
@@ -65,7 +123,21 @@ export function HouseholdWorkspace({
   useMapPreload();
 
   const navigation = useBrowseNavigation();
-  const { tab, search, listingId } = navigation;
+  const { tab: urgentTab, search, listingId } = navigation;
+  // The tab bar answers the tap at once; the panels follow in a render that yields to the browser.
+  const tab = useDeferredValue(urgentTab);
+  // A tapped tab shows as pressed in the next paint; the route change starts after that paint.
+  const [pressedTab, setPressedTab] = useState<WorkspaceTab | null>(null);
+  const barTab = pressedTab ?? urgentTab;
+  const pressTab = (value: WorkspaceTab) => {
+    setPressedTab(value);
+    requestAnimationFrame(() =>
+      setTimeout(() => {
+        navigation.changeTab(value);
+        setPressedTab(null);
+      }),
+    );
+  };
   const { person, section, filters, view } = search;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const detailsOpen = listingId !== null;
@@ -84,18 +156,6 @@ export function HouseholdWorkspace({
   const synthetic = snapshot.edition?.coverage === 'synthetic';
   const [satellite, setSatellite] = useState(false);
   const deferredSearch = useDeferredValue(filters);
-  // Favorites keep hidden homes in view, marked on the card, so a member's save never disappears.
-  const deferredFilters = useMemo(
-    () =>
-      tab === 'favorites'
-        ? { ...deferredSearch, hidden: 'both' as const }
-        : deferredSearch,
-    [tab, deferredSearch],
-  );
-  const scoped = useMemo(
-    () => scopeListings(snapshot, { tab, person, section, userId }),
-    [snapshot, tab, person, userId, section],
-  );
   // Shared by the household: the database keeps them, and the demo keeps them in memory.
   const hiddenActions = useHiddenListings({
     snapshot,
@@ -108,35 +168,25 @@ export function HouseholdWorkspace({
     () => findDuplicates(snapshot),
     [snapshot],
   );
-  const visible = useMemo(
-    () => applyListingFilters(scoped, deferredFilters, hidden, duplicateIds),
-    [scoped, deferredFilters, hidden, duplicateIds],
-  );
-  // Cross-posted copies the filters leave out, so the count line can say they were folded.
-  const duplicateCount = useMemo(
-    () =>
-      deferredFilters.showDuplicates
-        ? 0
-        : applyListingFilters(
-            scoped,
-            { ...deferredFilters, showDuplicates: true },
-            hidden,
-          ).length - visible.length,
-    [scoped, deferredFilters, hidden, visible],
-  );
-  // Hidden homes the filters leave out, so the count line can say they exist.
-  const hiddenCount = useMemo(
-    () =>
-      deferredFilters.hidden === 'not-hidden'
-        ? applyListingFilters(
-            scoped,
-            { ...deferredFilters, hidden: 'hidden-only' },
-            hidden,
-            duplicateIds,
-          ).length
-        : 0,
-    [scoped, deferredFilters, hidden, duplicateIds],
-  );
+  const views = {
+    suggestions: useListView(
+      snapshot,
+      'suggestions',
+      { person, section, userId },
+      deferredSearch,
+      hidden,
+      duplicateIds,
+    ),
+    favorites: useListView(
+      snapshot,
+      'favorites',
+      { person, section, userId },
+      deferredSearch,
+      hidden,
+      duplicateIds,
+    ),
+  };
+  const { visible } = tab === 'favorites' ? views.favorites : views.suggestions;
   const filterHosts = useMemo(
     () => [...new Set(snapshot.listings.map(listingHost))],
     [snapshot.listings],
@@ -206,20 +256,20 @@ export function HouseholdWorkspace({
               <Button
                 key={value}
                 className={classes.navTab}
-                variant={tab === value ? 'filled' : 'default'}
-                aria-pressed={tab === value}
+                variant={barTab === value ? 'filled' : 'default'}
+                aria-pressed={barTab === value}
                 leftSection={
                   value === 'suggestions' ? (
                     <House size={20} aria-hidden />
                   ) : (
                     <Star
                       size={20}
-                      fill={tab === value ? 'currentColor' : 'none'}
+                      fill={barTab === value ? 'currentColor' : 'none'}
                       aria-hidden
                     />
                   )
                 }
-                onClick={() => navigation.changeTab(value)}
+                onClick={() => pressTab(value)}
               >
                 {value === 'suggestions'
                   ? intl.formatMessage({ id: 'navigation.listings' })
@@ -228,14 +278,14 @@ export function HouseholdWorkspace({
             ))}
             <Button
               className={classes.navTab}
-              variant={tab === 'viewings' ? 'filled' : 'default'}
-              aria-pressed={tab === 'viewings'}
+              variant={barTab === 'viewings' ? 'filled' : 'default'}
+              aria-pressed={barTab === 'viewings'}
               leftSection={
                 <span className={classes.navIcon}>
                   <CalendarDays size={20} aria-hidden />
                 </span>
               }
-              onClick={() => navigation.changeTab('viewings')}
+              onClick={() => pressTab('viewings')}
             >
               <FormattedMessage id="navigation.viewings" />
             </Button>
@@ -247,9 +297,9 @@ export function HouseholdWorkspace({
                     <Ellipsis
                       size={20}
                       fill={
-                        tab !== 'suggestions' &&
-                        tab !== 'favorites' &&
-                        tab !== 'viewings'
+                        barTab !== 'suggestions' &&
+                        barTab !== 'favorites' &&
+                        barTab !== 'viewings'
                           ? 'currentColor'
                           : 'none'
                       }
@@ -257,9 +307,9 @@ export function HouseholdWorkspace({
                     />
                   }
                   variant={
-                    tab !== 'suggestions' &&
-                    tab !== 'favorites' &&
-                    tab !== 'viewings'
+                    barTab !== 'suggestions' &&
+                    barTab !== 'favorites' &&
+                    barTab !== 'viewings'
                       ? 'filled'
                       : 'default'
                   }
@@ -390,94 +440,106 @@ export function HouseholdWorkspace({
               onSaveProfile={onSaveProfile}
               access={access}
             />
-          ) : (
-            <ListingsPanel
-              tab={tab}
-              snapshot={snapshot}
-              userId={userId}
-              mapStyleUrl={mapStyleUrl}
-              person={person}
-              onPersonChange={(value) =>
-                navigation.updateSearch({ person: value })
-              }
-              section={section}
-              onSectionChange={(value) =>
-                navigation.updateSearch({
-                  section: validateBrowseSearch({ section: value }).section,
-                })
-              }
-              filters={filters}
-              hiddenIds={hidden}
-              hiddenCount={hiddenCount}
-              duplicateCount={duplicateCount}
-              alsoOn={alsoOn}
-              onHide={hide}
-              onHideMany={hiddenActions.hideMany}
-              onUndoHide={hiddenActions.undo}
-              hideBusy={hiddenActions.busy}
-              hideError={formatFeedback(intl, hiddenActions.error)}
-              hideMessage={hiddenActions.message}
-              undoHideCount={hiddenActions.undoCount}
-              canHide={hiddenActions.canHide}
-              onInvite={
-                access &&
-                snapshot.members.length === 1 &&
-                snapshot.members[0].userId === userId &&
-                snapshot.members[0].role === 'owner'
-                  ? () => navigation.changeTab('settings', 'household')
-                  : undefined
-              }
-              selecting={search.select}
-              onSelectingChange={(value) =>
-                navigation.setLayer('select', value)
-              }
-              filtersOpen={search.filterOpen}
-              onFiltersOpenChange={(value) =>
-                navigation.setLayer('filterOpen', value)
-              }
-              onUnhide={unhide}
-              onFiltersChange={(value) =>
-                navigation.updateSearch({ filters: value })
-              }
-              filterHosts={filterHosts}
-              total={scoped.length}
-              scoped={scoped}
-              duplicateIds={duplicateIds}
-              visible={visible}
-              selected={selected}
-              selectedId={listingId ?? selectedId}
-              onSelectedIdChange={setSelectedId}
-              detailsOpen={detailsOpen}
-              onOpenListing={(id) => {
-                setSelectedId(id);
-                navigation.openListing(id);
-              }}
-              onCloseListing={navigation.closeListing}
-              onSeeSelectedOnMap={() => {
-                setSelectedId(listingId);
-                navigation.seeSelectedOnMap();
-              }}
-              sort={search.sort}
-              onSortChange={(value) => navigation.updateSearch({ sort: value })}
-              view={view}
-              onViewChange={(value) => navigation.updateSearch({ view: value })}
-              satellite={satellite}
-              onSatelliteChange={setSatellite}
-              pending={pending}
-              mapWarning={
-                stale && !synthetic
-                  ? intl.formatMessage({
-                      id: 'navigation.over36HoursOldSoFactsMayBeStale',
+          ) : null}
+          {/* Both lists stay mounted: a return visit reveals the kept list, and the other list renders while idle.
+              The hidden one gets no selection, layer, drawer or map, so it never competes with the shown one. */}
+          {LIST_TABS.map((listTab) => {
+            const shown = tab === listTab;
+            return (
+              <Activity key={listTab} mode={shown ? 'visible' : 'hidden'}>
+                <ListingsPanel
+                  tab={listTab}
+                  snapshot={snapshot}
+                  userId={userId}
+                  mapStyleUrl={mapStyleUrl}
+                  person={person}
+                  onPersonChange={(value) =>
+                    navigation.updateSearch({ person: value })
+                  }
+                  section={section}
+                  onSectionChange={(value) =>
+                    navigation.updateSearch({
+                      section: validateBrowseSearch({ section: value }).section,
                     })
-                  : undefined
-              }
-              canSave={canSave}
-              notes={notes}
-              onFavorite={favorite}
-              onSaveMany={onSaveFavorites ? saveMany : undefined}
-              saveBusy={batchBusy}
-            />
-          )}
+                  }
+                  filters={filters}
+                  hiddenIds={hidden}
+                  hiddenCount={views[listTab].hiddenCount}
+                  duplicateCount={views[listTab].duplicateCount}
+                  alsoOn={alsoOn}
+                  onHide={hide}
+                  onHideMany={hiddenActions.hideMany}
+                  onUndoHide={hiddenActions.undo}
+                  hideBusy={hiddenActions.busy}
+                  hideError={formatFeedback(intl, hiddenActions.error)}
+                  hideMessage={hiddenActions.message}
+                  undoHideCount={hiddenActions.undoCount}
+                  canHide={hiddenActions.canHide}
+                  onInvite={
+                    access &&
+                    snapshot.members.length === 1 &&
+                    snapshot.members[0].userId === userId &&
+                    snapshot.members[0].role === 'owner'
+                      ? () => navigation.changeTab('settings', 'household')
+                      : undefined
+                  }
+                  selecting={shown && search.select}
+                  onSelectingChange={(value) =>
+                    navigation.setLayer('select', value)
+                  }
+                  filtersOpen={shown && search.filterOpen}
+                  onFiltersOpenChange={(value) =>
+                    navigation.setLayer('filterOpen', value)
+                  }
+                  onUnhide={unhide}
+                  onFiltersChange={(value) =>
+                    navigation.updateSearch({ filters: value })
+                  }
+                  filterHosts={filterHosts}
+                  total={views[listTab].scoped.length}
+                  scoped={views[listTab].scoped}
+                  duplicateIds={duplicateIds}
+                  visible={views[listTab].visible}
+                  selected={shown ? selected : null}
+                  selectedId={shown ? (listingId ?? selectedId) : null}
+                  onSelectedIdChange={setSelectedId}
+                  detailsOpen={shown && detailsOpen}
+                  onOpenListing={(id) => {
+                    setSelectedId(id);
+                    navigation.openListing(id);
+                  }}
+                  onCloseListing={navigation.closeListing}
+                  onSeeSelectedOnMap={() => {
+                    setSelectedId(listingId);
+                    navigation.seeSelectedOnMap();
+                  }}
+                  sort={search.sort}
+                  onSortChange={(value) =>
+                    navigation.updateSearch({ sort: value })
+                  }
+                  view={shown ? view : 'list'}
+                  onViewChange={(value) =>
+                    navigation.updateSearch({ view: value })
+                  }
+                  satellite={satellite}
+                  onSatelliteChange={setSatellite}
+                  pending={pending}
+                  mapWarning={
+                    stale && !synthetic
+                      ? intl.formatMessage({
+                          id: 'navigation.over36HoursOldSoFactsMayBeStale',
+                        })
+                      : undefined
+                  }
+                  canSave={canSave}
+                  notes={notes}
+                  onFavorite={favorite}
+                  onSaveMany={onSaveFavorites ? saveMany : undefined}
+                  saveBusy={batchBusy}
+                />
+              </Activity>
+            );
+          })}
           {!synthetic && (
             <FeedbackWidget key={userId} visible={tab === 'settings'} />
           )}

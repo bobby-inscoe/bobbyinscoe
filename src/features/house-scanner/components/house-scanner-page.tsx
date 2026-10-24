@@ -8,10 +8,9 @@ import {
   Stack,
   Title,
 } from '@mantine/core';
-import { useNetwork } from '@mantine/hooks';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { ArrowLeft } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { HouseholdWorkspace } from '@/features/house-scanner/components/household-workspace';
 import { SyntheticWorkspace } from '@/features/house-scanner/components/synthetic-workspace';
@@ -40,11 +39,33 @@ export function HouseScannerPage() {
   );
 }
 
+function subscribeOnline(onChange: () => void) {
+  window.addEventListener('online', onChange);
+  window.addEventListener('offline', onChange);
+  return () => {
+    window.removeEventListener('online', onChange);
+    window.removeEventListener('offline', onChange);
+  };
+}
+
+// Reads only online state: Mantine's useNetwork re-rendered the whole page on every connection estimate change.
+function OfflineAlert() {
+  const online = useSyncExternalStore(
+    subscribeOnline,
+    () => navigator.onLine,
+    () => true,
+  );
+  return online ? null : (
+    <Alert color="orange">
+      <FormattedMessage id="navigation.offline" />
+    </Alert>
+  );
+}
+
 function HouseScannerContent() {
   const intl = useIntl();
   const pageRef = useMobileNavigation();
   useShellterPwa();
-  const { online } = useNetwork();
 
   const [demo, setDemo] = useState(
     () =>
@@ -127,11 +148,7 @@ function HouseScannerContent() {
           </Group>
         </header>
         <Stack className={classes.content} gap="xs">
-          {!online && (
-            <Alert color="orange">
-              <FormattedMessage id="navigation.offline" />
-            </Alert>
-          )}
+          <OfflineAlert />
           {import.meta.env.DEV && demo ? (
             <SyntheticWorkspace controlsOpen={demoControlsOpen} />
           ) : (

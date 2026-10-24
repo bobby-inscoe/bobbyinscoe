@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { flushSync } from 'react-dom';
 import { useIntl } from 'react-intl';
 import { ListingPhoto } from '@/features/house-scanner/components/listing-photo';
 import { displayLabel } from '@/features/house-scanner/i18n/display-labels';
@@ -45,13 +46,17 @@ export function ListingGallery({
     : photos;
   const slot = useRef(index + (loop ? 1 : 0));
   const initialized = useRef(false);
-  const reducedMotion = useReducedMotion();
+  // Read at mount: every card has a gallery, and a value set later re-rendered each one.
+  const reducedMotion = useReducedMotion(undefined, {
+    getInitialValueInEffect: false,
+  });
   const [controlsHidden, setControlsHidden] = useState(false);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const swiping = useRef(false);
   const suppressClick = useRef(false);
   const [scrollPosition, setScrollPosition] = useState(index);
   const progress = reducedMotion ? Math.round(scrollPosition) : scrollPosition;
+  const shownSlot = scrollPosition + (loop ? 1 : 0);
   // Long galleries crossfade their end windows instead of sweeping through every dot on a loop.
   const dotLayers =
     photos.length > 7 && (progress < 0 || progress > photos.length - 1)
@@ -185,6 +190,8 @@ export function ListingGallery({
           // Edge copies join the last and first photos without a visible jump.
           if (loop && (next === 0 || next === photos.length + 1)) {
             next = next === 0 ? photos.length : 1;
+            // Render the real photo before jumping to it, since far slides stay empty.
+            flushSync(() => setScrollPosition(next - 1));
             element.scrollTo({
               left: next * element.clientWidth,
               behavior: 'instant',
@@ -197,34 +204,40 @@ export function ListingGallery({
       >
         {slides.length ? (
           slides.map((photo, position) => (
+            // Only the shown photo and its neighbours render; the rest keep their width empty.
             <div
               key={`${loop && position === 0 ? 'before' : loop && position === slides.length - 1 ? 'after' : 'photo'}-${photo.url}`}
               className={classes.photoSlide}
               inert={position !== index + (loop ? 1 : 0)}
               aria-hidden={position !== index + (loop ? 1 : 0)}
             >
-              <ListingPhoto
-                listing={{
-                  ...listing,
-                  photo,
-                  title:
-                    photo.url === listing.floorPlan?.url
-                      ? intl.formatMessage({ id: 'listings.details.floorPlan' })
-                      : listing.title,
-                }}
-                contain={contain || photo.url === listing.floorPlan?.url}
-                showAttribution={false}
-                linkToListing={!fullScreen}
-                onOpen={onOpen}
-                actionLabel={
-                  actionLabel ??
-                  (onOpen
-                    ? intl.formatMessage({
-                        id: 'listings.details.viewFullScreen',
-                      })
-                    : undefined)
-                }
-              />
+              {(Math.abs(position - shownSlot) < 2 ||
+                position === index + (loop ? 1 : 0)) && (
+                <ListingPhoto
+                  listing={{
+                    ...listing,
+                    photo,
+                    title:
+                      photo.url === listing.floorPlan?.url
+                        ? intl.formatMessage({
+                            id: 'listings.details.floorPlan',
+                          })
+                        : listing.title,
+                  }}
+                  contain={contain || photo.url === listing.floorPlan?.url}
+                  showAttribution={false}
+                  linkToListing={!fullScreen}
+                  onOpen={onOpen}
+                  actionLabel={
+                    actionLabel ??
+                    (onOpen
+                      ? intl.formatMessage({
+                          id: 'listings.details.viewFullScreen',
+                        })
+                      : undefined)
+                  }
+                />
+              )}
             </div>
           ))
         ) : (

@@ -712,7 +712,9 @@ test('unknown prices are kept or hidden by the checkbox, and an empty result say
   await applyFilters(page);
   await expect(page.getByRole('article')).toHaveCount(0);
   await expect(
-    page.getByText('Clear the filters', { exact: false }),
+    page
+      .getByText('Clear the filters', { exact: false })
+      .filter({ visible: true }),
   ).toBeVisible();
 });
 
@@ -1490,7 +1492,10 @@ test('the Viewings tab lists saved homes with their times and hands over a calen
     page.getByRole('heading', { name: 'Viewings', level: 2 }),
   ).toHaveCount(0);
   // Two viewings are listed for this home, one a day away and one a week away.
-  await expect(page.getByText('Example balcony home')).toHaveCount(2);
+  // The list tabs stay mounted out of sight, so count only what is shown.
+  await expect(
+    page.getByText('Example balcony home').filter({ visible: true }),
+  ).toHaveCount(2);
   const download = page.waitForEvent('download');
   await page
     .getByRole('button', { name: /Add to calendar: Example balcony home/ })

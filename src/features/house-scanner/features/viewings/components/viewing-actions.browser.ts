@@ -86,6 +86,8 @@ test('a failed hide in the Viewings drawer reports the error inside the drawer a
   await drawer.getByRole('button', { name: 'Close listing details' }).click();
   await expect(drawer).not.toBeVisible();
   await expect(
-    page.getByText('Could not confirm the change', { exact: false }),
+    page
+      .getByText('Could not confirm the change', { exact: false })
+      .filter({ visible: true }),
   ).toContainText('Could not confirm the change');
 });

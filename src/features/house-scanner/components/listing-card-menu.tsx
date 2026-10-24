@@ -1,5 +1,5 @@
 import { Button, Menu } from '@mantine/core';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { classes } from '@/features/house-scanner/theme/shellter-theme';
 import type { Listing } from '@/features/house-scanner/types/contracts';
@@ -14,6 +14,15 @@ export function ListingCardMenu({
 }) {
   const intl = useIntl();
   const [copied, setCopied] = useState(false);
+  const [armed, setArmed] = useState(false);
+  const [opened, setOpened] = useState(false);
+  const target = useRef<HTMLButtonElement>(null);
+  // The armed button replaces the first one, so focus it before opening for focus to return there.
+  useEffect(() => {
+    if (!armed) return;
+    target.current?.focus();
+    setOpened(true);
+  }, [armed]);
   const shareUrl = listing.sourceUrls[0];
   const located = onSeeOnMap && hasPin(listing.coordinates);
   const canShare = typeof navigator.share === 'function';
@@ -31,20 +40,30 @@ export function ListingCardMenu({
     }
   };
   if (!shareUrl && !located) return null;
+  const trigger = (
+    <Button
+      ref={target}
+      size="xs"
+      variant="subtle"
+      aria-label={intl.formatMessage(
+        { id: 'listings.details.moreActionsFor' },
+        { value0: listing.title },
+      )}
+      onClick={armed ? undefined : () => setArmed(true)}
+    >
+      <FormattedMessage id="listings.details.more" />
+    </Button>
+  );
+  // Every card has this menu, so the Mantine menu mounts on first use and opens at once.
+  if (!armed) return trigger;
   return (
-    <Menu position="bottom-end" classNames={{ item: classes.cardMenuItem }}>
-      <Menu.Target>
-        <Button
-          size="xs"
-          variant="subtle"
-          aria-label={intl.formatMessage(
-            { id: 'listings.details.moreActionsFor' },
-            { value0: listing.title },
-          )}
-        >
-          <FormattedMessage id="listings.details.more" />
-        </Button>
-      </Menu.Target>
+    <Menu
+      position="bottom-end"
+      opened={opened}
+      onChange={setOpened}
+      classNames={{ item: classes.cardMenuItem }}
+    >
+      <Menu.Target>{trigger}</Menu.Target>
       <Menu.Dropdown>
         {shareUrl && (
           <Menu.Item onClick={share} closeMenuOnClick={canShare}>

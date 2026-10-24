@@ -5,24 +5,27 @@ import {
 } from '@/features/house-scanner/features/listings/features/list/utils/listing-sort';
 import type { Listing } from '@/features/house-scanner/types/contracts';
 
-const LIST_BATCH_SIZE = 32;
+// A phone shows one or two cards, so it builds 8 at a time; wider screens fill a grid.
+const batchSize = () =>
+  window.matchMedia('(max-width: 35.99375em)').matches ? 8 : 32;
 
 export function useListBatching(
   visible: Listing[],
   sort: ListingSort,
   view: 'list' | 'map',
 ) {
+  const [size] = useState(batchSize);
   const [listRender, setListRender] = useState({
     visible,
     sort,
-    count: LIST_BATCH_SIZE,
+    count: size,
   });
   const listEnd = useRef<HTMLDivElement>(null);
   const ordered = useMemo(() => sortListings(visible, sort), [visible, sort]);
   const renderedCount =
     listRender.visible === visible && listRender.sort === sort
       ? listRender.count
-      : LIST_BATCH_SIZE;
+      : size;
   useEffect(() => {
     if (view !== 'list' || renderedCount >= ordered.length || !listEnd.current)
       return;
@@ -32,13 +35,13 @@ export function useListBatching(
           setListRender({
             visible,
             sort,
-            count: Math.min(renderedCount + LIST_BATCH_SIZE, ordered.length),
+            count: Math.min(renderedCount + size, ordered.length),
           });
       },
       { rootMargin: '600px' },
     );
     observer.observe(listEnd.current);
     return () => observer.disconnect();
-  }, [view, renderedCount, ordered.length, visible, sort]);
+  }, [view, renderedCount, ordered.length, visible, sort, size]);
   return { ordered, renderedCount, listEnd };
 }
