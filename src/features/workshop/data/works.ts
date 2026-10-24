@@ -18,9 +18,9 @@ export const WORKS = [
   {
     id: 'common-basket',
     title: 'Basket',
-    label: 'Proof of concept',
+    label: 'Shared checklists',
     description:
-      'Several people can edit the same grocery list. An early proof of concept.',
+      'Shared lists for groceries, packing, and plans with friends. Join with a link and save kits for next time.',
     paragraphs: [],
     facts: [['Focus', 'Collaborative editing']],
   },
