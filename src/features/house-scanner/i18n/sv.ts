@@ -798,6 +798,19 @@ export const sv = {
       'Du är offline. Anslut till internet för att läsa in eller uppdatera bostäder. Ändringar kan inte sparas offline.',
     leaveDemo: 'Lämna demon',
     demo: 'Demo',
+    demoScreen: 'Demovy',
+    restartDemoScreen: 'Börja om',
+    demoPreviewNotice:
+      'Förhandsvisa med påhittade uppgifter. Formulären fungerar utan riktiga inloggningsuppgifter. Inga konton skapas och inga mejl skickas. Ändringar rensas när du byter vy eller börjar om.',
+    demoScreens: {
+      app: 'Befintligt hushåll',
+      'signed-out': 'Utloggad',
+      create: 'Inbjudan: skapa ett hushåll',
+      join: 'Inbjudan: gå med i ett hushåll',
+      'new-household': 'Kom igång med ett nytt hushåll',
+      recovery: 'Välj ett nytt lösenord',
+      nonmember: 'Konto utan hushåll',
+    },
     backToTheWorkshop: 'Tillbaka till verkstaden',
     householdShortlist: 'Hushållets bostadslista',
     thisHouseholdUsesStarterCriteriaApartmentsInGoteborgFrom:

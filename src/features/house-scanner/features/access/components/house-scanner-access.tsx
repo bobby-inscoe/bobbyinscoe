@@ -23,21 +23,31 @@ import {
 } from '@/features/house-scanner/i18n/catalogs';
 import type { Household } from '@/features/house-scanner/types/household';
 
-export function HouseScannerAccess({
-  children,
-  onDemo,
-  inviteToken = null,
-  onInviteDone,
-}: {
+type AccessProps = {
   children: (household: Household, signOut: () => void) => ReactNode;
   onDemo?: () => void;
   // Set on the invitation page: the link's token, or '' for a malformed link.
   inviteToken?: string | null;
   onInviteDone?: () => void;
+};
+
+export function HouseScannerAccess(props: AccessProps) {
+  const session = useHouseholdSession();
+  return <HouseScannerAccessView {...props} session={session} />;
+}
+
+// The demo supplies an in-memory session to the same screens as a real visitor.
+export function HouseScannerAccessView({
+  session,
+  children,
+  onDemo,
+  inviteToken = null,
+  onInviteDone,
+}: AccessProps & {
+  session: ReturnType<typeof useHouseholdSession>;
 }) {
   const intl = useIntl();
 
-  const session = useHouseholdSession();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<Feedback | null>(null);
   async function perform(action: () => Promise<void>) {

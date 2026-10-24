@@ -108,6 +108,10 @@ test('private access is closed by default and demo state leaves no browser stora
   page,
 }) => {
   await expect(page.getByRole('article')).toHaveCount(0);
+  const initialStorage = await page.evaluate(() => ({
+    local: { ...localStorage },
+    session: { ...sessionStorage },
+  }));
   const requests: string[] = [];
   page.on('request', (request) => requests.push(request.url()));
   await openDemo(page);
@@ -127,10 +131,10 @@ test('private access is closed by default and demo state leaves no browser stora
   else await expect(balcony.getByText('Saved by Demo Morgan')).toBeVisible();
   expect(
     await page.evaluate(() => ({
-      local: Object.keys(localStorage),
-      session: Object.keys(sessionStorage),
+      local: { ...localStorage },
+      session: { ...sessionStorage },
     })),
-  ).toEqual({ local: [], session: [] });
+  ).toEqual(initialStorage);
   expect(
     requests.filter(
       (url) => !new URL(url).hostname.match(/^(localhost|127\.0\.0\.1)$/),
@@ -314,6 +318,8 @@ test('criteria revisions re-evaluate suggestions and keep favorites', async ({
     .fill('1500000');
   await page.getByRole('button', { name: 'Save criteria' }).click();
   await expect(page.getByText(/Profile saved/)).toBeVisible();
+  // Keyboard navigation reveals the mobile tab bar after scrolling down the form.
+  await page.keyboard.press('Tab');
   await page.getByRole('button', { name: 'Listings', exact: true }).click();
   await expect(page.getByRole('article')).toHaveCount(1);
   await expect(

@@ -46,7 +46,11 @@ function HouseScannerContent() {
   useShellterPwa();
   const { online } = useNetwork();
 
-  const [demo, setDemo] = useState(false);
+  const [demo, setDemo] = useState(
+    () =>
+      import.meta.env.DEV &&
+      new URLSearchParams(window.location.search).has('demo'),
+  );
   const [inviteToken, setInviteToken] = useState(readInviteToken);
   const navigate = useNavigate();
   // The site title lives in index.html; name Shellter in the tab while this page is open.
