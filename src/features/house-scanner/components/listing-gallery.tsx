@@ -45,7 +45,10 @@ export function ListingGallery({
     : photos;
   const slot = useRef(index + (loop ? 1 : 0));
   const initialized = useRef(false);
-  const reducedMotion = useReducedMotion();
+  // Read at mount: every card has a gallery, and a value set later re-rendered each one.
+  const reducedMotion = useReducedMotion(undefined, {
+    getInitialValueInEffect: false,
+  });
   const [controlsHidden, setControlsHidden] = useState(false);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const swiping = useRef(false);

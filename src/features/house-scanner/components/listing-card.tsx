@@ -204,7 +204,6 @@ export const ListingCard = memo(function ListingCard({
       ),
     };
   }, [listing, snapshot, userId, details, hidden, intl]);
-  // Keep checkbox widgets mounted and reusable; opening Select only reveals their lightweight wrappers.
   const selectionControl = useMemo(
     () => (
       <Checkbox
@@ -278,8 +277,9 @@ export const ListingCard = memo(function ListingCard({
           openPrimary();
       }}
     >
+      {/* Mounted only while selecting: a hidden checkbox per card re-rendered every list mount. */}
       <div className={classes.selectionRow} hidden={!selectionMode}>
-        {selectionControl}
+        {selectionMode && selectionControl}
       </div>
       <div className={`${classes.photoWrap} ${classes.cardPhoto}`}>
         {!details &&
