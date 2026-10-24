@@ -55,11 +55,23 @@ const memberPhotos = (urls: string[]) =>
     hotlinkAllowed: true as const,
   }));
 
-export function useDemoHousehold() {
-  const [snapshot, setSnapshot] = useState<Snapshot>(() =>
-    demoViewings(structuredClone(SYNTHETIC_SNAPSHOT)),
-  );
-  const [notes] = useState(createDemoNoteStore);
+export function useDemoHousehold(newHousehold = false) {
+  const [snapshot, setSnapshot] = useState<Snapshot>(() => {
+    const initial = demoViewings(structuredClone(SYNTHETIC_SNAPSHOT));
+    if (newHousehold) {
+      initial.members = initial.members.filter(
+        ({ userId }) => userId === DEMO_USER_ID,
+      );
+      initial.favorites = [];
+    } else {
+      initial.profiles = initial.profiles.map((profile) => ({
+        ...profile,
+        revision: 2,
+      }));
+    }
+    return initial;
+  });
+  const [notes] = useState(() => createDemoNoteStore(!newHousehold));
   async function saveFavorite(listingId: string) {
     setSnapshot((current) =>
       current.favorites.some(
@@ -248,20 +260,18 @@ export function useDemoHousehold() {
   // Members and invitations live in memory; nothing is sent, and a link only points back at the demo.
   const [household, setHousehold] = useState<HouseholdAccess>(() => ({
     name: 'Demo household',
-    members: SYNTHETIC_SNAPSHOT.members.map(
-      ({ userId, displayName, role }) => ({
-        userId,
-        displayName,
-        role,
-        active: true,
-      }),
-    ),
+    members: snapshot.members.map(({ userId, displayName, role }) => ({
+      userId,
+      displayName,
+      role,
+      active: true,
+    })),
     invitations: [],
   }));
   const access: HouseholdAccessActions = {
     load: async () => household,
     createLink: async (purpose) =>
-      `${window.location.origin}/shellter/invite?token=${purpose}`,
+      `${window.location.origin}/shellter?demo=${purpose}`,
     sendLink: async (purpose, email) => {
       const now = Date.now();
       setHousehold((current) => ({
@@ -276,7 +286,7 @@ export function useDemoHousehold() {
           },
         ],
       }));
-      return `${window.location.origin}/shellter/invite?token=${purpose}`;
+      return `${window.location.origin}/shellter?demo=${purpose}`;
     },
     revoke: async (id) =>
       setHousehold((current) => ({
@@ -300,8 +310,42 @@ export function useDemoHousehold() {
       })),
     leave: async () => {},
   };
+  async function acceptInvitation(
+    householdName: string | null,
+    displayName: string,
+  ) {
+    const updateMember = <
+      T extends {
+        userId: string;
+        displayName: string;
+        role: 'owner' | 'member';
+      },
+    >(
+      member: T,
+    ) =>
+      member.userId === DEMO_USER_ID
+        ? {
+            ...member,
+            displayName: displayName.trim() || member.displayName,
+            role:
+              householdName === null ? ('member' as const) : ('owner' as const),
+          }
+        : householdName === null
+          ? { ...member, role: 'owner' as const }
+          : member;
+    setSnapshot((current) => ({
+      ...current,
+      members: current.members.map(updateMember),
+    }));
+    setHousehold((current) => ({
+      ...current,
+      name: householdName?.trim() || current.name,
+      members: current.members.map(updateMember),
+    }));
+  }
   return {
     snapshot,
+    acceptInvitation,
     access,
     saveFavorite,
     saveFavorites,

@@ -279,9 +279,9 @@ const SEEDED_NOTES: [string, ListingNote][] = [
 
 // One shared note per member and listing, revisioned like hs_save_note.
 // Created per demo session, so leaving the demo discards every edit.
-export function createDemoNoteStore(): DemoNoteStore {
+export function createDemoNoteStore(seeded = true): DemoNoteStore {
   const notes = new Map<string, ListingNote[]>();
-  for (const [listingId, note] of SEEDED_NOTES)
+  for (const [listingId, note] of seeded ? SEEDED_NOTES : [])
     notes.set(listingId, [...(notes.get(listingId) ?? []), { ...note }]);
   return {
     list(listingId) {

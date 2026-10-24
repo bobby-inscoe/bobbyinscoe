@@ -4,8 +4,9 @@ export default defineConfig({
   testDir: './src/features/house-scanner',
   testMatch: '**/*.browser.ts',
   outputDir: '.browser-test-results',
-  fullyParallel: false,
-  workers: 1,
+  // Each test gets its own browser context, and the demo keeps its state in memory.
+  fullyParallel: true,
+  workers: 2,
   use: {
     baseURL: process.env.HOUSE_SCANNER_BROWSER_URL ?? 'http://localhost:5183',
     channel: 'msedge',

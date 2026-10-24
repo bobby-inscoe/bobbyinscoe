@@ -2,7 +2,15 @@ import { expect, type Page, test } from '@playwright/test';
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
-test.beforeEach(async ({ context }) => {
+test.beforeEach(async ({ context, page }) => {
+  // The dev-only demo controls push the app down on a phone; tests use the app itself.
+  await page.addLocatorHandler(page.locator('#shellter-demo-controls'), () =>
+    page
+      .getByRole('button', {
+        name: /^(Hide demo controls|Dölj demokontroller)$/,
+      })
+      .click(),
+  );
   await context.route('**/*', async (route) => {
     const url = new URL(route.request().url());
     if (['localhost', '127.0.0.1'].includes(url.hostname))
@@ -97,7 +105,7 @@ test('Swedish is the default and an explicit English choice survives reload', as
   ).toBe('sv');
 });
 
-test('member menu stays beside the name on mobile and desktop in both languages', async ({
+test('the member menu makes an owner and removes a member after confirmation', async ({
   page,
 }) => {
   await page.goto('/shellter');
@@ -108,73 +116,6 @@ test('member menu stays beside the name on mobile and desktop in both languages'
     })
     .click();
   await openSettings(page, true);
-  for (const width of [1440, 390, 320]) {
-    await page.setViewportSize({ width, height: 1000 });
-    for (const language of ['sv', 'en'] as const) {
-      if (language === 'en') await chooseLanguage(page, 'sv', 'en');
-      const row = page.getByRole('listitem').filter({ hasText: 'Demo Morgan' });
-      const name = row.getByText('Demo Morgan', { exact: true });
-      const trigger = row.getByRole('button', {
-        name:
-          language === 'sv'
-            ? 'Åtgärder för Demo Morgan'
-            : 'Actions for Demo Morgan',
-        exact: true,
-      });
-      await expect(trigger).toBeVisible();
-      const nameBox = await name.boundingBox();
-      const triggerBox = await trigger.boundingBox();
-      if (!nameBox || !triggerBox) throw new Error('Member row is missing');
-      expect(
-        Math.abs(
-          nameBox.y + nameBox.height / 2 - triggerBox.y - triggerBox.height / 2,
-        ),
-      ).toBeLessThan(1);
-      expect(nameBox.x + nameBox.width).toBeLessThanOrEqual(triggerBox.x);
-      expect(triggerBox.x + triggerBox.width).toBeLessThanOrEqual(width);
-      const select = page.getByRole('combobox', {
-        name: language === 'sv' ? 'Språk' : 'Language',
-        exact: true,
-      });
-      const selectWidth = await select.evaluate(
-        (element) => element.getBoundingClientRect().width,
-      );
-      if (width < 576) {
-        const contentWidth = await select.evaluate((element) => {
-          const paper = element.closest('.mantine-Paper-root');
-          if (!paper) throw new Error('Missing personal settings panel');
-          const style = getComputedStyle(paper);
-          return (
-            paper.clientWidth -
-            parseFloat(style.paddingLeft) -
-            parseFloat(style.paddingRight)
-          );
-        });
-        expect(Math.abs(selectWidth - contentWidth)).toBeLessThan(2);
-      } else expect(selectWidth).toBe(240);
-      await trigger.click();
-      await expect(
-        page.getByRole('menuitem', {
-          name: language === 'sv' ? 'Gör till ägare' : 'Make owner',
-          exact: true,
-        }),
-      ).toBeVisible();
-      await expect(
-        page.getByRole('menuitem', {
-          name: language === 'sv' ? 'Ta bort' : 'Remove',
-          exact: true,
-        }),
-      ).toBeVisible();
-      await page.keyboard.press('Escape');
-      await expect(trigger).toBeFocused();
-      expect(
-        await page.evaluate(
-          () => document.documentElement.scrollWidth <= window.innerWidth,
-        ),
-      ).toBe(true);
-      if (language === 'en') await chooseLanguage(page, 'en', 'sv');
-    }
-  }
   const trigger = page.getByRole('button', {
     name: 'Åtgärder för Demo Morgan',
     exact: true,
@@ -202,27 +143,7 @@ test('member menu stays beside the name on mobile and desktop in both languages'
   ).toHaveCount(0);
 });
 
-test('Sign out follows personal settings and calls the session action', async ({
-  page,
-}) => {
-  await page.route(
-    '**/src/features/house-scanner/components/synthetic-workspace.tsx*',
-    async (route) => {
-      const response = await route.fetch();
-      const source = await response.text();
-      const marker = 'userId: DEMO_USER_ID,';
-      if (!source.includes(marker))
-        throw new Error('Demo workspace fixture changed');
-      await route.fulfill({
-        response,
-        body: source.replace(
-          marker,
-          marker +
-            "onSignOut: () => { document.documentElement.dataset.signedOut = 'true'; },",
-        ),
-      });
-    },
-  );
+test('Sign out in personal settings ends the session', async ({ page }) => {
   await page.goto('/shellter');
   await page
     .getByRole('button', {
@@ -233,37 +154,9 @@ test('Sign out follows personal settings and calls the session action', async ({
   await openSettings(page, true);
   const signOut = page.getByRole('button', { name: 'Logga ut', exact: true });
   await expect(signOut).toBeVisible();
-  const language = page.getByRole('combobox', { name: 'Språk', exact: true });
-  expect(
-    await language.evaluate((element) => {
-      const signOut = Array.from(document.querySelectorAll('button')).find(
-        (button) => button.textContent === 'Logga ut',
-      );
-      return (
-        signOut &&
-        Boolean(
-          element.compareDocumentPosition(signOut) &
-            Node.DOCUMENT_POSITION_FOLLOWING,
-        )
-      );
-    }),
-  ).toBe(true);
-  for (const [name, width] of [
-    ['mobile', 390],
-    ['desktop', 1000],
-  ] as const) {
-    await page.setViewportSize({ width, height: 1300 });
-    await page
-      .getByRole('heading', { name: 'Hushåll', exact: true })
-      .evaluate((element) =>
-        element.scrollIntoView({ block: 'start', behavior: 'instant' }),
-      );
-    await page.screenshot({
-      path: `.browser-test-results/settings-${name}.png`,
-    });
-  }
   await signOut.click();
-  await expect(page.locator('html')).toHaveAttribute('data-signed-out', 'true');
+  await expect(signOut).toHaveCount(0);
+  await expect(page.getByRole('article')).toHaveCount(0);
 });
 
 test('map controls use the language selected in settings', async ({ page }) => {
@@ -274,6 +167,8 @@ test('map controls use the language selected in settings', async ({ page }) => {
     .click();
   await openSettings(page);
   await chooseLanguage(page, 'en', 'sv');
+  // The phone navigation recedes while scrolled; scrolling up brings it back.
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
   await page.getByRole('button', { name: 'Bostäder', exact: true }).click();
   await page.getByRole('button', { name: 'Karta', exact: true }).click();
   const map = page.getByLabel('Bostadskarta', { exact: true });

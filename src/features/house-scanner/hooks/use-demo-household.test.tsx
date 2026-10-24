@@ -15,6 +15,44 @@ afterEach(cleanup);
 const BALCONY = '00000000-0000-4000-8000-000000000010';
 const TERRACE = '00000000-0000-4000-8000-000000000011';
 
+it('starts onboarding with an empty household and saves the accepted identity in memory', async () => {
+  const { result } = renderHook(() => useDemoHousehold(true));
+  expect(result.current.snapshot.members).toHaveLength(1);
+  expect(result.current.snapshot.favorites).toEqual([]);
+  expect(await result.current.loadNotes(TERRACE)).toEqual([]);
+  await act(() =>
+    result.current.acceptInvitation('New demo home', 'New member'),
+  );
+  expect(result.current.snapshot.members[0]).toMatchObject({
+    displayName: 'New member',
+    role: 'owner',
+  });
+  expect(await result.current.access.load()).toMatchObject({
+    name: 'New demo home',
+    members: [{ displayName: 'New member', role: 'owner' }],
+  });
+  await act(() =>
+    result.current.saveProfile(result.current.snapshot.profiles[0]),
+  );
+  expect(result.current.snapshot.profiles[0].revision).toBe(2);
+});
+
+it('joins as a member and makes demo invitations reopen the simulated flow', async () => {
+  const { result } = renderHook(() => useDemoHousehold());
+  await act(() => result.current.acceptInvitation(null, 'Joined member'));
+  expect(
+    result.current.snapshot.members.find(
+      ({ userId }) => userId === DEMO_USER_ID,
+    ),
+  ).toMatchObject({ displayName: 'Joined member', role: 'member' });
+  expect(
+    result.current.snapshot.members.some(({ role }) => role === 'owner'),
+  ).toBe(true);
+  expect(await result.current.access.createLink('join')).toBe(
+    `${window.location.origin}/shellter?demo=join`,
+  );
+});
+
 it('hides and unhides in memory, and leaves the field out when none are hidden', async () => {
   const { result } = renderHook(useDemoHousehold);
   const hidden = () =>

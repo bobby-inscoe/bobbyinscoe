@@ -2,6 +2,20 @@ export interface NavigationTranslations {
   offline: string;
   leaveDemo: string;
   demo: string;
+  demoScreen: string;
+  hideDemoControls: string;
+  showDemoControls: string;
+  restartDemoScreen: string;
+  demoPreviewNotice: string;
+  demoScreens: {
+    app: string;
+    'signed-out': string;
+    create: string;
+    join: string;
+    'new-household': string;
+    recovery: string;
+    nonmember: string;
+  };
   backToTheWorkshop: string;
   householdShortlist: string;
   thisHouseholdUsesStarterCriteriaApartmentsInGoteborgFrom: string;
