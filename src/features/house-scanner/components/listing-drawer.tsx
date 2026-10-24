@@ -285,9 +285,9 @@ export function ListingDrawer({
                       </>
                     }
                     monthlyCost={
-                      // Remount per home and opening to discard price and cash edits on close.
+                      // Remount per home; closing unmounts the details, which discards price and cash edits.
                       <MonthlyCost
-                        key={`${listing.id}-${opened}`}
+                        key={listing.id}
                         listing={listing}
                         snapshot={snapshot}
                       />

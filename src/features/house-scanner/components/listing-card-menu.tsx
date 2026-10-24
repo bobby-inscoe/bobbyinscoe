@@ -49,6 +49,9 @@ export function ListingCardMenu({
         { id: 'listings.details.moreActionsFor' },
         { value0: listing.title },
       )}
+      // Mantine sets both once the menu mounts; until then the plain button announces the same.
+      aria-haspopup={armed ? undefined : 'menu'}
+      aria-expanded={armed ? undefined : false}
       onClick={armed ? undefined : () => setArmed(true)}
     >
       <FormattedMessage id="listings.details.more" />
