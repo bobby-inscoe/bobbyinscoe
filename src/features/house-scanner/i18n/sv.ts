@@ -29,6 +29,17 @@ export const sv = {
       'Ange rubrik och beskrivning och välj en tillåten bild på högst 5 MiB.',
   },
   settings: {
+    help: {
+      title: 'Så fungerar Shellter',
+      follows:
+        'Shellter följer lägenheter till salu i Göteborg och samlar dem i en lista.',
+      household:
+        'Ett hushåll är de som letar bostad tillsammans. Alla i hushållet ser samma bostäder.',
+      roles:
+        'Ägare ändrar sökkriterier och finansiering och bjuder in fler. Medlemmar sparar, döljer och skriver anteckningar, och kan bjuda in någon att skapa ett eget hushåll.',
+      criteriaAndFilters:
+        'Sparade kriterier avgör vilka bostäder hushållet ser. Filter under Bostäder begränsar bara din egen vy.',
+    },
     personal: {
       heading: 'Personliga inställningar',
       languageDescription: 'Språkvalet gäller bara dig i den här webbläsaren.',
@@ -55,20 +66,8 @@ export const sv = {
       savedPoint: 'Sparad punkt ({latitude}, {longitude})',
       legacySearchDescription:
         'Din sparade sökning omfattar {cities} eller bostäder inom {radius} från den sparade punkten. Den ändras inte förrän du väljer ett sökområde.',
-      budgetHelp:
-        'Önskad budget grupperar träffarna. Maxbudget filtrerar bort bostäder med ett högre känt utgångspris. Okända eller motstridiga uppgifter visas under Saknade uppgifter.',
-      locationHelp:
-        'Välj en hel kommun eller en radie runt en knutpunkt. Detta filtrerar sparade annonser och utökar inte mäklartäckningen.',
       roomsHeading: 'Rum',
       maximumRooms: 'Högsta antal rum',
-      shellterFollowsApartmentsForSaleInGoteborg:
-        'Shellter visar lägenheter till salu i Göteborg.',
-      householdProfileHelp:
-        'Hushållsprofilen anger de gemensamma sökkriterierna för alla i hushållet. Anpassa budget, storlek, antal rum, egenskaper och områden efter det du söker.',
-      filtersOnTheListingsTabAreYoursAloneAnd:
-        'Filtren på fliken Bostäder gäller bara dig och sparas i sidans webbadress, även när du laddar om. När du rensar dem behålls hushållets grundinställningar. Endast ägare kan ändra grundinställningarna.',
-      howDoesThisWork: 'Hur fungerar det?',
-      aboutShellter: 'Om Shellter',
       comingSoon: '{value0} (kommer snart)',
       notSupported: '{value0} (stöds inte)',
       profileSavedStoredHomesAreReEvaluatedAgainstThe:

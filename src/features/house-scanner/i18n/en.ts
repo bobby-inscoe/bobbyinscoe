@@ -29,6 +29,17 @@ export const en = {
       'Enter a title and description, and choose an allowed image up to 5 MiB.',
   },
   settings: {
+    help: {
+      title: 'How Shellter works',
+      follows:
+        'Shellter follows apartments for sale in Göteborg and gathers them in one list.',
+      household:
+        'A household is the people looking for a home together. Everyone in it sees the same homes.',
+      roles:
+        'Owners change the search criteria and financing, and invite people to join. Members save, hide and write notes, and can invite someone to start their own household.',
+      criteriaAndFilters:
+        'Saved criteria decide which homes the household sees. Filters on Listings only narrow your own view.',
+    },
     personal: {
       heading: 'Personal settings',
       languageDescription: 'Language applies only to this browser, for you.',
@@ -55,20 +66,8 @@ export const en = {
       savedPoint: 'Saved point ({latitude}, {longitude})',
       legacySearchDescription:
         'Your saved search includes {cities} or homes within {radius} of its saved point. It stays unchanged until you choose a location.',
-      budgetHelp:
-        'Preferred budget groups matches; maximum budget excludes homes with a higher known asking price. Unknown or disputed details stay under Missing info.',
-      locationHelp:
-        'Choose whole municipalities or a radius around a hub. This filters stored listings; it does not expand broker coverage.',
       roomsHeading: 'Rooms',
       maximumRooms: 'Maximum rooms',
-      shellterFollowsApartmentsForSaleInGoteborg:
-        'Shellter follows apartments for sale in Göteborg.',
-      householdProfileHelp:
-        'The household profile sets the shared search criteria for everyone in your household. Adjust budget, size, rooms, features and areas to fit what you are looking for.',
-      filtersOnTheListingsTabAreYoursAloneAnd:
-        'Filters on the Listings tab are yours alone and stay in the page URL, including after a reload. Clearing them keeps the shared defaults. Only owners can change these defaults.',
-      howDoesThisWork: 'How does this work?',
-      aboutShellter: 'About Shellter',
       comingSoon: '{value0} (coming soon)',
       notSupported: '{value0} (not supported)',
       profileSavedStoredHomesAreReEvaluatedAgainstThe:
