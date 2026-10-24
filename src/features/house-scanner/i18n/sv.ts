@@ -634,6 +634,9 @@ export const sv = {
         'Tryck på kartnålar för att välja bostäder och förhandsvisa dem. Använd Granska det här området för att välja fler.',
       undoHide: 'Ångra döljning ({value0})',
       noHomesHere: 'Inga bostäder här.{value0}',
+      favoritesEmpty:
+        'Bostäder som någon i hushållet sparar visas här. Tryck på stjärnan på en bostad för att spara den.',
+      inviteSomeone: 'Bjud in någon',
       clearTheFiltersToSeeMore: ' Rensa filtren för att se fler.',
       showHiddenHomes: 'Visa dolda bostäder',
       loadingMap: 'Laddar kartan…',
@@ -650,7 +653,7 @@ export const sv = {
       saved:
         '{count, plural, one {# bostad sparad bland dina favoriter.} other {# bostäder sparade bland dina favoriter.}}',
       hiddenCount:
-        '{count, plural, one {# bostad dold.} other {# bostäder dolda.}}',
+        '{count, plural, one {# bostad dold för hela hushållet.} other {# bostäder dolda för hela hushållet.}}',
       restoredCount:
         '{count, plural, one {# bostad visas igen.} other {# bostäder visas igen.}}',
       includesSavedCount:

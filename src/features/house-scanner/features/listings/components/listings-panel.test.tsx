@@ -53,6 +53,7 @@ function panelProps(onHideMany: PanelProps['onHideMany']): PanelProps {
     onUndoHide: async () => true,
     hideBusy: false,
     hideError: '',
+    hideMessage: '',
     undoHideCount: 0,
     canHide: true,
     selecting: true,
@@ -292,4 +293,21 @@ it('mounts list cards in batches and resets the rendered batch when order change
   rerender(<PanelHarness {...large} sort="price-asc" />);
   expect(screen.getAllByRole('article')).toHaveLength(32);
   vi.unstubAllGlobals();
+});
+
+it('explains an empty Favorites tab and offers an invite only when given one', () => {
+  const props = {
+    ...panelProps(vi.fn()),
+    tab: 'favorites' as const,
+    total: 0,
+    visible: [],
+    scoped: [],
+  };
+  const { rerender } = render(<PanelHarness {...props} />);
+  expect(screen.getByText(/Homes anyone in the household saves/)).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Invite someone' })).toBeNull();
+  const onInvite = vi.fn();
+  rerender(<PanelHarness {...props} onInvite={onInvite} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Invite someone' }));
+  expect(onInvite).toHaveBeenCalled();
 });

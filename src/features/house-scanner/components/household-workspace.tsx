@@ -410,8 +410,17 @@ export function HouseholdWorkspace({
               onUndoHide={hiddenActions.undo}
               hideBusy={hiddenActions.busy}
               hideError={formatFeedback(intl, hiddenActions.error)}
+              hideMessage={hiddenActions.message}
               undoHideCount={hiddenActions.undoCount}
               canHide={hiddenActions.canHide}
+              onInvite={
+                access &&
+                snapshot.members.length === 1 &&
+                snapshot.members[0].userId === userId &&
+                snapshot.members[0].role === 'owner'
+                  ? () => navigation.changeTab('settings', 'household')
+                  : undefined
+              }
               selecting={search.select}
               onSelectingChange={(value) =>
                 navigation.setLayer('select', value)

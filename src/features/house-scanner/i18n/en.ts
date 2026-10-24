@@ -628,6 +628,9 @@ export const en = {
         'Tap pins to select homes and see a preview. Use Review this area for a larger batch.',
       undoHide: 'Undo hide ({value0})',
       noHomesHere: 'No homes here.{value0}',
+      favoritesEmpty:
+        'Homes anyone in the household saves show up here. Tap the star on a home to save it.',
+      inviteSomeone: 'Invite someone',
       clearTheFiltersToSeeMore: ' Clear the filters to see more.',
       showHiddenHomes: 'Show hidden homes',
       loadingMap: 'Loading map…',
@@ -643,7 +646,7 @@ export const en = {
       saved:
         '{count, plural, one {# home saved to your favorites.} other {# homes saved to your favorites.}}',
       hiddenCount:
-        '{count, plural, one {# home hidden.} other {# homes hidden.}}',
+        '{count, plural, one {# home hidden for the whole household.} other {# homes hidden for the whole household.}}',
       restoredCount:
         '{count, plural, one {# home restored.} other {# homes restored.}}',
       includesSavedCount:
