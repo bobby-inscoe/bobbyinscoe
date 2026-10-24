@@ -51,7 +51,8 @@ In development, open Demo and use Demo screen to preview signed-out access,
 create or join invitations, new household setup, password recovery, an account
 without a household, or the existing household. Forms advance without real
 credentials, accounts or email. Switching screens or choosing Restart screen
-discards demo changes. Demo invitation links reopen the matching simulated flow;
+discards demo changes. Hide demo controls in the header removes the selector box
+without changing the current screen or form values. Demo invitation links reopen the matching simulated flow;
 `/shellter?demo=create` opens the create-household invitation directly. These
 previews are available only on the development server.
 

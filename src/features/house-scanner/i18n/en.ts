@@ -792,6 +792,8 @@ export const en = {
     leaveDemo: 'Leave demo',
     demo: 'Demo',
     demoScreen: 'Demo screen',
+    hideDemoControls: 'Hide demo controls',
+    showDemoControls: 'Show demo controls',
     restartDemoScreen: 'Restart screen',
     demoPreviewNotice:
       'Preview with fictional data. Forms work without real credentials. No accounts are created or emails sent. Switching or restarting clears changes.',

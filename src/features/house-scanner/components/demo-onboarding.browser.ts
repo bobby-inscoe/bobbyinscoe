@@ -52,6 +52,24 @@ test('demo previews onboarding and the app without contacting the account backen
     .getByRole('textbox', { name: 'Your name', exact: true })
     .fill('Preview person');
   await page
+    .getByRole('button', { name: 'Hide demo controls', exact: true })
+    .click();
+  await expect(
+    page.getByRole('combobox', { name: 'Demo screen', exact: true }),
+  ).toBeHidden();
+  await expect(
+    page.getByRole('textbox', { name: 'Your name', exact: true }),
+  ).toHaveValue('Preview person');
+  await page
+    .getByRole('button', { name: 'Show demo controls', exact: true })
+    .click();
+  await expect(
+    page.getByRole('combobox', { name: 'Demo screen', exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('textbox', { name: 'Your name', exact: true }),
+  ).toHaveValue('Preview person');
+  await page
     .getByRole('button', { name: 'Create household', exact: true })
     .click();
   await expect(

@@ -799,6 +799,8 @@ export const sv = {
     leaveDemo: 'Lämna demon',
     demo: 'Demo',
     demoScreen: 'Demovy',
+    hideDemoControls: 'Dölj demokontroller',
+    showDemoControls: 'Visa demokontroller',
     restartDemoScreen: 'Börja om',
     demoPreviewNotice:
       'Förhandsvisa med påhittade uppgifter. Formulären fungerar utan riktiga inloggningsuppgifter. Inga konton skapas och inga mejl skickas. Ändringar rensas när du byter vy eller börjar om.',

@@ -19,7 +19,11 @@ const screens = [
 ] as const;
 type DemoScreen = (typeof screens)[number];
 
-export function SyntheticWorkspace() {
+export function SyntheticWorkspace({
+  controlsOpen = true,
+}: {
+  controlsOpen?: boolean;
+}) {
   const intl = useIntl();
   const navigate = useNavigate();
   const [screen, setScreen] = useState<DemoScreen>(() => {
@@ -34,7 +38,7 @@ export function SyntheticWorkspace() {
   }
   return (
     <Stack gap="md">
-      <Alert>
+      <Alert id="shellter-demo-controls" hidden={!controlsOpen}>
         <Stack gap="xs">
           <FormattedMessage id="navigation.demoPreviewNotice" />
           <Group align="flex-end">

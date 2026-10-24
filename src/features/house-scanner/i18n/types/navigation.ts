@@ -3,6 +3,8 @@ export interface NavigationTranslations {
   leaveDemo: string;
   demo: string;
   demoScreen: string;
+  hideDemoControls: string;
+  showDemoControls: string;
   restartDemoScreen: string;
   demoPreviewNotice: string;
   demoScreens: {
