@@ -29,11 +29,13 @@ test('a large list mounts cards in batches while browsing controls work', async 
       });
     },
   );
+  // Phones build 8 cards per batch; wider screens fill a grid of 32.
+  const batch = test.info().project.name === 'narrow' ? 8 : 32;
   await page.goto('/shellter/listings');
   await page
     .getByRole('button', { name: 'Explore the synthetic demo' })
     .click();
-  await expect(page.getByRole('article')).toHaveCount(32);
+  await expect(page.getByRole('article')).toHaveCount(batch);
 
   await page.getByRole('button', { name: /^Filters(?: \(\d+\))?$/ }).click();
   await expect(page.getByRole('dialog', { name: 'Filters' })).toBeVisible();
@@ -46,12 +48,12 @@ test('a large list mounts cards in batches while browsing controls work', async 
     page.getByRole('checkbox', { name: 'Select Home 0' }),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Cancel selection' }).click();
-  await expect(page.getByRole('article')).toHaveCount(32);
+  await expect(page.getByRole('article')).toHaveCount(batch);
 
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-  await expect(page.getByRole('article')).toHaveCount(64);
+  await expect(page.getByRole('article')).toHaveCount(batch * 2);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.getByRole('combobox', { name: 'Sort homes' }).click();
   await page.getByRole('option', { name: 'Price: high to low' }).click();
-  await expect(page.getByRole('article')).toHaveCount(32);
+  await expect(page.getByRole('article')).toHaveCount(batch);
 });
