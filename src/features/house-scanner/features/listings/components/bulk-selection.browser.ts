@@ -1,6 +1,14 @@
 import { expect, test } from '@playwright/test';
 
 test.beforeEach(async ({ context, page }) => {
+  // The dev-only demo controls push the app down on a phone; tests use the app itself.
+  await page.addLocatorHandler(page.locator('#shellter-demo-controls'), () =>
+    page
+      .getByRole('button', {
+        name: /^(Hide demo controls|Dölj demokontroller)$/,
+      })
+      .click(),
+  );
   await context.route('**/*', async (route) => {
     const host = new URL(route.request().url()).hostname;
     if (host === 'localhost' || host === '127.0.0.1') await route.continue();
