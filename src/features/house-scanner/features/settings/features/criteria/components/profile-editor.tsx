@@ -80,14 +80,18 @@ export function ProfileEditor({
     );
   }
   function toggle(
-    key: 'excludeGroundFloor' | 'requireLift' | 'requireOutdoor',
+    key:
+      | 'excludeGroundFloor'
+      | 'requireLift'
+      | 'requireOutdoor'
+      | 'hideUnknownPrice',
     label: string,
   ) {
     return (
       <Checkbox
         key={key}
         label={label}
-        checked={criteria[key]}
+        checked={criteria[key] ?? false}
         disabled={!canEdit || !onSave}
         onChange={(event) => {
           const checked = event.currentTarget.checked;
@@ -214,6 +218,10 @@ export function ProfileEditor({
           intl.formatMessage({
             id: 'settings.criteria.requireABalconyOrTerrace',
           }),
+        )}
+        {toggle(
+          'hideUnknownPrice',
+          intl.formatMessage({ id: 'settings.criteria.hideUnknownPrice' }),
         )}
         {numeric(
           'feeReferenceSek',
