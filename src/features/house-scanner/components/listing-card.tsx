@@ -1,6 +1,5 @@
 import {
   Badge,
-  Box,
   Button,
   Checkbox,
   Group,
@@ -8,6 +7,7 @@ import {
   Title,
   UnstyledButton,
 } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
 import { memo, useMemo, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { FavoriteStar } from '@/features/house-scanner/components/favorite-star';
@@ -66,12 +66,6 @@ interface ListingCardProps {
   onSeeOnMap?: (listingId: string) => void;
 }
 
-// Compact cards swap to the phone summary below xs; a card with details always shows the full one.
-const desktopOnly = (details?: boolean) =>
-  details ? {} : { visibleFrom: 'xs' as const };
-const phoneOnly = (details?: boolean) =>
-  details ? { display: 'none' } : { hiddenFrom: 'xs' as const };
-
 export const ListingCard = memo(function ListingCard({
   listing,
   snapshot,
@@ -93,6 +87,12 @@ export const ListingCard = memo(function ListingCard({
   onSeeOnMap,
 }: ListingCardProps) {
   const intl = useIntl();
+  // Compact cards swap to the phone summary below xs; a card with details always shows the full one.
+  // Only the shown variant renders: hiding the other with CSS still built it for every card.
+  const phone =
+    useMediaQuery('(max-width: 35.99375em)', undefined, {
+      getInitialValueInEffect: false,
+    }) && !details;
   const [photoIndex, setPhotoIndex] = useState(0);
   const photos = cardPhotos(listing);
 
@@ -131,17 +131,21 @@ export const ListingCard = memo(function ListingCard({
       mine,
       summary: (
         <>
-          <Box {...desktopOnly(details)}>
-            <ReasonChips listing={listing} />
-          </Box>
-          <Box {...phoneOnly(details)} className={classes.cardAmenities}>
-            {chips.length > 0 && <Text size="sm">{chips.join(' · ')}</Text>}
-            {position && (
-              <Text size="sm" c="dimmed">
-                {position}
-              </Text>
-            )}
-          </Box>
+          {!phone && (
+            <div>
+              <ReasonChips listing={listing} />
+            </div>
+          )}
+          {phone && (
+            <div className={classes.cardAmenities}>
+              {chips.length > 0 && <Text size="sm">{chips.join(' · ')}</Text>}
+              {position && (
+                <Text size="sm" c="dimmed">
+                  {position}
+                </Text>
+              )}
+            </div>
+          )}
           {(showStatus ||
             listing.facts.bidding === true ||
             listing.origin === 'manual' ||
@@ -189,13 +193,13 @@ export const ListingCard = memo(function ListingCard({
               )}
             </Group>
           )}
-          {!details && (
-            <Box {...desktopOnly(details)}>
+          {!details && !phone && (
+            <div>
               <MatchLines listing={listing} snapshot={snapshot} />
-            </Box>
+            </div>
           )}
-          {saved.length > 0 && (
-            <Text size="sm" {...desktopOnly(details)}>
+          {saved.length > 0 && !phone && (
+            <Text size="sm">
               <FormattedMessage id="listings.details.savedBy" />{' '}
               {saved.map((favorite) => memberName(favorite.userId)).join(', ')}
             </Text>
@@ -203,7 +207,7 @@ export const ListingCard = memo(function ListingCard({
         </>
       ),
     };
-  }, [listing, snapshot, userId, details, hidden, intl]);
+  }, [listing, snapshot, userId, details, hidden, intl, phone]);
   const selectionControl = useMemo(
     () => (
       <Checkbox
@@ -339,26 +343,32 @@ export const ListingCard = memo(function ListingCard({
           {listing.title}
         </UnstyledButton>
       </Title>
-      {!details && (
-        <Box {...desktopOnly(details)}>
+      {!details && !phone && (
+        <div>
           <FactsLine listing={listing} />
-        </Box>
+        </div>
       )}
-      <Box {...phoneOnly(details)} className={classes.cardFacts}>
-        <KeyFacts listing={listing} />
-      </Box>
-      <Box {...desktopOnly(details)}>
-        <AlsoOn sites={alsoOn} />
-      </Box>
+      {phone && (
+        <div className={classes.cardFacts}>
+          <KeyFacts listing={listing} />
+        </div>
+      )}
+      {!phone && (
+        <div>
+          <AlsoOn sites={alsoOn} />
+        </div>
+      )}
       <div className={classes.cardViewing}>
         <NextViewing listing={listing} />
       </div>
       {summary}
       <div className={classes.grow} />
       <Group gap="xs" className={classes.cardActions}>
-        <Box {...desktopOnly(details)}>
-          <OriginalListingButton listing={listing} />
-        </Box>
+        {!phone && (
+          <div>
+            <OriginalListingButton listing={listing} />
+          </div>
+        )}
         <Button
           size="xs"
           variant="default"
@@ -368,8 +378,8 @@ export const ListingCard = memo(function ListingCard({
         >
           <FormattedMessage id="listings.details.details" />
         </Button>
-        {onSeeOnMap && hasPin(listing.coordinates) && (
-          <Box {...desktopOnly(details)}>
+        {onSeeOnMap && hasPin(listing.coordinates) && !phone && (
+          <div>
             <Button
               size="xs"
               variant="default"
@@ -377,13 +387,15 @@ export const ListingCard = memo(function ListingCard({
             >
               <FormattedMessage id="listings.details.seeOnMap" />
             </Button>
-          </Box>
+          </div>
         )}
-        <Box {...phoneOnly(details)}>
-          <ListingCardMenu listing={listing} onSeeOnMap={onSeeOnMap} />
-        </Box>
-        {saved.length > 0 && (
-          <Text size="xs" {...phoneOnly(details)}>
+        {phone && (
+          <div>
+            <ListingCardMenu listing={listing} onSeeOnMap={onSeeOnMap} />
+          </div>
+        )}
+        {saved.length > 0 && phone && (
+          <Text size="xs">
             <FormattedMessage
               id="listings.details.savedByMembers"
               values={{ count: saved.length }}

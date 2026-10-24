@@ -5,6 +5,7 @@ import {
   type ComponentProps,
   createContext,
   useContext,
+  useDeferredValue,
   useEffect,
   useRef,
   useState,
@@ -112,6 +113,8 @@ export function ListingDrawer({
 }: ListingDrawerProps) {
   const intl = useIntl();
   const viewport = useRef<HTMLDivElement>(null);
+  // The sheet's top renders with the tap; the long details follow in a background render, so the slide-in starts sooner.
+  const detailsFor = useDeferredValue(opened ? listing?.id : undefined);
   const [fullScreen, setFullScreen] = useState(false);
   useEffect(() => {
     if (!opened || !listing) setFullScreen(false);
@@ -257,39 +260,41 @@ export function ListingDrawer({
                     </Button>
                   )}
                 </Group>
-                <ListingDetails
-                  listing={listing}
-                  snapshot={snapshot}
-                  userId={userId}
-                  notes={notes}
-                  headingOrder={3}
-                  locationPreview={
-                    <>
-                      {opened && hasPin(listing.coordinates) && (
-                        <DrawerLocationPreview
-                          coordinates={listing.coordinates}
-                          styleUrl={mapStyleUrl}
-                          viewport={viewport}
-                          onActivate={onSeeOnMap}
-                        />
-                      )}
-                      {estimatedPositionLabel(listing.coordinates, intl) && (
-                        <Text size="sm">
-                          {estimatedPositionLabel(listing.coordinates, intl)}
-                        </Text>
-                      )}
-                    </>
-                  }
-                  monthlyCost={
-                    // Remount per home and opening to discard price and cash edits on close.
-                    <MonthlyCost
-                      key={`${listing.id}-${opened}`}
-                      listing={listing}
-                      snapshot={snapshot}
-                    />
-                  }
-                  onSelectPhoto={showPhoto}
-                />
+                {detailsFor === listing.id && (
+                  <ListingDetails
+                    listing={listing}
+                    snapshot={snapshot}
+                    userId={userId}
+                    notes={notes}
+                    headingOrder={3}
+                    locationPreview={
+                      <>
+                        {opened && hasPin(listing.coordinates) && (
+                          <DrawerLocationPreview
+                            coordinates={listing.coordinates}
+                            styleUrl={mapStyleUrl}
+                            viewport={viewport}
+                            onActivate={onSeeOnMap}
+                          />
+                        )}
+                        {estimatedPositionLabel(listing.coordinates, intl) && (
+                          <Text size="sm">
+                            {estimatedPositionLabel(listing.coordinates, intl)}
+                          </Text>
+                        )}
+                      </>
+                    }
+                    monthlyCost={
+                      // Remount per home and opening to discard price and cash edits on close.
+                      <MonthlyCost
+                        key={`${listing.id}-${opened}`}
+                        listing={listing}
+                        snapshot={snapshot}
+                      />
+                    }
+                    onSelectPhoto={showPhoto}
+                  />
+                )}
               </Stack>
             )}
           </Drawer.Body>
