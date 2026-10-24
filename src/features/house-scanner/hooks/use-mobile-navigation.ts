@@ -16,8 +16,7 @@ export function useMobileNavigation() {
     const phone = window.matchMedia('(max-width: 35.99375em)');
     const header = page.querySelector<HTMLElement>('header');
     const tabBar = () => page.querySelector<HTMLElement>(`.${classes.tabBar}`);
-    // Set by the first scroll event: reading the position here forced a layout on every route change.
-    let previous: number | null = null;
+    let previous = window.scrollY;
     let travel = 0;
     const show = () => {
       page.removeAttribute('data-navigation-hidden');
@@ -33,7 +32,7 @@ export function useMobileNavigation() {
           document.documentElement.scrollHeight - window.innerHeight,
         ),
       );
-      const delta = y - (previous ?? y);
+      const delta = y - previous;
       previous = y;
       const nav = tabBar();
       if (!phone.matches || !nav || y <= (header?.offsetHeight ?? 56)) {
