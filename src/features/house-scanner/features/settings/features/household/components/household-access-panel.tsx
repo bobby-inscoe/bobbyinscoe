@@ -79,7 +79,7 @@ export function HouseholdAccessPanel({
   const owner = me?.role === 'owner';
   const active = data.members.filter((member) => member.active);
   return (
-    <Paper>
+    <Paper id="household">
       <Stack>
         <Title order={2}>
           <FormattedMessage id="settings.household.household" />

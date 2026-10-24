@@ -396,6 +396,8 @@ export interface ListingsTranslations {
     tapPinsToSelectHomesAndSeeAPreview: string;
     undoHide: string;
     noHomesHere: string;
+    favoritesEmpty: string;
+    inviteSomeone: string;
     clearTheFiltersToSeeMore: string;
     showHiddenHomes: string;
     loadingMap: string;

@@ -1,4 +1,11 @@
 export interface SettingsTranslations {
+  help: {
+    title: string;
+    follows: string;
+    household: string;
+    roles: string;
+    criteriaAndFilters: string;
+  };
   personal: {
     installHeading: string;
     installDescription: string;
@@ -8,6 +15,9 @@ export interface SettingsTranslations {
     languageDescription: string;
   };
   criteria: {
+    setupTitle: string;
+    setupIntro: string;
+    keepStarterCriteria: string;
     preferredBudgetDescription: string;
     maximumBudgetDescription: string;
     apartmentRulesDescription: string;
@@ -19,15 +29,8 @@ export interface SettingsTranslations {
     wholeCity: string;
     savedPoint: string;
     legacySearchDescription: string;
-    budgetHelp: string;
-    locationHelp: string;
     roomsHeading: string;
     maximumRooms: string;
-    shellterFollowsApartmentsForSaleInGoteborg: string;
-    householdProfileHelp: string;
-    filtersOnTheListingsTabAreYoursAloneAnd: string;
-    howDoesThisWork: string;
-    aboutShellter: string;
     comingSoon: string;
     notSupported: string;
     profileSavedStoredHomesAreReEvaluatedAgainstThe: string;

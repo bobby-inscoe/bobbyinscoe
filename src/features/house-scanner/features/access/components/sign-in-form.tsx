@@ -1,4 +1,11 @@
-import { Button, Checkbox, Stack, Text, TextInput } from '@mantine/core';
+import {
+  Anchor,
+  Button,
+  Checkbox,
+  Stack,
+  Text,
+  TextInput,
+} from '@mantine/core';
 import { type ReactNode, useState } from 'react';
 import { useIntl } from 'react-intl';
 import {
@@ -112,9 +119,10 @@ export function SignInForm({
             ? intl.formatMessage({ id: 'access.sendResetLink' })
             : intl.formatMessage({ id: 'access.signIn' })}
         </Button>
-        <Button
+        <Anchor
+          component="button"
           type="button"
-          variant="subtle"
+          size="sm"
           disabled={busy}
           onClick={() => {
             setResetting(!resetting);
@@ -124,7 +132,7 @@ export function SignInForm({
           {resetting
             ? intl.formatMessage({ id: 'access.backToSignIn' })
             : intl.formatMessage({ id: 'access.forgotPassword' })}
-        </Button>
+        </Anchor>
         {children}
       </Stack>
     </form>

@@ -170,9 +170,10 @@ export function useBrowseNavigation() {
     [router, navigate, search, listingId, layers],
   );
 
-  const changeTab = (value: WorkspaceTab) => {
+  const changeTab = (value: WorkspaceTab, hash?: string) => {
     void navigate({
       to: destinations[value],
+      hash,
       search: toUrlSearch({ ...search, select: false, filterOpen: false }),
       resetScroll: window.matchMedia('(max-width: 35.99375em)').matches,
     });

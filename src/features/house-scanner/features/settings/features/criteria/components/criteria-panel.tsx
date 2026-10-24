@@ -1,6 +1,5 @@
 import { Flex, Paper, Stack, Text, Title } from '@mantine/core';
 import { FormattedMessage } from 'react-intl';
-import { CriteriaHelp } from '@/features/house-scanner/features/settings/features/criteria/components/criteria-help';
 import { ProfileEditor } from '@/features/house-scanner/features/settings/features/criteria/components/profile-editor';
 import type { SearchProfile } from '@/features/house-scanner/types/contracts';
 
@@ -21,7 +20,6 @@ export function CriteriaPanel({
         <Title order={2}>
           <FormattedMessage id="settings.criteria.householdProfile" />
         </Title>
-        <CriteriaHelp />
       </Flex>
       {synthetic && (
         <Text size="sm" c="dimmed">

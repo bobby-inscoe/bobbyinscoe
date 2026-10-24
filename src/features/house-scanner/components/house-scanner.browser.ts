@@ -1524,9 +1524,9 @@ test('Settings uses dropdowns, names the places and the search circle, and expla
       .evaluate((element) => element.getBoundingClientRect().width);
     expect(width).toBeGreaterThan(250);
   }
-  const help = page.getByRole('button', { name: 'How does this work?' });
+  const help = page.getByRole('button', { name: 'How Shellter works' });
   await help.click();
-  const dialog = page.getByRole('dialog', { name: 'About Shellter' });
+  const dialog = page.getByRole('dialog', { name: 'How Shellter works' });
   await expect(dialog).toBeVisible();
   await expect(
     dialog.getByText(/apartments for sale in Göteborg/),

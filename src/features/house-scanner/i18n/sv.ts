@@ -29,6 +29,17 @@ export const sv = {
       'Ange rubrik och beskrivning och välj en tillåten bild på högst 5 MiB.',
   },
   settings: {
+    help: {
+      title: 'Så fungerar Shellter',
+      follows:
+        'Shellter följer lägenheter till salu i Göteborg och samlar dem i en lista.',
+      household:
+        'Ett hushåll är de som letar bostad tillsammans. Alla i hushållet ser samma bostäder.',
+      roles:
+        'Ägare ändrar sökkriterier och finansiering och bjuder in fler. Medlemmar sparar, döljer och skriver anteckningar, och kan bjuda in någon att skapa ett eget hushåll.',
+      criteriaAndFilters:
+        'Sparade kriterier avgör vilka bostäder hushållet ser. Filter under Bostäder begränsar bara din egen vy.',
+    },
     personal: {
       installHeading: 'Installera Shellter',
       installDescription:
@@ -41,6 +52,10 @@ export const sv = {
       languageDescription: 'Språkvalet gäller bara dig i den här webbläsaren.',
     },
     criteria: {
+      setupTitle: 'Ställ in er sökning',
+      setupIntro:
+        'Bostäderna nedan följer startkriterier. Välj var ni vill leta och er maxbudget, eller behåll dem. Fler val finns under Inställningar.',
+      keepStarterCriteria: 'Behåll startkriterierna',
       preferredBudgetDescription:
         'Bostäder med ett pris upp till detta belopp visas under Inom budget.',
       maximumBudgetDescription:
@@ -58,20 +73,8 @@ export const sv = {
       savedPoint: 'Sparad punkt ({latitude}, {longitude})',
       legacySearchDescription:
         'Din sparade sökning omfattar {cities} eller bostäder inom {radius} från den sparade punkten. Den ändras inte förrän du väljer ett sökområde.',
-      budgetHelp:
-        'Önskad budget grupperar träffarna. Maxbudget filtrerar bort bostäder med ett högre känt utgångspris. Okända eller motstridiga uppgifter visas under Saknade uppgifter.',
-      locationHelp:
-        'Välj en hel kommun eller en radie runt en knutpunkt. Detta filtrerar sparade annonser och utökar inte mäklartäckningen.',
       roomsHeading: 'Rum',
       maximumRooms: 'Högsta antal rum',
-      shellterFollowsApartmentsForSaleInGoteborg:
-        'Shellter visar lägenheter till salu i Göteborg.',
-      householdProfileHelp:
-        'Hushållsprofilen anger de gemensamma sökkriterierna för alla i hushållet. Anpassa budget, storlek, antal rum, egenskaper och områden efter det du söker.',
-      filtersOnTheListingsTabAreYoursAloneAnd:
-        'Filtren på fliken Bostäder gäller bara dig och sparas i sidans webbadress, även när du laddar om. När du rensar dem behålls hushållets grundinställningar. Endast ägare kan ändra grundinställningarna.',
-      howDoesThisWork: 'Hur fungerar det?',
-      aboutShellter: 'Om Shellter',
       comingSoon: '{value0} (kommer snart)',
       notSupported: '{value0} (stöds inte)',
       profileSavedStoredHomesAreReEvaluatedAgainstThe:
@@ -637,6 +640,9 @@ export const sv = {
         'Tryck på kartnålar för att välja bostäder och förhandsvisa dem. Använd Granska det här området för att välja fler.',
       undoHide: 'Ångra döljning ({value0})',
       noHomesHere: 'Inga bostäder här.{value0}',
+      favoritesEmpty:
+        'Bostäder som någon i hushållet sparar visas här. Tryck på stjärnan på en bostad för att spara den.',
+      inviteSomeone: 'Bjud in någon',
       clearTheFiltersToSeeMore: ' Rensa filtren för att se fler.',
       showHiddenHomes: 'Visa dolda bostäder',
       loadingMap: 'Laddar kartan…',
@@ -653,7 +659,7 @@ export const sv = {
       saved:
         '{count, plural, one {# bostad sparad bland dina favoriter.} other {# bostäder sparade bland dina favoriter.}}',
       hiddenCount:
-        '{count, plural, one {# bostad dold.} other {# bostäder dolda.}}',
+        '{count, plural, one {# bostad dold för hela hushållet.} other {# bostäder dolda för hela hushållet.}}',
       restoredCount:
         '{count, plural, one {# bostad visas igen.} other {# bostäder visas igen.}}',
       includesSavedCount:
@@ -699,11 +705,14 @@ export const sv = {
     exploreTheSyntheticDemo: 'Utforska demon med fiktiva uppgifter',
     thatEmailLinkHasExpiredOrWasAlreadyUsed:
       'E-postlänken har gått ut eller redan använts. Be om en ny inbjudan eller använd Glömt lösenord för att få en ny länk.',
-    alreadyHaveAnAccount: 'Har du redan ett konto?',
     thisInvitationLinkIsIncompleteCopyTheWholeLink:
       'Inbjudningslänken är ofullständig. Kopiera hela länken och försök igen.',
     loadingYourHousehold: 'Laddar ditt hushåll…',
     signIn: 'Logga in',
+    signInIntro:
+      'Shellter följer lägenheter till salu i Göteborg så att ett hushåll kan gå igenom dem tillsammans.',
+    signInInviteOnly:
+      'Shellter kräver en inbjudan. Be någon som använder Shellter att skicka en länk.',
     chooseAHousehold: 'Välj ett hushåll.',
     as: '{value0} · som {value1}',
     household: 'Hushåll',
@@ -719,9 +728,9 @@ export const sv = {
     join: 'Gå med i {value0}',
     theLinkWorksUntil: '{value0} Länken gäller till {value1}.',
     invitedYouToStartYourOwnShellterHouseholdIt:
-      '{value0} har bjudit in dig att skapa ett eget hushåll i Shellter. Det delar inga uppgifter med avsändarens hushåll.',
+      '{value0} har bjudit in dig att skapa ett eget hushåll. Det börjar tomt och är skilt från avsändarens.',
     invitedYouToJoinTheirHouseholdAndShareIts:
-      '{value0} har bjudit in dig till sitt hushåll och dess bostadslista.',
+      '{value0} har bjudit in dig till sitt hushåll.',
     householdName: 'Hushållets namn',
     membersSeeItWhenTheyPickAHousehold:
       'Medlemmarna ser namnet när de väljer hushåll.',
@@ -736,6 +745,13 @@ export const sv = {
     chooseAPassword: 'Välj ett lösenord',
     '8To72Characters': '8 till 72 tecken.',
     createAccount: 'Skapa konto',
+    signInInstead: 'Har du redan ett konto? Logga in',
+    createAccountInstead: 'Ny på Shellter? Skapa ett konto',
+    rulesSharedLabel: 'Delas med hushållet',
+    rulesShared:
+      'favoriter, dolda bostäder, anteckningar, länkar och visningar. Ägare bestämmer sökning och finansiering.',
+    rulesPersonalLabel: 'Bara för dig',
+    rulesPersonal: 'filter under Bostäder.',
     theTwoPasswordsDiffer: 'Lösenorden stämmer inte överens.',
     chooseYourPassword: 'Välj ditt lösenord',
     chooseANewPassword: 'Välj ett nytt lösenord',
@@ -785,8 +801,7 @@ export const sv = {
     backToTheWorkshop: 'Tillbaka till verkstaden',
     householdShortlist: 'Hushållets bostadslista',
     thisHouseholdUsesStarterCriteriaApartmentsInGoteborgFrom:
-      'Hushållet använder startkriterier: lägenheter i Göteborg från 60 m², upp till 6 miljoner SEK.',
-    adjustThemInSettings: 'Ändra dem i Inställningar',
+      'Hushållet använder startkriterier: lägenheter i Göteborg från 60 m², upp till 6 miljoner SEK. En ägare kan ändra dem under Inställningar.',
     shortlistSections: 'Bostadslistans avsnitt',
     listings: 'Bostäder',
     favorites: 'Favoriter',

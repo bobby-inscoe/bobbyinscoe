@@ -5,7 +5,6 @@ export interface NavigationTranslations {
   backToTheWorkshop: string;
   householdShortlist: string;
   thisHouseholdUsesStarterCriteriaApartmentsInGoteborgFrom: string;
-  adjustThemInSettings: string;
   shortlistSections: string;
   listings: string;
   favorites: string;

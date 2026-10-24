@@ -29,6 +29,17 @@ export const en = {
       'Enter a title and description, and choose an allowed image up to 5 MiB.',
   },
   settings: {
+    help: {
+      title: 'How Shellter works',
+      follows:
+        'Shellter follows apartments for sale in Göteborg and gathers them in one list.',
+      household:
+        'A household is the people looking for a home together. Everyone in it sees the same homes.',
+      roles:
+        'Owners change the search criteria and financing, and invite people to join. Members save, hide and write notes, and can invite someone to start their own household.',
+      criteriaAndFilters:
+        'Saved criteria decide which homes the household sees. Filters on Listings only narrow your own view.',
+    },
     personal: {
       installHeading: 'Install Shellter',
       installDescription:
@@ -41,6 +52,10 @@ export const en = {
       languageDescription: 'Language applies only to this browser, for you.',
     },
     criteria: {
+      setupTitle: 'Set up your search',
+      setupIntro:
+        'The homes below use starter criteria. Pick where to look and your maximum budget, or keep them. More options are in Settings.',
+      keepStarterCriteria: 'Keep starter criteria',
       preferredBudgetDescription:
         'Homes at or below this price are grouped as Within budget.',
       maximumBudgetDescription:
@@ -58,20 +73,8 @@ export const en = {
       savedPoint: 'Saved point ({latitude}, {longitude})',
       legacySearchDescription:
         'Your saved search includes {cities} or homes within {radius} of its saved point. It stays unchanged until you choose a location.',
-      budgetHelp:
-        'Preferred budget groups matches; maximum budget excludes homes with a higher known asking price. Unknown or disputed details stay under Missing info.',
-      locationHelp:
-        'Choose whole municipalities or a radius around a hub. This filters stored listings; it does not expand broker coverage.',
       roomsHeading: 'Rooms',
       maximumRooms: 'Maximum rooms',
-      shellterFollowsApartmentsForSaleInGoteborg:
-        'Shellter follows apartments for sale in Göteborg.',
-      householdProfileHelp:
-        'The household profile sets the shared search criteria for everyone in your household. Adjust budget, size, rooms, features and areas to fit what you are looking for.',
-      filtersOnTheListingsTabAreYoursAloneAnd:
-        'Filters on the Listings tab are yours alone and stay in the page URL, including after a reload. Clearing them keeps the shared defaults. Only owners can change these defaults.',
-      howDoesThisWork: 'How does this work?',
-      aboutShellter: 'About Shellter',
       comingSoon: '{value0} (coming soon)',
       notSupported: '{value0} (not supported)',
       profileSavedStoredHomesAreReEvaluatedAgainstThe:
@@ -631,6 +634,9 @@ export const en = {
         'Tap pins to select homes and see a preview. Use Review this area for a larger batch.',
       undoHide: 'Undo hide ({value0})',
       noHomesHere: 'No homes here.{value0}',
+      favoritesEmpty:
+        'Homes anyone in the household saves show up here. Tap the star on a home to save it.',
+      inviteSomeone: 'Invite someone',
       clearTheFiltersToSeeMore: ' Clear the filters to see more.',
       showHiddenHomes: 'Show hidden homes',
       loadingMap: 'Loading map…',
@@ -646,7 +652,7 @@ export const en = {
       saved:
         '{count, plural, one {# home saved to your favorites.} other {# homes saved to your favorites.}}',
       hiddenCount:
-        '{count, plural, one {# home hidden.} other {# homes hidden.}}',
+        '{count, plural, one {# home hidden for the whole household.} other {# homes hidden for the whole household.}}',
       restoredCount:
         '{count, plural, one {# home restored.} other {# homes restored.}}',
       includesSavedCount:
@@ -692,11 +698,14 @@ export const en = {
     exploreTheSyntheticDemo: 'Explore the synthetic demo',
     thatEmailLinkHasExpiredOrWasAlreadyUsed:
       'That email link has expired or was already used. Ask for a new invitation, or use Forgot password to get a fresh link.',
-    alreadyHaveAnAccount: 'Already have an account?',
     thisInvitationLinkIsIncompleteCopyTheWholeLink:
       'This invitation link is incomplete. Copy the whole link and try again.',
     loadingYourHousehold: 'Loading your household…',
     signIn: 'Sign in',
+    signInIntro:
+      'Shellter follows apartments for sale in Göteborg so a household can look through them together.',
+    signInInviteOnly:
+      'Shellter is invitation only. Ask someone who uses it to send you a link.',
     chooseAHousehold: 'Choose a household.',
     as: '{value0} · as {value1}',
     household: 'Household',
@@ -712,9 +721,9 @@ export const en = {
     join: 'Join {value0}',
     theLinkWorksUntil: '{value0} The link works until {value1}.',
     invitedYouToStartYourOwnShellterHouseholdIt:
-      '{value0} invited you to start your own Shellter household. It shares nothing with theirs.',
+      '{value0} invited you to start your own household. It starts empty and is separate from theirs.',
     invitedYouToJoinTheirHouseholdAndShareIts:
-      '{value0} invited you to join their household and share its shortlist.',
+      '{value0} invited you to join their household.',
     householdName: 'Household name',
     membersSeeItWhenTheyPickAHousehold:
       'Members see it when they pick a household.',
@@ -729,6 +738,13 @@ export const en = {
     chooseAPassword: 'Choose a password',
     '8To72Characters': '8 to 72 characters.',
     createAccount: 'Create account',
+    signInInstead: 'Already have an account? Sign in',
+    createAccountInstead: 'New to Shellter? Create an account',
+    rulesSharedLabel: 'Shared with the household',
+    rulesShared:
+      'favorites, hidden homes, notes, links and viewings. Owners set the search and financing.',
+    rulesPersonalLabel: 'Just for you',
+    rulesPersonal: 'Listings filters.',
     theTwoPasswordsDiffer: 'The two passwords differ.',
     chooseYourPassword: 'Choose your password',
     chooseANewPassword: 'Choose a new password',
@@ -778,8 +794,7 @@ export const en = {
     backToTheWorkshop: 'Back to the workshop',
     householdShortlist: 'Household shortlist',
     thisHouseholdUsesStarterCriteriaApartmentsInGoteborgFrom:
-      'This household uses starter criteria: apartments in Göteborg from 60 m², up to 6M SEK.',
-    adjustThemInSettings: 'Adjust them in Settings',
+      'This household uses starter criteria: apartments in Göteborg from 60 m², up to 6M SEK. An owner can change them in Settings.',
     shortlistSections: 'Shortlist sections',
     listings: 'Listings',
     favorites: 'Favorites',

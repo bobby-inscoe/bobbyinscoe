@@ -1,7 +1,16 @@
-import { Alert, Button, Stack, Text, TextInput, Title } from '@mantine/core';
+import {
+  Alert,
+  Anchor,
+  Button,
+  Stack,
+  Text,
+  TextInput,
+  Title,
+} from '@mantine/core';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import type { InvitationPreview } from '@/features/house-scanner/api/household-client';
+import { HouseholdRules } from '@/features/house-scanner/components/household-rules';
 import {
   errorFeedback,
   type Feedback,
@@ -29,7 +38,7 @@ interface InvitePanelProps {
 }
 
 // What an invitation link grants, and the one way through it: a new person creates an account with their email and a
-// password, an existing one signs in, and a signed-in person names the household or themselves and accepts.
+// password, or switches to signing in, and a signed-in person names the household or themselves and accepts.
 export function InvitePanel({
   token,
   signedIn,
@@ -47,6 +56,7 @@ export function InvitePanel({
   const [password, setPassword] = useState('');
   const [householdName, setHouseholdName] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [signingIn, setSigningIn] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ text: Feedback; error: boolean }>();
   // The session hands out a new function on every render; the preview is fetched once per token.
@@ -136,6 +146,7 @@ export function InvitePanel({
             }}
           />
         </Text>
+        <HouseholdRules />
       </Stack>
       {message && (
         <Alert role={message.error ? 'alert' : 'status'}>
@@ -191,8 +202,22 @@ export function InvitePanel({
             </Button>
           </Stack>
         </form>
+      ) : signingIn ? (
+        <Stack gap="md">
+          {signIn}
+          <div>
+            <Anchor
+              component="button"
+              type="button"
+              size="sm"
+              onClick={() => setSigningIn(false)}
+            >
+              <FormattedMessage id="access.createAccountInstead" />
+            </Anchor>
+          </div>
+        </Stack>
       ) : (
-        <>
+        <Stack gap="md">
           <form
             onSubmit={(event) => {
               event.preventDefault();
@@ -243,8 +268,21 @@ export function InvitePanel({
               </Button>
             </Stack>
           </form>
-          {signIn}
-        </>
+          <div>
+            <Anchor
+              component="button"
+              type="button"
+              size="sm"
+              disabled={busy}
+              onClick={() => {
+                setSigningIn(true);
+                setMessage(undefined);
+              }}
+            >
+              <FormattedMessage id="access.signInInstead" />
+            </Anchor>
+          </div>
+        </Stack>
       )}
     </Stack>
   );

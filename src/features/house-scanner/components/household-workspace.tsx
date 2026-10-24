@@ -10,6 +10,7 @@ import { useFavoriteToggle } from '@/features/house-scanner/features/favorites/h
 import { FeedbackWidget } from '@/features/house-scanner/features/feedback/components/feedback-widget';
 import { ListingsPanel } from '@/features/house-scanner/features/listings/components/listings-panel';
 import { SettingsPanel } from '@/features/house-scanner/features/settings/components/settings-panel';
+import { StarterSetup } from '@/features/house-scanner/features/settings/features/criteria/components/starter-setup-card';
 import { ViewingsPanel } from '@/features/house-scanner/features/viewings/components/viewings-panel';
 import { useBrowseNavigation } from '@/features/house-scanner/hooks/use-browse-navigation';
 import { useHiddenListings } from '@/features/house-scanner/hooks/use-hidden-listings';
@@ -178,24 +179,14 @@ export function HouseholdWorkspace({
             id: 'navigation.householdShortlist',
           })}
         >
-          {/* A new household starts with one profile at revision 1, set to the collector bounds. */}
-          {!synthetic &&
-            tab !== 'settings' &&
-            snapshot.profiles.length === 1 &&
-            snapshot.profiles[0].revision === 1 && (
-              <Group gap={4} role="note">
-                <Text size="sm">
-                  <FormattedMessage id="navigation.thisHouseholdUsesStarterCriteriaApartmentsInGoteborgFrom" />
-                </Text>
-                <Button
-                  size="compact-sm"
-                  variant="subtle"
-                  onClick={() => navigation.changeTab('settings')}
-                >
-                  <FormattedMessage id="navigation.adjustThemInSettings" />
-                </Button>
-              </Group>
-            )}
+          {!synthetic && tab !== 'settings' && (
+            <StarterSetup
+              snapshot={snapshot}
+              userId={userId}
+              showCard={tab === 'suggestions'}
+              onSave={onSaveProfile}
+            />
+          )}
           <Group
             component="nav"
             aria-label={intl.formatMessage({
@@ -425,8 +416,17 @@ export function HouseholdWorkspace({
               onUndoHide={hiddenActions.undo}
               hideBusy={hiddenActions.busy}
               hideError={formatFeedback(intl, hiddenActions.error)}
+              hideMessage={hiddenActions.message}
               undoHideCount={hiddenActions.undoCount}
               canHide={hiddenActions.canHide}
+              onInvite={
+                access &&
+                snapshot.members.length === 1 &&
+                snapshot.members[0].userId === userId &&
+                snapshot.members[0].role === 'owner'
+                  ? () => navigation.changeTab('settings', 'household')
+                  : undefined
+              }
               selecting={search.select}
               onSelectingChange={(value) =>
                 navigation.setLayer('select', value)

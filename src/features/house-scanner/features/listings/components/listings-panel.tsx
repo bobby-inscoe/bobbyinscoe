@@ -120,8 +120,11 @@ interface ListingsPanelProps {
   onUndoHide: () => Promise<boolean>;
   hideBusy: boolean;
   hideError: Feedback;
+  hideMessage: Feedback;
   undoHideCount: number;
   canHide: boolean;
+  // Set for an owner alone in the household: the empty Favorites tab offers to invite someone.
+  onInvite?: () => void;
   selecting: boolean;
   onSelectingChange: (value: boolean) => void;
   filtersOpen: boolean;
@@ -176,8 +179,10 @@ export function ListingsPanel({
   onUndoHide,
   hideBusy,
   hideError,
+  hideMessage,
   undoHideCount,
   canHide,
+  onInvite,
   selecting,
   onSelectingChange,
   filtersOpen,
@@ -877,6 +882,9 @@ export function ListingsPanel({
           {hideError && (
             <Text size="sm">{formatFeedback(intl, hideError)}</Text>
           )}
+          {!hideError && undoHideCount > 0 && hideMessage && (
+            <Text size="sm">{formatFeedback(intl, hideMessage)}</Text>
+          )}
           {undoHideCount > 0 && (
             <Button
               variant="default"
@@ -891,20 +899,34 @@ export function ListingsPanel({
           )}
         </Group>
       )}
-      {!visible.length && view === 'list' && (
-        <Text>
-          <FormattedMessage
-            id="listings.list.noHomesHere"
-            values={{
-              value0: messageValue(
-                activeFilterCount(filters) > 0 &&
-                  intl.formatMessage({
-                    id: 'listings.list.clearTheFiltersToSeeMore',
-                  }),
-              ),
-            }}
-          />
-        </Text>
+      {!total && tab === 'favorites' ? (
+        <Stack align="flex-start" gap="xs">
+          <Text>
+            <FormattedMessage id="listings.list.favoritesEmpty" />
+          </Text>
+          {onInvite && (
+            <Button variant="default" onClick={onInvite}>
+              <FormattedMessage id="listings.list.inviteSomeone" />
+            </Button>
+          )}
+        </Stack>
+      ) : (
+        !visible.length &&
+        view === 'list' && (
+          <Text>
+            <FormattedMessage
+              id="listings.list.noHomesHere"
+              values={{
+                value0: messageValue(
+                  activeFilterCount(filters) > 0 &&
+                    intl.formatMessage({
+                      id: 'listings.list.clearTheFiltersToSeeMore',
+                    }),
+                ),
+              }}
+            />
+          </Text>
+        )
       )}
       {mobile && view === 'list' && <ScrollToTop />}
       {view === 'list' ? (

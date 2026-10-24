@@ -3,6 +3,7 @@ import { LogOut } from 'lucide-react';
 import { FormattedMessage } from 'react-intl';
 import { InstallShellter } from '@/features/house-scanner/components/install-shellter';
 import { LanguageSelect } from '@/features/house-scanner/components/language-select';
+import { ShellterHelp } from '@/features/house-scanner/features/settings/components/shellter-help';
 import { CriteriaPanel } from '@/features/house-scanner/features/settings/features/criteria/components/criteria-panel';
 import { FinancingEditor } from '@/features/house-scanner/features/settings/features/financing/components/financing-editor';
 import { HouseholdAccessPanel } from '@/features/house-scanner/features/settings/features/household/components/household-access-panel';
@@ -35,6 +36,7 @@ export function SettingsPanel({
   const profile = financingProfile(snapshot.profiles);
   return (
     <Stack w="100%" maw="48rem">
+      <ShellterHelp />
       <CriteriaPanel
         profiles={snapshot.profiles}
         canEdit={member?.role === 'owner'}
