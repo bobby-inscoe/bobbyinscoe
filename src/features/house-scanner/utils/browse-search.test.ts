@@ -96,6 +96,7 @@ describe('browse URL search', () => {
         glazedOnly: true,
         notOnMapOnly: true,
         includeUnknown: false,
+        hideUnknownPrice: true,
         hidden: 'hidden-only',
         showDuplicates: true,
         viewingWithinDays: 7,

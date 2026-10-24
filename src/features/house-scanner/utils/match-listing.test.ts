@@ -71,6 +71,16 @@ describe('buyer matching under incomplete evidence', () => {
       );
     },
   );
+  it('leaves out unknown and disputed prices only when the profile hides them', () => {
+    const hiding = { ...criteria, hideUnknownPrice: true };
+    const unknown = home({ askingPriceSek: null });
+    const disputed = home({}, { conflicts: ['askingPriceSek'] });
+    expect(matchListing(unknown, criteria).section).toBe('needs-details');
+    expect(matchListing(unknown, hiding).section).toBe('outside');
+    expect(matchListing(disputed, hiding).section).toBe('outside');
+    expect(matchListing(home(), hiding).section).not.toBe('outside');
+  });
+
   it('does not treat contradictory exclusions as confirmed', () => {
     const result = matchListing(
       home(

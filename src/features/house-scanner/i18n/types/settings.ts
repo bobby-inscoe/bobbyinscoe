@@ -47,6 +47,7 @@ export interface SettingsTranslations {
     excludeConfirmedGroundFloorApartments: string;
     requireALift: string;
     requireABalconyOrTerrace: string;
+    hideUnknownPrice: string;
     preferGlazedOutdoorSpaceExceptionsStayVisible: string;
     monthlyFeeReferenceSEKACostFlag: string;
     placesToSearch: string;

@@ -14,6 +14,7 @@ import {
 import { FormattedMessage, type IntlShape, useIntl } from 'react-intl';
 import neighborhoods from '@/features/house-scanner/assets/neighborhoods.json';
 import { NumberSelect } from '@/features/house-scanner/components/number-select';
+import type { ListingSort } from '@/features/house-scanner/features/listings/features/list/utils/listing-sort';
 import { messageValue } from '@/features/house-scanner/i18n/catalogs';
 import { displayLabel } from '@/features/house-scanner/i18n/display-labels';
 import {
@@ -28,6 +29,15 @@ import {
   type ListingFilters,
 } from '@/features/house-scanner/utils/listing-filters';
 import { sourceName } from '@/features/house-scanner/utils/source-name';
+
+const SORTS = [
+  ['newest', 'listings.list.newest'],
+  ['oldest', 'listings.list.oldest'],
+  ['next-viewing', 'listings.list.nextViewing'],
+  ['alphabetical', 'listings.list.alphabetical'],
+  ['price-asc', 'listings.list.priceLowToHigh'],
+  ['price-desc', 'listings.list.priceHighToLow'],
+] as const;
 
 const HIDDEN_VIEWS = (
   intl: IntlShape,
@@ -90,6 +100,11 @@ interface ListingFilterPanelProps {
   unassignedNeighborhoodCount: number;
   // The Match picker, which the listings tab sets; favorites has none.
   match?: React.ReactNode;
+  // Sorting applies at once; it is not part of the filter draft.
+  // A profile already hides unknown prices, so the checkbox is on and fixed.
+  householdHidesUnknownPrice: boolean;
+  sort: ListingSort;
+  onSortChange: (value: ListingSort) => void;
 }
 
 export function ListingFilterPanel({
@@ -101,6 +116,9 @@ export function ListingFilterPanel({
   total,
   unassignedNeighborhoodCount,
   match,
+  householdHidesUnknownPrice,
+  sort,
+  onSortChange,
 }: ListingFilterPanelProps) {
   const intl = useIntl();
 
@@ -185,6 +203,20 @@ export function ListingFilterPanel({
           </Button>
         </Flex>
         <Flex gap="sm" wrap="wrap">
+          <Select
+            label={intl.formatMessage({ id: 'listings.list.sort' })}
+            aria-label={intl.formatMessage({ id: 'listings.list.sortHomes' })}
+            value={sort}
+            onChange={(value) =>
+              onSortChange((value as ListingSort) ?? 'newest')
+            }
+            allowDeselect={false}
+            data={SORTS.map(([value, id]) => ({
+              value,
+              label: intl.formatMessage({ id }),
+            }))}
+            flex="1 1 15rem"
+          />
           {match}
           {pair(
             intl.formatMessage({ id: 'listings.filters.priceSEK2' }),
@@ -400,6 +432,26 @@ export function ListingFilterPanel({
               }),
               'includeUnknown',
             )}
+            <Checkbox
+              label={intl.formatMessage({
+                id: 'listings.filters.hideUnknownPrice',
+              })}
+              description={
+                householdHidesUnknownPrice
+                  ? intl.formatMessage({
+                      id: 'listings.filters.setInHouseholdCriteria',
+                    })
+                  : undefined
+              }
+              checked={householdHidesUnknownPrice || filters.hideUnknownPrice}
+              disabled={householdHidesUnknownPrice}
+              onChange={(event) =>
+                onChange({
+                  ...filters,
+                  hideUnknownPrice: event.currentTarget.checked,
+                })
+              }
+            />
           </Stack>
         </SimpleGrid>
         <Radio.Group

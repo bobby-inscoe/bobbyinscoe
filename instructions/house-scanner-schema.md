@@ -23,6 +23,12 @@ applies geography; the database still returns candidates using its hard rules.
 strict checks. The migration changes no profile values or grants. Deploy the
 client before allowing profiles to save the new field.
 
+`profiles.criteria.hideUnknownPrice` is an optional boolean: the client leaves
+homes with no or a disputed asking price out of that profile's matches. The
+database still returns them, so snapshot membership does not change.
+`hs.valid_criteria` strips and type-checks it. Deploy the client first, then
+apply the migration.
+
 | Area | Tables | Written by | Read by |
 | --- | --- | --- | --- |
 | Households and people | `households`, `members`, `invitations`, `admin_log` | onboarding and settings functions (`hs_invitation_*`, `hs_household_*`, `hs_member_*`) | every member function checks `members`; `admin_log` is for the owner only |

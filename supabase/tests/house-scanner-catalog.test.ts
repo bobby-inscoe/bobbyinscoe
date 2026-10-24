@@ -3101,6 +3101,8 @@ describe('listing gallery', () => {
 const BIDDING = '20261023080000_house_scanner_bidding';
 const HIGHEST_BID = '20261023090000_house_scanner_highest_bid';
 const FINANCING = '20261023200000_house_scanner_financing';
+const HIDE_UNKNOWN_PRICE = '20261024142859_house_scanner_hide_unknown_price';
+const STREET_ESTIMATES = '20261024100000_house_scanner_price_estimates_street';
 
 describe('bidding flag', () => {
   it('rolls back to exactly the earlier schema and applies again', async () => {
@@ -3474,6 +3476,38 @@ describe('household financing', () => {
         await earlier.close();
       }
       await database.exec(await migration(`${FINANCING}.sql`));
+      expect(await fingerprint(database)).toEqual(migrated);
+    } finally {
+      await database.close();
+    }
+  });
+});
+
+describe('hide unknown price criteria', () => {
+  it('accepts only a boolean, and rolls back to exactly the earlier schema', async () => {
+    const database = await migratedThrough(HIDE_UNKNOWN_PRICE);
+    try {
+      const valid = async (value: unknown) =>
+        (
+          await database.query<{ ok: boolean }>(
+            'select hs.valid_criteria($1::jsonb) as ok',
+            [JSON.stringify({ ...criteria, hideUnknownPrice: value })],
+          )
+        ).rows[0].ok;
+      expect(await valid(true)).toBe(true);
+      expect(await valid(false)).toBe(true);
+      expect(await valid('yes')).toBe(false);
+      expect(await valid(null)).toBe(false);
+      const migrated = await fingerprint(database);
+      await database.exec(await rollback(HIDE_UNKNOWN_PRICE));
+      expect(await valid(true)).toBe(false);
+      const earlier = await migratedThrough(STREET_ESTIMATES);
+      try {
+        expect(await fingerprint(database)).toEqual(await fingerprint(earlier));
+      } finally {
+        await earlier.close();
+      }
+      await database.exec(await migration(`${HIDE_UNKNOWN_PRICE}.sql`));
       expect(await fingerprint(database)).toEqual(migrated);
     } finally {
       await database.close();

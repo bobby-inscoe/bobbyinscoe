@@ -93,6 +93,7 @@ export const sv = {
         'Uteslut lägenheter på bottenvåningen',
       requireALift: 'Kräv hiss',
       requireABalconyOrTerrace: 'Kräv balkong eller terrass',
+      hideUnknownPrice: 'Dölj bostäder med okänt pris',
       preferGlazedOutdoorSpaceExceptionsStayVisible:
         'Föredra inglasad uteplats (undantag visas ändå)',
       monthlyFeeReferenceSEKACostFlag:
@@ -534,6 +535,9 @@ export const sv = {
       notOnTheMapOnly: 'Bara bostäder som saknas på kartan',
       showDuplicateListings: 'Visa dubbla annonser',
       keepUnknownOrDisputedValues: 'Behåll okända eller motstridiga uppgifter',
+      hideUnknownPrice: 'Dölj bostäder med okänt pris',
+      unknownPriceHidden: 'Okänt pris, dolt av profilen',
+      setInHouseholdCriteria: 'Aktiverat i hushållets kriterier',
       hiddenHomes: 'Dolda bostäder',
       whetherItIsForSale: 'om bostaden är till salu',
       homeType: 'bostadstyp',
@@ -615,8 +619,8 @@ export const sv = {
       alphabetical: 'Alfabetisk ordning',
       priceLowToHigh: 'Pris: lägst först',
       priceHighToLow: 'Pris: högst först',
-      searchByTitle: 'Sök på rubrik',
-      streetOrListingTitle: 'Gata eller annonsrubrik',
+      searchByTitle: 'Sök på rubrik eller område',
+      streetOrListingTitle: 'Gata, rubrik eller område',
       homes2: 'bostäder',
       notLocated: ' · {value0} utan position',
       clearAllFilters: 'Rensa alla filter',

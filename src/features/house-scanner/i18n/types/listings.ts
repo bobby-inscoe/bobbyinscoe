@@ -299,6 +299,9 @@ export interface ListingsTranslations {
     notOnTheMapOnly: string;
     showDuplicateListings: string;
     keepUnknownOrDisputedValues: string;
+    hideUnknownPrice: string;
+    unknownPriceHidden: string;
+    setInHouseholdCriteria: string;
     hiddenHomes: string;
     whetherItIsForSale: string;
     homeType: string;

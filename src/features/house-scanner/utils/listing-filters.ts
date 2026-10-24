@@ -31,6 +31,8 @@ export interface ListingFilters {
   glazedOnly: boolean;
   notOnMapOnly: boolean;
   includeUnknown: boolean;
+  // Drop homes with no asking price, or a disputed one, whatever includeUnknown says.
+  hideUnknownPrice: boolean;
   hidden: HiddenView;
   // Cross-posted copies of a home stay out of view unless this is on.
   showDuplicates: boolean;
@@ -56,6 +58,7 @@ export const emptyFilters: ListingFilters = {
   glazedOnly: false,
   notOnMapOnly: false,
   includeUnknown: true,
+  hideUnknownPrice: false,
   hidden: 'not-hidden',
   showDuplicates: false,
   viewingWithinDays: null,
@@ -88,6 +91,7 @@ export function activeFilterCount(filters: ListingFilters): number {
     filters.liftOnly,
     filters.glazedOnly,
     filters.notOnMapOnly,
+    filters.hideUnknownPrice,
     filters.hidden !== emptyFilters.hidden,
     filters.showDuplicates,
     filters.viewingWithinDays !== null,
@@ -132,7 +136,14 @@ export function applyListingFilters(
     const neighborhoods = listingNeighborhoods(listing);
     const firstSeen = Date.parse(listing.firstSeenAt ?? '');
     return (
-      (titleQuery === '' || fuzzyMatches(listing.title, titleQuery)) &&
+      (titleQuery === '' ||
+        fuzzyMatches(
+          [listing.title, ...neighborhoods.map(({ name }) => name)].join(' '),
+          titleQuery,
+        )) &&
+      (!filters.hideUnknownPrice ||
+        (facts.askingPriceSek !== null &&
+          !conflicts.includes('askingPriceSek'))) &&
       (filters.freshness === 'latest-scan'
         ? listing.isNew === true
         : freshnessDays === null ||

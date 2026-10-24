@@ -92,6 +92,7 @@ export const en = {
       excludeConfirmedGroundFloorApartments: 'Exclude ground floor apartments',
       requireALift: 'Require a lift',
       requireABalconyOrTerrace: 'Require a balcony or terrace',
+      hideUnknownPrice: 'Hide homes with unknown price',
       preferGlazedOutdoorSpaceExceptionsStayVisible:
         'Prefer glazed outdoor space (exceptions stay visible)',
       monthlyFeeReferenceSEKACostFlag:
@@ -528,6 +529,9 @@ export const en = {
       notOnTheMapOnly: 'Not on the map only',
       showDuplicateListings: 'Show duplicate listings',
       keepUnknownOrDisputedValues: 'Keep unknown or disputed values',
+      hideUnknownPrice: 'Hide homes with unknown price',
+      unknownPriceHidden: 'Price unknown and hidden by the profile',
+      setInHouseholdCriteria: 'Turned on in your household criteria',
       hiddenHomes: 'Hidden homes',
       whetherItIsForSale: 'whether it is for sale',
       homeType: 'home type',
@@ -609,8 +613,8 @@ export const en = {
       alphabetical: 'Alphabetical',
       priceLowToHigh: 'Price: low to high',
       priceHighToLow: 'Price: high to low',
-      searchByTitle: 'Search by title',
-      streetOrListingTitle: 'Street or listing title',
+      searchByTitle: 'Search by title or neighborhood',
+      streetOrListingTitle: 'Street, title or neighborhood',
       homes2: 'homes',
       notLocated: ' · {value0} not located',
       clearAllFilters: 'Clear all filters',

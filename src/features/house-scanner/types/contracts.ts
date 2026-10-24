@@ -80,6 +80,8 @@ export const criteriaSchema = z
     sourceIds: z.array(sourceId).min(1).max(20).optional(),
     // The household's numbers for monthly cost estimates. Absent means the typical defaults; it never changes matching.
     financing: financingSchema.optional(),
+    // Keeps homes with no or a disputed asking price out of this profile's matches. Absent means off.
+    hideUnknownPrice: z.boolean().optional(),
   })
   .refine(
     (c) => c.maxAreaM2 === null || c.maxAreaM2 >= c.minAreaM2,
